@@ -1,0 +1,16 @@
+PROJECT_NAME           = "SunrayComLib"
+PROJECT_BRIEF          = "Cross-platform communication middleware for Sunray"
+OUTPUT_DIRECTORY       = docs/doxygen_output
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = Chinese
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.hpp *.c *.cc *.cpp
+INPUT                  = include src examples tests
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
