@@ -1,6 +1,6 @@
 /**
  * @file examples/embedded_min_loop/main.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include <chrono>
@@ -31,8 +31,9 @@ int main() {
     for (int i = 0; i < 100; ++i) {
         sunraycom_event_t ev{};
         sunraycom_poll_event(h, &ev);
-        if (ev.type == SUNRAYCOM_EVENT_FRAME) {
-            std::cout << "frame seq=" << static_cast<int>(ev.seq) << " peer=" << ev.peer_id << "\n";
+        if (ev.type == SUNRAYCOM_EVENT_ENVELOPE) {
+            std::cout << "envelope family=" << static_cast<int>(ev.message_family)
+                      << " type=" << ev.message_type << " peer=" << ev.peer_id << "\n";
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }

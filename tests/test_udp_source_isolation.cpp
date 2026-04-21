@@ -1,38 +1,36 @@
 /**
  * @file tests/test_udp_source_isolation.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include <asio.hpp>
 
 #include <atomic>
 #include <chrono>
-#include <cstring>
 #include <iostream>
 #include <thread>
+#include <vector>
 
+#include "sunraycom/core/semantic_messages.hpp"
 #include "sunraycom/runtime/runtime.hpp"
 
 namespace {
 
-int send_part(int sock,
+int send_part(asio::ip::udp::socket& sock,
               const std::string& ip,
               uint16_t port,
               const std::vector<uint8_t>& data,
               size_t begin,
               size_t end) {
-    sockaddr_in target{};
-    target.sin_family = AF_INET;
-    target.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &target.sin_addr);
-    return static_cast<int>(sendto(sock,
-                                   data.data() + begin,
-                                   end - begin,
-                                   0,
-                                   reinterpret_cast<sockaddr*>(&target),
-                                   sizeof(target)));
+    std::error_code ec;
+    const auto addr = asio::ip::make_address(ip, ec);
+    if (ec) {
+        return -1;
+    }
+
+    const asio::ip::udp::endpoint target(addr, port);
+    const size_t sent = sock.send_to(asio::buffer(data.data() + begin, end - begin), target, 0, ec);
+    return ec ? -1 : static_cast<int>(sent);
 }
 
 }  // namespace
@@ -43,35 +41,63 @@ int main() {
     cfg.udp_bind_port = 12100;
     cfg.udp_target_port = 12100;
     cfg.tcp_listen_port = 12200;
+    cfg.self_identity.agent_type = sunraycom::AgentType::kGroundStation;
+    cfg.self_identity.agent_id = 77;
+    cfg.self_identity.role = sunraycom::EndpointRole::kObserver;
     if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
         std::cerr << "runtime start failed\n";
         return 1;
     }
 
     std::atomic<int> got{0};
-    auto tok = runtime.event_bus().subscribe_frame([&got](const sunraycom::FrameEvent& ev) {
+    auto tok = runtime.event_bus().subscribe_envelope([&got](const sunraycom::EnvelopeEvent& ev) {
         if (ev.transport == sunraycom::TransportType::kUdpUnicast &&
-            (ev.frame.header.seq == 201 || ev.frame.header.seq == 202)) {
+            ev.envelope.message_family == sunraycom::MessageFamily::kStateEvent) {
             ++got;
         }
     });
 
     sunraycom::ProtocolCodec codec;
-    sunraycom::Frame f1;
-    f1.header.seq = 201;
-    f1.header.robot_id = 1;
-    f1.payload = {1, 2, 3, 4, 5, 6};
-    auto b1 = codec.encode(f1, true);
+    sunraycom::VehicleEvent e1{};
+    e1.kind = sunraycom::VehicleEventKind::kFault;
+    e1.severity = 3;
+    e1.detail = "camera";
+    auto b1 = codec.encode(
+        sunraycom::make_typed_envelope(
+            {sunraycom::AgentType::kUav, 1, sunraycom::EndpointRole::kVehicle},
+            sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kGroundStation, 77),
+            0,
+            201,
+            sunraycom::QosClass::kBestEffort,
+            e1),
+        true);
 
-    sunraycom::Frame f2;
-    f2.header.seq = 202;
-    f2.header.robot_id = 2;
-    f2.payload = {9, 8, 7, 6, 5, 4};
-    auto b2 = codec.encode(f2, true);
+    sunraycom::VehicleEvent e2{};
+    e2.kind = sunraycom::VehicleEventKind::kFormationUpdate;
+    e2.severity = 1;
+    e2.detail = "swarm";
+    auto b2 = codec.encode(
+        sunraycom::make_typed_envelope(
+            {sunraycom::AgentType::kUav, 2, sunraycom::EndpointRole::kVehicle},
+            sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kGroundStation, 77),
+            0,
+            202,
+            sunraycom::QosClass::kBestEffort,
+            e2),
+        true);
 
-    int s1 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    int s2 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (s1 < 0 || s2 < 0) {
+    asio::io_context io;
+    asio::ip::udp::socket s1(io);
+    asio::ip::udp::socket s2(io);
+
+    std::error_code ec;
+    s1.open(asio::ip::udp::v4(), ec);
+    if (ec) {
+        std::cerr << "socket create failed\n";
+        return 2;
+    }
+    s2.open(asio::ip::udp::v4(), ec);
+    if (ec) {
         std::cerr << "socket create failed\n";
         return 2;
     }
@@ -88,8 +114,8 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
-    close(s1);
-    close(s2);
+    s1.close(ec);
+    s2.close(ec);
     runtime.event_bus().unsubscribe(tok);
     runtime.stop();
 

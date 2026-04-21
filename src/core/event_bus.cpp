@@ -1,16 +1,16 @@
 /**
  * @file src/core/event_bus.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include "sunraycom/core/event_bus.hpp"
 
 namespace sunraycom {
 
-size_t EventBus::subscribe_frame(FrameHandler cb) {
+size_t EventBus::subscribe_envelope(EnvelopeHandler cb) {
     std::lock_guard<std::mutex> lock(mu_);
     const size_t token = next_token_++;
-    frame_handlers_[token] = std::move(cb);
+    envelope_handlers_[token] = std::move(cb);
     return token;
 }
 
@@ -30,20 +30,21 @@ size_t EventBus::subscribe_link(LinkHandler cb) {
 
 void EventBus::unsubscribe(size_t token) {
     std::lock_guard<std::mutex> lock(mu_);
-    frame_handlers_.erase(token);
+    envelope_handlers_.erase(token);
     error_handlers_.erase(token);
     link_handlers_.erase(token);
 }
 
-void EventBus::publish_frame(const FrameEvent& ev) const {
-    std::unordered_map<size_t, FrameHandler> copy;
+void EventBus::publish_envelope(const EnvelopeEvent& ev) const {
+    std::unordered_map<size_t, EnvelopeHandler> copy;
     {
         std::lock_guard<std::mutex> lock(mu_);
-        copy = frame_handlers_;
+        copy = envelope_handlers_;
     }
     for (const auto& item : copy) {
-        if (item.second)
+        if (item.second) {
             item.second(ev);
+        }
     }
 }
 
@@ -54,8 +55,9 @@ void EventBus::publish_error(const ErrorEvent& ev) const {
         copy = error_handlers_;
     }
     for (const auto& item : copy) {
-        if (item.second)
+        if (item.second) {
             item.second(ev);
+        }
     }
 }
 
@@ -66,8 +68,9 @@ void EventBus::publish_link(const LinkEvent& ev) const {
         copy = link_handlers_;
     }
     for (const auto& item : copy) {
-        if (item.second)
+        if (item.second) {
             item.second(ev);
+        }
     }
 }
 

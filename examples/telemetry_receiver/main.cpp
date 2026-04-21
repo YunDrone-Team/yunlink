@@ -1,6 +1,6 @@
 /**
  * @file examples/telemetry_receiver/main.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include <chrono>
@@ -87,12 +87,15 @@ int main(int argc, char** argv) {
     }
 
     int got_frames = 0;
-    auto tok = runtime.event_bus().subscribe_frame([&got_frames](const sunraycom::FrameEvent& ev) {
-        ++got_frames;
-        std::cout << "transport=" << static_cast<int>(ev.transport)
-                  << " seq=" << static_cast<int>(ev.frame.header.seq)
-                  << " payload=" << ev.frame.payload.size() << " peer=" << ev.peer.id << "\n";
-    });
+    auto tok =
+        runtime.event_bus().subscribe_envelope([&got_frames](const sunraycom::EnvelopeEvent& ev) {
+            ++got_frames;
+            std::cout << "transport=" << static_cast<int>(ev.transport)
+                      << " family=" << static_cast<int>(ev.envelope.message_family)
+                      << " type=" << ev.envelope.message_type
+                      << " payload=" << ev.envelope.payload.size() << " peer=" << ev.peer.id
+                      << "\n";
+        });
 
     const auto start = std::chrono::steady_clock::now();
     while (true) {

@@ -1,91 +1,153 @@
 /**
  * @file src/transport/udp_transport.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include "sunraycom/transport/udp_transport.hpp"
 
-#include <cstring>
+#include <array>
+#include <chrono>
+#include <limits>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
-#include "sunraycom/core/message_ids.hpp"
-#include "socket_common.hpp"
+#include <asio.hpp>
+
+#include "sunraycom/core/envelope_stream_parser.hpp"
 
 namespace sunraycom {
 
-UdpTransport::UdpTransport() = default;
+namespace {
+
+std::string make_peer_id(const std::string& ip, uint16_t port) {
+    return ip + ":" + std::to_string(port);
+}
+
+int to_int_bytes(size_t n) {
+    if (n > static_cast<size_t>(std::numeric_limits<int>::max())) {
+        return -1;
+    }
+    return static_cast<int>(n);
+}
+
+bool is_socket_closed(const std::error_code& ec) {
+    return ec == asio::error::operation_aborted || ec == asio::error::bad_descriptor;
+}
+
+}  // namespace
+
+struct UdpTransport::Impl {
+    RuntimeConfig config;
+    EventBus* bus = nullptr;
+    ProtocolCodec codec;
+
+    std::atomic<bool> is_running{false};
+    asio::io_context io;
+    std::unique_ptr<asio::ip::udp::socket> socket;
+    std::thread recv_thread;
+
+    std::mutex parser_mu;
+    std::unordered_map<std::string, EnvelopeStreamParser> parsers;
+};
+
+UdpTransport::UdpTransport() : impl_(std::make_unique<Impl>()) {}
 
 UdpTransport::~UdpTransport() {
     stop();
 }
 
+bool UdpTransport::is_running() const {
+    return impl_->is_running.load();
+}
+
 ErrorCode UdpTransport::start(const RuntimeConfig& config, EventBus* bus) {
-    if (is_running_.load())
+    if (impl_->is_running.load()) {
         return ErrorCode::kOk;
-    if (bus == nullptr)
+    }
+    if (bus == nullptr) {
         return ErrorCode::kInvalidArgument;
+    }
 
-    if (!socket_env_init())
-        return ErrorCode::kSocketError;
+    impl_->config = config;
+    impl_->bus = bus;
 
-    config_ = config;
-    bus_ = bus;
+    impl_->socket = std::make_unique<asio::ip::udp::socket>(impl_->io);
 
-    sock_ = static_cast<int>(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
-    if (sock_ == static_cast<int>(kInvalidSocket)) {
+    std::error_code ec;
+    impl_->socket->open(asio::ip::udp::v4(), ec);
+    if (ec) {
+        impl_->socket.reset();
         return ErrorCode::kSocketError;
     }
 
-    const int yes = 1;
-    setsockopt(sock_, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&yes), sizeof(yes));
-    setsockopt(sock_, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&yes), sizeof(yes));
+    impl_->socket->set_option(asio::socket_base::broadcast(true), ec);
+    if (ec) {
+        impl_->socket.reset();
+        return ErrorCode::kSocketError;
+    }
 
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(config_.udp_bind_port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    impl_->socket->set_option(asio::socket_base::reuse_address(true), ec);
+    if (ec) {
+        impl_->socket.reset();
+        return ErrorCode::kSocketError;
+    }
 
-    if (bind(sock_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        close_socket(sock_);
-        sock_ = -1;
+    impl_->socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), impl_->config.udp_bind_port),
+                        ec);
+    if (ec) {
+        impl_->socket.reset();
         return ErrorCode::kBindError;
     }
+    impl_->socket->non_blocking(true, ec);
+    if (ec) {
+        impl_->socket.reset();
+        return ErrorCode::kSocketError;
+    }
 
-    is_running_.store(true);
-    recv_thread_ = std::thread(&UdpTransport::recv_loop, this);
+    impl_->is_running.store(true);
+    impl_->recv_thread = std::thread(&UdpTransport::recv_loop, this);
     return ErrorCode::kOk;
 }
 
 void UdpTransport::stop() {
-    if (!is_running_.exchange(false))
+    if (!impl_->is_running.exchange(false)) {
         return;
-
-    if (sock_ >= 0) {
-        close_socket(sock_);
-        sock_ = -1;
     }
 
-    if (recv_thread_.joinable()) {
-        recv_thread_.join();
+    if (impl_->socket) {
+        std::error_code ec;
+        impl_->socket->cancel(ec);
+        impl_->socket->close(ec);
     }
 
-    std::lock_guard<std::mutex> lock(parser_mu_);
-    parsers_.clear();
+    if (impl_->recv_thread.joinable()) {
+        impl_->recv_thread.join();
+    }
+
+    std::lock_guard<std::mutex> lock(impl_->parser_mu);
+    impl_->parsers.clear();
+    impl_->socket.reset();
 }
 
 int UdpTransport::send_unicast(const ByteBuffer& bytes, const std::string& ip, uint16_t port) {
-    if (sock_ < 0 || bytes.empty())
+    if (!impl_->socket || bytes.empty()) {
         return -1;
-    sockaddr_in target{};
-    target.sin_family = AF_INET;
-    target.sin_port = htons(port);
-    if (inet_pton(AF_INET, ip.c_str(), &target.sin_addr) != 1)
+    }
+
+    std::error_code ec;
+    const auto address = asio::ip::make_address(ip, ec);
+    if (ec) {
         return -1;
-    return static_cast<int>(sendto(sock_,
-                                   reinterpret_cast<const char*>(bytes.data()),
-                                   static_cast<int>(bytes.size()),
-                                   0,
-                                   reinterpret_cast<sockaddr*>(&target),
-                                   sizeof(target)));
+    }
+
+    const asio::ip::udp::endpoint endpoint(address, port);
+    const size_t sent = impl_->socket->send_to(asio::buffer(bytes), endpoint, 0, ec);
+    if (ec) {
+        return -1;
+    }
+
+    return to_int_bytes(sent);
 }
 
 int UdpTransport::send_broadcast(const ByteBuffer& bytes, uint16_t port) {
@@ -93,87 +155,89 @@ int UdpTransport::send_broadcast(const ByteBuffer& bytes, uint16_t port) {
 }
 
 int UdpTransport::send_multicast(const ByteBuffer& bytes, uint16_t port) {
-    return send_unicast(bytes, config_.multicast_group, port);
+    return send_unicast(bytes, impl_->config.multicast_group, port);
 }
 
-int UdpTransport::send_frame_unicast(const Frame& frame, const std::string& ip, uint16_t port) {
-    return send_unicast(codec_.encode(frame), ip, port);
+int UdpTransport::send_envelope_unicast(const SecureEnvelope& envelope,
+                                        const std::string& ip,
+                                        uint16_t port) {
+    return send_unicast(impl_->codec.encode(envelope), ip, port);
 }
 
-int UdpTransport::send_frame_broadcast(const Frame& frame, uint16_t port) {
-    return send_broadcast(codec_.encode(frame), port);
+int UdpTransport::send_envelope_broadcast(const SecureEnvelope& envelope, uint16_t port) {
+    return send_broadcast(impl_->codec.encode(envelope), port);
 }
 
-int UdpTransport::send_frame_multicast(const Frame& frame, uint16_t port) {
-    return send_multicast(codec_.encode(frame), port);
+int UdpTransport::send_envelope_multicast(const SecureEnvelope& envelope, uint16_t port) {
+    return send_multicast(impl_->codec.encode(envelope), port);
 }
 
 void UdpTransport::recv_loop() {
-    while (is_running_.load()) {
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET(sock_, &rfds);
-        timeval tv{};
-        tv.tv_sec = 0;
-        tv.tv_usec = 100 * 1000;
+    std::array<uint8_t, 4096> buf{};
 
-        const int ready = select(sock_ + 1, &rfds, nullptr, nullptr, &tv);
-        if (ready <= 0)
-            continue;
+    while (impl_->is_running.load()) {
+        std::error_code ec;
+        asio::ip::udp::endpoint from;
+        const size_t n = impl_->socket->receive_from(asio::buffer(buf), from, 0, ec);
 
-        sockaddr_in from{};
-        socklen_t from_len = sizeof(from);
-        uint8_t buf[4096];
-#ifdef _WIN32
-        const int n = recvfrom(sock_,
-                               reinterpret_cast<char*>(buf),
-                               sizeof(buf),
-                               0,
-                               reinterpret_cast<sockaddr*>(&from),
-                               &from_len);
-#else
-        const int n = static_cast<int>(
-            recvfrom(sock_, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&from), &from_len));
-#endif
-        if (n <= 0) {
-            if (bus_) {
+        if (ec) {
+            if (ec == asio::error::would_block || ec == asio::error::try_again) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(
+                    impl_->config.io_poll_interval_ms > 0 ? impl_->config.io_poll_interval_ms : 1));
+                continue;
+            }
+            if (!impl_->is_running.load() || is_socket_closed(ec)) {
+                break;
+            }
+
+            if (impl_->bus) {
                 ErrorEvent ee;
                 ee.code = ErrorCode::kSocketError;
                 ee.transport = TransportType::kUdpUnicast;
-                ee.message = "udp recvfrom failed";
-                bus_->publish_error(ee);
+                ee.message = std::string("udp receive failed: ") + ec.message();
+                impl_->bus->publish_error(ee);
             }
             continue;
         }
 
-        char ipstr[INET_ADDRSTRLEN] = {0};
-        inet_ntop(AF_INET, &from.sin_addr, ipstr, sizeof(ipstr));
-        const uint16_t port = ntohs(from.sin_port);
-        const std::string ip = ipstr;
+        const std::string ip = from.address().to_string(ec);
+        if (ec) {
+            continue;
+        }
+        const uint16_t port = from.port();
         const std::string peer_id = make_peer_id(ip, port);
 
-        std::lock_guard<std::mutex> lock(parser_mu_);
-        auto it = parsers_.find(peer_id);
-        if (it == parsers_.end()) {
-            it = parsers_.emplace(peer_id, FrameStreamParser(config_.max_buffer_bytes_per_peer))
-                     .first;
+        std::vector<SecureEnvelope> envelopes;
+        {
+            std::lock_guard<std::mutex> lock(impl_->parser_mu);
+            auto it = impl_->parsers.find(peer_id);
+            if (it == impl_->parsers.end()) {
+                it = impl_->parsers
+                         .emplace(peer_id,
+                                  EnvelopeStreamParser(impl_->config.max_buffer_bytes_per_peer))
+                         .first;
+            }
+
+            it->second.feed(buf.data(), n);
+            SecureEnvelope envelope;
+            DecodeResult dr;
+            while (it->second.pop_next(&envelope, &dr)) {
+                envelopes.push_back(envelope);
+            }
         }
 
-        it->second.feed(buf, static_cast<size_t>(n));
-
-        Frame frame;
-        DecodeResult dr;
-        while (it->second.pop_next(&frame, &dr)) {
-            FrameEvent ev;
-            ev.transport = (frame.header.seq == static_cast<uint8_t>(MessageId::SearchMessageID))
+        for (const auto& envelope : envelopes) {
+            EnvelopeEvent ev;
+            ev.transport = (envelope.target.scope == TargetScope::kBroadcast)
                                ? TransportType::kUdpBroadcast
                                : TransportType::kUdpUnicast;
             ev.peer.id = peer_id;
             ev.peer.ip = ip;
             ev.peer.port = port;
-            ev.frame = frame;
-            if (bus_)
-                bus_->publish_frame(ev);
+            ev.envelope = envelope;
+            if (impl_->bus) {
+                impl_->bus->publish_envelope(ev);
+            }
         }
     }
 }

@@ -1,224 +1,249 @@
 /**
  * @file src/transport/tcp_server.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include "sunraycom/transport/tcp_server.hpp"
 
+#include <chrono>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
 #include <vector>
 
-#include "socket_common.hpp"
+#include <asio.hpp>
+
+#include "tcp_stream_common.hpp"
 
 namespace sunraycom {
 
-TcpServer::TcpServer() = default;
+struct TcpServer::ClientConn {
+    PeerInfo peer;
+    std::atomic<bool> is_running{false};
+    std::thread rx_thread;
+    EnvelopeStreamParser parser;
+    std::shared_ptr<asio::ip::tcp::socket> socket;
+    std::mutex send_mu;
+
+    explicit ClientConn(size_t max_buffer_bytes) : parser(max_buffer_bytes) {}
+};
+
+struct TcpServer::Impl {
+    RuntimeConfig config;
+    EventBus* bus = nullptr;
+    ProtocolCodec codec;
+
+    std::atomic<bool> is_running{false};
+    asio::io_context accept_io;
+    std::unique_ptr<asio::ip::tcp::acceptor> acceptor;
+    std::thread accept_thread;
+
+    std::mutex mu;
+    std::unordered_map<std::string, std::shared_ptr<ClientConn>> clients;
+};
+
+bool is_socket_closed(const std::error_code& ec) {
+    return ec == asio::error::operation_aborted || ec == asio::error::bad_descriptor;
+}
+
+TcpServer::TcpServer() : impl_(std::make_unique<Impl>()) {}
 
 TcpServer::~TcpServer() {
     stop();
 }
 
 ErrorCode TcpServer::start(const RuntimeConfig& config, EventBus* bus) {
-    if (is_running_.load())
+    if (impl_->is_running.load()) {
         return ErrorCode::kOk;
-    if (bus == nullptr)
+    }
+    if (bus == nullptr) {
         return ErrorCode::kInvalidArgument;
-    if (!socket_env_init())
+    }
+
+    impl_->config = config;
+    impl_->bus = bus;
+
+    impl_->acceptor = std::make_unique<asio::ip::tcp::acceptor>(impl_->accept_io);
+
+    std::error_code ec;
+    impl_->acceptor->open(asio::ip::tcp::v4(), ec);
+    if (ec) {
+        impl_->acceptor.reset();
         return ErrorCode::kSocketError;
+    }
 
-    config_ = config;
-    bus_ = bus;
-
-    listen_sock_ = static_cast<int>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
-    if (listen_sock_ < 0)
+    impl_->acceptor->set_option(asio::socket_base::reuse_address(true), ec);
+    if (ec) {
+        impl_->acceptor.reset();
         return ErrorCode::kSocketError;
+    }
 
-    const int yes = 1;
-    setsockopt(
-        listen_sock_, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&yes), sizeof(yes));
-
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(config_.tcp_listen_port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    if (bind(listen_sock_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        close_socket(listen_sock_);
-        listen_sock_ = -1;
+    impl_->acceptor->bind(
+        asio::ip::tcp::endpoint(asio::ip::tcp::v4(), impl_->config.tcp_listen_port), ec);
+    if (ec) {
+        impl_->acceptor.reset();
         return ErrorCode::kBindError;
     }
-    if (listen(listen_sock_, 64) != 0) {
-        close_socket(listen_sock_);
-        listen_sock_ = -1;
+
+    impl_->acceptor->listen(asio::socket_base::max_listen_connections, ec);
+    if (ec) {
+        impl_->acceptor.reset();
         return ErrorCode::kListenError;
     }
+    impl_->acceptor->non_blocking(true, ec);
+    if (ec) {
+        impl_->acceptor.reset();
+        return ErrorCode::kSocketError;
+    }
 
-    is_running_.store(true);
-    accept_thread_ = std::thread(&TcpServer::accept_loop, this);
+    impl_->is_running.store(true);
+    impl_->accept_thread = std::thread(&TcpServer::accept_loop, this);
     return ErrorCode::kOk;
 }
 
 void TcpServer::stop() {
-    if (!is_running_.exchange(false))
+    if (!impl_->is_running.exchange(false)) {
         return;
-
-    if (listen_sock_ >= 0) {
-        close_socket(listen_sock_);
-        listen_sock_ = -1;
     }
 
-    if (accept_thread_.joinable())
-        accept_thread_.join();
+    if (impl_->acceptor) {
+        std::error_code ec;
+        impl_->acceptor->cancel(ec);
+        impl_->acceptor->close(ec);
+    }
+
+    if (impl_->accept_thread.joinable()) {
+        impl_->accept_thread.join();
+    }
 
     std::vector<std::shared_ptr<ClientConn>> clients;
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        for (auto& kv : clients_)
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        for (auto& kv : impl_->clients) {
             clients.push_back(kv.second);
-        clients_.clear();
+        }
+        impl_->clients.clear();
     }
 
-    for (auto& c : clients) {
+    for (const auto& c : clients) {
         c->is_running.store(false);
-        if (c->sock >= 0) {
-            close_socket(c->sock);
-            c->sock = -1;
+        if (c->socket) {
+            std::error_code ec;
+            c->socket->cancel(ec);
+            c->socket->close(ec);
         }
     }
-    for (auto& c : clients) {
-        if (c->rx_thread.joinable())
+
+    for (const auto& c : clients) {
+        if (c->rx_thread.joinable()) {
             c->rx_thread.join();
+        }
     }
+
+    impl_->acceptor.reset();
 }
 
 int TcpServer::send(const std::string& peer_id, const ByteBuffer& bytes) {
     std::shared_ptr<ClientConn> conn;
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        auto it = clients_.find(peer_id);
-        if (it == clients_.end())
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        auto it = impl_->clients.find(peer_id);
+        if (it == impl_->clients.end()) {
             return -1;
+        }
         conn = it->second;
     }
-    return send_all(conn->sock, bytes.data(), bytes.size());
+
+    if (!conn->socket) {
+        return -1;
+    }
+    return write_tcp_bytes(*conn->socket, conn->send_mu, bytes);
 }
 
-int TcpServer::send_frame(const std::string& peer_id, const Frame& frame) {
-    return send(peer_id, codec_.encode(frame));
+int TcpServer::send_envelope(const std::string& peer_id, const SecureEnvelope& envelope) {
+    return send(peer_id, impl_->codec.encode(envelope));
 }
 
 void TcpServer::broadcast(const ByteBuffer& bytes) {
     std::vector<std::shared_ptr<ClientConn>> clients;
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        for (auto& kv : clients_)
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        for (auto& kv : impl_->clients) {
             clients.push_back(kv.second);
+        }
     }
+
     for (const auto& c : clients) {
-        send_all(c->sock, bytes.data(), bytes.size());
+        if (!c->socket) {
+            continue;
+        }
+        std::error_code ec;
+        std::lock_guard<std::mutex> lock(c->send_mu);
+        asio::write(*c->socket, asio::buffer(bytes), ec);
     }
 }
 
-void TcpServer::broadcast_frame(const Frame& frame) {
-    broadcast(codec_.encode(frame));
+void TcpServer::broadcast_envelope(const SecureEnvelope& envelope) {
+    broadcast(impl_->codec.encode(envelope));
 }
 
 void TcpServer::accept_loop() {
-    while (is_running_.load()) {
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET(listen_sock_, &rfds);
-        timeval tv{};
-        tv.tv_sec = 0;
-        tv.tv_usec = 100 * 1000;
-
-        const int ready = select(listen_sock_ + 1, &rfds, nullptr, nullptr, &tv);
-        if (ready <= 0)
+    while (impl_->is_running.load()) {
+        auto socket = std::make_shared<asio::ip::tcp::socket>(impl_->accept_io);
+        std::error_code ec;
+        impl_->acceptor->accept(*socket, ec);
+        if (ec) {
+            if (ec == asio::error::would_block || ec == asio::error::try_again) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(
+                    impl_->config.io_poll_interval_ms > 0 ? impl_->config.io_poll_interval_ms : 1));
+                continue;
+            }
+            if (!impl_->is_running.load() || is_socket_closed(ec)) {
+                break;
+            }
             continue;
+        }
 
-        sockaddr_in cli{};
-        socklen_t cli_len = sizeof(cli);
-        const int client_sock =
-            static_cast<int>(accept(listen_sock_, reinterpret_cast<sockaddr*>(&cli), &cli_len));
-        if (client_sock < 0)
+        const auto endpoint = socket->remote_endpoint(ec);
+        if (ec) {
+            socket->close(ec);
             continue;
+        }
 
-        char ipstr[INET_ADDRSTRLEN] = {0};
-        inet_ntop(AF_INET, &cli.sin_addr, ipstr, sizeof(ipstr));
-        const uint16_t port = ntohs(cli.sin_port);
+        const std::string ip = endpoint.address().to_string(ec);
+        if (ec) {
+            socket->close(ec);
+            continue;
+        }
 
-        auto conn = std::make_shared<ClientConn>();
-        conn->sock = client_sock;
-        conn->peer.ip = ipstr;
-        conn->peer.port = port;
-        conn->peer.id = make_peer_id(conn->peer.ip, conn->peer.port);
+        auto conn = std::make_shared<ClientConn>(impl_->config.max_buffer_bytes_per_peer);
+        conn->socket = std::move(socket);
+        conn->socket->non_blocking(true, ec);
+        conn->peer.ip = ip;
+        conn->peer.port = endpoint.port();
+        conn->peer.id = make_tcp_peer_id(conn->peer.ip, conn->peer.port);
         conn->is_running.store(true);
 
         {
-            std::lock_guard<std::mutex> lock(mu_);
-            clients_[conn->peer.id] = conn;
+            std::lock_guard<std::mutex> lock(impl_->mu);
+            impl_->clients[conn->peer.id] = conn;
         }
 
-        if (bus_) {
-            LinkEvent le;
-            le.transport = TransportType::kTcpServer;
-            le.peer = conn->peer;
-            le.is_up = true;
-            bus_->publish_link(le);
-        }
+        publish_tcp_link_event(impl_->bus, TransportType::kTcpServer, conn->peer, true);
 
         conn->rx_thread = std::thread(&TcpServer::client_loop, this, conn);
     }
 }
 
-void TcpServer::client_loop(std::shared_ptr<ClientConn> conn) {
-    uint8_t buf[4096];
-    while (is_running_.load() && conn->is_running.load()) {
-#ifdef _WIN32
-        const int n = recv(conn->sock, reinterpret_cast<char*>(buf), sizeof(buf), 0);
-#else
-        const int n = static_cast<int>(recv(conn->sock, buf, sizeof(buf), 0));
-#endif
-        if (n <= 0)
-            break;
-
-        conn->parser.feed(buf, static_cast<size_t>(n));
-        Frame frame;
-        DecodeResult dr;
-        while (conn->parser.pop_next(&frame, &dr)) {
-            FrameEvent fe;
-            fe.transport = TransportType::kTcpServer;
-            fe.peer = conn->peer;
-            fe.frame = frame;
-            if (bus_)
-                bus_->publish_frame(fe);
-        }
-    }
-
-    conn->is_running.store(false);
-    if (bus_) {
-        LinkEvent le;
-        le.transport = TransportType::kTcpServer;
-        le.peer = conn->peer;
-        le.is_up = false;
-        bus_->publish_link(le);
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(mu_);
-        auto it = clients_.find(conn->peer.id);
-        if (it != clients_.end() && it->second.get() == conn.get()) {
-            clients_.erase(it);
-        }
-    }
-
-    if (conn->sock >= 0) {
-        close_socket(conn->sock);
-        conn->sock = -1;
-    }
-
-    if (conn->rx_thread.joinable() && conn->rx_thread.get_id() == std::this_thread::get_id()) {
-        conn->rx_thread.detach();
-    }
+void TcpServer::client_loop(const std::shared_ptr<ClientConn>& conn) {
+    run_tcp_read_loop(impl_->is_running,
+                      conn->is_running,
+                      *conn->socket,
+                      conn->parser,
+                      impl_->bus,
+                      conn->peer,
+                      TransportType::kTcpServer,
+                      impl_->config.io_poll_interval_ms);
 }
 
 }  // namespace sunraycom

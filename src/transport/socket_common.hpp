@@ -1,6 +1,6 @@
 /**
  * @file src/transport/socket_common.hpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #ifndef SUNRAYCOM_TRANSPORT_SOCKET_COMMON_HPP

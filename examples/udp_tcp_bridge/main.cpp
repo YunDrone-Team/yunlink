@@ -1,6 +1,6 @@
 /**
  * @file examples/udp_tcp_bridge/main.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include <chrono>
@@ -99,12 +99,12 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    auto tok =
-        runtime.event_bus().subscribe_frame([&runtime, &peer_id](const sunraycom::FrameEvent& ev) {
+    auto tok = runtime.event_bus().subscribe_envelope(
+        [&runtime, &peer_id](const sunraycom::EnvelopeEvent& ev) {
             if (ev.transport == sunraycom::TransportType::kUdpUnicast ||
                 ev.transport == sunraycom::TransportType::kUdpBroadcast) {
                 sunraycom::ProtocolCodec codec;
-                const auto bytes = codec.encode(ev.frame, false);
+                const auto bytes = codec.encode(ev.envelope, false);
                 runtime.tcp_clients().send(peer_id, bytes);
             }
         });

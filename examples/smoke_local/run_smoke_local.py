@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 @file examples/smoke_local/run_smoke_local.py
-@brief SunrayComLib 本机多进程冒烟测试编排脚本。
+@brief sunray_communication_lib 本机多进程冒烟测试编排脚本。
 """
 
 import argparse

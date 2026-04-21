@@ -1,6 +1,6 @@
 /**
  * @file examples/tcp_command_client/main.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/compat/legacy_adapter.hpp"
+#include "sunraycom/core/semantic_messages.hpp"
 #include "sunraycom/runtime/runtime.hpp"
 
 namespace {
@@ -76,6 +76,9 @@ int main(int argc, char** argv) {
     cfg.udp_bind_port = udp_bind;
     cfg.udp_target_port = udp_target;
     cfg.tcp_listen_port = tcp_listen;
+    cfg.self_identity.agent_type = sunraycom::AgentType::kGroundStation;
+    cfg.self_identity.agent_id = 7;
+    cfg.self_identity.role = sunraycom::EndpointRole::kController;
     if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
         std::cerr << "failed to start runtime\n";
         return 1;
@@ -88,17 +91,27 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    sunraycom::compat::LegacyAdapter adapter;
-    ::DataFrame hb{};
-    hb.seq = MessageID::HeartbeatMessageID;
-    hb.robot_ID = 1;
-    hb.data.heartbeat.init();
-    hb.data.heartbeat.agentType = 1;
-    hb.data.heartbeat.count = 1;
+    const uint64_t session_id = runtime.session_client().open_active_session(peer_id, "tcp_client");
+    if (session_id == 0) {
+        std::cerr << "open session failed\n";
+        runtime.stop();
+        return 3;
+    }
 
-    const auto bytes = adapter.encode_legacy(hb);
-    const int sent = runtime.tcp_clients().send(peer_id, bytes);
-    std::cout << "sent=" << sent << " bytes to " << peer_id << "\n";
+    const auto target = sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kUav, 1);
+    runtime.request_authority(
+        peer_id, session_id, target, sunraycom::ControlSource::kGroundStation, 3000);
+
+    sunraycom::GotoCommand cmd{};
+    cmd.x_m = 5.0F;
+    cmd.y_m = 0.0F;
+    cmd.z_m = 3.0F;
+    cmd.yaw_rad = 0.2F;
+    sunraycom::CommandHandle handle{};
+    const auto ec =
+        runtime.command_publisher().publish_goto(peer_id, session_id, target, cmd, &handle);
+    std::cout << "session=" << session_id << " message=" << handle.message_id
+              << " status=" << static_cast<int>(ec) << " peer=" << peer_id << "\n";
 
     runtime.tcp_clients().close_peer(peer_id);
     std::this_thread::sleep_for(std::chrono::seconds(1));

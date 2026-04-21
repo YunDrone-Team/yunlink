@@ -1,228 +1,254 @@
 /**
  * @file src/transport/tcp_client_pool.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include "sunraycom/transport/tcp_client_pool.hpp"
 
+#include <chrono>
+#include <mutex>
+#include <thread>
+#include <unordered_map>
 #include <vector>
 
-#include "socket_common.hpp"
+#include <asio.hpp>
+
+#include "tcp_stream_common.hpp"
 
 namespace sunraycom {
 
-TcpClientPool::TcpClientPool() = default;
+struct TcpClientPool::PeerConn {
+    PeerInfo peer;
+    std::atomic<bool> is_running{false};
+    std::thread rx_thread;
+    EnvelopeStreamParser parser;
+
+    asio::io_context io;
+    asio::ip::tcp::socket socket;
+    std::mutex send_mu;
+
+    explicit PeerConn(size_t max_buffer_bytes) : parser(max_buffer_bytes), socket(io) {}
+};
+
+struct TcpClientPool::Impl {
+    RuntimeConfig config;
+    EventBus* bus = nullptr;
+    ProtocolCodec codec;
+
+    std::atomic<bool> is_running{false};
+    std::mutex mu;
+    std::unordered_map<std::string, std::shared_ptr<PeerConn>> peers;
+};
+
+std::error_code connect_with_timeout(asio::ip::tcp::socket& socket,
+                                     const asio::ip::tcp::endpoint& endpoint,
+                                     int timeout_ms) {
+    auto& io = static_cast<asio::io_context&>(socket.get_executor().context());
+
+    std::error_code connect_ec = asio::error::would_block;
+    bool timed_out = false;
+
+    asio::steady_timer timer(io);
+    socket.async_connect(endpoint, [&](const std::error_code& ec) {
+        connect_ec = ec;
+        std::error_code cancel_ec;
+        timer.cancel(cancel_ec);
+    });
+
+    timer.expires_after(std::chrono::milliseconds(timeout_ms > 0 ? timeout_ms : 1));
+    timer.async_wait([&](const std::error_code& ec) {
+        if (!ec) {
+            timed_out = true;
+            std::error_code cancel_ec;
+            socket.cancel(cancel_ec);
+            socket.close(cancel_ec);
+        }
+    });
+
+    io.run();
+    io.restart();
+
+    if (timed_out) {
+        return asio::error::timed_out;
+    }
+    return connect_ec;
+}
+
+TcpClientPool::TcpClientPool() : impl_(std::make_unique<Impl>()) {}
 
 TcpClientPool::~TcpClientPool() {
     stop();
 }
 
 ErrorCode TcpClientPool::start(const RuntimeConfig& config, EventBus* bus) {
-    if (is_running_.load())
+    if (impl_->is_running.load()) {
         return ErrorCode::kOk;
-    if (bus == nullptr)
+    }
+    if (bus == nullptr) {
         return ErrorCode::kInvalidArgument;
-    if (!socket_env_init())
-        return ErrorCode::kSocketError;
-    config_ = config;
-    bus_ = bus;
-    is_running_.store(true);
+    }
+
+    impl_->config = config;
+    impl_->bus = bus;
+    impl_->is_running.store(true);
     return ErrorCode::kOk;
 }
 
 void TcpClientPool::stop() {
-    if (!is_running_.exchange(false))
+    if (!impl_->is_running.exchange(false)) {
         return;
+    }
 
     std::vector<std::shared_ptr<PeerConn>> peers;
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        for (auto& kv : peers_)
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        for (auto& kv : impl_->peers) {
             peers.push_back(kv.second);
-        peers_.clear();
+        }
+        impl_->peers.clear();
     }
 
-    for (auto& conn : peers) {
+    for (const auto& conn : peers) {
         conn->is_running.store(false);
-        if (conn->sock >= 0) {
-            close_socket(conn->sock);
-            conn->sock = -1;
-        }
+        std::error_code ec;
+        conn->socket.cancel(ec);
+        conn->socket.close(ec);
     }
-    for (auto& conn : peers) {
-        if (conn->rx_thread.joinable())
+
+    for (const auto& conn : peers) {
+        if (conn->rx_thread.joinable()) {
             conn->rx_thread.join();
+        }
     }
 }
 
 ErrorCode
 TcpClientPool::connect_peer(const std::string& ip, uint16_t port, std::string* out_peer_id) {
-    if (!is_running_.load())
+    if (!impl_->is_running.load()) {
         return ErrorCode::kRuntimeStopped;
+    }
 
-    const std::string peer_id = make_peer_id(ip, port);
+    const std::string peer_id = make_tcp_peer_id(ip, port);
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        if (peers_.find(peer_id) != peers_.end()) {
-            if (out_peer_id)
-                *out_peer_id = peer_id;
-            return ErrorCode::kOk;
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        auto it = impl_->peers.find(peer_id);
+        if (it != impl_->peers.end()) {
+            if (it->second->is_running.load()) {
+                if (out_peer_id) {
+                    *out_peer_id = peer_id;
+                }
+                return ErrorCode::kOk;
+            }
+            impl_->peers.erase(it);
         }
     }
 
-    SocketHandle sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock == kInvalidSocket)
-        return ErrorCode::kSocketError;
-
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    if (inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) != 1) {
-        close_socket(sock);
+    std::error_code ec;
+    const auto address = asio::ip::make_address(ip, ec);
+    if (ec) {
         return ErrorCode::kInvalidArgument;
     }
 
-    set_nonblocking(sock);
-    int rc = ::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-    bool ok = false;
-    if (rc == 0) {
-        ok = true;
-    } else {
-        if (wait_writable(sock, config_.connect_timeout_ms) && check_connect_success(sock)) {
-            ok = true;
-        }
+    auto conn = std::make_shared<PeerConn>(impl_->config.max_buffer_bytes_per_peer);
+    conn->peer.id = peer_id;
+    conn->peer.ip = ip;
+    conn->peer.port = port;
+
+    conn->socket.open(asio::ip::tcp::v4(), ec);
+    if (ec) {
+        return ErrorCode::kSocketError;
     }
 
-    if (!ok) {
-        close_socket(sock);
-        if (bus_) {
+    const std::error_code connect_ec = connect_with_timeout(
+        conn->socket, asio::ip::tcp::endpoint(address, port), impl_->config.connect_timeout_ms);
+
+    if (connect_ec) {
+        std::error_code close_ec;
+        conn->socket.close(close_ec);
+
+        if (impl_->bus) {
             ErrorEvent ee;
-            ee.code = ErrorCode::kConnectError;
+            ee.code = (connect_ec == asio::error::timed_out) ? ErrorCode::kTimeout
+                                                             : ErrorCode::kConnectError;
             ee.transport = TransportType::kTcpClient;
             ee.peer.id = peer_id;
             ee.peer.ip = ip;
             ee.peer.port = port;
-            ee.message = "tcp connect failed";
-            bus_->publish_error(ee);
+            ee.message = std::string("tcp connect failed: ") + connect_ec.message();
+            impl_->bus->publish_error(ee);
         }
-        return ErrorCode::kConnectError;
+
+        return (connect_ec == asio::error::timed_out) ? ErrorCode::kTimeout
+                                                      : ErrorCode::kConnectError;
     }
 
-    set_blocking(sock);
-
-    auto conn = std::make_shared<PeerConn>();
-    conn->sock = static_cast<int>(sock);
-    conn->peer.id = peer_id;
-    conn->peer.ip = ip;
-    conn->peer.port = port;
     conn->is_running.store(true);
+    conn->socket.non_blocking(true, ec);
 
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        peers_[peer_id] = conn;
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        impl_->peers[peer_id] = conn;
     }
 
-    if (bus_) {
-        LinkEvent le;
-        le.transport = TransportType::kTcpClient;
-        le.peer = conn->peer;
-        le.is_up = true;
-        bus_->publish_link(le);
-    }
+    publish_tcp_link_event(impl_->bus, TransportType::kTcpClient, conn->peer, true);
 
     conn->rx_thread = std::thread(&TcpClientPool::peer_loop, this, conn);
 
-    if (out_peer_id)
+    if (out_peer_id) {
         *out_peer_id = peer_id;
+    }
     return ErrorCode::kOk;
 }
 
 void TcpClientPool::close_peer(const std::string& peer_id) {
     std::shared_ptr<PeerConn> conn;
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        auto it = peers_.find(peer_id);
-        if (it == peers_.end())
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        auto it = impl_->peers.find(peer_id);
+        if (it == impl_->peers.end()) {
             return;
+        }
         conn = it->second;
-        peers_.erase(it);
+        impl_->peers.erase(it);
     }
 
     conn->is_running.store(false);
-    if (conn->sock >= 0) {
-        close_socket(conn->sock);
-        conn->sock = -1;
-    }
-    if (conn->rx_thread.joinable())
+    std::error_code ec;
+    conn->socket.cancel(ec);
+    conn->socket.close(ec);
+
+    if (conn->rx_thread.joinable() && conn->rx_thread.get_id() != std::this_thread::get_id()) {
         conn->rx_thread.join();
+    }
 }
 
 int TcpClientPool::send(const std::string& peer_id, const ByteBuffer& bytes) {
     std::shared_ptr<PeerConn> conn;
     {
-        std::lock_guard<std::mutex> lock(mu_);
-        auto it = peers_.find(peer_id);
-        if (it == peers_.end())
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        auto it = impl_->peers.find(peer_id);
+        if (it == impl_->peers.end()) {
             return -1;
+        }
         conn = it->second;
     }
-    return send_all(conn->sock, bytes.data(), bytes.size());
+
+    return write_tcp_bytes(conn->socket, conn->send_mu, bytes);
 }
 
-int TcpClientPool::send_frame(const std::string& peer_id, const Frame& frame) {
-    return send(peer_id, codec_.encode(frame));
+int TcpClientPool::send_envelope(const std::string& peer_id, const SecureEnvelope& envelope) {
+    return send(peer_id, impl_->codec.encode(envelope));
 }
 
-void TcpClientPool::peer_loop(std::shared_ptr<PeerConn> conn) {
-    uint8_t buf[4096];
-    while (is_running_.load() && conn->is_running.load()) {
-#ifdef _WIN32
-        const int n = recv(conn->sock, reinterpret_cast<char*>(buf), sizeof(buf), 0);
-#else
-        const int n = static_cast<int>(recv(conn->sock, buf, sizeof(buf), 0));
-#endif
-        if (n <= 0) {
-            break;
-        }
-
-        conn->parser.feed(buf, static_cast<size_t>(n));
-        Frame frame;
-        DecodeResult dr;
-        while (conn->parser.pop_next(&frame, &dr)) {
-            FrameEvent fe;
-            fe.transport = TransportType::kTcpClient;
-            fe.peer = conn->peer;
-            fe.frame = frame;
-            if (bus_)
-                bus_->publish_frame(fe);
-        }
-    }
-
-    conn->is_running.store(false);
-    if (bus_) {
-        LinkEvent le;
-        le.transport = TransportType::kTcpClient;
-        le.peer = conn->peer;
-        le.is_up = false;
-        bus_->publish_link(le);
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(mu_);
-        auto it = peers_.find(conn->peer.id);
-        if (it != peers_.end() && it->second.get() == conn.get()) {
-            peers_.erase(it);
-        }
-    }
-
-    if (conn->sock >= 0) {
-        close_socket(conn->sock);
-        conn->sock = -1;
-    }
-
-    if (conn->rx_thread.joinable() && conn->rx_thread.get_id() == std::this_thread::get_id()) {
-        conn->rx_thread.detach();
-    }
+void TcpClientPool::peer_loop(const std::shared_ptr<PeerConn>& conn) {
+    run_tcp_read_loop(impl_->is_running,
+                      conn->is_running,
+                      conn->socket,
+                      conn->parser,
+                      impl_->bus,
+                      conn->peer,
+                      TransportType::kTcpClient,
+                      impl_->config.io_poll_interval_ms);
 }
 
 }  // namespace sunraycom

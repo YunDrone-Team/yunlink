@@ -1,39 +1,64 @@
 /**
  * @file tests/test_parser.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include <iostream>
 
-#include "sunraycom/core/frame_stream_parser.hpp"
+#include "sunraycom/core/envelope_stream_parser.hpp"
+#include "sunraycom/core/semantic_messages.hpp"
 
 int main() {
     sunraycom::ProtocolCodec codec;
-    sunraycom::Frame a;
-    a.header.seq = 200;
-    a.header.robot_id = 1;
-    a.payload = {9, 8, 7};
+    const sunraycom::EndpointIdentity source{
+        sunraycom::AgentType::kGroundStation,
+        11,
+        sunraycom::EndpointRole::kController,
+    };
 
-    sunraycom::Frame b;
-    b.header.seq = 201;
-    b.header.robot_id = 2;
-    b.payload = {6, 5, 4, 3};
+    sunraycom::TakeoffCommand takeoff{};
+    takeoff.relative_height_m = 12.5F;
+    takeoff.max_velocity_mps = 3.2F;
+    const auto a = sunraycom::make_typed_envelope(
+        source,
+        sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kUav, 1),
+        7001,
+        8001,
+        sunraycom::QosClass::kReliableOrdered,
+        takeoff,
+        200);
+
+    sunraycom::VehicleEvent vehicle_event{};
+    vehicle_event.kind = sunraycom::VehicleEventKind::kTakeoff;
+    vehicle_event.severity = 2;
+    vehicle_event.detail = "armed";
+    const auto b = sunraycom::make_typed_envelope(
+        source,
+        sunraycom::TargetSelector::broadcast(sunraycom::AgentType::kGroundStation),
+        0,
+        8002,
+        sunraycom::QosClass::kBestEffort,
+        vehicle_event);
 
     const auto ba = codec.encode(a, true);
     const auto bb = codec.encode(b, true);
 
-    sunraycom::FrameStreamParser parser;
+    sunraycom::EnvelopeStreamParser parser;
     parser.feed(ba.data(), 5);
     parser.feed(ba.data() + 5, ba.size() - 5);
     parser.feed(bb);
 
-    sunraycom::Frame out;
-    if (!parser.pop_next(&out) || out.header.seq != a.header.seq) {
-        std::cerr << "first frame failed\n";
+    sunraycom::SecureEnvelope out;
+    if (!parser.pop_next(&out) || out.message_id != a.message_id ||
+        out.message_family != sunraycom::MessageFamily::kCommand) {
+        std::cerr << "first envelope failed\n";
         return 1;
     }
-    if (!parser.pop_next(&out) || out.header.seq != b.header.seq) {
-        std::cerr << "second frame failed\n";
+
+    if (!parser.pop_next(&out) || out.message_id != b.message_id ||
+        out.message_family != sunraycom::MessageFamily::kStateEvent ||
+        out.target.scope != sunraycom::TargetScope::kBroadcast) {
+        std::cerr << "second envelope failed\n";
         return 2;
     }
     return 0;

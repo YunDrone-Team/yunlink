@@ -1,6 +1,6 @@
 /**
  * @file examples/discovery_udp/main.cpp
- * @brief SunrayComLib source file.
+ * @brief sunray_communication_lib source file.
  */
 
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/compat/legacy_adapter.hpp"
+#include "sunraycom/core/semantic_messages.hpp"
 #include "sunraycom/runtime/runtime.hpp"
 
 namespace {
@@ -80,19 +80,25 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    auto tok = runtime.event_bus().subscribe_frame([](const sunraycom::FrameEvent& ev) {
-        std::cout << "rx seq=" << static_cast<int>(ev.frame.header.seq) << " from " << ev.peer.ip
-                  << ":" << ev.peer.port << "\n";
+    auto tok = runtime.event_bus().subscribe_envelope([](const sunraycom::EnvelopeEvent& ev) {
+        std::cout << "rx family=" << static_cast<int>(ev.envelope.message_family) << " from "
+                  << ev.peer.ip << ":" << ev.peer.port << "\n";
     });
 
-    sunraycom::compat::LegacyAdapter adapter;
-    ::DataFrame df{};
-    df.data.search.init();
-    df.data.search.port = cfg.udp_bind_port;
-    df.seq = MessageID::SearchMessageID;
-    df.robot_ID = 0;
-
-    auto bytes = adapter.encode_legacy(df);
+    sunraycom::ProtocolCodec codec;
+    sunraycom::VehicleEvent discovery{};
+    discovery.kind = sunraycom::VehicleEventKind::kInfo;
+    discovery.severity = 1;
+    discovery.detail = "discovery";
+    auto bytes = codec.encode(
+        sunraycom::make_typed_envelope(
+            {sunraycom::AgentType::kGroundStation, 0, sunraycom::EndpointRole::kObserver},
+            sunraycom::TargetSelector::broadcast(sunraycom::AgentType::kUnknown),
+            0,
+            0,
+            sunraycom::QosClass::kBestEffort,
+            discovery),
+        true);
     runtime.udp().send_broadcast(bytes, cfg.udp_target_port);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(hold_ms));

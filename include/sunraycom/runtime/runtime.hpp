@@ -6,69 +6,228 @@
 #ifndef SUNRAYCOM_RUNTIME_RUNTIME_HPP
 #define SUNRAYCOM_RUNTIME_RUNTIME_HPP
 
+#include <functional>
+#include <memory>
+#include <string>
+
 #include "sunraycom/core/event_bus.hpp"
 #include "sunraycom/core/runtime_config.hpp"
+#include "sunraycom/core/semantic_messages.hpp"
 #include "sunraycom/transport/tcp_client_pool.hpp"
 #include "sunraycom/transport/tcp_server.hpp"
 #include "sunraycom/transport/udp_transport.hpp"
 
 namespace sunraycom {
 
-/**
- * @brief SunrayComLib 统一运行时。
- */
+class Runtime;
+
+class SessionClient {
+  public:
+    explicit SessionClient(Runtime* runtime = nullptr);
+
+    uint64_t open_active_session(const std::string& peer_id, const std::string& node_name);
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
+class SessionServer {
+  public:
+    explicit SessionServer(Runtime* runtime = nullptr);
+
+    bool has_active_session(uint64_t session_id) const;
+    bool describe_session(uint64_t session_id, SessionDescriptor* out) const;
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
+class CommandPublisher {
+  public:
+    explicit CommandPublisher(Runtime* runtime = nullptr);
+
+    ErrorCode publish_takeoff(const std::string& peer_id,
+                              uint64_t session_id,
+                              const TargetSelector& target,
+                              const TakeoffCommand& payload,
+                              CommandHandle* out_handle = nullptr);
+    ErrorCode publish_land(const std::string& peer_id,
+                           uint64_t session_id,
+                           const TargetSelector& target,
+                           const LandCommand& payload,
+                           CommandHandle* out_handle = nullptr);
+    ErrorCode publish_return(const std::string& peer_id,
+                             uint64_t session_id,
+                             const TargetSelector& target,
+                             const ReturnCommand& payload,
+                             CommandHandle* out_handle = nullptr);
+    ErrorCode publish_goto(const std::string& peer_id,
+                           uint64_t session_id,
+                           const TargetSelector& target,
+                           const GotoCommand& payload,
+                           CommandHandle* out_handle = nullptr);
+    ErrorCode publish_velocity_setpoint(const std::string& peer_id,
+                                        uint64_t session_id,
+                                        const TargetSelector& target,
+                                        const VelocitySetpointCommand& payload,
+                                        CommandHandle* out_handle = nullptr);
+    ErrorCode publish_trajectory_chunk(const std::string& peer_id,
+                                       uint64_t session_id,
+                                       const TargetSelector& target,
+                                       const TrajectoryChunkCommand& payload,
+                                       CommandHandle* out_handle = nullptr);
+    ErrorCode publish_formation_task(const std::string& peer_id,
+                                     uint64_t session_id,
+                                     const TargetSelector& target,
+                                     const FormationTaskCommand& payload,
+                                     CommandHandle* out_handle = nullptr);
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
+class StateSubscriber {
+  public:
+    using VehicleCoreHandler = std::function<void(const TypedMessage<VehicleCoreState>&)>;
+
+    explicit StateSubscriber(Runtime* runtime = nullptr);
+
+    size_t subscribe_vehicle_core(VehicleCoreHandler cb);
+    void unsubscribe(size_t token);
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
+class EventSubscriber {
+  public:
+    using VehicleEventHandler = std::function<void(const TypedMessage<VehicleEvent>&)>;
+    using CommandResultHandler = std::function<void(const CommandResultView&)>;
+
+    explicit EventSubscriber(Runtime* runtime = nullptr);
+
+    size_t subscribe_vehicle_event(VehicleEventHandler cb);
+    size_t subscribe_command_results(CommandResultHandler cb);
+    void unsubscribe(size_t token);
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
 class Runtime {
   public:
     Runtime();
     ~Runtime();
 
-    /**
-     * @brief 启动运行时。
-     * @param config 运行时配置。
-     * @return 错误码。
-     */
     ErrorCode start(const RuntimeConfig& config);
-    /**
-     * @brief 停止运行时并释放资源。
-     */
     void stop();
 
-    /**
-     * @brief 访问事件总线。
-     * @return 事件总线引用。
-     */
     EventBus& event_bus() {
         return bus_;
     }
-    /**
-     * @brief 访问 UDP 传输组件。
-     * @return UDP 传输组件引用。
-     */
     UdpTransport& udp() {
         return udp_;
     }
-    /**
-     * @brief 访问 TCP 客户端池组件。
-     * @return TCP 客户端池引用。
-     */
     TcpClientPool& tcp_clients() {
         return tcp_clients_;
     }
-    /**
-     * @brief 访问 TCP 服务端组件。
-     * @return TCP 服务端引用。
-     */
     TcpServer& tcp_server() {
         return tcp_server_;
     }
 
+    SessionClient& session_client() {
+        return session_client_;
+    }
+    SessionServer& session_server() {
+        return session_server_;
+    }
+    CommandPublisher& command_publisher() {
+        return command_publisher_;
+    }
+    StateSubscriber& state_subscriber() {
+        return state_subscriber_;
+    }
+    EventSubscriber& event_subscriber() {
+        return event_subscriber_;
+    }
+
+    ErrorCode request_authority(const std::string& peer_id,
+                                uint64_t session_id,
+                                const TargetSelector& target,
+                                ControlSource source,
+                                uint32_t lease_ttl_ms,
+                                bool allow_preempt = false);
+    ErrorCode release_authority(const std::string& peer_id,
+                                uint64_t session_id,
+                                const TargetSelector& target);
+    bool current_authority(AuthorityLease* out) const;
+
+    ErrorCode publish_vehicle_core_state(const std::string& peer_id,
+                                         const TargetSelector& target,
+                                         const VehicleCoreState& payload,
+                                         uint64_t session_id = 0);
+    ErrorCode publish_vehicle_event(const std::string& peer_id,
+                                    const TargetSelector& target,
+                                    const VehicleEvent& payload,
+                                    uint64_t session_id = 0);
+
   private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+
     RuntimeConfig config_;
     EventBus bus_;
     UdpTransport udp_;
     TcpClientPool tcp_clients_;
     TcpServer tcp_server_;
+    SessionClient session_client_;
+    SessionServer session_server_;
+    CommandPublisher command_publisher_;
+    StateSubscriber state_subscriber_;
+    EventSubscriber event_subscriber_;
     bool is_started_ = false;
+
+    uint64_t allocate_session_id();
+    uint64_t allocate_message_id();
+    ErrorCode send_session_payload(const std::string& peer_id,
+                                   uint64_t session_id,
+                                   uint64_t correlation_id,
+                                   uint16_t message_type,
+                                   const ByteBuffer& payload,
+                                   uint32_t ttl_ms);
+    ErrorCode publish_command_payload(const std::string& peer_id,
+                                      uint64_t session_id,
+                                      const TargetSelector& target,
+                                      uint16_t message_type,
+                                      const ByteBuffer& payload,
+                                      CommandHandle* out_handle,
+                                      uint32_t ttl_ms);
+    ErrorCode send_envelope_to_peer(const std::string& peer_id, const SecureEnvelope& envelope);
+    ErrorCode reply_on_route(const EnvelopeEvent& inbound, const SecureEnvelope& envelope);
+    bool describe_session_internal(uint64_t session_id, SessionDescriptor* out) const;
+    void unsubscribe_semantic(size_t token);
+    size_t subscribe_vehicle_core_internal(StateSubscriber::VehicleCoreHandler cb);
+    size_t subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb);
+    size_t subscribe_command_result_internal(EventSubscriber::CommandResultHandler cb);
+    void handle_session_envelope(const EnvelopeEvent& ev);
+    void handle_authority_envelope(const EnvelopeEvent& ev);
+    void handle_command_envelope(const EnvelopeEvent& ev);
+    void handle_state_snapshot_envelope(const EnvelopeEvent& ev);
+    void handle_state_event_envelope(const EnvelopeEvent& ev);
+    void handle_command_result_envelope(const EnvelopeEvent& ev);
+    void handle_envelope(const EnvelopeEvent& ev);
+    void publish_command_result_sequence(const EnvelopeEvent& inbound, const SecureEnvelope& cmd);
+
+    friend class SessionClient;
+    friend class SessionServer;
+    friend class CommandPublisher;
+    friend class StateSubscriber;
+    friend class EventSubscriber;
 };
 
 }  // namespace sunraycom
