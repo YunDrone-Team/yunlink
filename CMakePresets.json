@@ -1,0 +1,57 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ninja-debug",
+      "displayName": "Ninja Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ninja-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SUNRAYCOM_BUILD_EXAMPLES": "ON",
+        "SUNRAYCOM_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "ninja-release",
+      "displayName": "Ninja Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SUNRAYCOM_BUILD_EXAMPLES": "ON",
+        "SUNRAYCOM_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "ci-ninja",
+      "displayName": "Ninja CI Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ci-ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SUNRAYCOM_BUILD_EXAMPLES": "ON",
+        "SUNRAYCOM_BUILD_TESTS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-debug",
+      "configurePreset": "ninja-debug"
+    },
+    {
+      "name": "ninja-release",
+      "configurePreset": "ninja-release"
+    },
+    {
+      "name": "ci-ninja",
+      "configurePreset": "ci-ninja"
+    }
+  ]
+}

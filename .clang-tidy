@@ -1,0 +1,13 @@
+Checks: >-
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  portability-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  -bugprone-branch-clone,
+  -bugprone-unused-return-value,
+  -performance-enum-size
+HeaderFilterRegex: '^(include|src)/'
+FormatStyle: file
+WarningsAsErrors: '*'
