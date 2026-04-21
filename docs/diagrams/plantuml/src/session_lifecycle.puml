@@ -1,0 +1,17 @@
+@startuml
+title 会话状态机
+skinparam backgroundColor white
+skinparam shadowing false
+
+[*] --> Discovered
+Discovered --> Handshaking : SessionHello
+Handshaking --> Authenticated : SessionAuthenticate 成功
+Handshaking --> Closed : 认证失败
+Authenticated --> Negotiated : SessionCapabilities 接受
+Negotiated --> Active : SessionReady + major 匹配
+Negotiated --> Closed : major 不匹配
+Active --> Draining : transport 断连\n或主动收尾
+Draining --> Closed : 清理完成
+Active --> Closed : 显式关闭
+Closed --> [*]
+@enduml

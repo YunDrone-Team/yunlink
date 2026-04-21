@@ -1,0 +1,26 @@
+@startuml
+title 场景：地面站控制单架 UAV
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor "Ground Station" as GS
+participant "UAV Runtime" as UAV
+participant "Flight Executor" as FC
+
+GS -> UAV : SessionHello / Authenticate /\nCapabilities / Ready
+UAV --> GS : Session 进入 Active
+
+GS -> UAV : AuthorityRequest(Claim)\ntarget = Entity(UAV#1)
+UAV --> GS : Authority granted
+
+GS -> UAV : Command.Goto\nsession_id != 0
+UAV --> GS : CommandResult.Received
+UAV --> GS : CommandResult.Accepted
+UAV -> FC : 执行 Goto
+FC --> UAV : 执行中 / 完成
+UAV --> GS : CommandResult.InProgress
+UAV --> GS : CommandResult.Succeeded
+
+UAV --> GS : StateSnapshot.VehicleCore
+UAV --> GS : StateEvent.VehicleEvent (可选)
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+title SecureEnvelope 线包布局
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+rectangle "Magic\n4 bytes\n'S' 'R' 'C' 'M'" as magic #E8F3FF
+rectangle "Fixed Header\n72 bytes after magic\nprotocol_major\nheader_version\nflags\nheader_len\npayload_len\nqos_class\nmessage_family\nmessage_type\nschema_version\nsession_id\nmessage_id\ncorrelation_id\ncreated_at_ms\nttl_ms\nsource\ntarget meta\nsecurity meta" as fixed #FFF2CC
+rectangle "Variable Header\ntarget_ids[target_count]\nauth_tag[auth_tag_len]" as var #FCE5CD
+rectangle "Payload\nschema binary body" as payload #D5E8D4
+rectangle "Checksum\n4 bytes\nuint32 additive sum" as checksum #F4CCCC
+
+magic -down-> fixed
+fixed -down-> var
+var -down-> payload
+payload -down-> checksum
+
+note right of fixed
+v1 固定头长度 = 76 bytes
+
+header_len = 76
+           + 4 * target_count
+           + auth_tag_len
+end note
+
+note right of payload
+payload 由
+message_family +
+message_type +
+schema_version
+唯一解释
+end note
+@enduml

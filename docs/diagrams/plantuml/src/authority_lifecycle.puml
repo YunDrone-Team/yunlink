@@ -1,0 +1,19 @@
+@startuml
+title 控制权状态机
+skinparam backgroundColor white
+skinparam shadowing false
+
+[*] --> Observer
+Observer --> PendingGrant : Claim
+PendingGrant --> Controller : Grant
+PendingGrant --> Rejected : Reject
+Rejected --> Observer
+Controller --> Controller : Renew
+Controller --> Preempting : Preempt
+Preempting --> Revoked : 被抢占
+Preempting --> Controller : 抢占成功
+Controller --> Released : Release
+Controller --> Revoked : Lease Expired
+Released --> Observer
+Revoked --> Observer
+@enduml

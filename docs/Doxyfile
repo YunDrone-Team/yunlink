@@ -1,4 +1,4 @@
-PROJECT_NAME           = "SunrayComLib"
+PROJECT_NAME           = "sunray_communication_lib"
 PROJECT_BRIEF          = "Cross-platform communication middleware for Sunray"
 OUTPUT_DIRECTORY       = docs/doxygen_output
 CREATE_SUBDIRS         = NO

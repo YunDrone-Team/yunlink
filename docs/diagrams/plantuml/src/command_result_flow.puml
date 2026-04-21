@@ -1,0 +1,24 @@
+@startuml
+title 命令与执行反馈时序
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor "Ground Station" as GS
+participant "Protocol Runtime" as RT
+participant "Vehicle Executor" as EX
+
+GS -> RT : Command.Goto\nmessage_id = 8101\ncorrelation_id = 8101
+RT --> GS : CommandResult.Received\ncorrelation_id = 8101
+RT -> EX : 调度执行
+EX --> RT : 语义校验通过
+RT --> GS : CommandResult.Accepted\ncorrelation_id = 8101
+EX --> RT : 执行中
+RT --> GS : CommandResult.InProgress\nprogress = 60
+EX --> RT : 执行完成
+RT --> GS : CommandResult.Succeeded\nprogress = 100
+
+note right of GS
+失败路径可替换终态为：
+Failed / Cancelled / Expired
+end note
+@enduml

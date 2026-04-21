@@ -1,0 +1,26 @@
+@startuml
+title 场景：地面站控制单台 UGV
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor "Ground Station" as GS
+participant "UGV Runtime" as UGV
+participant "Drive Executor" as DRV
+
+GS -> UGV : SessionHello / Authenticate /\nCapabilities / Ready
+UGV --> GS : Session 进入 Active
+
+GS -> UGV : AuthorityRequest(Claim)\ntarget = Entity(UGV#21)
+UGV --> GS : Authority granted
+
+loop 连续控制
+  GS -> UGV : Command.VelocitySetpoint\nshort TTL
+  UGV --> GS : CommandResult.Received / Accepted
+end
+
+GS -> UGV : Command.TrajectoryChunk (可选)
+UGV -> DRV : 执行速度或轨迹
+DRV --> UGV : 状态变化 / 故障
+UGV --> GS : StateSnapshot.VehicleCore
+UGV --> GS : StateEvent.VehicleEvent(Fault) (可选)
+@enduml

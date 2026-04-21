@@ -1,0 +1,39 @@
+@startuml
+title Sunray 协议总体上下文图
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+
+rectangle "Ground Station\n(agent_type = kGroundStation)" as gs #E8F3FF
+
+package "Sunray Protocol" #F8F8F8 {
+  rectangle "控制面\nSession / Authority /\nCommand / CommandResult" as control #FFF2CC
+  rectangle "状态面\nStateSnapshot /\nStateEvent" as state #D5E8D4
+  rectangle "Bulk 发现面\nBulkChannelDescriptor" as bulk #FCE5CD
+}
+
+rectangle "UAV Onboard Computer\n(agent_type = kUav)" as uav #EAF7EA
+rectangle "UGV Compute Node\n(agent_type = kUgv)" as ugv #EAF7EA
+rectangle "Swarm Coordinator\nor Group Endpoint" as swarm #EAF7EA
+
+gs --> control : 规划/控制指令
+uav --> state : 快照/事件
+ugv --> state : 快照/事件
+swarm --> state : 群组状态/成员事件
+
+gs --> bulk : 发现/授权
+bulk --> uav : 视频/点云 URI
+bulk --> ugv : 地图/视频 URI
+bulk --> swarm : 群组大流描述
+
+control --> uav : 单 UAV
+control --> ugv : 单 UGV
+control --> swarm : Group Target / Broadcast
+
+note bottom of control
+统一信封总线承载控制语义，
+不再使用旧 seq + robot_id 模型。
+end note
+@enduml

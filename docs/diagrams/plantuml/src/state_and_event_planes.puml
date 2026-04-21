@@ -1,0 +1,30 @@
+@startuml
+title 状态面与事件面边界
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+package "Onboard / Vehicle Side" #F8F8F8 {
+  rectangle "状态采样器" as sampler #D5E8D4
+  rectangle "事件检测器" as detector #FCE5CD
+  rectangle "Bulk Producer" as producer #E8F3FF
+}
+
+package "Ground Station Side" #F8F8F8 {
+  rectangle "StateSubscriber" as sub_state #D5E8D4
+  rectangle "EventSubscriber" as sub_event #FCE5CD
+  rectangle "Bulk Consumer" as sub_bulk #E8F3FF
+}
+
+sampler --> sub_state : StateSnapshot.VehicleCore\n周期 / 可覆盖 / 最新值
+detector --> sub_event : StateEvent.VehicleEvent\n离散 / 稀疏 / 关键变化
+producer --> sub_bulk : BulkChannelDescriptor\n主协议发现，旁路传输内容
+
+note bottom of sampler
+快照不应承载一次性告警文本
+end note
+
+note bottom of detector
+事件不应用来重建完整姿态状态
+end note
+@enduml

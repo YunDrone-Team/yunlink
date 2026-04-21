@@ -1,71 +1,83 @@
-# SunrayComLib
+# sunray_communication_lib
 
-SunrayComLib 是从 Sunray Station 中拆分出的跨平台通信库，提供协议兼容的 TCP/UDP 传输能力、旧协议适配层、C++ API 与 C ABI。
+[![CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/sunray_communication_lib/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/YunDrone-Team/sunray_communication_lib/actions/workflows/ci.yml)
+![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B)
+![CMake](https://img.shields.io/badge/CMake-3.25%2B-064F8C?style=for-the-badge&logo=cmake)
+![Ninja](https://img.shields.io/badge/Build-Ninja-000000?style=for-the-badge&logo=ninja)
+![Targets](https://img.shields.io/badge/Targets-UAV%20%7C%20UGV%20%7C%20Swarm-0A7E8C?style=for-the-badge)
+![SDK](https://img.shields.io/badge/API-C%2B%2B%20%2B%20C-2E8B57?style=for-the-badge)
 
-本仓库对齐 `sunray-codestyle`（v1.1，2026-02-03）中的可执行约束：命名风格、`clang-format`、Ruff、Doxygen 文件头与接口注释。
+`sunray_communication_lib` 是 Sunray 的统一通信库，面向地面站、无人机机载计算机、无人车车载计算机与集群控制场景。项目提供稳定的 `SecureEnvelope` 线包、语义化消息层、统一 runtime、类型化 C++ SDK 与最小 C ABI，用于构建控制、状态、事件与会话类通信链路。
 
-## 主要能力
+## 文档导航
 
-- 基于统一运行时的 UDP/TCP 收发
-- 协议编解码与流式解析
-- 兼容旧版 `legacy_sunray` 数据模型与编解码
-- 提供 C++ 与 C 两套调用接口
+- 协议导航页：
+  [docs/protocol/README.md](docs/protocol/README.md)
+- 协议主规范：
+  [docs/protocol/sunray-unified-protocol-spec.md](docs/protocol/sunray-unified-protocol-spec.md)
+- 接入指南：
+  [docs/protocol/integration-guide.md](docs/protocol/integration-guide.md)
+- 场景 walkthrough：
+  [docs/protocol/scenario-walkthroughs.md](docs/protocol/scenario-walkthroughs.md)
+- 实现状态：
+  [docs/protocol/implementation-status.md](docs/protocol/implementation-status.md)
+- 迁移说明：
+  [docs/protocol/migration-notes.md](docs/protocol/migration-notes.md)
+- API Reference（可选生成）：
+  `docs/doxygen_output/html/index.html`
 
-## 构建与测试
-
-```bash
-cmake -S . -B build -DSUNRAYCOM_BUILD_EXAMPLES=ON -DSUNRAYCOM_BUILD_TESTS=ON
-cmake --build build -j
-ctest --test-dir build --output-on-failure
-```
-
-## 代码风格与格式化
-
-C++（`.clang-format`）：
-
-```bash
-clang-format -style=file -i $(rg --files include src examples tests | rg '\.(hpp|h|cpp)$')
-```
-
-Python（`pyproject.toml` + Ruff）：
-
-```bash
-ruff format .
-ruff check .
-```
-
-## 本机冒烟测试（多进程）
-
-手动执行：
+## 快速开始
 
 ```bash
-python3 examples/smoke_local/run_smoke_local.py --bin-dir build
+git clone https://github.com/YunDrone-Team/sunray_communication_lib.git
+cd sunray_communication_lib
+git submodule update --init --recursive
+cmake --preset ninja-debug
+python3 tools/build_fast.py --preset ninja-debug
+ctest --test-dir build/ninja-debug --output-on-failure
 ```
 
-仅运行冒烟用例：
+默认推荐使用 `Ninja` 作为构建后端。构建并行度由 [`tools/build_fast.py`](/Users/groove/Project/work/YunDrone/sunray_communication_lib/tools/build_fast.py) 自动计算，策略固定为 `max(1, 逻辑核心数 - 1)`。旧的 `cmake -S . -B build` 路径仍可用，但不再是推荐入口。
+
+## 项目能力
+
+- 面向单 UAV、单 UGV、group target、broadcast 四类目标域
+- 提供 `Session`、`Authority`、`Command`、`CommandResult`、`StateSnapshot`、`StateEvent`、`BulkChannelDescriptor` 七大消息族
+- 内建会话、能力协商、控制权租约与三段式命令结果流
+- 支持 TCP / UDP 承载，主控制链路与 bulk 描述协同工作
+- 默认采用 `CMake + Ninja` 工作流，并内建 `clang-format`、`clang-tidy`、`maxline` 质量护栏
+
+## 构建与质量检查
+
+常用命令：
 
 ```bash
-ctest --test-dir build -R smoke_examples_local --output-on-failure
+cmake --preset ninja-debug
+python3 tools/build_fast.py --preset ninja-debug
+python3 tools/build_fast.py --preset ninja-debug --target lint
+ctest --test-dir build/ninja-debug -R smoke_examples_local --output-on-failure
 ```
 
-该冒烟测试会在单机上编排多个示例进程，覆盖两条链路：
+当前质量护栏包括：
 
-1. TCP 直连：`tcp_command_client -> telemetry_receiver`
-2. UDP 转 TCP：`discovery_udp -> udp_tcp_bridge -> telemetry_receiver`
+- `.clang-format`：统一 C++ 排版
+- `.clang-tidy`：静态检查
+- `tools/check_core_maxline.sh`：核心代码文件行数约束
+- GitHub Actions：自动验证构建、lint 与测试链路
 
-## 文档生成（Doxygen）
+## 示例与依赖
+
+- 示例程序位于 `examples/`
+- `standalone Asio 1.30.2` 以 Git submodule 固定在 `thirdparty/asio`
+- 头文件目录为 `thirdparty/asio/asio/include`
+
+手动运行 smoke 示例：
 
 ```bash
-doxygen docs/Doxyfile
+python3 examples/smoke_local/run_smoke_local.py --bin-dir build/ninja-debug
 ```
 
-生成入口：`docs/doxygen_output/html/index.html`
+## 仓库
 
-## 目录结构
-
-- `include/`：公开头文件
-- `src/`：核心实现
-- `compat/legacy_sunray/`：旧协议模型与编解码兼容层
-- `examples/`：示例程序
-- `tests/`：单元、集成与回归测试
-- `docs/`：协议说明与迁移文档
+- GitHub:
+  [YunDrone-Team/sunray_communication_lib](https://github.com/YunDrone-Team/sunray_communication_lib)
