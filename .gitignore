@@ -25,9 +25,6 @@ compile_commands.json
 *.ninja
 .ninja_*
 
-# Generated docs
-docs/doxygen_output/
-
 # Python
 __pycache__/
 *.pyc

@@ -134,14 +134,14 @@ Sunray Protocol 逻辑上分成三条面：
 | Transport | 提供 TCP/UDP 等底层承载，不定义业务语义。 |
 | `SecureEnvelope` Wire Layer | 统一头部、QoS、会话、寻址、安全上下文和校验。 |
 | Semantic Message Layer | 通过消息族和业务类型表达会话、控制权、命令、状态和 Bulk 描述。 |
-| SDK Layer | `SessionClient`、`AuthorityLease`、`CommandPublisher`、`StateSubscriber` 等语义接口。 |
+| SDK Layer | `Runtime` 及其 `SessionClient`、`SessionServer`、`CommandPublisher`、`StateSubscriber`、`EventSubscriber` 等语义接口。 |
 
 ### 5.2 SDK 语义接口映射
 
 | SDK 接口 | 对应协议面 |
 | --- | --- |
 | `SessionClient` / `SessionServer` | `Session` |
-| `AuthorityLease` / `Runtime::request_authority()` | `Authority` |
+| `Runtime::request_authority()` / `Runtime::release_authority()` / `Runtime::current_authority()` | `Authority` |
 | `CommandPublisher` | `Command` |
 | `EventSubscriber` for `CommandResult` | `CommandResult` |
 | `StateSubscriber` | `StateSnapshot` |
@@ -278,6 +278,12 @@ header_len = 76 + target_count * 4 + auth_tag_len
 2. `scope = kGroup` 时按组成员关系匹配。
 3. `scope = kEntity` 时按 `target_ids` 精确匹配。
 
+当前 repo 的最小实现仍有边界：
+
+- `kEntity` 已按 `target_ids` 精确匹配。
+- `kGroup` 当前还没有真实组成员关系，runtime 只按 `target_type` 做粗匹配。
+- 这些实现限制不改变本规范的应然要求，但接入当前仓库时必须联读 [implementation-status.md](implementation-status.md)。
+
 ## 8. QoS 与传输语义
 
 ### 8.1 `QosClass`
@@ -358,6 +364,8 @@ header_len = 76 + target_count * 4 + auth_tag_len
 - `message_family = Session`
 - `qos_class = kReliableOrdered`
 - 同一握手事务共享同一个 `correlation_id`
+
+当前 repo 的最小会话实现就是上述“发起方单向发送四条消息、接收方本地推进状态”的路径；更完整的双向协商、断链恢复和能力裁决仍属于待补齐实现。
 
 ### 9.5 字段要求
 
@@ -620,6 +628,14 @@ header_len = 76 + target_count * 4 + auth_tag_len
 - 快照应能让观察端快速理解当前核心控制状态。
 - 快照不应混入只出现一次的故障文本或临时事件语义。
 
+对于 UAV 接入，协议允许在 `VehicleCoreState` 之外补充更具业务语义的快照类型，例如：
+
+- `Px4StateSnapshot`
+- `OdomStatusSnapshot`
+- `UavControlFsmStateSnapshot`
+- `UavControllerStateSnapshot`
+- `GimbalParamsSnapshot`
+
 ### 13.3 `StateEvent`
 
 当前最小事件类型为 `VehicleEvent`，字段包括：
@@ -743,6 +759,13 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 本规范定义协议应有能力，不直接承担实现覆盖矩阵与限制报告。当前 repo 的实现覆盖、已知限制与接入含义，请阅读 [implementation-status.md](implementation-status.md)。
 
+特别是以下条目，不能只从规范正文推断“仓库已经具备”：
+
+- `AuthorityStatus` 主动回执
+- `kGroup` 的真实成员级匹配与群组执行
+- TTL 在 runtime 收包路径中的自动强制执行
+- bulk 通道的运行时消费与管理
+
 ## 18. 接入与联读导航
 
 接入步骤、联调观察点与最小闭环建议，请阅读 [integration-guide.md](integration-guide.md)。
@@ -806,6 +829,11 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | 编号 | 名称 |
 | --- | --- |
 | `1` | `VehicleCoreState` |
+| `2` | `Px4StateSnapshot` |
+| `3` | `OdomStatusSnapshot` |
+| `4` | `UavControlFsmStateSnapshot` |
+| `5` | `UavControllerStateSnapshot` |
+| `6` | `GimbalParamsSnapshot` |
 
 #### `StateEvent`
 
@@ -823,15 +851,20 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 ```bash
 ./tools/render_protocol_diagrams.sh
+doxygen docs/Doxyfile
 ```
 
-脚本会把：
+脚本与命令会把：
 
 - `docs/diagrams/plantuml/src/*.puml`
 
 渲染到：
 
 - `docs/diagrams/plantuml/svg/*.svg`
+
+并把 API Reference 生成到：
+
+- `build/doxygen/html/`
 
 ### 19.4 图目录
 

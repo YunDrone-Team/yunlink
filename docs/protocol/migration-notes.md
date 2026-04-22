@@ -39,13 +39,19 @@
 3. 再把命令、结果、快照、事件按消息族拆开
 4. 最后处理群组目标与 bulk 旁路能力
 
-## 5. 对代码接入者的提示
+## 5. 面向当前仓库 API 的落点
+
+- 如果你需要 typed C++ 接入，优先从 `Runtime`、`SessionClient`、`CommandPublisher`、`StateSubscriber`、`EventSubscriber` 入手。
+- 如果你需要嵌入式或跨语言接入，当前 C ABI 更接近“transport + 事件轮询层”，而不是完整语义 SDK。
+- 不要再寻找旧的 `FrameHeader` / `Frame` / `PayloadMapper` 主路径；当前仓库已经把主模型收敛到 `SecureEnvelope + semantic messages`。
+
+## 6. 对代码接入者的提示
 
 - 如果你在旧代码里寻找“哪一个字段等价于 `robot_id`”，应改为思考目标域如何通过 `TargetSelector` 表达
 - 如果你在旧代码里寻找“哪一个数字等价于旧 `seq`”，应改为从消息族和消息类型目录入手
 - 如果你想保留历史桥接逻辑，应把桥接视为边缘适配问题，而不是协议主模型的一部分
 
-## 6. 推荐联读
+## 7. 推荐联读
 
 - 主规范：
   [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md)
