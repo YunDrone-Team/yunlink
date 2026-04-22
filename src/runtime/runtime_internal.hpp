@@ -23,6 +23,13 @@ struct Runtime::Impl {
     uint64_t next_session_id = 1;
     uint64_t next_message_id = 1;
     std::unordered_map<size_t, StateSubscriber::VehicleCoreHandler> vehicle_core_handlers;
+    std::unordered_map<size_t, StateSubscriber::Px4StateHandler> px4_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::OdomStatusHandler> odom_status_handlers;
+    std::unordered_map<size_t, StateSubscriber::UavControlFsmStateHandler>
+        uav_control_fsm_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::UavControllerStateHandler>
+        uav_controller_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::GimbalParamsHandler> gimbal_params_handlers;
     std::unordered_map<size_t, EventSubscriber::VehicleEventHandler> vehicle_event_handlers;
     std::unordered_map<size_t, EventSubscriber::CommandResultHandler> command_result_handlers;
 };

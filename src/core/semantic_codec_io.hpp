@@ -17,6 +17,10 @@ struct BufferWriter {
         data.push_back(value);
     }
 
+    void write_i8(int8_t value) {
+        write_u8(static_cast<uint8_t>(value));
+    }
+
     void write_bool(bool value) {
         write_u8(value ? 1U : 0U);
     }
@@ -43,6 +47,11 @@ struct BufferWriter {
         data.insert(data.end(), raw, raw + sizeof(float));
     }
 
+    void write_double(double value) {
+        const auto raw = reinterpret_cast<const uint8_t*>(&value);
+        data.insert(data.end(), raw, raw + sizeof(double));
+    }
+
     void write_string(const std::string& value) {
         write_u16(static_cast<uint16_t>(value.size()));
         data.insert(data.end(), value.begin(), value.end());
@@ -59,6 +68,11 @@ struct BufferReader {
         }
         *out = data[cursor++];
         return true;
+    }
+
+    bool read_i8(int8_t* out) {
+        uint8_t value = 0;
+        return read_u8(&value) ? (*out = static_cast<int8_t>(value), true) : false;
     }
 
     bool read_bool(bool* out) {
@@ -105,6 +119,15 @@ struct BufferReader {
         }
         *out = *reinterpret_cast<const float*>(data.data() + cursor);
         cursor += sizeof(float);
+        return true;
+    }
+
+    bool read_double(double* out) {
+        if (cursor + sizeof(double) > data.size()) {
+            return false;
+        }
+        *out = *reinterpret_cast<const double*>(data.data() + cursor);
+        cursor += sizeof(double);
         return true;
     }
 

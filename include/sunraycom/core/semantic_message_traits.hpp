@@ -34,6 +34,11 @@ SUNRAYCOM_DEFINE_TRAITS(TrajectoryChunkCommand, MessageFamily::kCommand, 6);
 SUNRAYCOM_DEFINE_TRAITS(FormationTaskCommand, MessageFamily::kCommand, 7);
 SUNRAYCOM_DEFINE_TRAITS(CommandResult, MessageFamily::kCommandResult, 1);
 SUNRAYCOM_DEFINE_TRAITS(VehicleCoreState, MessageFamily::kStateSnapshot, 1);
+SUNRAYCOM_DEFINE_TRAITS(Px4StateSnapshot, MessageFamily::kStateSnapshot, 2);
+SUNRAYCOM_DEFINE_TRAITS(OdomStatusSnapshot, MessageFamily::kStateSnapshot, 3);
+SUNRAYCOM_DEFINE_TRAITS(UavControlFsmStateSnapshot, MessageFamily::kStateSnapshot, 4);
+SUNRAYCOM_DEFINE_TRAITS(UavControllerStateSnapshot, MessageFamily::kStateSnapshot, 5);
+SUNRAYCOM_DEFINE_TRAITS(GimbalParamsSnapshot, MessageFamily::kStateSnapshot, 6);
 SUNRAYCOM_DEFINE_TRAITS(VehicleEvent, MessageFamily::kStateEvent, 1);
 SUNRAYCOM_DEFINE_TRAITS(BulkChannelDescriptor, MessageFamily::kBulkChannelDescriptor, 1);
 

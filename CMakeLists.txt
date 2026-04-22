@@ -90,6 +90,7 @@ add_library(sunraycom STATIC
   src/runtime/runtime_authority.cpp
   src/runtime/runtime_command.cpp
   src/runtime/runtime_state.cpp
+  src/runtime/runtime_state_publish.cpp
   src/c/sunraycom_c.cpp
 )
 
@@ -155,6 +156,10 @@ if (SUNRAYCOM_BUILD_TESTS)
   add_executable(test_runtime_control_paths tests/test_runtime_control_paths.cpp)
   target_link_libraries(test_runtime_control_paths PRIVATE sunraycom)
   add_test(NAME test_runtime_control_paths COMMAND test_runtime_control_paths)
+
+  add_executable(test_uav_state_snapshots tests/test_uav_state_snapshots.cpp)
+  target_link_libraries(test_uav_state_snapshots PRIVATE sunraycom)
+  add_test(NAME test_uav_state_snapshots COMMAND test_uav_state_snapshots)
 
   add_test(
     NAME test_dev_tooling_config

@@ -92,10 +92,22 @@ class CommandPublisher {
 class StateSubscriber {
   public:
     using VehicleCoreHandler = std::function<void(const TypedMessage<VehicleCoreState>&)>;
+    using Px4StateHandler = std::function<void(const TypedMessage<Px4StateSnapshot>&)>;
+    using OdomStatusHandler = std::function<void(const TypedMessage<OdomStatusSnapshot>&)>;
+    using UavControlFsmStateHandler =
+        std::function<void(const TypedMessage<UavControlFsmStateSnapshot>&)>;
+    using UavControllerStateHandler =
+        std::function<void(const TypedMessage<UavControllerStateSnapshot>&)>;
+    using GimbalParamsHandler = std::function<void(const TypedMessage<GimbalParamsSnapshot>&)>;
 
     explicit StateSubscriber(Runtime* runtime = nullptr);
 
     size_t subscribe_vehicle_core(VehicleCoreHandler cb);
+    size_t subscribe_px4_state(Px4StateHandler cb);
+    size_t subscribe_odom_status(OdomStatusHandler cb);
+    size_t subscribe_uav_control_fsm_state(UavControlFsmStateHandler cb);
+    size_t subscribe_uav_controller_state(UavControllerStateHandler cb);
+    size_t subscribe_gimbal_params(GimbalParamsHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 
@@ -171,6 +183,26 @@ class Runtime {
                                          const TargetSelector& target,
                                          const VehicleCoreState& payload,
                                          uint64_t session_id = 0);
+    ErrorCode publish_px4_state(const std::string& peer_id,
+                                const TargetSelector& target,
+                                const Px4StateSnapshot& payload,
+                                uint64_t session_id = 0);
+    ErrorCode publish_odom_status(const std::string& peer_id,
+                                  const TargetSelector& target,
+                                  const OdomStatusSnapshot& payload,
+                                  uint64_t session_id = 0);
+    ErrorCode publish_uav_control_fsm_state(const std::string& peer_id,
+                                            const TargetSelector& target,
+                                            const UavControlFsmStateSnapshot& payload,
+                                            uint64_t session_id = 0);
+    ErrorCode publish_uav_controller_state(const std::string& peer_id,
+                                           const TargetSelector& target,
+                                           const UavControllerStateSnapshot& payload,
+                                           uint64_t session_id = 0);
+    ErrorCode publish_gimbal_params(const std::string& peer_id,
+                                    const TargetSelector& target,
+                                    const GimbalParamsSnapshot& payload,
+                                    uint64_t session_id = 0);
     ErrorCode publish_vehicle_event(const std::string& peer_id,
                                     const TargetSelector& target,
                                     const VehicleEvent& payload,
@@ -212,6 +244,11 @@ class Runtime {
     bool describe_session_internal(uint64_t session_id, SessionDescriptor* out) const;
     void unsubscribe_semantic(size_t token);
     size_t subscribe_vehicle_core_internal(StateSubscriber::VehicleCoreHandler cb);
+    size_t subscribe_px4_state_internal(StateSubscriber::Px4StateHandler cb);
+    size_t subscribe_odom_status_internal(StateSubscriber::OdomStatusHandler cb);
+    size_t subscribe_uav_control_fsm_state_internal(StateSubscriber::UavControlFsmStateHandler cb);
+    size_t subscribe_uav_controller_state_internal(StateSubscriber::UavControllerStateHandler cb);
+    size_t subscribe_gimbal_params_internal(StateSubscriber::GimbalParamsHandler cb);
     size_t subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb);
     size_t subscribe_command_result_internal(EventSubscriber::CommandResultHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);

@@ -28,6 +28,11 @@ ByteBuffer encode_payload(const TrajectoryChunkCommand& payload);
 ByteBuffer encode_payload(const FormationTaskCommand& payload);
 ByteBuffer encode_payload(const CommandResult& payload);
 ByteBuffer encode_payload(const VehicleCoreState& payload);
+ByteBuffer encode_payload(const Px4StateSnapshot& payload);
+ByteBuffer encode_payload(const OdomStatusSnapshot& payload);
+ByteBuffer encode_payload(const UavControlFsmStateSnapshot& payload);
+ByteBuffer encode_payload(const UavControllerStateSnapshot& payload);
+ByteBuffer encode_payload(const GimbalParamsSnapshot& payload);
 ByteBuffer encode_payload(const VehicleEvent& payload);
 ByteBuffer encode_payload(const BulkChannelDescriptor& payload);
 
@@ -46,6 +51,11 @@ bool decode_payload(const ByteBuffer& bytes, TrajectoryChunkCommand* payload);
 bool decode_payload(const ByteBuffer& bytes, FormationTaskCommand* payload);
 bool decode_payload(const ByteBuffer& bytes, CommandResult* payload);
 bool decode_payload(const ByteBuffer& bytes, VehicleCoreState* payload);
+bool decode_payload(const ByteBuffer& bytes, Px4StateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, OdomStatusSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, UavControlFsmStateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, UavControllerStateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, GimbalParamsSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, VehicleEvent* payload);
 bool decode_payload(const ByteBuffer& bytes, BulkChannelDescriptor* payload);
 
