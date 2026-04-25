@@ -1,0 +1,51 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Sunray ROS1 Bridge - System Context
+
+actor "Rust Ground Client" as Ground
+
+rectangle "Ground Side" <<Neutral>> {
+  component "Rust SDK /\nMission Logic" as RustSdk <<Control>>
+}
+
+rectangle "Yunlink Network" <<Control>> {
+  component "Session / Authority /\nCommand / CommandResult" as Network <<Control>>
+}
+
+rectangle "Air Side" <<Neutral>> {
+  component "sunray_yunlink_bridge" as Bridge <<Control>>
+
+  package "Sunray ROS Graph" <<Neutral>> {
+    component "px4_state" as Px4Topic <<StatePlane>>
+    component "odom_status" as OdomTopic <<StatePlane>>
+    component "fsm/state" as FsmTopic <<StatePlane>>
+    component "controller_state" as CtrlTopic <<StatePlane>>
+    component "uav_control_cmd" as CmdTopic <<Control>>
+  }
+
+  package "PX4 / MAVROS" <<StatePlane>> {
+    component "Flight Controller\nState Sources" as Px4 <<StatePlane>>
+  }
+}
+
+Ground --> RustSdk
+RustSdk <--> Network : Yunlink wire protocol
+Network <--> Bridge : command / state / result envelopes
+
+Px4 --> Px4Topic
+Px4 --> OdomTopic
+Px4 --> CtrlTopic
+Px4 --> FsmTopic
+
+Bridge --> CmdTopic : publish raw control
+Px4Topic --> Bridge : subscribe
+OdomTopic --> Bridge : subscribe
+FsmTopic --> Bridge : subscribe
+CtrlTopic --> Bridge : subscribe
+
+note bottom
+ROS 只存在于机载端。
+bridge 既不侵入 Sunray controller/FSM API，
+也不把 ROS 带到地面端。
+end note
+@enduml

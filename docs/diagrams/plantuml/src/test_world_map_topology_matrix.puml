@@ -1,0 +1,40 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Yunlink Test World Map - Topology Matrix
+
+rectangle "Done" <<StatePlane>> {
+  component "1 GCS -> 1 UAV\nsingle-host + Office Wi-Fi" as OneOne <<StatePlane>>
+  component "2 GCS -> 1 UAV\ncompetition / preempt" as TwoOne <<StatePlane>>
+  component "1 GCS -> 2 UAV\nrouting / state isolation" as OneTwo <<StatePlane>>
+}
+
+rectangle "Partial" <<Control>> {
+  component "ROS bridge loopback\nfake ROS publishers" as BridgeLoop <<Control>>
+  component "Ground restart / air restart\nexplicit recovery" as Recovery <<Control>>
+}
+
+rectangle "Missing" <<Risk>> {
+  component "Real Sunray ROS graph\nno fake topics" as RealRos <<Risk>>
+  component "PX4 SITL end-to-end" as Sitl <<Risk>>
+  component "2 GCS -> 2 UAV" as TwoTwo <<Risk>>
+  component "1 GCS -> N UAV / swarm" as Swarm <<Risk>>
+  component "HIL / real vehicle" as Hil <<Risk>>
+}
+
+OneOne --> TwoOne
+OneOne --> OneTwo
+TwoOne --> TwoTwo
+OneTwo --> TwoTwo
+BridgeLoop --> RealRos
+RealRos --> Sitl
+Sitl --> Hil
+TwoTwo --> Swarm
+Recovery --> Sitl
+
+legend bottom
+  Done = tested business semantics in current scope
+  Partial = adapter or recovery behavior proven without full vehicle loop
+  Missing = required before high-confidence release
+endlegend
+@enduml
+

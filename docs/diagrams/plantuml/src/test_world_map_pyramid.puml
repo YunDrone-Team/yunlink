@@ -1,0 +1,33 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Yunlink Test World Map - Test Pyramid
+
+rectangle "Release confidence" <<Neutral>> {
+  rectangle "HIL / Real Vehicle Safety Gate\nmissing" as L6 <<Risk>>
+  rectangle "PX4 SITL + Sunray + Bridge + Ground\nmissing" as L5 <<Risk>>
+  rectangle "Long Soak / Weak Network Matrix\nscaffolded, not proven" as L4 <<Risk>>
+  rectangle "Dual-host Semantic Suites\nbaseline / recovery / competition / routing" as L3 <<StatePlane>>
+  rectangle "Single-host Interop and SDK Matrix\nRust / Python / C++" as L2 <<StatePlane>>
+  rectangle "Runtime / Transport / ABI Tests\npartial strong" as L1 <<Control>>
+  rectangle "Protocol Codec / Parser Unit Tests\nstrongest current base" as L0 <<Control>>
+}
+
+L6 -down-> L5
+L5 -down-> L4
+L4 -down-> L3
+L3 -down-> L2
+L2 -down-> L1
+L1 -down-> L0
+
+note right of L5
+This is the largest reason
+business coverage is still ~32/100.
+end note
+
+note left of L3
+Office Wi-Fi dual-host suites
+prove important network semantics,
+but not real flight execution.
+end note
+@enduml
+

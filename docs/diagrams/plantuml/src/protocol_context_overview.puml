@@ -1,39 +1,41 @@
 @startuml
-title Sunray 协议总体上下文图
-skinparam backgroundColor white
-skinparam shadowing false
-skinparam defaultTextAlignment center
-skinparam packageStyle rectangle
-skinparam componentStyle rectangle
+!include _yunlink_protocol_theme.iuml
+title 协议分面与参与方
+top to bottom direction
 
-rectangle "Ground Station\n(agent_type = kGroundStation)" as gs #E8F3FF
+actor "Ground Station\nagent_type = kGroundStation" as gs
+actor "Onboard Computer\nUAV / UGV protocol endpoint" as onboard
+actor "Swarm Endpoint\nGroup coordinator or relay" as swarm
 
-package "Sunray Protocol" #F8F8F8 {
-  rectangle "控制面\nSession / Authority /\nCommand / CommandResult" as control #FFF2CC
-  rectangle "状态面\nStateSnapshot /\nStateEvent" as state #D5E8D4
-  rectangle "Bulk 发现面\nBulkChannelDescriptor" as bulk #FCE5CD
+package "Yunlink Protocol" <<Neutral>> {
+  component "Transport\nTCP / UDP" as transport <<Neutral>>
+  component "SecureEnvelope Wire Layer" as wire <<Neutral>>
+  component "Control Plane\nSession / Authority /\nCommand / CommandResult" as control <<Control>>
+  component "State Plane\nStateSnapshot / StateEvent" as state <<StatePlane>>
+  component "Bulk Discovery Plane\nBulkChannelDescriptor" as bulk <<Bulk>>
+  component "SDK Layer\nRuntime / SessionClient /\nCommandPublisher / Subscribers" as sdk <<Neutral>>
 }
 
-rectangle "UAV Onboard Computer\n(agent_type = kUav)" as uav #EAF7EA
-rectangle "UGV Compute Node\n(agent_type = kUgv)" as ugv #EAF7EA
-rectangle "Swarm Coordinator\nor Group Endpoint" as swarm #EAF7EA
+gs --> sdk : typed API / protocol access
+sdk --> wire : semantic message -> envelope
+wire --> transport : route over TCP / UDP
 
-gs --> control : 规划/控制指令
-uav --> state : 快照/事件
-ugv --> state : 快照/事件
-swarm --> state : 群组状态/成员事件
+wire --> control : control families
+wire --> state : snapshot / event families
+wire --> bulk : discovery / authorization
 
-gs --> bulk : 发现/授权
-bulk --> uav : 视频/点云 URI
-bulk --> ugv : 地图/视频 URI
-bulk --> swarm : 群组大流描述
+control --> onboard : single-vehicle control
+control --> swarm : group target / broadcast
 
-control --> uav : 单 UAV
-control --> ugv : 单 UGV
-control --> swarm : Group Target / Broadcast
+onboard --> state : periodic snapshots\nand sparse events
+swarm --> state : group result\nand member feedback
 
-note bottom of control
-统一信封总线承载控制语义，
-不再使用旧 seq + robot_id 模型。
+bulk --> onboard : URI / channel metadata
+bulk --> swarm : group bulk descriptors
+
+note bottom of wire
+统一信封总线只负责稳定承载：
+transport 不定义业务语义，
+message_family + message_type + schema_version 才定义语义。
 end note
 @enduml

@@ -1,4 +1,4 @@
-# Sunray Protocol 迁移说明
+# Yunlink 协议迁移说明
 
 本文档用于帮助已有通信认知迁移到当前统一协议模型。这里允许集中谈历史模型与迁移建议；其它首页或导航文档不再承担这部分叙事。
 
@@ -54,7 +54,7 @@
 ## 7. 推荐联读
 
 - 主规范：
-  [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md)
+  [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
 - 接入指南：
   [integration-guide.md](integration-guide.md)
 - 实现状态：

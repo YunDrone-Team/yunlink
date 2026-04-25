@@ -1,0 +1,20 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Yunlink Test World Map - Coverage Roadmap
+
+state "Current\n~32/100" as Current <<Risk>>
+state "50/100\nMinimum business confidence" as Fifty <<Transit>>
+state "70/100\nNightly integration confidence" as Seventy <<ActiveState>>
+state "Release gate\nHIL + soak + safety evidence" as Release <<Terminal>>
+
+[*] --> Current
+Current --> Fifty : real Sunray graph\nPX4 SITL loop\nreal Failed branches\nminimal netem\n30min soak
+Fifty --> Seventy : dual-host nightly\nstate freshness metrics\nlatency reports\n2 GCS -> 2 UAV\nWi-Fi + netem
+Seventy --> Release : HIL / real vehicle\novernight soak\ntri-platform ABI\nfuzz\nplanning/swarm bridge
+Release --> [*]
+
+note bottom of Current
+Existing assets are meaningful,
+but they are not yet real flight-loop confidence.
+end note
+@enduml

@@ -1,6 +1,6 @@
-# Sunray Protocol 接入指南
+# Yunlink 协议接入指南
 
-本文档面向“按当前仓库实际能力接入”的读者。协议字段、消息族与线包约束请以 [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md) 为准；当前 runtime 的边界和实现缺口请同时参考 [implementation-status.md](implementation-status.md)。
+本文档面向“按当前仓库实际能力接入”的读者。协议字段、消息族与线包约束请以 [yunlink-protocol-spec.md](yunlink-protocol-spec.md) 为准；当前 runtime 的边界和实现缺口请同时参考 [implementation-status.md](implementation-status.md)。
 
 ## 1. 适用对象
 
@@ -32,8 +32,8 @@ ctest --test-dir build/ninja-debug --output-on-failure
 
 ```bash
 cmake -S . -B build/manual -G Ninja \
-  -DSUNRAYCOM_BUILD_EXAMPLES=ON \
-  -DSUNRAYCOM_BUILD_TESTS=ON
+  -DYUNLINK_BUILD_EXAMPLES=ON \
+  -DYUNLINK_BUILD_TESTS=ON
 cmake --build build/manual --parallel
 ctest --test-dir build/manual --output-on-failure
 ```
@@ -56,11 +56,11 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 ## 3. 公开 API 入口
 
 - C++ 总入口头：
-  `include/sunraycom/sunraycom.hpp`
+  `include/yunlink/yunlink.hpp`
 - C++ runtime 入口：
-  `include/sunraycom/runtime/runtime.hpp`
+  `include/yunlink/runtime/runtime.hpp`
 - C ABI 入口：
-  `include/sunraycom/c/sunraycom_c.h`
+  `include/yunlink/c/yunlink_c.h`
 
 当前最常用的 C++ 接口是：
 
@@ -101,19 +101,28 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 5. 周期发布 `StateSnapshot`
 6. 按需发布 `VehicleEvent`
 
-如果你要做真实执行器集成，需要明确一点：当前 repo 的默认 runtime 只会在命令命中时自动发出一串 `CommandResult`，并不会替你接入飞控、车辆底盘或群组执行器。
+如果你要做真实执行器集成，需要明确一点：默认 runtime 只负责协议边界和默认 auto-result，不会替你接入飞控、车辆底盘或群组执行器。若执行器侧需要自己拥有正式结果流，例如 `sunray_yunlink_bridge` 这种外部 bridge，则应显式切到 `CommandHandlingMode::kExternalHandler`，通过 typed inbound command subscribe + `reply_command_result(...)` 自行回包。
+
+外部 executor 的 contract 固定为：
+
+- runtime 先统一执行 TTL、target、session、authority gate。
+- gate 失败时 runtime 直接回 `CommandResult.Failed` 或 `CommandResult.Expired`，detail 使用稳定字符串，例如 `wrong-target`、`no-active-session`、`no-authority`、`session-lost`、`runtime-ttl-expired`。
+- 只有 gate 通过的 command 才会进入 typed inbound command handler。
+- `CommandHandlingMode::kExternalHandler` 关闭默认 `runtime-auto-result`，后续 `Received / Accepted / InProgress / Succeeded / Failed` 由 bridge 或 executor 使用 `reply_command_result(...)` 显式回包。
+- executor 必须保留 inbound route/envelope 元信息，尤其是 `session_id`、`message_id`、`correlation_id` 和 transport peer，以保证结果能原路返回。
 
 ## 5. 当前 runtime 的最小现实模型
 
 下面这些行为是“当前仓库确实已经实现”的接入前提，不是规范层的理想化描述：
 
-- 会话由发起方单向发送 `SessionHello -> SessionAuthenticate -> SessionCapabilities -> SessionReady` 四条消息；接收方在本地推进到 `Active`。
+- 会话由发起方发送 `SessionHello -> SessionAuthenticate -> SessionCapabilities -> SessionReady`，接收方校验后推进到 `Active` 并回 `SessionReady` ack；发起方收到 ack 后也能在本地观察到 `Active`。
 - 认证当前只是 `shared_secret` 的字符串比较。
-- capability flags 会被记录，但不会驱动能力裁决。
-- `Authority` 当前是单全局租约；没有按目标域分片，也不会主动发送 `AuthorityStatus` 回执。
-- 控制命令只有在“会话为 `Active` 且当前租约属于该 `session_id`”时才会进入默认处理路径。
+- capability flags 会作为 required bitset 做裁决，peer flags 不覆盖本端 required flags 时 session 进入 `Invalid`。
+- `Authority` 按 target 分片管理，并会主动发送 `AuthorityStatus` 回执。
+- 控制命令只有在 TTL 未过期、target 命中、会话为 `Active` 且对应 target 租约属于该 `session_id` 时才会进入默认 auto-result 或 external handler 路径。
 - 默认命令处理路径会自动发出 `Received -> Accepted -> InProgress -> Succeeded` 四段结果流。
-- TTL 虽然在线包和 codec 层存在，但 transport/runtime 收包路径当前不会自动做全局 TTL 过期判定。
+- 如果切到 `CommandHandlingMode::kExternalHandler`，runtime 会在 gate 通过后把命令分发给外部 handler，并关闭默认 `runtime-auto-result`。
+- runtime 收包入口会执行 TTL freshness；过期 command 会返回 `CommandResult.Expired(detail=runtime-ttl-expired)`。
 
 ## 6. 最小联调闭环
 
@@ -171,7 +180,7 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 ## 9. 参考入口
 
 - 协议约束：
-  [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md)
+  [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
 - 当前实现覆盖：
   [implementation-status.md](implementation-status.md)
 - 场景 walkthrough：

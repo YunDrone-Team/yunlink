@@ -1,26 +1,41 @@
 @startuml
-title 场景：地面站控制单台 UGV
-skinparam backgroundColor white
-skinparam shadowing false
+!include _yunlink_protocol_theme.iuml
+title 场景：地面站控制单台 UGV 的协议协作时序
+hide footbox
 
 actor "Ground Station" as GS
-participant "UGV Runtime" as UGV
-participant "Drive Executor" as DRV
+participant "UGV Runtime" as UGV #EEF2F4
+participant "Drive Executor" as DRV #F1F4F6
 
+== Session ==
 GS -> UGV : SessionHello / Authenticate /\nCapabilities / Ready
-UGV --> GS : Session 进入 Active
+UGV --> GS : Session 本地推进到 Active
 
-GS -> UGV : AuthorityRequest(Claim)\ntarget = Entity(UGV#21)
-UGV --> GS : Authority granted
+== Authority ==
+GS -> UGV : AuthorityRequest(action=Claim)\ntarget = Entity(UGV#21)
+UGV --> GS : AuthorityStatus(state=Controller)\n或本地租约已生效
 
-loop 连续控制
-  GS -> UGV : Command.VelocitySetpoint\nshort TTL
-  UGV --> GS : CommandResult.Received / Accepted
+== Continuous Control ==
+loop short-TTL control window
+  GS -> UGV : Command.VelocitySetpoint\nbody_frame + short ttl_ms
+  UGV --> GS : CommandResult.Received
+  UGV --> GS : CommandResult.Accepted
 end
 
-GS -> UGV : Command.TrajectoryChunk (可选)
+== Trajectory Extension ==
+opt 需要轨迹分块时
+  GS -> UGV : Command.TrajectoryChunk
+  UGV --> GS : CommandResult.Accepted
+end
+
+== Uplink ==
 UGV -> DRV : 执行速度或轨迹
 DRV --> UGV : 状态变化 / 故障
 UGV --> GS : StateSnapshot.VehicleCore
-UGV --> GS : StateEvent.VehicleEvent(Fault) (可选)
+UGV --> GS : StateEvent.VehicleEvent(kind=Fault) (optional)
+
+note right of UGV
+UGV 场景的特殊点不是图种不同，
+而是“连续控制 + 短 TTL”必须被看出来。
+end note
 @enduml

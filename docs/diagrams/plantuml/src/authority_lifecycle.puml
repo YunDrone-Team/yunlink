@@ -1,19 +1,42 @@
 @startuml
+!include _yunlink_protocol_theme.iuml
 title 控制权状态机
-skinparam backgroundColor white
-skinparam shadowing false
+
+state "Observer" as Observer <<Neutral>>
+state "PendingGrant" as PendingGrant <<Transit>>
+state "Controller" as Controller <<ActiveState>>
+state "Preempting" as Preempting <<Transit>>
+state "Released" as Released <<Terminal>>
+state "Revoked" as Revoked <<Risk>>
+state "Rejected" as Rejected <<Risk>>
 
 [*] --> Observer
-Observer --> PendingGrant : Claim
-PendingGrant --> Controller : Grant
-PendingGrant --> Rejected : Reject
-Rejected --> Observer
-Controller --> Controller : Renew
-Controller --> Preempting : Preempt
-Preempting --> Revoked : 被抢占
-Preempting --> Controller : 抢占成功
-Controller --> Released : Release
-Controller --> Revoked : Lease Expired
-Released --> Observer
-Revoked --> Observer
+
+Observer --> PendingGrant : AuthorityRequest(action=Claim)
+PendingGrant --> Controller : AuthorityStatus(state=Controller)
+PendingGrant --> Rejected : AuthorityStatus(state=Rejected)
+Rejected --> Observer : 观察方保留会话
+
+Controller --> Controller : Renew / lease_ttl_ms 更新
+Controller --> Preempting : AuthorityRequest(action=Preempt)
+Preempting --> Controller : 抢占成功并保留当前租约
+Preempting --> Revoked : 被更高优先级会话抢占
+
+Controller --> Released : AuthorityRequest(action=Release)
+Controller --> Revoked : Lease Expired\n或 route 失效
+Released --> Observer : 租约主动归还
+Revoked --> Observer : 租约失效后回到观察态
+
+note right of PendingGrant
+主路径关心三件事：
+- 谁申请控制权
+- 是否进入 Controller
+- 若失败，是否给出拒绝原因
+end note
+
+note bottom of Preempting
+Preempting 是分支态：
+它表达的是控制权竞争，
+不是新的稳定控制态。
+end note
 @enduml

@@ -1,30 +1,37 @@
 @startuml
+!include _yunlink_protocol_theme.iuml
 title 状态面与事件面边界
-skinparam backgroundColor white
-skinparam shadowing false
-skinparam packageStyle rectangle
+left to right direction
 
-package "Onboard / Vehicle Side" #F8F8F8 {
-  rectangle "状态采样器" as sampler #D5E8D4
-  rectangle "事件检测器" as detector #FCE5CD
-  rectangle "Bulk Producer" as producer #E8F3FF
+package "Vehicle / Onboard Side" <<Neutral>> {
+  component "Snapshot Publisher\n周期采样 / latest view" as sampler <<StatePlane>>
+  component "Event Publisher\n关键变化 / sparse signal" as detector <<Control>>
+  component "Bulk Descriptor Publisher\nURI / channel metadata" as producer <<Bulk>>
 }
 
-package "Ground Station Side" #F8F8F8 {
-  rectangle "StateSubscriber" as sub_state #D5E8D4
-  rectangle "EventSubscriber" as sub_event #FCE5CD
-  rectangle "Bulk Consumer" as sub_bulk #E8F3FF
+package "Ground Station Side" <<Neutral>> {
+  component "StateSubscriber" as sub_state <<StatePlane>>
+  component "EventSubscriber" as sub_event <<Control>>
+  component "Bulk Consumer\nout-of-band content path" as sub_bulk <<Bulk>>
 }
 
-sampler --> sub_state : StateSnapshot.VehicleCore\n周期 / 可覆盖 / 最新值
-detector --> sub_event : StateEvent.VehicleEvent\n离散 / 稀疏 / 关键变化
-producer --> sub_bulk : BulkChannelDescriptor\n主协议发现，旁路传输内容
+sampler --> sub_state : StateSnapshot.*\nperiodic / overwrite-friendly
+detector --> sub_event : StateEvent.*\ndiscrete / sparse / high-value
+producer --> sub_bulk : BulkChannelDescriptor\ncontrol plane discovery only
 
 note bottom of sampler
-快照不应承载一次性告警文本
+Snapshot 用于重建当前核心状态，
+不应携带一次性故障文本或告警措辞。
 end note
 
 note bottom of detector
-事件不应用来重建完整姿态状态
+Event 用于表达关键变化，
+不应用来拼出完整姿态或全量状态。
+end note
+
+note bottom of producer
+Bulk 内容必须旁路传输；
+主协议只发现和授权，
+不直接承载视频或点云本体。
 end note
 @enduml

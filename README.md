@@ -1,64 +1,68 @@
-# sunray_communication_lib
+# yunlink
 
-[![CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/sunray_communication_lib/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/YunDrone-Team/sunray_communication_lib/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci.yml)
+![Protocol](https://img.shields.io/badge/Protocol-yunlink-0A7E8C?style=for-the-badge)
+![Brand](https://img.shields.io/badge/Brand-%E4%BA%91%E7%BA%B5%E7%A7%91%E6%8A%80-1F3A5F?style=for-the-badge)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B)
-![CMake Presets](https://img.shields.io/badge/CMake%20Presets-3.25%2B-064F8C?style=for-the-badge&logo=cmake)
-![Ninja](https://img.shields.io/badge/Build-Ninja-000000?style=for-the-badge&logo=ninja)
-![Targets](https://img.shields.io/badge/Targets-UAV%20%7C%20UGV%20%7C%20Swarm-0A7E8C?style=for-the-badge)
-![SDK](https://img.shields.io/badge/API-C%2B%2B%20%2B%20C-2E8B57?style=for-the-badge)
+![Build](https://img.shields.io/badge/CMake%20%2B%20Ninja-Ready-064F8C?style=for-the-badge&logo=cmake)
+![Bindings](https://img.shields.io/badge/Bindings-Rust%20%7C%20Python%20%7C%20JavaScript-F28C28?style=for-the-badge)
+![Stage](https://img.shields.io/badge/Stage-Startup%20Dev-2E8B57?style=for-the-badge)
 
-`sunray_communication_lib` 是 Sunray 的统一通信库，面向地面站、无人机机载计算机、无人车车载计算机与集群控制场景。项目提供稳定的 `SecureEnvelope` 线包、语义化消息层、统一 runtime、类型化 C++ SDK 与最小 C ABI，用于构建控制、状态、事件与会话类通信链路。
+`yunlink` 是面向无人机、无人车、地面站与集群系统的统一通信协议与基础通信库。这个仓库聚焦同一套 `yunlink` 协议核心，提供 `SecureEnvelope` 线包、语义消息模型、统一 `Runtime`、类型化 C++ SDK，以及可供 Rust、Python、JavaScript 复用的最小 C ABI。
 
-## 文档入口
+## 命名统一
 
-- 总导航：
-  [docs/README.md](docs/README.md)
-- 协议导航页：
-  [docs/protocol/README.md](docs/protocol/README.md)
-- 协议主规范：
-  [docs/protocol/sunray-unified-protocol-spec.md](docs/protocol/sunray-unified-protocol-spec.md)
-- 当前实现状态：
-  [docs/protocol/implementation-status.md](docs/protocol/implementation-status.md)
-- 接入指南：
-  [docs/protocol/integration-guide.md](docs/protocol/integration-guide.md)
-- 场景 walkthrough：
-  [docs/protocol/scenario-walkthroughs.md](docs/protocol/scenario-walkthroughs.md)
-- 迁移说明：
-  [docs/protocol/migration-notes.md](docs/protocol/migration-notes.md)
-- API Reference（本地生成）：
-  `build/doxygen/html/index.html`
+仓库内与对外暴露的核心标识统一使用 `yunlink`：
+
+- GitHub 仓库：`YunDrone-Team/yunlink`
+- CMake 项目与主库 target：`yunlink`
+- C++ 命名空间：`yunlink`
+- 头文件根目录：`include/yunlink/`
+- C ABI 前缀：`yunlink_*`
+- 协议主规范：`docs/protocol/yunlink-protocol-spec.md`
+
+## 核心能力
+
+- `SecureEnvelope` 编解码与流式拆包
+  由 `ProtocolCodec` 和 `EnvelopeStreamParser` 负责定长头、payload、magic 重同步与帧级校验。
+- 语义消息与 typed payload
+  覆盖 `Session`、`Authority`、`Command`、`CommandResult`、`StateSnapshot`、`StateEvent`、`BulkChannelDescriptor` 等核心消息族。
+- 统一 runtime
+  通过 `Runtime`、`SessionClient`、`SessionServer`、`CommandPublisher`、`StateSubscriber`、`EventSubscriber` 组织会话、控制权、命令与状态流。
+- 传输与事件分发
+  提供 `UdpTransport`、`TcpClientPool`、`TcpServer` 与 `EventBus`，支撑本地联调与集成验证。
+- 最小 C ABI
+  位于 `include/yunlink/c/yunlink_c.h`，作为多语言绑定的稳定基础层。
+
+## 仓库结构
+
+- `include/yunlink/`
+  对外头文件入口，包含 core、runtime、transport 与 C ABI。
+- `src/`
+  协议编解码、runtime 语义实现、TCP/UDP 传输实现。
+- `tests/`
+  协议、传输、runtime、快照上行与兼容路径的回归测试。
+- `examples/`
+  本地 smoke、UDP 发现、TCP 命令客户端、遥测接收与桥接样例。
+- `docs/`
+  协议规范、实现状态、接入说明、场景 walkthrough 与图示资源。
+- `tools/`
+  快速构建、质量检查、图示渲染等研发脚本。
 
 ## 快速开始
 
 ```bash
-git clone https://github.com/YunDrone-Team/sunray_communication_lib.git
-cd sunray_communication_lib
+git clone https://github.com/YunDrone-Team/yunlink.git
+cd yunlink
 git submodule update --init --recursive
 cmake --preset ninja-debug
 python3 tools/build_fast.py --preset ninja-debug
 ctest --test-dir build/ninja-debug --output-on-failure
 ```
 
-`cmake --preset ...` 这一推荐工作流依赖 `CMake 3.25+`。如果你只走传统 `cmake -S . -B ...` 配置路径，则顶层 `CMakeLists.txt` 的最低要求是 `3.16`。构建并行度由 `tools/build_fast.py` 自动计算，策略固定为 `max(1, 逻辑核心数 - 1)`。
+推荐工作流使用 `CMake 3.25+` 与 `Ninja`。如果采用传统 `cmake -S . -B ...` 配置方式，顶层 `CMakeLists.txt` 当前仍兼容 `CMake 3.16+`。
 
-## 当前仓库提供的能力
-
-- `ProtocolCodec` 与 `EnvelopeStreamParser`
-  负责 `SecureEnvelope` 编解码、流式拆包和 magic 重同步。
-- 语义消息模型与 typed payload 编解码
-  覆盖 `Session`、`Authority`、`Command`、`CommandResult`、`StateSnapshot`、`StateEvent`、`BulkChannelDescriptor` 七大消息族。
-- 传输与事件分发
-  提供 `EventBus`、`UdpTransport`、`TcpClientPool`、`TcpServer`。
-- 统一 C++ runtime 入口
-  通过 `Runtime`、`SessionClient`、`SessionServer`、`CommandPublisher`、`StateSubscriber`、`EventSubscriber` 组织会话、控制权、命令与状态流。
-- 最小 C ABI
-  位于 `include/sunraycom/c/sunraycom_c.h`，当前以原始事件轮询为主。
-- 示例与回归测试
-  `examples/` 提供最小联调样例，`tests/` 覆盖协议、传输、runtime 和 UAV 上行快照路径。
-
-## 构建、示例与文档生成
-
-常用命令：
+## 常用命令
 
 ```bash
 cmake --preset ninja-debug
@@ -70,30 +74,41 @@ python3 examples/smoke_local/run_smoke_local.py --bin-dir build/ninja-debug
 doxygen docs/Doxyfile
 ```
 
-当前质量护栏包括：
+## 文档入口
 
-- `.clang-format`：统一 C++ 排版
-- `.clang-tidy`：静态检查
-- `tools/check_core_maxline.sh`：核心代码文件行数约束
-- GitHub Actions：自动验证构建、lint 与测试链路
+- 总导航：`docs/README.md`
+- 协议导航：`docs/protocol/README.md`
+- 协议主规范：`docs/protocol/yunlink-protocol-spec.md`
+- 实现状态：`docs/protocol/implementation-status.md`
+- 接入指南：`docs/protocol/integration-guide.md`
+- 场景 walkthrough：`docs/protocol/scenario-walkthroughs.md`
+- 迁移说明：`docs/protocol/migration-notes.md`
+- 本地 API 文档：`build/doxygen/html/index.html`
 
-## 示例与依赖
+## 多语言接口方向
 
-- 示例程序位于 `examples/`
-- `standalone Asio 1.30.2` 以 Git submodule 固定在 `thirdparty/asio`
-- 头文件目录为 `thirdparty/asio/asio/include`
-- Doxygen 本地输出目录为 `build/doxygen/html/`
+`yunlink` 的演进方向保持“单协议核心，多语言薄封装”：
+
+1. 稳定 `yunlink` 的 C++ 核心与 C ABI。
+2. 让 Rust、Python、JavaScript 通过 FFI 或绑定层共享同一套协议语义。
+3. 在需要的语言侧逐步补齐高层 typed SDK 与更贴近业务的开发体验。
 
 ## 当前边界
 
-- 当前最小会话路径是发起方单向发送 `Hello -> Authenticate -> Capabilities -> Ready` 四条消息，接收方本地推进到 `Active`；并没有完整双向协商或重连恢复。
-- `Authority` 当前是单全局租约，不按目标域分片，也不会自动对外发送 `AuthorityStatus`。
-- `TargetScope::kGroup` 可以在线包和 payload 中表达，但当前 runtime 的目标匹配还没有接入真实组成员关系。
-- `BulkChannelDescriptor` 已有类型与编解码，但 runtime 还没有 bulk 消费者。
+- 当前最小会话路径以 `Hello -> Authenticate -> Capabilities -> Ready` 为主，尚未完成完整双向协商、重连恢复与会话续接。
+- `Authority` 当前仍是单全局租约，不按目标域分片，也不会自动对外发送 `AuthorityStatus`。
+- `TargetScope::kGroup` 已能在线包与 payload 中表达，但 runtime 还没有接入真实组成员关系。
+- `BulkChannelDescriptor` 已具备类型与编解码，runtime 侧尚未接入 bulk 消费者。
 
-这些边界和更细的覆盖矩阵请直接阅读 [docs/protocol/implementation-status.md](docs/protocol/implementation-status.md)。
+覆盖矩阵与限制细节见 `docs/protocol/implementation-status.md`。
 
-## 仓库
+## 质量护栏
 
-- GitHub:
-  [YunDrone-Team/sunray_communication_lib](https://github.com/YunDrone-Team/sunray_communication_lib)
+- `.clang-format`
+- `.clang-tidy`
+- `tools/check_core_maxline.sh`
+- GitHub Actions 构建与测试流程
+
+## 仓库地址
+
+[https://github.com/YunDrone-Team/yunlink](https://github.com/YunDrone-Team/yunlink)

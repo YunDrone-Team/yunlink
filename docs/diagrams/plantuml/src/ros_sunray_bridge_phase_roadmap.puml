@@ -1,0 +1,31 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Sunray Bridge Roadmap
+
+rectangle "v1 Raw Control Bridge" <<Control>> as V1 {
+  component "ROS1 only" as V1A
+  component "single UAV /\nsingle session" as V1B
+  component "Takeoff / Land /\nReturn / Goto /\nVelocitySetpoint" as V1C
+  component "bridge-owned\nCommandResult" as V1D
+}
+
+rectangle "v2 Planning Bridge" <<StatePlane>> as V2 {
+  component "planning_cmd /\nplanning_state" as V2A
+  component "TrajectoryChunk\ntrue bridge" as V2B
+  component "VehicleEvent\nformalized" as V2C
+}
+
+rectangle "Future Portability" <<Neutral>> as V3 {
+  component "ROS2 adapter layer" as V3A
+  component "shared mapping /\ntracker core" as V3B
+  component "same Yunlink protocol\nowner model" as V3C
+}
+
+V1 --> V2 : expand semantic surface
+V2 --> V3 : keep module split\nros_adapter isolated
+
+note bottom
+一期先把 owner、边界、回包语义和 raw control 闭环做对。
+二期再扩 planning，而不是一开始混在一起。
+end note
+@enduml

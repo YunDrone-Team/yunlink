@@ -1,10 +1,12 @@
-# Sunray Protocol 场景 Walkthrough
+# Yunlink 协议场景 Walkthrough
 
-本文档提供三个协议落地场景的 walkthrough，并明确区分“协议上应该发生什么”和“当前 repo 已经能直接对照到什么”。字段与状态定义仍以 [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md) 为准；仓库现实边界以 [implementation-status.md](implementation-status.md) 为准。
+本文档提供三个协议落地场景的 walkthrough，并明确区分“协议上应该发生什么”和“当前 repo 已经能直接对照到什么”。字段与状态定义仍以 [yunlink-protocol-spec.md](yunlink-protocol-spec.md) 为准；仓库现实边界以 [implementation-status.md](implementation-status.md) 为准。
 
 ## 1. 场景 A：地面站控制单架 UAV
 
-![单 UAV 场景](../diagrams/plantuml/svg/scenario_single_uav_control.svg)
+读图目的：先把单 UAV 的成功路径压缩成一张协议协作时序图，再对照下面的实现覆盖、关键字段和失败分支去读。
+
+![单 UAV 协议协作时序](../diagrams/plantuml/svg/scenario_single_uav_control.svg)
 
 ### 场景目标
 
@@ -67,7 +69,9 @@
 
 ## 2. 场景 B：地面站控制单台 UGV
 
-![单 UGV 场景](../diagrams/plantuml/svg/scenario_single_ugv_control.svg)
+读图目的：先看清 UGV 控制的时序骨架，再带着“连续控制 + 短 TTL”的约束去读下面的成功路径与失败分支。
+
+![单 UGV 协议协作时序](../diagrams/plantuml/svg/scenario_single_ugv_control.svg)
 
 ### 场景目标
 
@@ -121,7 +125,9 @@
 
 ## 3. 场景 C：地面站控制 UAV 集群
 
-![Swarm 场景](../diagrams/plantuml/svg/scenario_swarm_control.svg)
+读图目的：先看清群组级命令结果与成员级状态回流是两条不同语义线，再去对照当前 repo 的实现边界。
+
+![Swarm 协议协作时序](../diagrams/plantuml/svg/scenario_swarm_control.svg)
 
 ### 场景目标
 

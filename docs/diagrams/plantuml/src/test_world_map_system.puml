@@ -1,0 +1,63 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Yunlink Test World Map - System Boundary
+
+rectangle "Ground Side" <<Neutral>> {
+  component "Rust SDK\nMission Logic" as RustSdk <<Control>>
+  component "Python SDK\nOps Helpers" as PySdk <<Control>>
+  component "C ABI / FFI\nLoader Tests" as Ffi <<Neutral>>
+}
+
+rectangle "Yunlink Core" <<Control>> {
+  component "Protocol Codec\nSecureEnvelope" as Codec <<Control>>
+  component "Runtime\nSession / Authority" as Runtime <<Control>>
+  component "Transport\nTCP / UDP" as Transport <<Control>>
+  component "CommandResult\nState Snapshots" as Results <<StatePlane>>
+}
+
+rectangle "Air Side" <<Neutral>> {
+  component "C++ Air Runtime" as CxxAir <<Control>>
+  component "sunray_yunlink_bridge\nROS1 Catkin Package" as Bridge <<Control>>
+}
+
+rectangle "Sunray / PX4 World" <<Risk>> {
+  component "Sunray ROS Graph\nReal Topics" as Sunray <<Risk>>
+  component "PX4 SITL" as Sitl <<Risk>>
+  component "HIL / Real Vehicle\nSafety Gate" as Hil <<Risk>>
+}
+
+rectangle "Test Infrastructure" <<Neutral>> {
+  component "CI / CTest" as CI <<Neutral>>
+  component "Dual-host Office Wi-Fi" as DualHost <<StatePlane>>
+  component "netem Profiles" as Netem <<Risk>>
+  component "Soak / Perf Reports" as Soak <<Risk>>
+}
+
+RustSdk --> Runtime
+PySdk --> Ffi
+Ffi --> Runtime
+Runtime --> Codec
+Runtime --> Transport
+Runtime --> Results
+Transport <--> CxxAir
+CxxAir <--> Bridge
+Bridge <--> Sunray
+Sunray <--> Sitl
+Sitl <--> Hil
+
+CI --> Codec
+CI --> Runtime
+CI --> Ffi
+DualHost --> Transport
+DualHost --> Runtime
+Netem --> Transport
+Soak --> Runtime
+Soak --> Bridge
+
+legend right
+  Green: good engineering coverage
+  Yellow: partial business semantics
+  Red: major business gap
+endlegend
+@enduml
+

@@ -1,33 +1,70 @@
 @startuml
-title SecureEnvelope 线包布局
-skinparam backgroundColor white
-skinparam shadowing false
-skinparam defaultTextAlignment center
+!include _yunlink_protocol_theme.iuml
+title SecureEnvelope 结构对象图
+left to right direction
 
-rectangle "Magic\n4 bytes\n'S' 'R' 'C' 'M'" as magic #E8F3FF
-rectangle "Fixed Header\n72 bytes after magic\nprotocol_major\nheader_version\nflags\nheader_len\npayload_len\nqos_class\nmessage_family\nmessage_type\nschema_version\nsession_id\nmessage_id\ncorrelation_id\ncreated_at_ms\nttl_ms\nsource\ntarget meta\nsecurity meta" as fixed #FFF2CC
-rectangle "Variable Header\ntarget_ids[target_count]\nauth_tag[auth_tag_len]" as var #FCE5CD
-rectangle "Payload\nschema binary body" as payload #D5E8D4
-rectangle "Checksum\n4 bytes\nuint32 additive sum" as checksum #F4CCCC
+object "SecureEnvelope" as env <<Neutral>> {
+  protocol_major = 1
+  header_version = 1
+  header_len = 76 + 4 * target_count + auth_tag_len
+  payload_len = variable
+  checksum = uint32 additive sum
+}
 
-magic -down-> fixed
-fixed -down-> var
-var -down-> payload
-payload -down-> checksum
+object "Magic\nbytes 0..3" as magic <<Bulk>> {
+  value = 'S' 'U' 'R' 'Y'
+  purpose = frame sync
+}
+
+object "Fixed Header\nbytes 4..75" as fixed <<Control>> {
+  protocol_major
+  header_version
+  flags
+  header_len / payload_len
+  qos_class
+  message_family / message_type / schema_version
+  session_id / message_id / correlation_id
+  created_at_ms / ttl_ms
+  source
+  target meta
+  security meta
+}
+
+object "Variable Header\nbytes 76..(header_len-1)" as variable <<Neutral>> {
+  target_ids[target_count]
+  auth_tag[auth_tag_len]
+}
+
+object "Payload\nbytes header_len..(header_len+payload_len-1)" as body <<StatePlane>> {
+  schema binary body
+  interpretation = message_family + message_type + schema_version
+}
+
+object "Checksum\nlast 4 bytes" as checksum <<Risk>> {
+  uint32 additive sum
+  range = magic .. payload end
+}
+
+env *-- magic
+env *-- fixed
+env *-- variable
+env *-- body
+env *-- checksum
 
 note right of fixed
-v1 固定头长度 = 76 bytes
-
-header_len = 76
-           + 4 * target_count
-           + auth_tag_len
+固定头总长度为 76 bytes，
+其中 bytes 0..3 是 magic，
+bytes 4..75 是其余固定头字段。
 end note
 
-note right of payload
-payload 由
-message_family +
-message_type +
-schema_version
-唯一解释
+note right of variable
+只有两类变长内容：
+target_ids 与 auth_tag。
+因此 header_len 的推导必须可验证。
+end note
+
+note right of body
+Payload 不允许靠 transport 或私有编号解释，
+只能由 schema 标识三元组解释。
 end note
 @enduml

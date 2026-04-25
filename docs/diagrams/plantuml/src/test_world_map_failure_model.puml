@@ -1,0 +1,53 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Yunlink Test World Map - Failure Model
+
+[*] --> ReceiveCommand
+
+ReceiveCommand --> FailedSession : no active session
+ReceiveCommand --> FailedTarget : wrong target / scope
+ReceiveCommand --> FailedTtl : TTL expired
+ReceiveCommand --> CheckAuthority : session + target fresh
+
+CheckAuthority --> FailedAuthority : no authority / stale lease
+CheckAuthority --> PublishRos : authority valid
+
+PublishRos --> FailedPublish : ROS publish failed
+PublishRos --> Accepted : publish ok
+
+Accepted --> InProgress : FSM enters execution state
+Accepted --> FailedTimeout : no progress before timeout
+
+InProgress --> Succeeded : FSM converges
+InProgress --> FailedTimeout : execution timeout
+InProgress --> FailedSessionLost : session lost during execution
+InProgress --> FailedAuthorityLost : authority lost during execution
+
+FailedSession --> [*]
+FailedTarget --> [*]
+FailedTtl --> [*]
+FailedAuthority --> [*]
+FailedPublish --> [*]
+FailedTimeout --> [*]
+FailedSessionLost --> [*]
+FailedAuthorityLost --> [*]
+Succeeded --> [*]
+
+state FailedSession <<Risk>>
+state FailedTarget <<Risk>>
+state FailedTtl <<Risk>>
+state FailedAuthority <<Risk>>
+state FailedPublish <<Risk>>
+state FailedTimeout <<Risk>>
+state FailedSessionLost <<Risk>>
+state FailedAuthorityLost <<Risk>>
+state Succeeded <<ActiveState>>
+state Accepted <<Transit>>
+state InProgress <<Transit>>
+
+note right of PublishRos
+Current tests cover mapping, loopback, and tracker logic.
+Real Sunray/PX4 executor failures are still missing.
+end note
+@enduml
+

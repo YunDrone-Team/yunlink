@@ -1,0 +1,40 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title State Uplink Sequence
+
+participant "Sunray px4_state" as PX4
+participant "Sunray odom_status" as ODOM
+participant "Sunray fsm/state" as FSM
+participant "Sunray controller_state" as CTRL
+participant "bridge tick" as TICK
+participant "sunray_yunlink_bridge" as BRIDGE
+participant "yunlink::Runtime" as RT
+participant "Rust Ground Client" as GROUND
+
+PX4 -> BRIDGE : cache latest Px4State
+ODOM -> BRIDGE : cache latest OdomStatus
+FSM -> BRIDGE : cache latest UAVControlFSMState
+CTRL -> BRIDGE : cache latest UAVControllerState
+
+loop 50 Hz bridge tick
+  TICK -> BRIDGE : evaluate throttles\nand active session
+
+  alt active session exists
+    BRIDGE -> RT : publish Px4StateSnapshot (20 Hz)
+    BRIDGE -> RT : publish VehicleCoreState (20 Hz)
+    BRIDGE -> RT : publish UavControllerStateSnapshot (20 Hz)
+
+    alt fsm changed or 2 Hz heartbeat due
+      BRIDGE -> RT : publish UavControlFsmStateSnapshot
+    end
+
+    alt odom changed or 1 Hz heartbeat due
+      BRIDGE -> RT : publish OdomStatusSnapshot
+    end
+
+    RT -> GROUND : route only to current active peer
+  else no active session
+    BRIDGE -> BRIDGE : drop outbound state\n(no broadcast)
+  end
+end
+@enduml

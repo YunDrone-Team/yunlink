@@ -1,11 +1,11 @@
-# 协议文档导航
+# Yunlink 协议文档导航
 
 本目录把协议相关文档拆分为“协议主规范 + 当前实现状态 + 接入说明 + 场景 walkthrough + 迁移说明”。这样可以把“协议应然模型”和“当前仓库已经做到哪里”明确分开，避免规范、教程和实现报告互相污染。
 
 ## 如何阅读
 
 - 想理解协议蓝图：
-  先读 [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md)
+  先读 [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
 - 想按当前 repo 真实能力接入：
   先读 [implementation-status.md](implementation-status.md)，再读 [integration-guide.md](integration-guide.md)
 - 想看端到端场景：
@@ -15,7 +15,7 @@
 
 首次接入推荐顺序：
 
-1. [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md)
+1. [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
 2. [implementation-status.md](implementation-status.md)
 3. [integration-guide.md](integration-guide.md)
 4. [scenario-walkthroughs.md](scenario-walkthroughs.md)
@@ -26,7 +26,7 @@
 
 ## 文档分工
 
-- [sunray-unified-protocol-spec.md](sunray-unified-protocol-spec.md)
+- [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
   唯一协议主规范。定义 `SecureEnvelope`、消息族、状态机、字段、编号域与协议约束。
 - [implementation-status.md](implementation-status.md)
   当前仓库实现的覆盖矩阵、已验证路径、限制与接入含义。

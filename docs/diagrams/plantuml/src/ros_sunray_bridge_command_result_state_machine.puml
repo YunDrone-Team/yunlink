@@ -1,0 +1,36 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Command Result Derivation State Machine
+
+[*] --> Validate : inbound command
+
+state Validate <<Transit>> {
+}
+
+Validate --> Failed : no active session
+Validate --> Failed : no authority
+Validate --> Failed : ttl expired
+Validate --> Failed : target != kEntity
+Validate --> Failed : unsupported command
+Validate --> Received : validation passed
+
+state Received <<ActiveState>>
+state Accepted <<ActiveState>>
+state InProgress <<Transit>>
+state Succeeded <<Terminal>>
+state Failed <<Risk>>
+
+Received --> Accepted : ROS publish ok
+Received --> Failed : ROS publish failed
+Accepted --> InProgress : FSM enters execution state
+Accepted --> Failed : session invalidated
+Accepted --> Failed : authority lost
+Accepted --> Failed : execution timeout
+InProgress --> Succeeded : FSM convergence rule hit
+InProgress --> Failed : session invalidated
+InProgress --> Failed : authority lost
+InProgress --> Failed : execution timeout
+
+Succeeded --> [*]
+Failed --> [*]
+@enduml

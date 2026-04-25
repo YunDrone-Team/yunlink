@@ -1,0 +1,188 @@
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam dpi 140
+
+skinparam defaultFontName "Helvetica"
+skinparam defaultFontSize 13
+skinparam defaultFontColor #243039
+skinparam defaultTextAlignment center
+
+skinparam ArrowColor #5E6A71
+skinparam ArrowFontColor #243039
+skinparam ArrowFontSize 12
+skinparam ArrowThickness 1.1
+
+skinparam NoteBackgroundColor #F7F5F1
+skinparam NoteBorderColor #B7AEA1
+skinparam NoteFontColor #2D3135
+skinparam NoteFontSize 12
+
+skinparam TitleFontName "Helvetica"
+skinparam TitleFontSize 18
+skinparam TitleFontColor #1F2A33
+skinparam TitleBorderRoundCorner 0
+skinparam TitleBorderThickness 0
+
+skinparam LegendBackgroundColor #F7F5F1
+skinparam LegendBorderColor #B7AEA1
+
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam roundcorner 8
+
+skinparam rectangle {
+  RoundCorner 10
+  BorderColor #5E6A71
+  BackgroundColor #EEF2F4
+  FontColor #243039
+}
+
+skinparam package {
+  BorderColor #7A8791
+  BackgroundColor #FAFBFB
+  FontColor #243039
+}
+
+skinparam component {
+  BorderColor #5E6A71
+  BackgroundColor #EEF2F4
+  FontColor #243039
+}
+
+skinparam object {
+  BorderColor #5E6A71
+  BackgroundColor #EEF2F4
+  FontColor #243039
+}
+
+skinparam state {
+  BorderColor #5E6A71
+  BackgroundColor #EEF2F4
+  FontColor #243039
+  AttributeFontSize 11
+  StartColor #7A8791
+  EndColor #7A8791
+}
+
+skinparam sequence {
+  ArrowColor #5E6A71
+  LifeLineBorderColor #A0AAB2
+  LifeLineBackgroundColor #FDFDFD
+  ParticipantBorderColor #5E6A71
+  ParticipantBackgroundColor #EEF2F4
+  ParticipantFontColor #243039
+  GroupBorderColor #A7AFB5
+  GroupHeaderFontColor #243039
+  GroupBackgroundColor #FBFCFC
+  DividerBorderColor #B7BDC2
+  DividerBackgroundColor #F4F6F7
+  DividerFontColor #243039
+  BoxBorderColor #A7AFB5
+  BoxBackgroundColor #FBFCFC
+}
+
+skinparam actor {
+  BorderColor #5E6A71
+  BackgroundColor #F1F4F6
+  FontColor #243039
+}
+
+skinparam component<<Control>> {
+  BackgroundColor #F6E6BE
+  BorderColor #9A6B18
+}
+
+skinparam component<<StatePlane>> {
+  BackgroundColor #DCECDD
+  BorderColor #3F7047
+}
+
+skinparam component<<Bulk>> {
+  BackgroundColor #DCEBFA
+  BorderColor #3D699A
+}
+
+skinparam component<<Neutral>> {
+  BackgroundColor #EEF2F4
+  BorderColor #5E6A71
+}
+
+skinparam component<<Risk>> {
+  BackgroundColor #F6D8D5
+  BorderColor #9A4D46
+}
+
+skinparam rectangle<<Control>> {
+  BackgroundColor #F6E6BE
+  BorderColor #9A6B18
+}
+
+skinparam rectangle<<StatePlane>> {
+  BackgroundColor #DCECDD
+  BorderColor #3F7047
+}
+
+skinparam rectangle<<Bulk>> {
+  BackgroundColor #DCEBFA
+  BorderColor #3D699A
+}
+
+skinparam rectangle<<Neutral>> {
+  BackgroundColor #EEF2F4
+  BorderColor #5E6A71
+}
+
+skinparam rectangle<<Risk>> {
+  BackgroundColor #F6D8D5
+  BorderColor #9A4D46
+}
+
+skinparam object<<Control>> {
+  BackgroundColor #F6E6BE
+  BorderColor #9A6B18
+}
+
+skinparam object<<StatePlane>> {
+  BackgroundColor #DCECDD
+  BorderColor #3F7047
+}
+
+skinparam object<<Bulk>> {
+  BackgroundColor #DCEBFA
+  BorderColor #3D699A
+}
+
+skinparam object<<Neutral>> {
+  BackgroundColor #EEF2F4
+  BorderColor #5E6A71
+}
+
+skinparam object<<Risk>> {
+  BackgroundColor #F6D8D5
+  BorderColor #9A4D46
+}
+
+skinparam state<<Neutral>> {
+  BackgroundColor #EEF2F4
+  BorderColor #5E6A71
+}
+
+skinparam state<<Transit>> {
+  BackgroundColor #F6E6BE
+  BorderColor #9A6B18
+}
+
+skinparam state<<ActiveState>> {
+  BackgroundColor #DCECDD
+  BorderColor #3F7047
+}
+
+skinparam state<<Terminal>> {
+  BackgroundColor #ECE8F6
+  BorderColor #6E5A9A
+}
+
+skinparam state<<Risk>> {
+  BackgroundColor #F6D8D5
+  BorderColor #9A4D46
+}

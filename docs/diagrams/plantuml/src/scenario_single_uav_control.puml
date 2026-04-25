@@ -1,26 +1,39 @@
 @startuml
-title 场景：地面站控制单架 UAV
-skinparam backgroundColor white
-skinparam shadowing false
+!include _yunlink_protocol_theme.iuml
+title 场景：地面站控制单架 UAV 的协议协作时序
+hide footbox
 
 actor "Ground Station" as GS
-participant "UAV Runtime" as UAV
-participant "Flight Executor" as FC
+participant "UAV Runtime" as UAV #EEF2F4
+participant "Flight Executor" as FC #F1F4F6
 
-GS -> UAV : SessionHello / Authenticate /\nCapabilities / Ready
-UAV --> GS : Session 进入 Active
+== Session ==
+GS -> UAV : SessionHello
+GS -> UAV : SessionAuthenticate
+GS -> UAV : SessionCapabilities
+GS -> UAV : SessionReady
+UAV --> GS : Session 本地推进到 Active
 
-GS -> UAV : AuthorityRequest(Claim)\ntarget = Entity(UAV#1)
-UAV --> GS : Authority granted
+== Authority ==
+GS -> UAV : AuthorityRequest(action=Claim)\ntarget = Entity(UAV#1)
+UAV --> GS : AuthorityStatus(state=Controller)\n或本地租约已生效
 
-GS -> UAV : Command.Goto\nsession_id != 0
+== Command ==
+GS -> UAV : Command.Goto\nsession_id != 0\nttl_ms = motion window
 UAV --> GS : CommandResult.Received
 UAV --> GS : CommandResult.Accepted
-UAV -> FC : 执行 Goto
-FC --> UAV : 执行中 / 完成
+UAV -> FC : 调度 Goto
+FC --> UAV : progress / done
 UAV --> GS : CommandResult.InProgress
 UAV --> GS : CommandResult.Succeeded
 
+== Uplink ==
 UAV --> GS : StateSnapshot.VehicleCore
-UAV --> GS : StateEvent.VehicleEvent (可选)
+UAV --> GS : StateEvent.VehicleEvent (optional)
+
+note right of GS
+这是最小闭环：
+Session -> Authority -> Command -> Uplink
+缺任何一段，都不是完整控制路径。
+end note
 @enduml

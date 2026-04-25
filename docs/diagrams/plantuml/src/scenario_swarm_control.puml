@@ -1,29 +1,45 @@
 @startuml
-title 场景：地面站控制 UAV 集群
-skinparam backgroundColor white
-skinparam shadowing false
+!include _yunlink_protocol_theme.iuml
+title 场景：地面站控制 UAV 集群的协议协作时序
+hide footbox
 
 actor "Ground Station" as GS
-participant "Swarm Endpoint" as SW
-participant "Group Executor" as GX
-participant "UAV-A" as A
-participant "UAV-B" as B
+participant "Swarm Endpoint" as SW #EEF2F4
+participant "Group Executor" as GX #F1F4F6
+participant "UAV-A" as A #F1F4F6
+participant "UAV-B" as B #F1F4F6
 
+== Session ==
 GS -> SW : SessionHello / Authenticate /\nCapabilities / Ready
-SW --> GS : Session 进入 Active
+SW --> GS : Session 本地推进到 Active
 
-GS -> SW : AuthorityRequest(Claim)\ntarget = Group(UAV, group_id=42)
-SW --> GS : Group authority granted
+== Group Authority ==
+GS -> SW : AuthorityRequest(action=Claim)\ntarget = Group(UAV, group_id=42)
+SW --> GS : AuthorityStatus(state=Controller)\nfor group_id = 42
 
-GS -> SW : Command.FormationTask\n(target.group_id = 42)
+== Group Command ==
+GS -> SW : Command.FormationTask\n(target.group_id = 42)\npayload.group_id = 42
 SW --> GS : CommandResult.Received
 SW --> GS : CommandResult.Accepted
-SW -> GX : 执行群组任务
-GX -> A : fan-out 子任务
-GX -> B : fan-out 子任务
-A --> SW : StateSnapshot / Event
-B --> SW : StateSnapshot / Event
+SW -> GX : 提交群组任务
+
+== Fan-out to Members ==
+GX -> A : member subtask
+GX -> B : member subtask
+
+== Member Feedback ==
+A --> SW : StateSnapshot / StateEvent
+B --> SW : StateSnapshot / StateEvent
+SW --> GS : member-level state / event relay
+
+== Group Result ==
 SW --> GS : Group CommandResult.InProgress
-SW --> GS : 成员状态/事件回流
-SW --> GS : Group CommandResult.Succeeded\n或 Failed
+SW --> GS : Group CommandResult.Succeeded\nor Failed / PartialSuccess policy
+
+note right of SW
+这张图必须同时表达两层语义：
+- 群组级命令结果
+- 成员级状态与事件回流
+不能把它画成普通多参与方流水线。
+end note
 @enduml

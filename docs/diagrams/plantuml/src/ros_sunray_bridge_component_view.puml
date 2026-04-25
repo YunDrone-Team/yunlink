@@ -1,0 +1,45 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title sunray_yunlink_bridge - Component View
+
+package "sunray_yunlink_bridge" <<Neutral>> {
+  component "bridge_node" as Node <<Control>>
+  component "ros_adapter" as RosAdapter <<StatePlane>>
+  component "yunlink_adapter" as YunAdapter <<Control>>
+  component "command_tracker" as Tracker <<Control>>
+}
+
+package "Sunray ROS Contract" <<Neutral>> {
+  component "px4_state" as Px4 <<StatePlane>>
+  component "odom_status" as Odom <<StatePlane>>
+  component "fsm/state" as Fsm <<StatePlane>>
+  component "controller_state" as Ctrl <<StatePlane>>
+  component "uav_control_cmd" as Cmd <<Control>>
+}
+
+package "yunlink::Runtime" <<Control>> {
+  component "external command mode" as RuntimeMode <<Control>>
+  component "typed inbound command\nsubscriber" as RuntimeSub <<Control>>
+  component "explicit command\nresult reply helper" as RuntimeReply <<Control>>
+}
+
+Node --> RosAdapter : pull latest states /\npublish raw command
+Node --> YunAdapter : validate / publish /\nreply result
+Node --> Tracker : infer InProgress /\nSucceeded / Failed
+
+RosAdapter --> Px4
+RosAdapter --> Odom
+RosAdapter --> Fsm
+RosAdapter --> Ctrl
+RosAdapter --> Cmd
+
+YunAdapter --> RuntimeMode
+YunAdapter --> RuntimeSub
+YunAdapter --> RuntimeReply
+
+note right of Tracker
+只跟踪一期 raw control 命令：
+Takeoff / Land / Return /
+Goto / VelocitySetpoint
+end note
+@enduml

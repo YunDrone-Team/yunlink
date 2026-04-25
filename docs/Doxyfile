@@ -1,5 +1,5 @@
-PROJECT_NAME           = "sunray_communication_lib"
-PROJECT_BRIEF          = "Sunray unified communication library"
+PROJECT_NAME           = "yunlink"
+PROJECT_BRIEF          = "Core robotics communication protocol and library by YunDrone"
 OUTPUT_DIRECTORY       = build/doxygen
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English

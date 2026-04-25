@@ -1,0 +1,30 @@
+@startuml
+!include _yunlink_protocol_theme.iuml
+title Command Downlink Sequence
+
+participant "Rust Ground Client" as GROUND
+participant "yunlink::Runtime\n(ground)" as GRT
+participant "sunray_yunlink_bridge" as BRIDGE
+participant "command_tracker" as TRACK
+participant "Sunray uav_control_cmd" as CMD
+participant "Sunray FSM" as FSM
+
+GROUND -> GRT : Command.Goto / Takeoff / ...
+GRT -> BRIDGE : inbound command envelope
+
+BRIDGE -> BRIDGE : validate target=kEntity\nvalidate session / authority\nvalidate TTL / support
+alt validation failed
+  BRIDGE --> GRT : CommandResult.Failed
+else accepted by bridge
+  BRIDGE --> GRT : CommandResult.Received
+  BRIDGE -> CMD : publish UAVControlCMD
+  BRIDGE --> GRT : CommandResult.Accepted
+  CMD -> FSM : raw control request
+
+  FSM -> TRACK : enter TAKEOFF / LAND /\nRETURN / MOVE
+  TRACK --> GRT : CommandResult.InProgress
+
+  FSM -> TRACK : converge to HOVER / INIT
+  TRACK --> GRT : CommandResult.Succeeded
+end
+@enduml

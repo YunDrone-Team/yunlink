@@ -1,8 +1,8 @@
-# Sunray 新一代统一协议规范
+# Yunlink 新一代统一协议规范
 
 ## 1. 文档目的与适用范围
 
-本文档定义 Sunray 新一代统一协议（下文简称“Sunray Protocol”）的线包结构、语义消息、会话、控制权、命令、状态面与大数据旁路发现机制。本文档是协议规范主文档，适用于以下对象：
+本文档定义 Yunlink 新一代统一协议（下文简称“Yunlink Protocol”）的线包结构、语义消息、会话、控制权、命令、状态面与大数据旁路发现机制。本文档是协议规范主文档，适用于以下对象：
 
 - 地面站程序
 - 无人机机载计算机
@@ -90,13 +90,15 @@
 
 ### 3.2 总体架构
 
-Sunray Protocol 逻辑上分成三条面：
+Yunlink Protocol 逻辑上分成三条面：
 
 - 控制面：承载 `Session`、`Authority`、`Command`、`CommandResult`。
 - 状态面：承载 `StateSnapshot` 和 `StateEvent`。
 - 大流面：由 `BulkChannelDescriptor` 在主协议内发现和授权，实际内容走旁路通道。
 
-![协议上下文图](../diagrams/plantuml/svg/protocol_context_overview.svg)
+读图目的：先建立“参与方通过哪几条协议面发生关系”的整体心智，再进入 wire layer、状态机和场景细节。
+
+![协议分面与参与方](../diagrams/plantuml/svg/protocol_context_overview.svg)
 
 ### 3.3 基本原则
 
@@ -160,13 +162,15 @@ Sunray Protocol 逻辑上分成三条面：
 
 `SecureEnvelope` 是协议的稳定线包。任何业务消息都必须由它承载。v1 固定头长度为 `76` 字节，尾部校验长度为 `4` 字节。
 
-![SecureEnvelope 线包布局](../diagrams/plantuml/svg/secure_envelope_wire_format.svg)
+读图目的：把 `SecureEnvelope` 当成一个稳定对象来理解，先看组成块与解释边界，再读后面的字段表。
+
+![SecureEnvelope 结构对象图](../diagrams/plantuml/svg/secure_envelope_wire_format.svg)
 
 ### 6.2 固定头字段与偏移
 
 | 偏移 | 字段 | 大小 | 说明 |
 | --- | --- | --- | --- |
-| 0..3 | `magic` | 4 | 固定为 ASCII `SRCM`。 |
+| 0..3 | `magic` | 4 | 固定为 ASCII `SURY`。 |
 | 4 | `protocol_major` | 1 | 协议 major 版本，当前为 `1`。 |
 | 5 | `header_version` | 1 | 头部版本，当前为 `1`。 |
 | 6..7 | `flags` | 2 | 头部标志位，v1 保留。 |
@@ -338,6 +342,8 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 ### 9.3 状态机
 
+读图目的：关注会话从发现、握手、认证、协商到 `Active` 的推进条件，以及失败或断链后如何收束。
+
 ![会话状态机](../diagrams/plantuml/svg/session_lifecycle.svg)
 
 状态如下：
@@ -416,6 +422,8 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | `2` | `AuthorityStatus` | 告知控制权状态与原因 |
 
 ### 10.3 状态机
+
+读图目的：区分控制权主路径与分支路径，尤其是 `Controller`、`Preempting`、`Revoked` 之间的关系。
 
 ![控制权状态机](../diagrams/plantuml/svg/authority_lifecycle.svg)
 
@@ -580,7 +588,9 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 对于极短命令，可以省略 `InProgress`，但不应省略终态。
 
-![命令结果时序](../diagrams/plantuml/svg/command_result_flow.svg)
+读图目的：把 `Received -> Accepted -> InProgress -> Terminal` 看成标准结果流骨架，失败终态只是替换最后一段。
+
+![命令结果标准结果流时序](../diagrams/plantuml/svg/command_result_flow.svg)
 
 ### 12.4 `CommandResult` 字段
 
@@ -610,7 +620,9 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 不得用事件流拼出完整状态，也不应把快照流当作告警总线。
 
-![状态面与事件面](../diagrams/plantuml/svg/state_and_event_planes.svg)
+读图目的：确认 `Snapshot`、`Event`、`Bulk Descriptor` 三类流的边界，避免把状态面和告警面混成一条流。
+
+![状态面与事件面边界](../diagrams/plantuml/svg/state_and_event_planes.svg)
 
 ### 13.2 `StateSnapshot`
 
@@ -724,7 +736,9 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 ### 16.1 场景 A：地面站控制单架 UAV
 
-![单 UAV 场景](../diagrams/plantuml/svg/scenario_single_uav_control.svg)
+读图目的：把单 UAV 最小闭环压缩成一张协议协作时序图，先看到 `Session -> Authority -> Command -> Uplink` 四段骨架。
+
+![单 UAV 协议协作时序](../diagrams/plantuml/svg/scenario_single_uav_control.svg)
 
 协议级观察点：
 
@@ -736,7 +750,9 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 ### 16.2 场景 B：地面站控制单台 UGV
 
-![单 UGV 场景](../diagrams/plantuml/svg/scenario_single_ugv_control.svg)
+读图目的：重点看出 UGV 场景并不是普通离散命令流，而是“连续控制 + 短 TTL + 事件回流”的组合。
+
+![单 UGV 协议协作时序](../diagrams/plantuml/svg/scenario_single_ugv_control.svg)
 
 协议级观察点：
 
@@ -746,7 +762,9 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 ### 16.3 场景 C：地面站控制 UAV 集群
 
-![Swarm 场景](../diagrams/plantuml/svg/scenario_swarm_control.svg)
+读图目的：同时看见群组级结果和成员级回流两层语义，而不是把 swarm 控制误读成多参与方普通时序。
+
+![Swarm 协议协作时序](../diagrams/plantuml/svg/scenario_swarm_control.svg)
 
 协议级观察点：
 
