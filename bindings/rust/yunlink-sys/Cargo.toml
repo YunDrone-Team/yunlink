@@ -1,0 +1,9 @@
+[package]
+name = "yunlink-sys"
+version = "0.1.0"
+edition = "2021"
+links = "yunlink_ffi"
+build = "build.rs"
+
+[lib]
+path = "src/lib.rs"

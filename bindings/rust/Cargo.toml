@@ -1,0 +1,3 @@
+[workspace]
+members = ["yunlink", "yunlink-sys"]
+resolver = "2"

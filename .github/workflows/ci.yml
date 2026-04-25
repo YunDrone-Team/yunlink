@@ -57,3 +57,117 @@ jobs:
       - name: Test (Linux/macOS)
         if: runner.os != 'Windows'
         run: ctest --test-dir build/ci-ninja --output-on-failure
+
+  bindings-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Run Bindings Matrix
+        shell: bash
+        run: tools/bindings/run_all.sh
+
+  bindings-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure
+        run: cmake --preset ci-ninja
+
+      - name: Build Core Bindings Targets
+        run: cmake --build --preset ci-ninja --target yunlink_ffi example_cxx_air_roundtrip
+
+      - name: Test FFI Contracts
+        run: ctest --test-dir build/ci-ninja -R "test_c_ffi_(v1|contract|loader)" --output-on-failure
+
+      - name: Test Rust Bindings
+        run: |
+          cargo test -p yunlink --manifest-path bindings/rust/Cargo.toml
+          cargo build --examples -p yunlink --manifest-path bindings/rust/Cargo.toml
+
+      - name: Test Python Bindings
+        shell: bash
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -e bindings/python
+          python -m unittest discover -s bindings/python/tests
+
+      - name: Wheel Smoke
+        shell: bash
+        run: tools/bindings/build_python_wheel.sh
+
+  bindings-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure
+        run: cmake --preset ci-ninja
+
+      - name: Build Core Bindings Targets
+        run: cmake --build --preset ci-ninja --target yunlink_ffi test_c_ffi_v1 test_c_ffi_contract
+
+      - name: Test FFI Contracts
+        run: ctest --test-dir build/ci-ninja -R "test_c_ffi_(v1|contract|loader)" --output-on-failure
+
+      - name: Test Rust Bindings
+        run: |
+          cargo test -p yunlink --manifest-path bindings/rust/Cargo.toml
+          cargo build --examples -p yunlink --manifest-path bindings/rust/Cargo.toml
+
+      - name: Test Python Bindings
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+          .\.venv\Scripts\python -m pip install -e bindings/python
+          .\.venv\Scripts\python -m unittest discover -s bindings/python/tests
+
+      - name: Wheel Smoke
+        shell: pwsh
+        run: |
+          python -m venv .venv-wheel
+          .\.venv-wheel\Scripts\python -m pip install --upgrade pip
+          .\.venv-wheel\Scripts\python -m pip wheel bindings/python -w output/python-wheel

@@ -1,0 +1,154 @@
+use std::env;
+use std::time::{Duration, Instant};
+
+use tokio::sync::broadcast;
+use tokio::time::{sleep, timeout};
+
+use yunlink::{
+    AgentType, ControlSource, Event, GotoCommand, PeerConnection, Runtime, RuntimeConfig,
+    Session, TargetSelector,
+};
+
+fn parse_u16(value: &str) -> u16 {
+    value.parse::<u16>().expect("invalid u16")
+}
+
+fn parse_usize(value: Option<&String>, default: usize) -> usize {
+    value.and_then(|raw| raw.parse::<usize>().ok()).unwrap_or(default)
+}
+
+async fn connect_retry(runtime: &Runtime, ip: &str, port: u16) -> PeerConnection {
+    let deadline = Instant::now() + Duration::from_secs(4);
+    loop {
+        match runtime.connect(ip, port).await {
+            Ok(peer) => return peer,
+            Err(err) if Instant::now() < deadline => {
+                eprintln!("connect retry after error: {err}");
+                sleep(Duration::from_millis(100)).await;
+            }
+            Err(err) => panic!("connect retry timed out: {err}"),
+        }
+    }
+}
+
+async fn complete_round(
+    runtime: &Runtime,
+    events: &mut broadcast::Receiver<Event>,
+    ip: &str,
+    port: u16,
+    round: usize,
+) {
+    eprintln!("ground_recovery: round {round} connect");
+    let peer = connect_retry(runtime, ip, port).await;
+    eprintln!("ground_recovery: round {round} open_session");
+    let session = runtime
+        .open_session(&peer, &format!("rust-ground-recovery-{round}"))
+        .await
+        .expect("open session");
+    let target = TargetSelector::entity(AgentType::Uav, 1);
+
+    eprintln!("ground_recovery: round {round} request_authority");
+    runtime
+        .request_authority(
+            &peer,
+            &session,
+            &target,
+            ControlSource::GroundStation,
+            3000,
+            false,
+        )
+        .await
+        .expect("request authority");
+    eprintln!("ground_recovery: round {round} renew_authority");
+    runtime
+        .renew_authority(
+            &peer,
+            &session,
+            &target,
+            ControlSource::GroundStation,
+            4500,
+        )
+        .await
+        .expect("renew authority");
+    eprintln!("ground_recovery: round {round} publish_goto");
+    runtime
+        .publish_goto(
+            &peer,
+            &session,
+            &target,
+            &GotoCommand {
+                x_m: 5.0 + round as f32,
+                y_m: 1.0,
+                z_m: 3.0,
+                yaw_rad: 0.25,
+            },
+        )
+        .await
+        .expect("publish goto");
+
+    eprintln!("ground_recovery: round {round} wait_for_roundtrip");
+    wait_for_roundtrip(events, &session).await;
+
+    eprintln!("ground_recovery: round {round} release_authority");
+    runtime
+        .release_authority(&peer, &session, &target)
+        .await
+        .expect("release authority");
+    sleep(Duration::from_millis(100)).await;
+    eprintln!("ground_recovery: round {round} complete");
+}
+
+async fn wait_for_roundtrip(events: &mut broadcast::Receiver<Event>, session: &Session) {
+    let mut saw_state = false;
+    let mut result_count = 0usize;
+    timeout(Duration::from_secs(4), async {
+        loop {
+            match events.recv().await.expect("receive event") {
+                Event::CommandResult(result) if result.session_id == session.session_id => {
+                    result_count += 1;
+                }
+                Event::VehicleCoreState(state)
+                    if state.session_id == session.session_id
+                        && (state.battery_percent - 76.5).abs() < f32::EPSILON =>
+                {
+                    saw_state = true;
+                }
+                _ => {}
+            }
+            if saw_state && result_count >= 4 {
+                return;
+            }
+        }
+    })
+    .await
+    .expect("roundtrip timeout");
+}
+
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+async fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 6 || args.len() > 7 {
+        eprintln!(
+            "usage: {} <ip> <port> <udp-bind> <udp-target> <tcp-listen> [rounds]",
+            args[0]
+        );
+        std::process::exit(2);
+    }
+
+    let runtime = Runtime::start(RuntimeConfig::new(
+        parse_u16(&args[3]),
+        parse_u16(&args[4]),
+        parse_u16(&args[5]),
+        AgentType::GroundStation,
+        7,
+    ))
+    .expect("start runtime");
+
+    let mut events = runtime.subscribe();
+    let rounds = parse_usize(args.get(6), 2);
+    for round in 1..=rounds {
+        complete_round(&runtime, &mut events, &args[1], parse_u16(&args[2]), round).await;
+    }
+
+    println!("rust-ground-recovery ok");
+}

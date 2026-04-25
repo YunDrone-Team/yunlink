@@ -1,0 +1,10 @@
+[package]
+name = "yunlink"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+yunlink-sys = { path = "../yunlink-sys" }
