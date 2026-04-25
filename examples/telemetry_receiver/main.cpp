@@ -1,6 +1,6 @@
 /**
  * @file examples/telemetry_receiver/main.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/runtime/runtime.hpp"
+#include "yunlink/runtime/runtime.hpp"
 
 namespace {
 
@@ -76,19 +76,19 @@ int main(int argc, char** argv) {
         }
     }
 
-    sunraycom::Runtime runtime;
-    sunraycom::RuntimeConfig cfg;
+    yunlink::Runtime runtime;
+    yunlink::RuntimeConfig cfg;
     cfg.udp_bind_port = udp_bind;
     cfg.tcp_listen_port = tcp_listen;
 
-    if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
+    if (runtime.start(cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "failed to start runtime\n";
         return 1;
     }
 
     int got_frames = 0;
     auto tok =
-        runtime.event_bus().subscribe_envelope([&got_frames](const sunraycom::EnvelopeEvent& ev) {
+        runtime.event_bus().subscribe_envelope([&got_frames](const yunlink::EnvelopeEvent& ev) {
             ++got_frames;
             std::cout << "transport=" << static_cast<int>(ev.transport)
                       << " family=" << static_cast<int>(ev.envelope.message_family)

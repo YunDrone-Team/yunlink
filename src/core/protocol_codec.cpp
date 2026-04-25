@@ -1,13 +1,13 @@
 /**
  * @file src/core/protocol_codec.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#include "sunraycom/core/protocol_codec.hpp"
+#include "yunlink/core/protocol_codec.hpp"
 
 #include <chrono>
 
-namespace sunraycom {
+namespace yunlink {
 
 namespace {
 
@@ -216,4 +216,4 @@ DecodeResult ProtocolCodec::decode(const uint8_t* data, size_t len, uint64_t now
     return result;
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

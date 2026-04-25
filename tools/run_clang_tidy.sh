@@ -77,19 +77,31 @@ PY
   echo "[clang-tidy] detected AppleClang compile database, configuring ${BUILD_DIR}" >&2
   cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" \
     -DCMAKE_CXX_COMPILER="${llvm_clangxx}" \
-    -DSUNRAYCOM_BUILD_EXAMPLES=ON \
-    -DSUNRAYCOM_BUILD_TESTS=ON >/dev/null
+    -DYUNLINK_BUILD_EXAMPLES=ON \
+    -DYUNLINK_BUILD_TESTS=ON >/dev/null
 }
 
 configure_darwin_tidy_build
 
+list_translation_units() {
+  if command -v rg >/dev/null 2>&1; then
+    (
+      cd "${ROOT_DIR}"
+      rg --files src examples tests | rg '\.cpp$'
+    )
+    return 0
+  fi
+
+  (
+    cd "${ROOT_DIR}"
+    find src examples tests -type f -name '*.cpp' | LC_ALL=C sort
+  )
+}
+
 CPP_FILES=()
 while IFS= read -r file; do
   CPP_FILES+=("${file}")
-done < <(
-  cd "${ROOT_DIR}"
-  rg --files src examples tests | rg '\.cpp$'
-)
+done < <(list_translation_units)
 
 if [[ ${#CPP_FILES[@]} -eq 0 ]]; then
   echo "no translation units found under src/examples/tests" >&2

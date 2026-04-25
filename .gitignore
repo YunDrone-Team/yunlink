@@ -30,11 +30,16 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+.venv-bindings-wheel/
 .ruff_cache/
 
 # Local caches / logs
 .cache/
 *.log
+
+# Bindings artifacts
+bindings/rust/target/
+output/python-wheel/
 
 
 .codex/

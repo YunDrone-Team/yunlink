@@ -5,9 +5,24 @@
 
 #include "semantic_codec_io.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 namespace {
+
+bool valid_vehicle_event_kind(uint8_t value) {
+    return value >= static_cast<uint8_t>(VehicleEventKind::kInfo) &&
+           value <= static_cast<uint8_t>(VehicleEventKind::kFault);
+}
+
+bool valid_bulk_stream_type(uint8_t value) {
+    return value >= static_cast<uint8_t>(BulkStreamType::kPointCloud) &&
+           value <= static_cast<uint8_t>(BulkStreamType::kVideo);
+}
+
+bool valid_bulk_channel_state(uint8_t value) {
+    return value >= static_cast<uint8_t>(BulkChannelState::kReady) &&
+           value <= static_cast<uint8_t>(BulkChannelState::kClosed);
+}
 
 void write_vec3(BufferWriter& writer, const Vector3f& value) {
     writer.write_float(value.x);
@@ -123,7 +138,7 @@ ByteBuffer encode_payload(const UavControlFsmStateSnapshot& payload) {
         writer.write_double(payload.land_max_velocity_mps);
         write_vec3(writer, payload.home_point_m);
         writer.write_u8(payload.control_command);
-        writer.write_u8(payload.sunray_fsm_state);
+        writer.write_u8(payload.yunlink_fsm_state);
     });
 }
 
@@ -133,7 +148,7 @@ bool decode_payload(const ByteBuffer& bytes, UavControlFsmStateSnapshot* payload
                reader.read_double(&out->takeoff_max_velocity_mps) &&
                reader.read_u8(&out->land_type) && reader.read_double(&out->land_max_velocity_mps) &&
                read_vec3(reader, &out->home_point_m) && reader.read_u8(&out->control_command) &&
-               reader.read_u8(&out->sunray_fsm_state);
+               reader.read_u8(&out->yunlink_fsm_state);
     });
 }
 
@@ -207,6 +222,9 @@ bool decode_payload(const ByteBuffer& bytes, VehicleEvent* payload) {
             !reader.read_string(&out->detail)) {
             return false;
         }
+        if (!valid_vehicle_event_kind(kind)) {
+            return false;
+        }
         out->kind = static_cast<VehicleEventKind>(kind);
         return true;
     });
@@ -214,23 +232,33 @@ bool decode_payload(const ByteBuffer& bytes, VehicleEvent* payload) {
 
 ByteBuffer encode_payload(const BulkChannelDescriptor& payload) {
     return build_payload([&](BufferWriter& writer) {
+        writer.write_u32(payload.channel_id);
         writer.write_u8(static_cast<uint8_t>(payload.stream_type));
+        writer.write_u8(static_cast<uint8_t>(payload.state));
         writer.write_string(payload.uri);
         writer.write_u32(payload.mtu_bytes);
         writer.write_bool(payload.reliable);
+        writer.write_string(payload.detail);
     });
 }
 
 bool decode_payload(const ByteBuffer& bytes, BulkChannelDescriptor* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, BulkChannelDescriptor* out) {
         uint8_t type = 0;
-        if (!reader.read_u8(&type) || !reader.read_string(&out->uri) ||
-            !reader.read_u32(&out->mtu_bytes) || !reader.read_bool(&out->reliable)) {
+        uint8_t state = 0;
+        if (!reader.read_u32(&out->channel_id) || !reader.read_u8(&type) ||
+            !reader.read_u8(&state) || !reader.read_string(&out->uri) ||
+            !reader.read_u32(&out->mtu_bytes) || !reader.read_bool(&out->reliable) ||
+            !reader.read_string(&out->detail)) {
+            return false;
+        }
+        if (!valid_bulk_stream_type(type) || !valid_bulk_channel_state(state)) {
             return false;
         }
         out->stream_type = static_cast<BulkStreamType>(type);
+        out->state = static_cast<BulkChannelState>(state);
         return true;
     });
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

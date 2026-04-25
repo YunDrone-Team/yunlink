@@ -1,9 +1,9 @@
 /**
  * @file src/transport/tcp_server.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#include "sunraycom/transport/tcp_server.hpp"
+#include "yunlink/transport/tcp_server.hpp"
 
 #include <chrono>
 #include <mutex>
@@ -15,7 +15,7 @@
 
 #include "tcp_stream_common.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 struct TcpServer::ClientConn {
     PeerInfo peer;
@@ -246,4 +246,4 @@ void TcpServer::client_loop(const std::shared_ptr<ClientConn>& conn) {
                       impl_->config.io_poll_interval_ms);
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

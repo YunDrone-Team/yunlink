@@ -1,9 +1,9 @@
 /**
  * @file src/transport/udp_transport.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#include "sunraycom/transport/udp_transport.hpp"
+#include "yunlink/transport/udp_transport.hpp"
 
 #include <array>
 #include <chrono>
@@ -14,9 +14,9 @@
 
 #include <asio.hpp>
 
-#include "sunraycom/core/envelope_stream_parser.hpp"
+#include "yunlink/core/envelope_stream_parser.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 namespace {
 
@@ -242,4 +242,4 @@ void UdpTransport::recv_loop() {
     }
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

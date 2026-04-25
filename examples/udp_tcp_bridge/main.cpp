@@ -1,6 +1,6 @@
 /**
  * @file examples/udp_tcp_bridge/main.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/runtime/runtime.hpp"
+#include "yunlink/runtime/runtime.hpp"
 
 namespace {
 
@@ -82,28 +82,28 @@ int main(int argc, char** argv) {
         }
     }
 
-    sunraycom::Runtime runtime;
-    sunraycom::RuntimeConfig cfg;
+    yunlink::Runtime runtime;
+    yunlink::RuntimeConfig cfg;
     cfg.udp_bind_port = udp_bind;
     cfg.tcp_listen_port = tcp_listen;
-    if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
+    if (runtime.start(cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "failed to start runtime\n";
         return 1;
     }
 
     std::string peer_id;
     if (runtime.tcp_clients().connect_peer(tcp_ip, tcp_port, &peer_id) !=
-        sunraycom::ErrorCode::kOk) {
+        yunlink::ErrorCode::kOk) {
         std::cerr << "connect failed\n";
         runtime.stop();
         return 2;
     }
 
     auto tok = runtime.event_bus().subscribe_envelope(
-        [&runtime, &peer_id](const sunraycom::EnvelopeEvent& ev) {
-            if (ev.transport == sunraycom::TransportType::kUdpUnicast ||
-                ev.transport == sunraycom::TransportType::kUdpBroadcast) {
-                sunraycom::ProtocolCodec codec;
+        [&runtime, &peer_id](const yunlink::EnvelopeEvent& ev) {
+            if (ev.transport == yunlink::TransportType::kUdpUnicast ||
+                ev.transport == yunlink::TransportType::kUdpBroadcast) {
+                yunlink::ProtocolCodec codec;
                 const auto bytes = codec.encode(ev.envelope, false);
                 runtime.tcp_clients().send(peer_id, bytes);
             }

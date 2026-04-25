@@ -3,8 +3,8 @@
  * @brief TCP transport 共享 helper。
  */
 
-#ifndef SUNRAYCOM_TRANSPORT_TCP_STREAM_COMMON_HPP
-#define SUNRAYCOM_TRANSPORT_TCP_STREAM_COMMON_HPP
+#ifndef YUNLINK_TRANSPORT_TCP_STREAM_COMMON_HPP
+#define YUNLINK_TRANSPORT_TCP_STREAM_COMMON_HPP
 
 #include <array>
 #include <chrono>
@@ -15,10 +15,10 @@
 
 #include <asio.hpp>
 
-#include "sunraycom/core/envelope_stream_parser.hpp"
-#include "sunraycom/core/event_bus.hpp"
+#include "yunlink/core/envelope_stream_parser.hpp"
+#include "yunlink/core/event_bus.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 inline std::string make_tcp_peer_id(const std::string& ip, uint16_t port) {
     return ip + ":" + std::to_string(port);
@@ -105,6 +105,6 @@ void run_tcp_read_loop(std::atomic<bool>& owner_running,
     socket.close(ec);
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink
 
-#endif  // SUNRAYCOM_TRANSPORT_TCP_STREAM_COMMON_HPP
+#endif  // YUNLINK_TRANSPORT_TCP_STREAM_COMMON_HPP

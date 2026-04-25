@@ -1,10 +1,10 @@
 /**
  * @file src/transport/socket_common.hpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#ifndef SUNRAYCOM_TRANSPORT_SOCKET_COMMON_HPP
-#define SUNRAYCOM_TRANSPORT_SOCKET_COMMON_HPP
+#ifndef YUNLINK_TRANSPORT_SOCKET_COMMON_HPP
+#define YUNLINK_TRANSPORT_SOCKET_COMMON_HPP
 
 #include <cerrno>
 #include <cstring>
@@ -116,4 +116,4 @@ inline int send_all(SocketHandle s, const uint8_t* data, size_t len) {
     return static_cast<int>(sent);
 }
 
-#endif  // SUNRAYCOM_TRANSPORT_SOCKET_COMMON_HPP
+#endif  // YUNLINK_TRANSPORT_SOCKET_COMMON_HPP

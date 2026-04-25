@@ -1,63 +1,63 @@
 /**
  * @file tests/test_parser.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <iostream>
 
-#include "sunraycom/core/envelope_stream_parser.hpp"
-#include "sunraycom/core/semantic_messages.hpp"
+#include "yunlink/core/envelope_stream_parser.hpp"
+#include "yunlink/core/semantic_messages.hpp"
 
 int main() {
-    sunraycom::ProtocolCodec codec;
-    const sunraycom::EndpointIdentity source{
-        sunraycom::AgentType::kGroundStation,
+    yunlink::ProtocolCodec codec;
+    const yunlink::EndpointIdentity source{
+        yunlink::AgentType::kGroundStation,
         11,
-        sunraycom::EndpointRole::kController,
+        yunlink::EndpointRole::kController,
     };
 
-    sunraycom::TakeoffCommand takeoff{};
+    yunlink::TakeoffCommand takeoff{};
     takeoff.relative_height_m = 12.5F;
     takeoff.max_velocity_mps = 3.2F;
-    const auto a = sunraycom::make_typed_envelope(
+    const auto a = yunlink::make_typed_envelope(
         source,
-        sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kUav, 1),
+        yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 1),
         7001,
         8001,
-        sunraycom::QosClass::kReliableOrdered,
+        yunlink::QosClass::kReliableOrdered,
         takeoff,
         200);
 
-    sunraycom::VehicleEvent vehicle_event{};
-    vehicle_event.kind = sunraycom::VehicleEventKind::kTakeoff;
+    yunlink::VehicleEvent vehicle_event{};
+    vehicle_event.kind = yunlink::VehicleEventKind::kTakeoff;
     vehicle_event.severity = 2;
     vehicle_event.detail = "armed";
-    const auto b = sunraycom::make_typed_envelope(
+    const auto b = yunlink::make_typed_envelope(
         source,
-        sunraycom::TargetSelector::broadcast(sunraycom::AgentType::kGroundStation),
+        yunlink::TargetSelector::broadcast(yunlink::AgentType::kGroundStation),
         0,
         8002,
-        sunraycom::QosClass::kBestEffort,
+        yunlink::QosClass::kBestEffort,
         vehicle_event);
 
     const auto ba = codec.encode(a, true);
     const auto bb = codec.encode(b, true);
 
-    sunraycom::EnvelopeStreamParser parser;
+    yunlink::EnvelopeStreamParser parser;
     parser.feed(ba.data(), 5);
     parser.feed(ba.data() + 5, ba.size() - 5);
     parser.feed(bb);
 
-    sunraycom::SecureEnvelope out;
+    yunlink::SecureEnvelope out;
     if (!parser.pop_next(&out) || out.message_id != a.message_id ||
-        out.message_family != sunraycom::MessageFamily::kCommand) {
+        out.message_family != yunlink::MessageFamily::kCommand) {
         std::cerr << "first envelope failed\n";
         return 1;
     }
 
     if (!parser.pop_next(&out) || out.message_id != b.message_id ||
-        out.message_family != sunraycom::MessageFamily::kStateEvent ||
-        out.target.scope != sunraycom::TargetScope::kBroadcast) {
+        out.message_family != yunlink::MessageFamily::kStateEvent ||
+        out.target.scope != yunlink::TargetScope::kBroadcast) {
         std::cerr << "second envelope failed\n";
         return 2;
     }

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 @file examples/smoke_local/run_smoke_local.py
-@brief sunray_communication_lib 本机多进程冒烟测试编排脚本。
+@brief yunlink 本机多进程冒烟测试编排脚本。
 """
 
 import argparse
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -115,6 +116,17 @@ def require_ok(result: ProcResult) -> None:
         raise RuntimeError(f"{result.name} failed")
 
 
+def wait_for_tcp_listener(host: str, port: int, timeout_s: float) -> bool:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.2):
+                return True
+        except OSError:
+            time.sleep(0.05)
+    return False
+
+
 def scenario_tcp_direct(bin_dir: Path, cwd: Path) -> None:
     print("== Scenario 1: TCP direct ==")
     tcp_listen = 21096
@@ -138,7 +150,8 @@ def scenario_tcp_direct(bin_dir: Path, cwd: Path) -> None:
         cwd,
     )
     receiver.start()
-    time.sleep(0.25)
+    if not wait_for_tcp_listener("127.0.0.1", tcp_listen, timeout_s=2.5):
+        raise RuntimeError("telemetry_receiver_tcp did not open its TCP listener in time")
 
     sender = run_checked(
         [
@@ -182,7 +195,7 @@ def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
             "--tcp-listen",
             str(sink_tcp_listen),
             "--timeout-ms",
-            "3000",
+            "5000",
             "--required-frames",
             "1",
         ],
@@ -199,15 +212,18 @@ def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
             "--tcp-listen",
             str(bridge_tcp_listen),
             "--duration-ms",
-            "4000",
+            "5500",
         ],
         cwd,
     )
 
     sink.start()
-    time.sleep(0.2)
+    if not wait_for_tcp_listener("127.0.0.1", sink_tcp_listen, timeout_s=2.5):
+        raise RuntimeError("telemetry_receiver_sink did not open its TCP listener in time")
+
     bridge.start()
-    time.sleep(0.6)
+    if not wait_for_tcp_listener("127.0.0.1", bridge_tcp_listen, timeout_s=2.5):
+        raise RuntimeError("udp_tcp_bridge did not finish startup in time")
 
     try:
         for attempt in range(1, 4):

@@ -5,7 +5,7 @@
 
 #include "runtime_internal.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 ErrorCode Runtime::publish_vehicle_core_state(const std::string& peer_id,
                                               const TargetSelector& target,
@@ -77,4 +77,14 @@ ErrorCode Runtime::publish_vehicle_event(const std::string& peer_id,
     return send_envelope_to_peer(peer_id, envelope);
 }
 
-}  // namespace sunraycom
+ErrorCode Runtime::publish_bulk_channel_descriptor(const std::string& peer_id,
+                                                   const TargetSelector& target,
+                                                   const BulkChannelDescriptor& payload,
+                                                   uint64_t session_id) {
+    SecureEnvelope envelope = make_typed_envelope(
+        config_.self_identity, target, session_id, 0, QosClass::kReliableOrdered, payload);
+    envelope.message_id = allocate_message_id();
+    return send_envelope_to_peer(peer_id, envelope);
+}
+
+}  // namespace yunlink

@@ -5,7 +5,20 @@
 
 #include "semantic_codec_io.hpp"
 
-namespace sunraycom {
+namespace yunlink {
+
+namespace {
+
+bool valid_command_kind(uint16_t value) {
+    return value <= static_cast<uint16_t>(CommandKind::kFormationTask);
+}
+
+bool valid_command_phase(uint8_t value) {
+    return value >= static_cast<uint8_t>(CommandPhase::kReceived) &&
+           value <= static_cast<uint8_t>(CommandPhase::kExpired);
+}
+
+}  // namespace
 
 ByteBuffer encode_payload(const TakeoffCommand& payload) {
     return build_payload([&](BufferWriter& writer) {
@@ -153,10 +166,13 @@ bool decode_payload(const ByteBuffer& bytes, CommandResult* payload) {
             !reader.read_string(&out->detail)) {
             return false;
         }
+        if (!valid_command_kind(kind) || !valid_command_phase(phase)) {
+            return false;
+        }
         out->command_kind = static_cast<CommandKind>(kind);
         out->phase = static_cast<CommandPhase>(phase);
         return true;
     });
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

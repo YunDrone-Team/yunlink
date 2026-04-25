@@ -1,31 +1,31 @@
 /**
  * @file tests/test_protocol.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <iostream>
 
-#include "sunraycom/core/protocol_codec.hpp"
-#include "sunraycom/core/semantic_messages.hpp"
+#include "yunlink/core/protocol_codec.hpp"
+#include "yunlink/core/semantic_messages.hpp"
 
 int main() {
-    sunraycom::ProtocolCodec codec;
-    const sunraycom::EndpointIdentity source{
-        sunraycom::AgentType::kGroundStation,
+    yunlink::ProtocolCodec codec;
+    const yunlink::EndpointIdentity source{
+        yunlink::AgentType::kGroundStation,
         7,
-        sunraycom::EndpointRole::kController,
+        yunlink::EndpointRole::kController,
     };
-    const sunraycom::TargetSelector target =
-        sunraycom::TargetSelector::for_group(sunraycom::AgentType::kUav, 42);
+    const yunlink::TargetSelector target =
+        yunlink::TargetSelector::for_group(yunlink::AgentType::kUav, 42);
 
-    sunraycom::GotoCommand payload{};
+    yunlink::GotoCommand payload{};
     payload.x_m = 1.25F;
     payload.y_m = -2.5F;
     payload.z_m = 8.0F;
     payload.yaw_rad = 0.33F;
 
-    auto envelope = sunraycom::make_typed_envelope(
-        source, target, 1001, 9001, sunraycom::QosClass::kReliableOrdered, payload, 25);
+    auto envelope = yunlink::make_typed_envelope(
+        source, target, 1001, 9001, yunlink::QosClass::kReliableOrdered, payload, 25);
     envelope.security.key_epoch = 3;
     envelope.security.auth_tag = {0xAA, 0x55, 0x10, 0x20};
 
@@ -46,32 +46,32 @@ int main() {
         dr.envelope.correlation_id != envelope.correlation_id ||
         dr.envelope.source.agent_id != source.agent_id ||
         dr.envelope.target.group_id != target.group_id ||
-        dr.envelope.target.scope != sunraycom::TargetScope::kGroup ||
-        dr.envelope.message_family != sunraycom::MessageFamily::kCommand ||
+        dr.envelope.target.scope != yunlink::TargetScope::kGroup ||
+        dr.envelope.message_family != yunlink::MessageFamily::kCommand ||
         dr.envelope.message_type !=
-            sunraycom::MessageTraits<sunraycom::GotoCommand>::kMessageType) {
+            yunlink::MessageTraits<yunlink::GotoCommand>::kMessageType) {
         std::cerr << "roundtrip mismatch\n";
         return 3;
     }
 
-    sunraycom::GotoCommand decoded{};
-    if (!sunraycom::decode_typed_payload(dr.envelope.payload, &decoded) ||
+    yunlink::GotoCommand decoded{};
+    if (!yunlink::decode_typed_payload(dr.envelope.payload, &decoded) ||
         decoded.x_m != payload.x_m || decoded.z_m != payload.z_m ||
         decoded.yaw_rad != payload.yaw_rad) {
         std::cerr << "typed payload mismatch\n";
         return 4;
     }
 
-    sunraycom::AuthorityStatus authority_status{};
-    authority_status.state = sunraycom::AuthorityState::kController;
+    yunlink::AuthorityStatus authority_status{};
+    authority_status.state = yunlink::AuthorityState::kController;
     authority_status.session_id = 0x12345678ABCDEF01ULL;
     authority_status.lease_ttl_ms = 2000;
     authority_status.reason_code = 9;
     authority_status.detail = "lease";
 
-    const auto authority_bytes = sunraycom::encode_payload(authority_status);
-    sunraycom::AuthorityStatus authority_decoded{};
-    if (!sunraycom::decode_typed_payload(authority_bytes, &authority_decoded)) {
+    const auto authority_bytes = yunlink::encode_payload(authority_status);
+    yunlink::AuthorityStatus authority_decoded{};
+    if (!yunlink::decode_typed_payload(authority_bytes, &authority_decoded)) {
         std::cerr << "authority status decode failed\n";
         return 5;
     }
@@ -83,14 +83,14 @@ int main() {
     auto corrupted = bytes;
     corrupted[0] = 0x00;
     const auto bad = codec.decode(corrupted.data(), corrupted.size(), envelope.created_at_ms);
-    if (bad.code != sunraycom::ErrorCode::kInvalidHeader) {
+    if (bad.code != yunlink::ErrorCode::kInvalidHeader) {
         std::cerr << "invalid header not detected\n";
         return 7;
     }
 
     const auto expired =
         codec.decode(bytes.data(), bytes.size(), envelope.created_at_ms + envelope.ttl_ms + 1);
-    if (expired.code != sunraycom::ErrorCode::kTimeout) {
+    if (expired.code != yunlink::ErrorCode::kTimeout) {
         std::cerr << "ttl expiration not detected\n";
         return 8;
     }

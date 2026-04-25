@@ -13,8 +13,8 @@
       "binaryDir": "${sourceDir}/build/ninja-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SUNRAYCOM_BUILD_EXAMPLES": "ON",
-        "SUNRAYCOM_BUILD_TESTS": "ON"
+        "YUNLINK_BUILD_EXAMPLES": "ON",
+        "YUNLINK_BUILD_TESTS": "ON"
       }
     },
     {
@@ -24,8 +24,8 @@
       "binaryDir": "${sourceDir}/build/ninja-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SUNRAYCOM_BUILD_EXAMPLES": "ON",
-        "SUNRAYCOM_BUILD_TESTS": "ON"
+        "YUNLINK_BUILD_EXAMPLES": "ON",
+        "YUNLINK_BUILD_TESTS": "ON"
       }
     },
     {
@@ -35,8 +35,8 @@
       "binaryDir": "${sourceDir}/build/ci-ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SUNRAYCOM_BUILD_EXAMPLES": "ON",
-        "SUNRAYCOM_BUILD_TESTS": "ON"
+        "YUNLINK_BUILD_EXAMPLES": "ON",
+        "YUNLINK_BUILD_TESTS": "ON"
       }
     }
   ],

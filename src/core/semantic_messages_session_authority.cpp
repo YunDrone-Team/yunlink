@@ -5,7 +5,7 @@
 
 #include "semantic_codec_io.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 ByteBuffer encode_payload(const SessionHello& payload) {
     return build_payload([&](BufferWriter& writer) {
@@ -97,4 +97,4 @@ bool decode_payload(const ByteBuffer& bytes, AuthorityStatus* payload) {
     });
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

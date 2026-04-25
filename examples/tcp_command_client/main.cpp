@@ -1,6 +1,6 @@
 /**
  * @file examples/tcp_command_client/main.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <chrono>
@@ -8,8 +8,8 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/core/semantic_messages.hpp"
-#include "sunraycom/runtime/runtime.hpp"
+#include "yunlink/core/semantic_messages.hpp"
+#include "yunlink/runtime/runtime.hpp"
 
 namespace {
 
@@ -71,21 +71,21 @@ int main(int argc, char** argv) {
         }
     }
 
-    sunraycom::Runtime runtime;
-    sunraycom::RuntimeConfig cfg;
+    yunlink::Runtime runtime;
+    yunlink::RuntimeConfig cfg;
     cfg.udp_bind_port = udp_bind;
     cfg.udp_target_port = udp_target;
     cfg.tcp_listen_port = tcp_listen;
-    cfg.self_identity.agent_type = sunraycom::AgentType::kGroundStation;
+    cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     cfg.self_identity.agent_id = 7;
-    cfg.self_identity.role = sunraycom::EndpointRole::kController;
-    if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
+    cfg.self_identity.role = yunlink::EndpointRole::kController;
+    if (runtime.start(cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "failed to start runtime\n";
         return 1;
     }
 
     std::string peer_id;
-    if (runtime.tcp_clients().connect_peer(ip, port, &peer_id) != sunraycom::ErrorCode::kOk) {
+    if (runtime.tcp_clients().connect_peer(ip, port, &peer_id) != yunlink::ErrorCode::kOk) {
         std::cerr << "connect failed\n";
         runtime.stop();
         return 2;
@@ -98,16 +98,16 @@ int main(int argc, char** argv) {
         return 3;
     }
 
-    const auto target = sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kUav, 1);
+    const auto target = yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 1);
     runtime.request_authority(
-        peer_id, session_id, target, sunraycom::ControlSource::kGroundStation, 3000);
+        peer_id, session_id, target, yunlink::ControlSource::kGroundStation, 3000);
 
-    sunraycom::GotoCommand cmd{};
+    yunlink::GotoCommand cmd{};
     cmd.x_m = 5.0F;
     cmd.y_m = 0.0F;
     cmd.z_m = 3.0F;
     cmd.yaw_rad = 0.2F;
-    sunraycom::CommandHandle handle{};
+    yunlink::CommandHandle handle{};
     const auto ec =
         runtime.command_publisher().publish_goto(peer_id, session_id, target, cmd, &handle);
     std::cout << "session=" << session_id << " message=" << handle.message_id

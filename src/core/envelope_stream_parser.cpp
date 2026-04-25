@@ -1,11 +1,11 @@
 /**
  * @file src/core/envelope_stream_parser.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#include "sunraycom/core/envelope_stream_parser.hpp"
+#include "yunlink/core/envelope_stream_parser.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 EnvelopeStreamParser::EnvelopeStreamParser(size_t max_buffer_bytes)
     : max_buffer_bytes_(max_buffer_bytes) {}
@@ -90,4 +90,4 @@ size_t EnvelopeStreamParser::size() const {
     return buffer_.size();
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

@@ -1,6 +1,6 @@
 /**
  * @file examples/discovery_udp/main.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <chrono>
@@ -8,8 +8,8 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/core/semantic_messages.hpp"
-#include "sunraycom/runtime/runtime.hpp"
+#include "yunlink/core/semantic_messages.hpp"
+#include "yunlink/runtime/runtime.hpp"
 
 namespace {
 
@@ -70,33 +70,33 @@ int main(int argc, char** argv) {
         }
     }
 
-    sunraycom::Runtime runtime;
-    sunraycom::RuntimeConfig cfg;
+    yunlink::Runtime runtime;
+    yunlink::RuntimeConfig cfg;
     cfg.udp_bind_port = udp_bind;
     cfg.udp_target_port = udp_target;
 
-    if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
+    if (runtime.start(cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "failed to start runtime\n";
         return 1;
     }
 
-    auto tok = runtime.event_bus().subscribe_envelope([](const sunraycom::EnvelopeEvent& ev) {
+    auto tok = runtime.event_bus().subscribe_envelope([](const yunlink::EnvelopeEvent& ev) {
         std::cout << "rx family=" << static_cast<int>(ev.envelope.message_family) << " from "
                   << ev.peer.ip << ":" << ev.peer.port << "\n";
     });
 
-    sunraycom::ProtocolCodec codec;
-    sunraycom::VehicleEvent discovery{};
-    discovery.kind = sunraycom::VehicleEventKind::kInfo;
+    yunlink::ProtocolCodec codec;
+    yunlink::VehicleEvent discovery{};
+    discovery.kind = yunlink::VehicleEventKind::kInfo;
     discovery.severity = 1;
     discovery.detail = "discovery";
     auto bytes = codec.encode(
-        sunraycom::make_typed_envelope(
-            {sunraycom::AgentType::kGroundStation, 0, sunraycom::EndpointRole::kObserver},
-            sunraycom::TargetSelector::broadcast(sunraycom::AgentType::kUnknown),
+        yunlink::make_typed_envelope(
+            {yunlink::AgentType::kGroundStation, 0, yunlink::EndpointRole::kObserver},
+            yunlink::TargetSelector::broadcast(yunlink::AgentType::kUnknown),
             0,
             0,
-            sunraycom::QosClass::kBestEffort,
+            yunlink::QosClass::kBestEffort,
             discovery),
         true);
     runtime.udp().send_broadcast(bytes, cfg.udp_target_port);

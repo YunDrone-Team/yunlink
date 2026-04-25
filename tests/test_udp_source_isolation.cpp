@@ -1,6 +1,6 @@
 /**
  * @file tests/test_udp_source_isolation.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <asio.hpp>
@@ -11,8 +11,8 @@
 #include <thread>
 #include <vector>
 
-#include "sunraycom/core/semantic_messages.hpp"
-#include "sunraycom/runtime/runtime.hpp"
+#include "yunlink/core/semantic_messages.hpp"
+#include "yunlink/runtime/runtime.hpp"
 
 namespace {
 
@@ -36,53 +36,53 @@ int send_part(asio::ip::udp::socket& sock,
 }  // namespace
 
 int main() {
-    sunraycom::Runtime runtime;
-    sunraycom::RuntimeConfig cfg;
+    yunlink::Runtime runtime;
+    yunlink::RuntimeConfig cfg;
     cfg.udp_bind_port = 12100;
     cfg.udp_target_port = 12100;
     cfg.tcp_listen_port = 12200;
-    cfg.self_identity.agent_type = sunraycom::AgentType::kGroundStation;
+    cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     cfg.self_identity.agent_id = 77;
-    cfg.self_identity.role = sunraycom::EndpointRole::kObserver;
-    if (runtime.start(cfg) != sunraycom::ErrorCode::kOk) {
+    cfg.self_identity.role = yunlink::EndpointRole::kObserver;
+    if (runtime.start(cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "runtime start failed\n";
         return 1;
     }
 
     std::atomic<int> got{0};
-    auto tok = runtime.event_bus().subscribe_envelope([&got](const sunraycom::EnvelopeEvent& ev) {
-        if (ev.transport == sunraycom::TransportType::kUdpUnicast &&
-            ev.envelope.message_family == sunraycom::MessageFamily::kStateEvent) {
+    auto tok = runtime.event_bus().subscribe_envelope([&got](const yunlink::EnvelopeEvent& ev) {
+        if (ev.transport == yunlink::TransportType::kUdpUnicast &&
+            ev.envelope.message_family == yunlink::MessageFamily::kStateEvent) {
             ++got;
         }
     });
 
-    sunraycom::ProtocolCodec codec;
-    sunraycom::VehicleEvent e1{};
-    e1.kind = sunraycom::VehicleEventKind::kFault;
+    yunlink::ProtocolCodec codec;
+    yunlink::VehicleEvent e1{};
+    e1.kind = yunlink::VehicleEventKind::kFault;
     e1.severity = 3;
     e1.detail = "camera";
     auto b1 = codec.encode(
-        sunraycom::make_typed_envelope(
-            {sunraycom::AgentType::kUav, 1, sunraycom::EndpointRole::kVehicle},
-            sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kGroundStation, 77),
+        yunlink::make_typed_envelope(
+            {yunlink::AgentType::kUav, 1, yunlink::EndpointRole::kVehicle},
+            yunlink::TargetSelector::for_entity(yunlink::AgentType::kGroundStation, 77),
             0,
             201,
-            sunraycom::QosClass::kBestEffort,
+            yunlink::QosClass::kBestEffort,
             e1),
         true);
 
-    sunraycom::VehicleEvent e2{};
-    e2.kind = sunraycom::VehicleEventKind::kFormationUpdate;
+    yunlink::VehicleEvent e2{};
+    e2.kind = yunlink::VehicleEventKind::kFormationUpdate;
     e2.severity = 1;
     e2.detail = "swarm";
     auto b2 = codec.encode(
-        sunraycom::make_typed_envelope(
-            {sunraycom::AgentType::kUav, 2, sunraycom::EndpointRole::kVehicle},
-            sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kGroundStation, 77),
+        yunlink::make_typed_envelope(
+            {yunlink::AgentType::kUav, 2, yunlink::EndpointRole::kVehicle},
+            yunlink::TargetSelector::for_entity(yunlink::AgentType::kGroundStation, 77),
             0,
             202,
-            sunraycom::QosClass::kBestEffort,
+            yunlink::QosClass::kBestEffort,
             e2),
         true);
 

@@ -3,12 +3,16 @@
  * @brief 语义消息编解码内部 IO helper。
  */
 
-#ifndef SUNRAYCOM_CORE_SEMANTIC_CODEC_IO_HPP
-#define SUNRAYCOM_CORE_SEMANTIC_CODEC_IO_HPP
+#ifndef YUNLINK_CORE_SEMANTIC_CODEC_IO_HPP
+#define YUNLINK_CORE_SEMANTIC_CODEC_IO_HPP
 
-#include "sunraycom/core/semantic_messages.hpp"
+#include <algorithm>
 
-namespace sunraycom {
+#include "yunlink/core/semantic_messages.hpp"
+
+namespace yunlink {
+
+constexpr size_t kMaxSemanticStringBytes = 1024;
 
 struct BufferWriter {
     ByteBuffer data;
@@ -53,8 +57,9 @@ struct BufferWriter {
     }
 
     void write_string(const std::string& value) {
-        write_u16(static_cast<uint16_t>(value.size()));
-        data.insert(data.end(), value.begin(), value.end());
+        const size_t size = std::min(value.size(), kMaxSemanticStringBytes);
+        write_u16(static_cast<uint16_t>(size));
+        data.insert(data.end(), value.begin(), value.begin() + static_cast<std::ptrdiff_t>(size));
     }
 };
 
@@ -160,6 +165,6 @@ template <typename T, typename Fn> bool parse_payload(const ByteBuffer& bytes, T
     return fn(reader, out) && reader.done();
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink
 
-#endif  // SUNRAYCOM_CORE_SEMANTIC_CODEC_IO_HPP
+#endif  // YUNLINK_CORE_SEMANTIC_CODEC_IO_HPP

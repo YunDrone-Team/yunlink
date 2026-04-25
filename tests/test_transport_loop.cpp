@@ -1,6 +1,6 @@
 /**
  * @file tests/test_transport_loop.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
 #include <atomic>
@@ -8,38 +8,38 @@
 #include <iostream>
 #include <thread>
 
-#include "sunraycom/core/semantic_messages.hpp"
-#include "sunraycom/runtime/runtime.hpp"
+#include "yunlink/core/semantic_messages.hpp"
+#include "yunlink/runtime/runtime.hpp"
 
 int main() {
-    sunraycom::Runtime receiver;
-    sunraycom::Runtime sender;
+    yunlink::Runtime receiver;
+    yunlink::Runtime sender;
 
-    sunraycom::RuntimeConfig rx_cfg;
+    yunlink::RuntimeConfig rx_cfg;
     rx_cfg.udp_bind_port = 12096;
     rx_cfg.udp_target_port = 12096;
     rx_cfg.tcp_listen_port = 12196;
-    rx_cfg.self_identity.agent_type = sunraycom::AgentType::kGroundStation;
+    rx_cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     rx_cfg.self_identity.agent_id = 91;
-    rx_cfg.self_identity.role = sunraycom::EndpointRole::kObserver;
+    rx_cfg.self_identity.role = yunlink::EndpointRole::kObserver;
 
-    sunraycom::RuntimeConfig tx_cfg;
+    yunlink::RuntimeConfig tx_cfg;
     tx_cfg.udp_bind_port = 12097;
     tx_cfg.udp_target_port = 12097;
     tx_cfg.tcp_listen_port = 12197;
-    tx_cfg.self_identity.agent_type = sunraycom::AgentType::kUav;
+    tx_cfg.self_identity.agent_type = yunlink::AgentType::kUav;
     tx_cfg.self_identity.agent_id = 1;
-    tx_cfg.self_identity.role = sunraycom::EndpointRole::kVehicle;
+    tx_cfg.self_identity.role = yunlink::EndpointRole::kVehicle;
 
-    if (receiver.start(rx_cfg) != sunraycom::ErrorCode::kOk ||
-        sender.start(tx_cfg) != sunraycom::ErrorCode::kOk) {
+    if (receiver.start(rx_cfg) != yunlink::ErrorCode::kOk ||
+        sender.start(tx_cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "runtime start failed\n";
         return 1;
     }
 
     std::atomic<bool> got{false};
     const size_t tok = receiver.state_subscriber().subscribe_vehicle_core(
-        [&got](const sunraycom::TypedMessage<sunraycom::VehicleCoreState>& msg) {
+        [&got](const yunlink::TypedMessage<yunlink::VehicleCoreState>& msg) {
             if (msg.payload.armed && msg.payload.x_m == 1.0F &&
                 msg.payload.battery_percent == 87.5F) {
                 got.store(true);
@@ -48,12 +48,12 @@ int main() {
 
     std::string peer_id;
     if (sender.tcp_clients().connect_peer("127.0.0.1", rx_cfg.tcp_listen_port, &peer_id) !=
-        sunraycom::ErrorCode::kOk) {
+        yunlink::ErrorCode::kOk) {
         std::cerr << "connect failed\n";
         return 2;
     }
 
-    sunraycom::VehicleCoreState state{};
+    yunlink::VehicleCoreState state{};
     state.armed = true;
     state.nav_mode = 3;
     state.x_m = 1.0F;
@@ -66,9 +66,9 @@ int main() {
 
     const auto ec = sender.publish_vehicle_core_state(
         peer_id,
-        sunraycom::TargetSelector::for_entity(sunraycom::AgentType::kGroundStation, 91),
+        yunlink::TargetSelector::for_entity(yunlink::AgentType::kGroundStation, 91),
         state);
-    if (ec != sunraycom::ErrorCode::kOk) {
+    if (ec != yunlink::ErrorCode::kOk) {
         std::cerr << "publish state failed\n";
         return 3;
     }

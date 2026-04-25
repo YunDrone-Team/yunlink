@@ -1,11 +1,11 @@
 /**
  * @file src/core/event_bus.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#include "sunraycom/core/event_bus.hpp"
+#include "yunlink/core/event_bus.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 size_t EventBus::subscribe_envelope(EnvelopeHandler cb) {
     std::lock_guard<std::mutex> lock(mu_);
@@ -74,4 +74,4 @@ void EventBus::publish_link(const LinkEvent& ev) const {
     }
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink

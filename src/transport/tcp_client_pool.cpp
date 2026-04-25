@@ -1,9 +1,9 @@
 /**
  * @file src/transport/tcp_client_pool.cpp
- * @brief sunray_communication_lib source file.
+ * @brief yunlink source file.
  */
 
-#include "sunraycom/transport/tcp_client_pool.hpp"
+#include "yunlink/transport/tcp_client_pool.hpp"
 
 #include <chrono>
 #include <mutex>
@@ -15,7 +15,7 @@
 
 #include "tcp_stream_common.hpp"
 
-namespace sunraycom {
+namespace yunlink {
 
 struct TcpClientPool::PeerConn {
     PeerInfo peer;
@@ -129,6 +129,7 @@ TcpClientPool::connect_peer(const std::string& ip, uint16_t port, std::string* o
     }
 
     const std::string peer_id = make_tcp_peer_id(ip, port);
+    std::shared_ptr<PeerConn> stale_conn;
     {
         std::lock_guard<std::mutex> lock(impl_->mu);
         auto it = impl_->peers.find(peer_id);
@@ -139,7 +140,19 @@ TcpClientPool::connect_peer(const std::string& ip, uint16_t port, std::string* o
                 }
                 return ErrorCode::kOk;
             }
+            stale_conn = it->second;
             impl_->peers.erase(it);
+        }
+    }
+
+    if (stale_conn) {
+        stale_conn->is_running.store(false);
+        std::error_code close_ec;
+        stale_conn->socket.cancel(close_ec);
+        stale_conn->socket.close(close_ec);
+        if (stale_conn->rx_thread.joinable() &&
+            stale_conn->rx_thread.get_id() != std::this_thread::get_id()) {
+            stale_conn->rx_thread.join();
         }
     }
 
@@ -251,4 +264,4 @@ void TcpClientPool::peer_loop(const std::shared_ptr<PeerConn>& conn) {
                       impl_->config.io_poll_interval_ms);
 }
 
-}  // namespace sunraycom
+}  // namespace yunlink
