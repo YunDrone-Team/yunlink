@@ -205,7 +205,11 @@ class RuntimeCore {
             out["session_id"] = event.data.command_result.session_id;
             out["message_id"] = event.data.command_result.message_id;
             out["correlation_id"] = event.data.command_result.correlation_id;
+            out["command_kind"] = event.data.command_result.command_kind;
+            out["phase"] = event.data.command_result.phase;
+            out["result_code"] = event.data.command_result.result_code;
             out["progress_percent"] = event.data.command_result.progress_percent;
+            out["detail"] = event.data.command_result.detail;
             return nb::cast(out);
         }
         if (event.type == YUNLINK_RUNTIME_EVENT_VEHICLE_CORE_STATE) {

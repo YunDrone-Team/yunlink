@@ -90,10 +90,15 @@ def expect_result_count(events: queue.Queue, session_id: int, timeout_s: float, 
         )
 
 
-def expect_no_results(events: queue.Queue, session_id: int, timeout_s: float) -> None:
+def expect_failed_result(
+    events: queue.Queue, session_id: int, detail: str, timeout_s: float
+) -> None:
     results = collect_results(events, session_id, timeout_s)
-    if results:
-        raise RuntimeError(f"unexpected command results for session={session_id}: {len(results)}")
+    if not any(result.phase == 5 and result.detail == detail for result in results):
+        raise RuntimeError(
+            f"expected failed command result detail={detail!r} "
+            f"for session={session_id}, got {results!r}"
+        )
 
 
 def main() -> int:
@@ -136,7 +141,7 @@ def main() -> int:
 
         drain_events(events)
         ground.publish_goto(peer1, session1, target2, goto)
-        expect_no_results(events, session1.session_id, timeout_s=0.5)
+        expect_failed_result(events, session1.session_id, "wrong-target", timeout_s=1.0)
 
         ground.publish_goto(peer1, session1, target1, goto)
         expect_result_count(events, session1.session_id, timeout_s=3.0, minimum=4)

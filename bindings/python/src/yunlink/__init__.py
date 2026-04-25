@@ -178,7 +178,11 @@ class CommandResultEvent:
     session_id: int
     message_id: int
     correlation_id: int
+    command_kind: int
+    phase: int
+    result_code: int
     progress_percent: int
+    detail: str
 
 
 @dataclass(frozen=True)
@@ -422,7 +426,11 @@ def _coerce_event(event: dict[str, Any]) -> object | None:
             event["session_id"],
             event["message_id"],
             event["correlation_id"],
+            event["command_kind"],
+            event["phase"],
+            event["result_code"],
             event["progress_percent"],
+            event["detail"],
         )
     if kind == "vehicle_core_state":
         return VehicleCoreStateEvent(

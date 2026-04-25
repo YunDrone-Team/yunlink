@@ -66,6 +66,27 @@ class RuntimeContractTests(unittest.TestCase):
         finally:
             runtime.close()
 
+    def test_command_result_event_preserves_failure_metadata(self) -> None:
+        event = yunlink._coerce_event(
+            {
+                "type": "command_result",
+                "session_id": 42,
+                "message_id": 9001,
+                "correlation_id": 7001,
+                "command_kind": 4,
+                "phase": 5,
+                "result_code": 13,
+                "progress_percent": 0,
+                "detail": "no-authority",
+            }
+        )
+
+        self.assertIsInstance(event, yunlink.CommandResultEvent)
+        self.assertEqual(event.session_id, 42)
+        self.assertEqual(event.phase, 5)
+        self.assertEqual(event.result_code, 13)
+        self.assertEqual(event.detail, "no-authority")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -81,10 +81,15 @@ def expect_result_count(events: queue.Queue, session_id: int, timeout_s: float, 
         )
 
 
-def expect_no_results(events: queue.Queue, session_id: int, timeout_s: float) -> None:
+def expect_failed_result(
+    events: queue.Queue, session_id: int, detail: str, timeout_s: float
+) -> None:
     results = collect_results(events, session_id, timeout_s)
-    if results:
-        raise RuntimeError(f"unexpected command results for session={session_id}: {len(results)}")
+    if not any(result.phase == 5 and result.detail == detail for result in results):
+        raise RuntimeError(
+            f"expected failed command result detail={detail!r} "
+            f"for session={session_id}, got {results!r}"
+        )
 
 
 def main() -> int:
@@ -134,7 +139,7 @@ def main() -> int:
             peer_b, session_b, target, ControlSource.GROUND_STATION, 3000, False
         )
         ground_b.publish_goto(peer_b, session_b, target, goto)
-        expect_no_results(events_b, session_b.session_id, timeout_s=0.5)
+        expect_failed_result(events_b, session_b.session_id, "no-authority", timeout_s=1.0)
 
         ground_b.request_authority(
             peer_b, session_b, target, ControlSource.GROUND_STATION, 3000, True
@@ -148,7 +153,7 @@ def main() -> int:
 
         drain_events(events_a)
         ground_a.publish_goto(peer_a, session_a, target, goto)
-        expect_no_results(events_a, session_a.session_id, timeout_s=0.5)
+        expect_failed_result(events_a, session_a.session_id, "no-authority", timeout_s=1.0)
 
         ground_b.release_authority(peer_b, session_b, target)
         time.sleep(0.2)
