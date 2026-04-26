@@ -12,6 +12,7 @@ def find_library(build_dir: Path) -> Path:
     candidates = [
         *build_dir.rglob("libyunlink_ffi*.dylib"),
         *build_dir.rglob("libyunlink_ffi*.so"),
+        *build_dir.rglob("libyunlink_ffi*.dll"),
         *build_dir.rglob("yunlink_ffi*.dll"),
     ]
     if not candidates:

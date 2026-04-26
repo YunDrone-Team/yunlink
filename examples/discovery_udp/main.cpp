@@ -36,8 +36,9 @@ bool parse_i32_arg(const std::string& s, int* out) {
 }
 
 void print_usage(const char* prog) {
-    std::cerr << "usage: " << prog
-              << " [--udp-bind <port>] [--udp-target <port>] [--hold-ms <n>]\n";
+    std::cerr
+        << "usage: " << prog
+        << " [--udp-bind <port>] [--udp-target <port>] [--udp-target-ip <ip>] [--hold-ms <n>]\n";
 }
 
 }  // namespace
@@ -45,6 +46,7 @@ void print_usage(const char* prog) {
 int main(int argc, char** argv) {
     uint16_t udp_bind = 9696;
     uint16_t udp_target = 9898;
+    std::string udp_target_ip = "255.255.255.255";
     int hold_ms = 3000;
 
     for (int i = 1; i < argc; ++i) {
@@ -59,6 +61,8 @@ int main(int argc, char** argv) {
                 print_usage(argv[0]);
                 return 2;
             }
+        } else if (arg == "--udp-target-ip" && i + 1 < argc) {
+            udp_target_ip = argv[++i];
         } else if (arg == "--hold-ms" && i + 1 < argc) {
             if (!parse_i32_arg(argv[++i], &hold_ms) || hold_ms <= 0) {
                 print_usage(argv[0]);
@@ -99,7 +103,7 @@ int main(int argc, char** argv) {
                          yunlink::QosClass::kBestEffort,
                          discovery),
                      true);
-    runtime.udp().send_broadcast(bytes, cfg.udp_target_port);
+    runtime.udp().send_unicast(bytes, udp_target_ip, cfg.udp_target_port);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(hold_ms));
     runtime.event_bus().unsubscribe(tok);

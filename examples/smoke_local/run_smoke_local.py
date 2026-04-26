@@ -234,6 +234,8 @@ def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
                     str(22100 + attempt),
                     "--udp-target",
                     str(bridge_udp_bind),
+                    "--udp-target-ip",
+                    "127.0.0.1",
                     "--hold-ms",
                     "500",
                 ],

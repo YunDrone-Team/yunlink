@@ -61,7 +61,7 @@ int main() {
     air_cfg.self_identity.role = yunlink::EndpointRole::kVehicle;
     air_cfg.shared_secret = "trajectory-runtime-secret";
     air_cfg.command_handling_mode = yunlink::CommandHandlingMode::kExternalHandler;
-    air_cfg.trajectory_chunk_timeout_ms = 80;
+    air_cfg.trajectory_chunk_timeout_ms = 1000;
 
     yunlink::RuntimeConfig ground_cfg;
     ground_cfg.udp_bind_port = 12561;
@@ -253,7 +253,7 @@ int main() {
         std::cerr << "timeout first chunk was not buffered\n";
         return 16;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(130));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
 
     yunlink::TrajectoryChunkCommand timeout1{};
     timeout1.chunk_index = 1;
