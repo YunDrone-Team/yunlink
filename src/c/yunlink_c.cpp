@@ -167,13 +167,8 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
         push_event(runtime, out);
     });
 
-    runtime->tok_vehicle_core =
-        runtime->runtime.state_subscriber().subscribe_vehicle_core([runtime](
-                                                                       const yunlink::
-                                                                           TypedMessage<
-                                                                               yunlink::
-                                                                                   VehicleCoreState>&
-                                                                               msg) {
+    runtime->tok_vehicle_core = runtime->runtime.state_subscriber().subscribe_vehicle_core(
+        [runtime](const yunlink::TypedMessage<yunlink::VehicleCoreState>& msg) {
             yunlink_runtime_event_t out{};
             out.type = YUNLINK_RUNTIME_EVENT_VEHICLE_CORE_STATE;
             out.data.vehicle_core_state.session_id = msg.envelope.session_id;
@@ -196,13 +191,8 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             push_event(runtime, out);
         });
 
-    runtime->tok_vehicle_event =
-        runtime->runtime.event_subscriber().subscribe_vehicle_event([runtime](
-                                                                        const yunlink::
-                                                                            TypedMessage<
-                                                                                yunlink::
-                                                                                    VehicleEvent>&
-                                                                                msg) {
+    runtime->tok_vehicle_event = runtime->runtime.event_subscriber().subscribe_vehicle_event(
+        [runtime](const yunlink::TypedMessage<yunlink::VehicleEvent>& msg) {
             yunlink_runtime_event_t out{};
             out.type = YUNLINK_RUNTIME_EVENT_VEHICLE_EVENT;
             out.data.vehicle_event.session_id = msg.envelope.session_id;
@@ -408,7 +398,8 @@ yunlink_result_t yunlink_session_open(yunlink_runtime_t* runtime,
     if (!runtime->started) {
         return YUNLINK_RESULT_RUNTIME_STOPPED;
     }
-    out_session->session_id = runtime->runtime.session_client().open_active_session(peer->id, node_name);
+    out_session->session_id =
+        runtime->runtime.session_client().open_active_session(peer->id, node_name);
     return out_session->session_id == 0 ? YUNLINK_RESULT_INTERNAL : YUNLINK_RESULT_OK;
 }
 
@@ -592,13 +583,13 @@ yunlink_result_t yunlink_command_publish_goto(yunlink_runtime_t* runtime,
     return result;
 }
 
-yunlink_result_t yunlink_command_publish_velocity_setpoint(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    const yunlink_velocity_setpoint_command_t* payload,
-    yunlink_command_handle_t* out_handle) {
+yunlink_result_t
+yunlink_command_publish_velocity_setpoint(yunlink_runtime_t* runtime,
+                                          const yunlink_peer_t* peer,
+                                          const yunlink_session_t* session,
+                                          const yunlink_target_selector_t* target,
+                                          const yunlink_velocity_setpoint_command_t* payload,
+                                          yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target) || payload == nullptr) {
         return YUNLINK_RESULT_INVALID_ARGUMENT;

@@ -74,8 +74,7 @@ int main() {
     yunlink::AuthorityLease lease{};
     for (int i = 0; i < 100; ++i) {
         if (server.current_authority(&lease) &&
-            lease.state == yunlink::AuthorityState::kController &&
-            lease.session_id == session_id) {
+            lease.state == yunlink::AuthorityState::kController && lease.session_id == session_id) {
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));

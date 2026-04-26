@@ -97,12 +97,13 @@ int main() {
             std::lock_guard<std::mutex> lock(mu);
             batteries.push_back(message.payload.battery_percent);
         });
-    const size_t error_token = ground.event_bus().subscribe_error([&](const yunlink::ErrorEvent& ev) {
-        std::lock_guard<std::mutex> lock(mu);
-        errors.push_back(ev.message);
-    });
-    const size_t raw_token = ground.event_bus().subscribe_envelope(
-        [&](const yunlink::EnvelopeEvent& ev) {
+    const size_t error_token =
+        ground.event_bus().subscribe_error([&](const yunlink::ErrorEvent& ev) {
+            std::lock_guard<std::mutex> lock(mu);
+            errors.push_back(ev.message);
+        });
+    const size_t raw_token =
+        ground.event_bus().subscribe_envelope([&](const yunlink::EnvelopeEvent& ev) {
             if (ev.envelope.message_family == yunlink::MessageFamily::kStateEvent) {
                 std::lock_guard<std::mutex> lock(mu);
                 raw_event_qos.push_back(ev.envelope.qos_class);
@@ -185,13 +186,8 @@ int main() {
     bulk.state = yunlink::BulkChannelState::kReady;
     bulk.uri = "udp://239.1.1.7:5700";
     bulk.mtu_bytes = 1200;
-    auto bad_bulk_qos = yunlink::make_typed_envelope(air_cfg.self_identity,
-                                                     ground_target,
-                                                     session_id,
-                                                     0,
-                                                     yunlink::QosClass::kBulk,
-                                                     bulk,
-                                                     1000);
+    auto bad_bulk_qos = yunlink::make_typed_envelope(
+        air_cfg.self_identity, ground_target, session_id, 0, yunlink::QosClass::kBulk, bulk, 1000);
     bad_bulk_qos.message_id = 200;
     yunlink::EnvelopeEvent bad_bulk_event = newest_event;
     bad_bulk_event.envelope = bad_bulk_qos;
@@ -222,8 +218,7 @@ int main() {
     }
     if (!wait_until([&]() {
             std::lock_guard<std::mutex> lock(mu);
-            return !raw_event_qos.empty() &&
-                   raw_event_qos.back() == yunlink::QosClass::kBestEffort;
+            return !raw_event_qos.empty() && raw_event_qos.back() == yunlink::QosClass::kBestEffort;
         })) {
         std::cerr << "state event did not use best-effort QoS\n";
         return 9;

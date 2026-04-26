@@ -95,10 +95,11 @@ int main() {
             std::lock_guard<std::mutex> lock(mu);
             results.push_back(view);
         });
-    const size_t air_error_token = air.event_bus().subscribe_error([&](const yunlink::ErrorEvent& ev) {
-        std::lock_guard<std::mutex> lock(mu);
-        air_errors.push_back(ev.message);
-    });
+    const size_t air_error_token =
+        air.event_bus().subscribe_error([&](const yunlink::ErrorEvent& ev) {
+            std::lock_guard<std::mutex> lock(mu);
+            air_errors.push_back(ev.message);
+        });
     const size_t ground_error_token =
         ground.event_bus().subscribe_error([&](const yunlink::ErrorEvent& ev) {
             std::lock_guard<std::mutex> lock(mu);

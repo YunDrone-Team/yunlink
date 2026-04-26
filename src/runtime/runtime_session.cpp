@@ -157,8 +157,7 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
             return;
         }
 
-        if (ev.envelope.message_type ==
-            static_cast<uint16_t>(SessionMessageType::kAuthenticate)) {
+        if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kAuthenticate)) {
             SessionAuthenticate payload{};
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.state = payload.shared_secret == config_.shared_secret
@@ -170,8 +169,7 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
             return;
         }
 
-        if (ev.envelope.message_type ==
-            static_cast<uint16_t>(SessionMessageType::kCapabilities)) {
+        if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kCapabilities)) {
             SessionCapabilities payload{};
             if (!decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.state = SessionState::kInvalid;
@@ -201,7 +199,7 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                 session.state = SessionState::kActive;
                 send_ready_ack = true;
                 ack_correlation_id = ev.envelope.correlation_id != 0 ? ev.envelope.correlation_id
-                                                                      : ev.envelope.message_id;
+                                                                     : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
                 session.state = SessionState::kActive;
             }

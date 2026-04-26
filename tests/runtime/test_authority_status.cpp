@@ -87,8 +87,7 @@ int main() {
 
     const uint64_t session_a = client_a.session_client().open_active_session(peer_a, "station-a");
     const uint64_t session_b = client_b.session_client().open_active_session(peer_b, "station-b");
-    if (session_a == 0 || session_b == 0 ||
-        !wait_until([&]() {
+    if (session_a == 0 || session_b == 0 || !wait_until([&]() {
             return server.session_server().has_active_session(session_a) &&
                    server.session_server().has_active_session(session_b);
         })) {
@@ -119,10 +118,8 @@ int main() {
     }
     if (!wait_until([&]() {
             std::lock_guard<std::mutex> lock(mu);
-            return has_status(statuses_a,
-                              yunlink::AuthorityState::kController,
-                              session_a,
-                              "authority-granted");
+            return has_status(
+                statuses_a, yunlink::AuthorityState::kController, session_a, "authority-granted");
         })) {
         std::cerr << "client_a did not receive granted status\n";
         return 5;

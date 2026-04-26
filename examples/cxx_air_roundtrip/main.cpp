@@ -80,11 +80,11 @@ int main(int argc, char** argv) {
     state.vz_mps = 0.3F;
     state.battery_percent = 76.5F;
 
-    if (runtime.publish_vehicle_core_state(lease.peer.id,
-                                           yunlink::TargetSelector::broadcast(
-                                               yunlink::AgentType::kGroundStation),
-                                           state,
-                                           lease.session_id) != yunlink::ErrorCode::kOk) {
+    if (runtime.publish_vehicle_core_state(
+            lease.peer.id,
+            yunlink::TargetSelector::broadcast(yunlink::AgentType::kGroundStation),
+            state,
+            lease.session_id) != yunlink::ErrorCode::kOk) {
         std::cerr << "state publish failed\n";
         runtime.stop();
         return 4;

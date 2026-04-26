@@ -48,8 +48,7 @@ int main() {
         dr.envelope.target.group_id != target.group_id ||
         dr.envelope.target.scope != yunlink::TargetScope::kGroup ||
         dr.envelope.message_family != yunlink::MessageFamily::kCommand ||
-        dr.envelope.message_type !=
-            yunlink::MessageTraits<yunlink::GotoCommand>::kMessageType) {
+        dr.envelope.message_type != yunlink::MessageTraits<yunlink::GotoCommand>::kMessageType) {
         std::cerr << "roundtrip mismatch\n";
         return 3;
     }

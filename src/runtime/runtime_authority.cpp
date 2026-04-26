@@ -128,7 +128,8 @@ bool Runtime::current_authority(AuthorityLease* out) const {
     return false;
 }
 
-bool Runtime::current_authority_for_target(const TargetSelector& target, AuthorityLease* out) const {
+bool Runtime::current_authority_for_target(const TargetSelector& target,
+                                           AuthorityLease* out) const {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const auto it = impl_->authorities.find(runtime_target_key(target));
     if (it == impl_->authorities.end()) {
@@ -177,15 +178,14 @@ void Runtime::handle_authority_envelope(const EnvelopeEvent& ev) {
     }
 
     const auto reply_to_requester = [&](const AuthorityStatus& status) {
-        SecureEnvelope reply =
-            make_typed_envelope(config_.self_identity,
-                                TargetSelector::for_entity(ev.envelope.source.agent_type,
-                                                           ev.envelope.source.agent_id),
-                                ev.envelope.session_id,
-                                ev.envelope.message_id,
-                                QosClass::kReliableOrdered,
-                                status,
-                                1000);
+        SecureEnvelope reply = make_typed_envelope(
+            config_.self_identity,
+            TargetSelector::for_entity(ev.envelope.source.agent_type, ev.envelope.source.agent_id),
+            ev.envelope.session_id,
+            ev.envelope.message_id,
+            QosClass::kReliableOrdered,
+            status,
+            1000);
         reply.message_id = allocate_message_id();
         reply.correlation_id = ev.envelope.message_id;
         (void)reply_on_route(ev, reply);

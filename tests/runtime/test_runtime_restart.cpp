@@ -55,7 +55,8 @@ int main() {
         return 2;
     }
 
-    const uint64_t session1 = ground.session_client().open_active_session(peer_id, "restart-ground");
+    const uint64_t session1 =
+        ground.session_client().open_active_session(peer_id, "restart-ground");
     const auto target = yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 1);
     if (session1 == 0 ||
         !wait_until([&]() { return air.session_server().has_active_session(session1); }) ||
@@ -67,7 +68,8 @@ int main() {
     }
 
     yunlink::AuthorityLease lease{};
-    if (!wait_until([&]() { return air.current_authority(&lease) && lease.session_id == session1; })) {
+    if (!wait_until(
+            [&]() { return air.current_authority(&lease) && lease.session_id == session1; })) {
         std::cerr << "initial authority missing\n";
         return 4;
     }
@@ -117,7 +119,8 @@ int main() {
         return 11;
     }
 
-    const uint64_t session2 = ground.session_client().open_active_session(peer_id, "restart-ground");
+    const uint64_t session2 =
+        ground.session_client().open_active_session(peer_id, "restart-ground");
     if (session2 == 0 || session2 == session1 ||
         !wait_until([&]() { return air.session_server().has_active_session(session2); }) ||
         air.session_server().has_active_session(session1)) {
@@ -131,7 +134,8 @@ int main() {
         std::cerr << "authority reacquire failed\n";
         return 13;
     }
-    if (!wait_until([&]() { return air.current_authority(&lease) && lease.session_id == session2; })) {
+    if (!wait_until(
+            [&]() { return air.current_authority(&lease) && lease.session_id == session2; })) {
         std::cerr << "authority reacquire missing\n";
         return 14;
     }

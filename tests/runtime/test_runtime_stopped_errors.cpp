@@ -54,8 +54,10 @@ int main() {
         return 2;
     }
 
-    const uint64_t session_id = ground.session_client().open_active_session(peer_id, "stopped-ground");
-    if (session_id == 0 || !wait_until([&]() { return air.session_server().has_active_session(session_id); })) {
+    const uint64_t session_id =
+        ground.session_client().open_active_session(peer_id, "stopped-ground");
+    if (session_id == 0 ||
+        !wait_until([&]() { return air.session_server().has_active_session(session_id); })) {
         std::cerr << "session setup failed\n";
         return 3;
     }

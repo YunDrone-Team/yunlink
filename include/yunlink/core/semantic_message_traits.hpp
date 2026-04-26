@@ -12,7 +12,7 @@ namespace yunlink {
 
 template <typename T> struct MessageTraits;
 
-#define YUNLINK_DEFINE_TRAITS(TYPE, FAMILY, TYPE_ID)                                             \
+#define YUNLINK_DEFINE_TRAITS(TYPE, FAMILY, TYPE_ID)                                               \
     template <> struct MessageTraits<TYPE> {                                                       \
         static constexpr MessageFamily kFamily = FAMILY;                                           \
         static constexpr uint16_t kMessageType = TYPE_ID;                                          \

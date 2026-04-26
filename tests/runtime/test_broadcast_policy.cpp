@@ -76,11 +76,11 @@ int main() {
         });
 
     yunlink::GotoCommand goto_cmd{};
-    if (ground.command_publisher().publish_goto(peer_id,
-                                                session_id,
-                                                yunlink::TargetSelector::broadcast(
-                                                    yunlink::AgentType::kUav),
-                                                goto_cmd) != yunlink::ErrorCode::kOk) {
+    if (ground.command_publisher().publish_goto(
+            peer_id,
+            session_id,
+            yunlink::TargetSelector::broadcast(yunlink::AgentType::kUav),
+            goto_cmd) != yunlink::ErrorCode::kOk) {
         std::cerr << "broadcast command publish failed before runtime policy\n";
         return 4;
     }
@@ -105,11 +105,11 @@ int main() {
 
     yunlink::VehicleCoreState state{};
     state.battery_percent = 81.0F;
-    if (air.publish_vehicle_core_state(air_session.peer.id,
-                                       yunlink::TargetSelector::broadcast(
-                                           yunlink::AgentType::kGroundStation),
-                                       state,
-                                       session_id) != yunlink::ErrorCode::kOk) {
+    if (air.publish_vehicle_core_state(
+            air_session.peer.id,
+            yunlink::TargetSelector::broadcast(yunlink::AgentType::kGroundStation),
+            state,
+            session_id) != yunlink::ErrorCode::kOk) {
         std::cerr << "broadcast state publish failed\n";
         return 7;
     }

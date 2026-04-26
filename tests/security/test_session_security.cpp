@@ -29,13 +29,14 @@ yunlink::SecureEnvelope make_session_envelope(const yunlink::EndpointIdentity& s
                                               uint64_t correlation_id,
                                               const T& payload,
                                               uint32_t ttl_ms = 1000) {
-    return yunlink::make_typed_envelope(source,
-                                        yunlink::TargetSelector::broadcast(yunlink::AgentType::kUnknown),
-                                        session_id,
-                                        correlation_id,
-                                        yunlink::QosClass::kReliableOrdered,
-                                        payload,
-                                        ttl_ms);
+    return yunlink::make_typed_envelope(
+        source,
+        yunlink::TargetSelector::broadcast(yunlink::AgentType::kUnknown),
+        session_id,
+        correlation_id,
+        yunlink::QosClass::kReliableOrdered,
+        payload,
+        ttl_ms);
 }
 
 }  // namespace
@@ -102,8 +103,8 @@ int main() {
     }
 
     std::string manual_peer;
-    if (manual_client.tcp_clients().connect_peer("127.0.0.1", server_cfg.tcp_listen_port, &manual_peer) !=
-        yunlink::ErrorCode::kOk) {
+    if (manual_client.tcp_clients().connect_peer(
+            "127.0.0.1", server_cfg.tcp_listen_port, &manual_peer) != yunlink::ErrorCode::kOk) {
         std::cerr << "manual client connect failed\n";
         return 5;
     }

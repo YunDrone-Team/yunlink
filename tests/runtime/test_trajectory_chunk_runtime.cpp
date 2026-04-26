@@ -135,7 +135,8 @@ int main() {
 
     yunlink::CommandHandle missing_handle{};
     if (ground.command_publisher().publish_trajectory_chunk(
-            peer_id, session_id, target, missing_first, &missing_handle) != yunlink::ErrorCode::kOk) {
+            peer_id, session_id, target, missing_first, &missing_handle) !=
+        yunlink::ErrorCode::kOk) {
         std::cerr << "publish missing-first trajectory failed\n";
         return 5;
     }
@@ -214,11 +215,10 @@ int main() {
 
     if (!wait_until([&]() {
             std::lock_guard<std::mutex> lock(mu);
-            return dispatch_count == 1 &&
-                   has_result_detail(results,
-                                     final_handle.message_id,
-                                     yunlink::CommandPhase::kSucceeded,
-                                     "trajectory-executor-succeeded");
+            return dispatch_count == 1 && has_result_detail(results,
+                                                            final_handle.message_id,
+                                                            yunlink::CommandPhase::kSucceeded,
+                                                            "trajectory-executor-succeeded");
         })) {
         std::cerr << "completed trajectory was not dispatched once\n";
         return 13;

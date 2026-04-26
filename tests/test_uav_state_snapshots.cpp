@@ -72,8 +72,7 @@ int main() {
         return 4;
     }
 
-    const auto target =
-        yunlink::TargetSelector::for_entity(yunlink::AgentType::kGroundStation, 21);
+    const auto target = yunlink::TargetSelector::for_entity(yunlink::AgentType::kGroundStation, 21);
 
     std::atomic<int> received_count{0};
     yunlink::Px4StateSnapshot px4_seen{};

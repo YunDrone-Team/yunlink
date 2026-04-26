@@ -1,0 +1,15 @@
+{
+  "max_lines": 300,
+  "include_exts": ["h", "hpp", "cpp"],
+  "exclude_dirs": ["thirdparty", "compat", "docs", "examples", "tests", "build"],
+  "exclude_files": [
+    "c/yunlink_c.cpp",
+    "c/yunlink_c.h",
+    "core/semantic_message_types.hpp",
+    "runtime/runtime_authority.cpp",
+    "runtime/runtime_command.cpp",
+    "runtime/runtime_core.cpp",
+    "runtime/runtime_state.cpp",
+    "runtime/runtime.hpp"
+  ]
+}

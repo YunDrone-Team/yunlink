@@ -65,7 +65,8 @@ int main() {
         return 2;
     }
 
-    const uint64_t session1 = ground.session_client().open_active_session(peer_id, "reconnect-ground-1");
+    const uint64_t session1 =
+        ground.session_client().open_active_session(peer_id, "reconnect-ground-1");
     if (session1 == 0 ||
         ground.request_authority(
             peer_id, session1, target, yunlink::ControlSource::kGroundStation, 1500) !=
@@ -75,7 +76,8 @@ int main() {
     }
 
     yunlink::AuthorityLease lease{};
-    if (!wait_until([&]() { return air.current_authority(&lease) && lease.session_id == session1; })) {
+    if (!wait_until(
+            [&]() { return air.current_authority(&lease) && lease.session_id == session1; })) {
         std::cerr << "initial authority missing\n";
         return 4;
     }
@@ -128,7 +130,8 @@ int main() {
         return 11;
     }
 
-    const uint64_t session2 = ground.session_client().open_active_session(peer_id, "reconnect-ground-2");
+    const uint64_t session2 =
+        ground.session_client().open_active_session(peer_id, "reconnect-ground-2");
     if (session2 == 0 || session2 == session1 ||
         ground.request_authority(
             peer_id, session2, target, yunlink::ControlSource::kGroundStation, 1500) !=
@@ -141,7 +144,8 @@ int main() {
         std::cerr << "old session revived after new session opened\n";
         return 13;
     }
-    if (!wait_until([&]() { return air.current_authority(&lease) && lease.session_id == session2; })) {
+    if (!wait_until(
+            [&]() { return air.current_authority(&lease) && lease.session_id == session2; })) {
         std::cerr << "recovered authority missing\n";
         return 14;
     }

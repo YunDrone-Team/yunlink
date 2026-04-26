@@ -90,15 +90,15 @@ int main(int argc, char** argv) {
     discovery.kind = yunlink::VehicleEventKind::kInfo;
     discovery.severity = 1;
     discovery.detail = "discovery";
-    auto bytes = codec.encode(
-        yunlink::make_typed_envelope(
-            {yunlink::AgentType::kGroundStation, 0, yunlink::EndpointRole::kObserver},
-            yunlink::TargetSelector::broadcast(yunlink::AgentType::kUnknown),
-            0,
-            0,
-            yunlink::QosClass::kBestEffort,
-            discovery),
-        true);
+    auto bytes =
+        codec.encode(yunlink::make_typed_envelope(
+                         {yunlink::AgentType::kGroundStation, 0, yunlink::EndpointRole::kObserver},
+                         yunlink::TargetSelector::broadcast(yunlink::AgentType::kUnknown),
+                         0,
+                         0,
+                         yunlink::QosClass::kBestEffort,
+                         discovery),
+                     true);
     runtime.udp().send_broadcast(bytes, cfg.udp_target_port);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(hold_ms));

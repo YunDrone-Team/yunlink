@@ -74,8 +74,7 @@ int main() {
 
     const uint64_t session1 = ground.session_client().open_active_session(peer1, "ground-air1");
     const uint64_t session2 = ground.session_client().open_active_session(peer2, "ground-air2");
-    if (session1 == 0 || session2 == 0 ||
-        !wait_until([&]() {
+    if (session1 == 0 || session2 == 0 || !wait_until([&]() {
             return air1.session_server().has_active_session(session1) &&
                    air2.session_server().has_active_session(session2);
         })) {
@@ -117,8 +116,10 @@ int main() {
     }
 
     yunlink::AuthorityLease lease{};
-    if (!wait_until([&]() { return air1.current_authority(&lease) && lease.session_id == session1; }) ||
-        !wait_until([&]() { return air2.current_authority(&lease) && lease.session_id == session2; })) {
+    if (!wait_until(
+            [&]() { return air1.current_authority(&lease) && lease.session_id == session1; }) ||
+        !wait_until(
+            [&]() { return air2.current_authority(&lease) && lease.session_id == session2; })) {
         std::cerr << "authority not granted\n";
         return 7;
     }
@@ -174,8 +175,7 @@ int main() {
     std::atomic<int> matching_states{0};
     const size_t state_token = ground.state_subscriber().subscribe_vehicle_core(
         [&](const yunlink::TypedMessage<yunlink::VehicleCoreState>& message) {
-            if (message.envelope.source.agent_id == 2 &&
-                message.payload.battery_percent == 66.0F) {
+            if (message.envelope.source.agent_id == 2 && message.payload.battery_percent == 66.0F) {
                 ++matching_states;
             }
         });

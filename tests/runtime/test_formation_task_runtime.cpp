@@ -229,7 +229,8 @@ int main() {
 
     {
         std::lock_guard<std::mutex> lock(mu);
-        if (observed.group_id != valid.group_id || observed.formation_shape != valid.formation_shape ||
+        if (observed.group_id != valid.group_id ||
+            observed.formation_shape != valid.formation_shape ||
             observed.spacing_m != valid.spacing_m || observed.label != valid.label) {
             std::cerr << "formation task payload mismatch\n";
             return 12;

@@ -1,0 +1,83 @@
+{
+  "hosts": {
+    "host-ground": {
+      "mode": "ssh",
+      "address": "ground.local",
+      "user": "yunlink",
+      "repo_dir": "/opt/yunlink",
+      "python_bin": "/opt/yunlink/.venv/bin/python",
+      "env": {
+        "YUNLINK_ROLE": "ground"
+      }
+    },
+    "host-air": {
+      "mode": "ssh",
+      "address": "air.local",
+      "user": "yunlink",
+      "repo_dir": "/opt/yunlink",
+      "python_bin": "/opt/yunlink/.venv/bin/python",
+      "env": {
+        "YUNLINK_ROLE": "air"
+      }
+    }
+  },
+  "suites": {
+    "dual-host-baseline": {
+      "description": "Single GCS to single UAV baseline roundtrip.",
+      "cases": [
+        {
+          "name": "cxx-air-rust-ground",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "ground_command": "bindings/rust/target/debug/examples/ground_roundtrip 10.0.0.2 16130 16031 16031 16131",
+          "air_command": "build/ninja-debug/example_cxx_air_roundtrip 16030 16030 16130"
+        }
+      ]
+    },
+    "dual-host-recovery": {
+      "description": "Explicit reconnect and authority reacquire.",
+      "cases": [
+        {
+          "name": "python-air-rust-ground-recovery",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "ground_steps": [
+            {
+              "name": "ground-round-1",
+              "command": "bindings/rust/target/debug/examples/ground_roundtrip 10.0.0.2 16170 16071 16071 16171"
+            },
+            {
+              "name": "ground-round-2",
+              "command": "bindings/rust/target/debug/examples/ground_roundtrip 10.0.0.2 16170 16072 16072 16172"
+            }
+          ],
+          "air_command": "tools/bindings/python_air_recovery.py 16070 16070 16170 --rounds 2"
+        }
+      ]
+    },
+    "dual-host-competition": {
+      "description": "2 GCS -> 1 UAV authority competition matrix.",
+      "cases": [
+        {
+          "name": "python-air-python-ground-competition",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": "tools/bindings/python_air_competition.py 16090 16090 16190",
+          "ground_command": "tools/bindings/python_ground_competition.py 10.0.0.2 16190 16091 16091 16191 16092 16092 16192"
+        }
+      ]
+    },
+    "dual-host-routing": {
+      "description": "1 GCS -> 2 UAV routing and isolation matrix.",
+      "cases": [
+        {
+          "name": "python-air-python-ground-dual-uav",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": "tools/bindings/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
+          "ground_command": "tools/bindings/python_ground_dual_uav.py 10.0.0.2 16200 16201 16102 16102 16202"
+        }
+      ]
+    }
+  }
+}

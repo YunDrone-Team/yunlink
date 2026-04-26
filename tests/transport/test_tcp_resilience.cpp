@@ -55,8 +55,7 @@ int main() {
     }
 
     std::string missing_peer;
-    const auto missing_ec =
-        client.tcp_clients().connect_peer("127.0.0.1", 6550, &missing_peer);
+    const auto missing_ec = client.tcp_clients().connect_peer("127.0.0.1", 6550, &missing_peer);
     if (missing_ec != yunlink::ErrorCode::kConnectError &&
         missing_ec != yunlink::ErrorCode::kTimeout) {
         std::cerr << "unexpected error for unavailable listener\n";

@@ -294,8 +294,7 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
         std::lock_guard<std::mutex> lock(impl_->mu);
         const std::string key = runtime_qos_latest_key(ev.envelope);
         const auto it = impl_->reliable_latest_watermarks.find(key);
-        if (it != impl_->reliable_latest_watermarks.end() &&
-            ev.envelope.message_id <= it->second) {
+        if (it != impl_->reliable_latest_watermarks.end() && ev.envelope.message_id <= it->second) {
             return;
         }
         impl_->reliable_latest_watermarks[key] = ev.envelope.message_id;
@@ -329,8 +328,10 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
         }
         return;
     case StateSnapshotType::kUavControllerState:
-        if (!fanout_snapshot<UavControllerStateSnapshot>(
-                impl_->mu, ev.envelope, ev.envelope.payload, impl_->uav_controller_state_handlers)) {
+        if (!fanout_snapshot<UavControllerStateSnapshot>(impl_->mu,
+                                                         ev.envelope,
+                                                         ev.envelope.payload,
+                                                         impl_->uav_controller_state_handlers)) {
             publish_semantic_decode_error(bus_, ev);
         }
         return;

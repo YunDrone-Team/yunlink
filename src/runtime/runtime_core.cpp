@@ -147,9 +147,8 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
 
     impl_->bus_token =
         bus_.subscribe_envelope([this](const EnvelopeEvent& ev) { handle_envelope(ev); });
-    impl_->link_bus_token = bus_.subscribe_link([this](const LinkEvent& ev) {
-        handle_link_event(ev);
-    });
+    impl_->link_bus_token =
+        bus_.subscribe_link([this](const LinkEvent& ev) { handle_link_event(ev); });
     is_started_ = true;
     return ErrorCode::kOk;
 }
@@ -209,9 +208,8 @@ ErrorCode Runtime::reply_on_route(const EnvelopeEvent& inbound, const SecureEnve
     SecureEnvelope outbound = envelope;
     apply_runtime_security_tag(config_, &outbound);
     if (inbound.transport == TransportType::kTcpServer) {
-        return tcp_server_.send_envelope(inbound.peer.id, outbound) >= 0
-                   ? ErrorCode::kOk
-                   : ErrorCode::kConnectError;
+        return tcp_server_.send_envelope(inbound.peer.id, outbound) >= 0 ? ErrorCode::kOk
+                                                                         : ErrorCode::kConnectError;
     }
     if (inbound.transport == TransportType::kTcpClient) {
         return tcp_clients_.send_envelope(inbound.peer.id, outbound) >= 0
@@ -279,15 +277,14 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         result.progress_percent = 0;
         result.detail = detail;
 
-        SecureEnvelope reply =
-            make_typed_envelope(config_.self_identity,
-                                TargetSelector::for_entity(ev.envelope.source.agent_type,
-                                                           ev.envelope.source.agent_id),
-                                ev.envelope.session_id,
-                                ev.envelope.message_id,
-                                QosClass::kReliableOrdered,
-                                result,
-                                1000);
+        SecureEnvelope reply = make_typed_envelope(
+            config_.self_identity,
+            TargetSelector::for_entity(ev.envelope.source.agent_type, ev.envelope.source.agent_id),
+            ev.envelope.session_id,
+            ev.envelope.message_id,
+            QosClass::kReliableOrdered,
+            result,
+            1000);
         reply.message_id = allocate_message_id();
         reply.correlation_id = ev.envelope.message_id;
         (void)reply_on_route(ev, reply);

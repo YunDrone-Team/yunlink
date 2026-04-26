@@ -284,17 +284,16 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
         (void)reply_command_result(ev, result);
     };
 
-    const auto ack_command = [&](CommandPhase phase,
-                                 uint8_t progress_percent,
-                                 const std::string& detail) {
-        CommandResult result{};
-        result.command_kind = runtime_command_kind_for_message_type(ev.envelope.message_type);
-        result.phase = phase;
-        result.result_code = static_cast<uint16_t>(ErrorCode::kOk);
-        result.progress_percent = progress_percent;
-        result.detail = detail;
-        (void)reply_command_result(ev, result);
-    };
+    const auto ack_command =
+        [&](CommandPhase phase, uint8_t progress_percent, const std::string& detail) {
+            CommandResult result{};
+            result.command_kind = runtime_command_kind_for_message_type(ev.envelope.message_type);
+            result.phase = phase;
+            result.result_code = static_cast<uint16_t>(ErrorCode::kOk);
+            result.progress_percent = progress_percent;
+            result.detail = detail;
+            (void)reply_command_result(ev, result);
+        };
 
     if (ev.envelope.target.scope == TargetScope::kBroadcast) {
         fail_command(ErrorCode::kRejected, "broadcast-command-disallowed");
@@ -367,8 +366,7 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
             const std::string key = runtime_trajectory_key(ev);
             auto it = impl_->trajectory_accumulators.find(key);
             if (it != impl_->trajectory_accumulators.end() &&
-                config_.trajectory_chunk_timeout_ms > 0 &&
-                now_ms > it->second.updated_at_ms &&
+                config_.trajectory_chunk_timeout_ms > 0 && now_ms > it->second.updated_at_ms &&
                 now_ms - it->second.updated_at_ms > config_.trajectory_chunk_timeout_ms) {
                 impl_->trajectory_accumulators.erase(it);
                 it = impl_->trajectory_accumulators.end();
@@ -398,9 +396,8 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
                 impl_->trajectory_accumulators.erase(it);
                 failure_detail = "trajectory-missing-chunk";
             } else {
-                it->second.assembled.points.insert(it->second.assembled.points.end(),
-                                                  chunk.points.begin(),
-                                                  chunk.points.end());
+                it->second.assembled.points.insert(
+                    it->second.assembled.points.end(), chunk.points.begin(), chunk.points.end());
                 it->second.assembled.final_chunk = chunk.final_chunk;
                 it->second.next_chunk_index = chunk.chunk_index + 1;
                 it->second.updated_at_ms = now_ms;

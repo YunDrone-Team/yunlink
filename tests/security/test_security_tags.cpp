@@ -108,14 +108,16 @@ int main() {
             std::lock_guard<std::mutex> lock(mu);
             results.push_back(view);
         });
-    const size_t raw_token = air.event_bus().subscribe_envelope([&](const yunlink::EnvelopeEvent& ev) {
-        if (ev.envelope.message_family == yunlink::MessageFamily::kCommand &&
-            ev.envelope.message_type == yunlink::MessageTraits<yunlink::GotoCommand>::kMessageType) {
-            std::lock_guard<std::mutex> lock(mu);
-            captured = ev;
-            captured_command = true;
-        }
-    });
+    const size_t raw_token =
+        air.event_bus().subscribe_envelope([&](const yunlink::EnvelopeEvent& ev) {
+            if (ev.envelope.message_family == yunlink::MessageFamily::kCommand &&
+                ev.envelope.message_type ==
+                    yunlink::MessageTraits<yunlink::GotoCommand>::kMessageType) {
+                std::lock_guard<std::mutex> lock(mu);
+                captured = ev;
+                captured_command = true;
+            }
+        });
     const size_t cmd_token = air.command_subscriber().subscribe_goto(
         [&](const yunlink::InboundCommandView<yunlink::GotoCommand>& view) {
             {
@@ -142,8 +144,8 @@ int main() {
 
     if (!wait_until([&]() {
             std::lock_guard<std::mutex> lock(mu);
-            return dispatch_count == 1 && captured_command && !captured.envelope.security.auth_tag.empty() &&
-                   !results.empty() &&
+            return dispatch_count == 1 && captured_command &&
+                   !captured.envelope.security.auth_tag.empty() && !results.empty() &&
                    results.back().payload.detail == "secure-command-succeeded";
         })) {
         std::cerr << "signed command did not complete\n";

@@ -37,8 +37,7 @@ struct Runtime::Impl {
     std::unordered_map<size_t, CommandSubscriber::GotoHandler> goto_handlers;
     std::unordered_map<size_t, CommandSubscriber::VelocitySetpointHandler>
         velocity_setpoint_handlers;
-    std::unordered_map<size_t, CommandSubscriber::TrajectoryChunkHandler>
-        trajectory_chunk_handlers;
+    std::unordered_map<size_t, CommandSubscriber::TrajectoryChunkHandler> trajectory_chunk_handlers;
     std::unordered_map<size_t, CommandSubscriber::FormationTaskHandler> formation_task_handlers;
     std::unordered_map<size_t, StateSubscriber::VehicleCoreHandler> vehicle_core_handlers;
     std::unordered_map<size_t, StateSubscriber::Px4StateHandler> px4_state_handlers;
@@ -94,8 +93,7 @@ inline std::string runtime_trajectory_key(const EnvelopeEvent& ev) {
 
 inline std::string runtime_qos_latest_key(const SecureEnvelope& envelope) {
     return std::to_string(static_cast<uint8_t>(envelope.message_family)) + ":" +
-           std::to_string(envelope.message_type) + ":" +
-           std::to_string(envelope.session_id) + ":" +
+           std::to_string(envelope.message_type) + ":" + std::to_string(envelope.session_id) + ":" +
            std::to_string(static_cast<uint8_t>(envelope.source.agent_type)) + ":" +
            std::to_string(envelope.source.agent_id) + ":" + runtime_target_key(envelope.target);
 }

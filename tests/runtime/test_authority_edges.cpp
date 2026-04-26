@@ -149,7 +149,8 @@ int main() {
         std::cerr << "authority reacquire failed\n";
         return 12;
     }
-    if (!wait_until([&]() { return air.current_authority(&lease) && lease.session_id == session_id; })) {
+    if (!wait_until(
+            [&]() { return air.current_authority(&lease) && lease.session_id == session_id; })) {
         std::cerr << "authority reacquire not observed\n";
         return 13;
     }

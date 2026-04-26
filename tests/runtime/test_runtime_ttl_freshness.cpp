@@ -82,14 +82,14 @@ int main() {
     payload.z_m = 3.0F;
     payload.yaw_rad = 0.5F;
 
-    auto expired = yunlink::make_typed_envelope(client_cfg.self_identity,
-                                                yunlink::TargetSelector::for_entity(
-                                                    yunlink::AgentType::kUav, 9),
-                                                777,
-                                                0,
-                                                yunlink::QosClass::kReliableOrdered,
-                                                payload,
-                                                1);
+    auto expired = yunlink::make_typed_envelope(
+        client_cfg.self_identity,
+        yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 9),
+        777,
+        0,
+        yunlink::QosClass::kReliableOrdered,
+        payload,
+        1);
     expired.created_at_ms = now_ms() - 10'000;
     expired.message_id = 987654321;
     expired.correlation_id = expired.message_id;

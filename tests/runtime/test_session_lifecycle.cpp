@@ -95,7 +95,8 @@ int main() {
     }
 
     yunlink::AuthorityLease lease{};
-    if (!wait_until([&]() { return air.current_authority(&lease) && lease.session_id == session_id; })) {
+    if (!wait_until(
+            [&]() { return air.current_authority(&lease) && lease.session_id == session_id; })) {
         std::cerr << "authority not granted\n";
         return 7;
     }
@@ -103,7 +104,8 @@ int main() {
     ground.stop();
 
     if (!wait_until([&]() {
-            return air.session_server().describe_session(server_peer_id, session_id, &server_session) &&
+            return air.session_server().describe_session(
+                       server_peer_id, session_id, &server_session) &&
                    server_session.state == yunlink::SessionState::kLost;
         })) {
         std::cerr << "server session did not converge to lost on link down\n";

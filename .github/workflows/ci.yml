@@ -103,7 +103,7 @@ jobs:
         run: cmake --preset ci-ninja
 
       - name: Build Core Bindings Targets
-        run: cmake --build --preset ci-ninja --target yunlink_ffi example_cxx_air_roundtrip
+        run: cmake --build --preset ci-ninja --target yunlink_ffi example_cxx_air_roundtrip test_c_ffi_v1 test_c_ffi_contract
 
       - name: Test FFI Contracts
         run: ctest --test-dir build/ci-ninja -R "test_c_ffi_(v1|contract|loader)" --output-on-failure

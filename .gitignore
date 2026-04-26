@@ -18,7 +18,7 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 CTestTestfile.cmake
-Testing/
+/Testing/
 Makefile
 install_manifest.txt
 compile_commands.json
@@ -40,7 +40,9 @@ __pycache__/
 # Bindings artifacts
 bindings/rust/target/
 output/python-wheel/
+output/testing/
 
 
-.codex/
+.codex/*
+!.codex/check-maxline.json
 rsync2testdevice.sh

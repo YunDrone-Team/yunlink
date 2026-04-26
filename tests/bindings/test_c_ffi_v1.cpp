@@ -70,12 +70,8 @@ int main() {
 
     const auto air_cfg =
         make_config(13030, 13030, 13130, YUNLINK_AGENT_TYPE_UAV, 1, YUNLINK_ROLE_VEHICLE);
-    const auto ground_cfg = make_config(13031,
-                                        13031,
-                                        13131,
-                                        YUNLINK_AGENT_TYPE_GROUND_STATION,
-                                        7,
-                                        YUNLINK_ROLE_CONTROLLER);
+    const auto ground_cfg = make_config(
+        13031, 13031, 13131, YUNLINK_AGENT_TYPE_GROUND_STATION, 7, YUNLINK_ROLE_CONTROLLER);
 
     if (yunlink_runtime_start(air, &air_cfg) != YUNLINK_RESULT_OK ||
         yunlink_runtime_start(ground, &ground_cfg) != YUNLINK_RESULT_OK) {
@@ -104,8 +100,7 @@ int main() {
     session_info.struct_size = sizeof(session_info);
     if (!wait_until([&]() {
             return yunlink_session_describe(air, &session, &session_info) == YUNLINK_RESULT_OK &&
-                   session_info.session_id == session.session_id &&
-                   session_info.state == 5 &&
+                   session_info.session_id == session.session_id && session_info.state == 5 &&
                    session_info.remote_identity.agent_type == YUNLINK_AGENT_TYPE_GROUND_STATION;
         })) {
         std::cerr << "typed session describe did not observe active session\n";
@@ -127,13 +122,9 @@ int main() {
         0,
     };
 
-    if (yunlink_authority_request(ground,
-                                  &air_peer,
-                                  &session,
-                                  &target,
-                                  YUNLINK_CONTROL_SOURCE_GROUND_STATION,
-                                  3000,
-                                  0) != YUNLINK_RESULT_OK) {
+    if (yunlink_authority_request(
+            ground, &air_peer, &session, &target, YUNLINK_CONTROL_SOURCE_GROUND_STATION, 3000, 0) !=
+        YUNLINK_RESULT_OK) {
         std::cerr << "authority request failed\n";
         return 8;
     }
@@ -147,12 +138,9 @@ int main() {
         std::cerr << "authority lease not observed\n";
         return 9;
     }
-    if (yunlink_authority_renew(ground,
-                                &air_peer,
-                                &session,
-                                &target,
-                                YUNLINK_CONTROL_SOURCE_GROUND_STATION,
-                                4500) != YUNLINK_RESULT_OK) {
+    if (yunlink_authority_renew(
+            ground, &air_peer, &session, &target, YUNLINK_CONTROL_SOURCE_GROUND_STATION, 4500) !=
+        YUNLINK_RESULT_OK) {
         std::cerr << "authority renew failed\n";
         return 10;
     }
@@ -190,8 +178,7 @@ int main() {
     state.battery_percent = 76.5F;
 
     if (yunlink_publish_vehicle_core_state(
-            air, &lease.peer, &ground_target, &state, session.session_id) !=
-        YUNLINK_RESULT_OK) {
+            air, &lease.peer, &ground_target, &state, session.session_id) != YUNLINK_RESULT_OK) {
         std::cerr << "publish vehicle core state failed\n";
         return 13;
     }
@@ -230,7 +217,8 @@ int main() {
         std::cerr << "authority release failed\n";
         return 16;
     }
-    if (!wait_until([&]() { return yunlink_authority_current(air, &lease) == YUNLINK_RESULT_NOT_FOUND; })) {
+    if (!wait_until(
+            [&]() { return yunlink_authority_current(air, &lease) == YUNLINK_RESULT_NOT_FOUND; })) {
         std::cerr << "authority release not observed\n";
         return 17;
     }

@@ -1,0 +1,117 @@
+{
+  "hosts": {
+    "host-ground": {
+      "mode": "local",
+      "repo_dir": "/Users/groove/Project/work/YunDrone/yunlink",
+      "env": {
+        "YUNLINK_ROLE": "ground"
+      }
+    },
+    "host-air": {
+      "mode": "ssh",
+      "address": "OfficeUbuntu26",
+      "user": "",
+      "repo_dir": "/home/groove/Project/work/YunDrone/yunlink",
+      "env": {
+        "YUNLINK_ROLE": "air"
+      }
+    }
+  },
+  "suites": {
+    "dual-host-baseline": {
+      "description": "Office Wi-Fi baseline with local ground and OfficeUbuntu26 air.",
+      "cases": [
+        {
+          "name": "office-wifi-cxx-air-rust-ground",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": "build/ninja-debug/example_cxx_air_roundtrip 16030 16030 16130",
+          "ground_command": "bindings/rust/target/debug/examples/ground_roundtrip 192.168.10.32 16130 16031 16031 16131",
+          "air_probe_host": "192.168.10.32",
+          "air_probe_port": 16130,
+          "ground_timeout_s": 15,
+          "air_timeout_s": 15
+        },
+        {
+          "name": "office-wifi-cxx-air-python-ground",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": "build/ninja-debug/example_cxx_air_roundtrip 16040 16040 16140",
+          "ground_command": ".venv/bin/python tools/bindings/python_ground_roundtrip.py 192.168.10.32 16140 16041 16041 16141",
+          "air_probe_host": "192.168.10.32",
+          "air_probe_port": 16140,
+          "ground_timeout_s": 15,
+          "air_timeout_s": 15
+        }
+      ]
+    },
+    "dual-host-recovery": {
+      "description": "Office Wi-Fi explicit recovery with local Rust ground and OfficeUbuntu26 Python air.",
+      "cases": [
+        {
+          "name": "office-wifi-python-air-rust-ground-recovery",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": ".venv/bin/python tools/bindings/python_air_recovery.py 16070 16070 16170 --rounds 2",
+          "ground_steps": [
+            {
+              "name": "ground-round-1",
+              "command": "bindings/rust/target/debug/examples/ground_roundtrip 192.168.10.32 16170 16071 16071 16171"
+            },
+            {
+              "name": "ground-round-2",
+              "command": "bindings/rust/target/debug/examples/ground_roundtrip 192.168.10.32 16170 16072 16072 16172"
+            }
+          ],
+          "air_probe_host": "192.168.10.32",
+          "air_probe_port": 16170,
+          "ground_timeout_s": 15,
+          "air_timeout_s": 20
+        },
+        {
+          "name": "office-wifi-python-air-restart-rust-ground",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": ".venv/bin/python tools/bindings/python_air_restart.py 16080 16080 16180 --rounds 2",
+          "ground_command": "bindings/rust/target/debug/examples/ground_recovery 192.168.10.32 16180 16081 16081 16181 2",
+          "air_probe_host": "192.168.10.32",
+          "air_probe_port": 16180,
+          "ground_timeout_s": 20,
+          "air_timeout_s": 20
+        }
+      ]
+    },
+    "dual-host-competition": {
+      "description": "Office Wi-Fi 2 GCS -> 1 UAV authority competition matrix.",
+      "cases": [
+        {
+          "name": "office-wifi-python-air-python-ground-competition",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": ".venv/bin/python tools/bindings/python_air_competition.py 16090 16090 16190",
+          "ground_command": ".venv/bin/python tools/bindings/python_ground_competition.py 192.168.10.32 16190 16091 16091 16191 16092 16092 16192",
+          "air_probe_host": "192.168.10.32",
+          "air_probe_port": 16190,
+          "ground_timeout_s": 20,
+          "air_timeout_s": 20
+        }
+      ]
+    },
+    "dual-host-routing": {
+      "description": "Office Wi-Fi 1 GCS -> 2 UAV routing and isolation matrix.",
+      "cases": [
+        {
+          "name": "office-wifi-python-air-python-ground-dual-uav",
+          "ground_host": "host-ground",
+          "air_host": "host-air",
+          "air_command": ".venv/bin/python tools/bindings/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
+          "ground_command": ".venv/bin/python tools/bindings/python_ground_dual_uav.py 192.168.10.32 16200 16201 16102 16102 16202",
+          "air_probe_host": "192.168.10.32",
+          "air_probe_port": 16200,
+          "ground_timeout_s": 20,
+          "air_timeout_s": 20
+        }
+      ]
+    }
+  }
+}

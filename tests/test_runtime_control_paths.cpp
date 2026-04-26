@@ -25,10 +25,10 @@ bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_
 }
 
 yunlink::SecureEnvelope make_authority_envelope(const yunlink::RuntimeConfig& cfg,
-                                                  const yunlink::TargetSelector& target,
-                                                  uint64_t session_id,
-                                                  yunlink::AuthorityAction action,
-                                                  uint32_t lease_ttl_ms) {
+                                                const yunlink::TargetSelector& target,
+                                                uint64_t session_id,
+                                                yunlink::AuthorityAction action,
+                                                uint32_t lease_ttl_ms) {
     yunlink::AuthorityRequest payload{};
     payload.action = action;
     payload.source = yunlink::ControlSource::kGroundStation;
@@ -36,12 +36,12 @@ yunlink::SecureEnvelope make_authority_envelope(const yunlink::RuntimeConfig& cf
     payload.allow_preempt = action == yunlink::AuthorityAction::kPreempt;
 
     auto envelope = yunlink::make_typed_envelope(cfg.self_identity,
-                                                   target,
-                                                   session_id,
-                                                   0,
-                                                   yunlink::QosClass::kReliableOrdered,
-                                                   payload,
-                                                   lease_ttl_ms);
+                                                 target,
+                                                 session_id,
+                                                 0,
+                                                 yunlink::QosClass::kReliableOrdered,
+                                                 payload,
+                                                 lease_ttl_ms);
     static uint64_t next_message_id = 50000;
     envelope.message_id = next_message_id++;
     envelope.correlation_id = envelope.message_id;

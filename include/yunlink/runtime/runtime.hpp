@@ -326,8 +326,8 @@ class Runtime {
     size_t subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb);
     size_t subscribe_command_result_internal(EventSubscriber::CommandResultHandler cb);
     size_t subscribe_authority_status_internal(EventSubscriber::AuthorityStatusHandler cb);
-    size_t subscribe_bulk_channel_descriptor_internal(
-        EventSubscriber::BulkChannelDescriptorHandler cb);
+    size_t
+    subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);
     void handle_authority_envelope(const EnvelopeEvent& ev);
     void handle_command_envelope(const EnvelopeEvent& ev);

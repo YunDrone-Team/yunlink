@@ -10,15 +10,15 @@
 #include <stdint.h>
 
 #ifdef _WIN32
-#  ifdef YUNLINK_FFI_SHARED_BUILD
-#    define YUNLINK_C_API __declspec(dllexport)
-#  elif defined(YUNLINK_FFI_SHARED_USE)
-#    define YUNLINK_C_API __declspec(dllimport)
-#  else
-#    define YUNLINK_C_API
-#  endif
+#ifdef YUNLINK_FFI_SHARED_BUILD
+#define YUNLINK_C_API __declspec(dllexport)
+#elif defined(YUNLINK_FFI_SHARED_USE)
+#define YUNLINK_C_API __declspec(dllimport)
 #else
-#  define YUNLINK_C_API __attribute__((visibility("default")))
+#define YUNLINK_C_API
+#endif
+#else
+#define YUNLINK_C_API __attribute__((visibility("default")))
 #endif
 
 #ifdef __cplusplus
@@ -339,26 +339,23 @@ YUNLINK_C_API yunlink_result_t yunlink_session_describe(yunlink_runtime_t* runti
                                                         const yunlink_session_t* session,
                                                         yunlink_session_info_t* out_info);
 
-YUNLINK_C_API yunlink_result_t
-yunlink_authority_request(yunlink_runtime_t* runtime,
-                          const yunlink_peer_t* peer,
-                          const yunlink_session_t* session,
-                          const yunlink_target_selector_t* target,
-                          uint8_t source,
-                          uint32_t lease_ttl_ms,
-                          uint8_t allow_preempt);
-YUNLINK_C_API yunlink_result_t
-yunlink_authority_renew(yunlink_runtime_t* runtime,
-                        const yunlink_peer_t* peer,
-                        const yunlink_session_t* session,
-                        const yunlink_target_selector_t* target,
-                        uint8_t source,
-                        uint32_t lease_ttl_ms);
-YUNLINK_C_API yunlink_result_t
-yunlink_authority_release(yunlink_runtime_t* runtime,
-                          const yunlink_peer_t* peer,
-                          const yunlink_session_t* session,
-                          const yunlink_target_selector_t* target);
+YUNLINK_C_API yunlink_result_t yunlink_authority_request(yunlink_runtime_t* runtime,
+                                                         const yunlink_peer_t* peer,
+                                                         const yunlink_session_t* session,
+                                                         const yunlink_target_selector_t* target,
+                                                         uint8_t source,
+                                                         uint32_t lease_ttl_ms,
+                                                         uint8_t allow_preempt);
+YUNLINK_C_API yunlink_result_t yunlink_authority_renew(yunlink_runtime_t* runtime,
+                                                       const yunlink_peer_t* peer,
+                                                       const yunlink_session_t* session,
+                                                       const yunlink_target_selector_t* target,
+                                                       uint8_t source,
+                                                       uint32_t lease_ttl_ms);
+YUNLINK_C_API yunlink_result_t yunlink_authority_release(yunlink_runtime_t* runtime,
+                                                         const yunlink_peer_t* peer,
+                                                         const yunlink_session_t* session,
+                                                         const yunlink_target_selector_t* target);
 YUNLINK_C_API yunlink_result_t yunlink_authority_current(yunlink_runtime_t* runtime,
                                                          yunlink_authority_lease_t* out_lease);
 
@@ -369,13 +366,12 @@ yunlink_command_publish_takeoff(yunlink_runtime_t* runtime,
                                 const yunlink_target_selector_t* target,
                                 const yunlink_takeoff_command_t* payload,
                                 yunlink_command_handle_t* out_handle);
-YUNLINK_C_API yunlink_result_t
-yunlink_command_publish_land(yunlink_runtime_t* runtime,
-                             const yunlink_peer_t* peer,
-                             const yunlink_session_t* session,
-                             const yunlink_target_selector_t* target,
-                             const yunlink_land_command_t* payload,
-                             yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_command_publish_land(yunlink_runtime_t* runtime,
+                                                            const yunlink_peer_t* peer,
+                                                            const yunlink_session_t* session,
+                                                            const yunlink_target_selector_t* target,
+                                                            const yunlink_land_command_t* payload,
+                                                            yunlink_command_handle_t* out_handle);
 YUNLINK_C_API yunlink_result_t
 yunlink_command_publish_return(yunlink_runtime_t* runtime,
                                const yunlink_peer_t* peer,
@@ -383,13 +379,12 @@ yunlink_command_publish_return(yunlink_runtime_t* runtime,
                                const yunlink_target_selector_t* target,
                                const yunlink_return_command_t* payload,
                                yunlink_command_handle_t* out_handle);
-YUNLINK_C_API yunlink_result_t
-yunlink_command_publish_goto(yunlink_runtime_t* runtime,
-                             const yunlink_peer_t* peer,
-                             const yunlink_session_t* session,
-                             const yunlink_target_selector_t* target,
-                             const yunlink_goto_command_t* payload,
-                             yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_command_publish_goto(yunlink_runtime_t* runtime,
+                                                            const yunlink_peer_t* peer,
+                                                            const yunlink_session_t* session,
+                                                            const yunlink_target_selector_t* target,
+                                                            const yunlink_goto_command_t* payload,
+                                                            yunlink_command_handle_t* out_handle);
 YUNLINK_C_API yunlink_result_t
 yunlink_command_publish_velocity_setpoint(yunlink_runtime_t* runtime,
                                           const yunlink_peer_t* peer,

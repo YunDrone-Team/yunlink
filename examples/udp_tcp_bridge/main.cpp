@@ -92,8 +92,7 @@ int main(int argc, char** argv) {
     }
 
     std::string peer_id;
-    if (runtime.tcp_clients().connect_peer(tcp_ip, tcp_port, &peer_id) !=
-        yunlink::ErrorCode::kOk) {
+    if (runtime.tcp_clients().connect_peer(tcp_ip, tcp_port, &peer_id) != yunlink::ErrorCode::kOk) {
         std::cerr << "connect failed\n";
         runtime.stop();
         return 2;
