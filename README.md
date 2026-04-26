@@ -1,12 +1,11 @@
 # yunlink
 
-[![CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci.yml)
-![Protocol](https://img.shields.io/badge/Protocol-yunlink-0A7E8C?style=for-the-badge)
-![Brand](https://img.shields.io/badge/Brand-%E4%BA%91%E7%BA%B5%E7%A7%91%E6%8A%80-1F3A5F?style=for-the-badge)
+[![Linux CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-linux.yml?branch=main&style=for-the-badge&label=Linux%20CI&logo=linux)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-linux.yml)
+[![macOS CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-macos.yml?branch=main&style=for-the-badge&label=macOS%20CI&logo=apple)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-macos.yml)
+[![Windows CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-windows.yml?branch=main&style=for-the-badge&label=Windows%20CI&logo=windows)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-windows.yml)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B)
 ![Build](https://img.shields.io/badge/CMake%20%2B%20Ninja-Ready-064F8C?style=for-the-badge&logo=cmake)
 ![Bindings](https://img.shields.io/badge/Bindings-Rust%20%7C%20Python%20%7C%20JavaScript-F28C28?style=for-the-badge)
-![Stage](https://img.shields.io/badge/Stage-Startup%20Dev-2E8B57?style=for-the-badge)
 
 `yunlink` 是面向无人机、无人车、地面站与集群系统的统一通信协议与基础通信库。这个仓库聚焦同一套 `yunlink` 协议核心，提供 `SecureEnvelope` 线包、语义消息模型、统一 `Runtime`、类型化 C++ SDK，以及可供 Rust、Python、JavaScript 复用的最小 C ABI。
 
