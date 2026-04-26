@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ctypes
+import os
 import sys
 from pathlib import Path
 
@@ -20,12 +21,34 @@ def find_library(build_dir: Path) -> Path:
     return sorted(candidates)[0]
 
 
+def add_windows_dll_directories(lib_path: Path) -> list[object]:
+    if os.name != "nt" or not hasattr(os, "add_dll_directory"):
+        return []
+
+    dirs = [lib_path.parent]
+    dirs.extend(Path(item) for item in os.environ.get("PATH", "").split(os.pathsep) if item)
+
+    handles: list[object] = []
+    seen: set[Path] = set()
+    for directory in dirs:
+        try:
+            resolved = directory.resolve()
+        except OSError:
+            continue
+        if resolved in seen or not resolved.is_dir():
+            continue
+        seen.add(resolved)
+        handles.append(os.add_dll_directory(str(resolved)))
+    return handles
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("usage: test_c_ffi_loader.py <build-dir>")
 
     build_dir = Path(sys.argv[1]).resolve()
     lib_path = find_library(build_dir)
+    dll_dir_handles = add_windows_dll_directories(lib_path)
     lib = ctypes.CDLL(str(lib_path))
 
     required_symbols = [
@@ -63,6 +86,8 @@ def main() -> int:
         raise SystemExit(f"unexpected result name: {name!r}")
 
     print(f"[ffi-loader] loaded {lib_path.name} abi={abi_version}")
+    for handle in dll_dir_handles:
+        handle.close()
     return 0
 
 
