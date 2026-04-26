@@ -11,10 +11,10 @@ fn run(cmd: &mut Command) {
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
-    let repo_root = manifest_dir
-        .join("../../..")
-        .canonicalize()
-        .expect("resolve repo root");
+    let mut repo_root = manifest_dir.clone();
+    repo_root.pop();
+    repo_root.pop();
+    repo_root.pop();
     let build_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("cmake-build");
     let generator = env::var("CMAKE_GENERATOR").unwrap_or_else(|_| "Ninja".to_string());
 
