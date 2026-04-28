@@ -9,6 +9,7 @@
 #include <functional>
 #include <iostream>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -260,12 +261,13 @@ int main(int argc, char** argv) {
     runtime.state_subscriber().unsubscribe(state_token);
     runtime.event_subscriber().unsubscribe(result_token);
     runtime.stop();
-    std::cout << "YUNLINK_METRICS "
-              << "{\"connect_ms\":" << connect_ms << ",\"session_ready_ms\":" << session_ready_ms
-              << ",\"authority_acquire_ms\":" << state_first_seen_ms
-              << ",\"command_result_ms\":" << command_result_ms
-              << ",\"state_first_seen_ms\":" << state_first_seen_ms
-              << ",\"recovery_ms\":" << recovery_ms << "}\n";
+    std::ostringstream metrics;
+    metrics << "{\"connect_ms\":" << connect_ms << ",\"session_ready_ms\":" << session_ready_ms
+            << ",\"authority_acquire_ms\":" << state_first_seen_ms
+            << ",\"command_result_ms\":" << command_result_ms
+            << ",\"state_first_seen_ms\":" << state_first_seen_ms
+            << ",\"recovery_ms\":" << recovery_ms << "}";
+    std::cout << "YUNLINK_METRICS " << metrics.str() << '\n';
     std::cout << "cxx-ground-peer-recovery ok\n";
     return 0;
 }

@@ -7,6 +7,7 @@
 #define YUNLINK_CORE_SEMANTIC_CODEC_IO_HPP
 
 #include <algorithm>
+#include <cstring>
 
 #include "yunlink/core/semantic_messages.hpp"
 
@@ -122,7 +123,7 @@ struct BufferReader {
         if (cursor + sizeof(float) > data.size()) {
             return false;
         }
-        *out = *reinterpret_cast<const float*>(data.data() + cursor);
+        std::memcpy(out, data.data() + cursor, sizeof(float));
         cursor += sizeof(float);
         return true;
     }
@@ -131,7 +132,7 @@ struct BufferReader {
         if (cursor + sizeof(double) > data.size()) {
             return false;
         }
-        *out = *reinterpret_cast<const double*>(data.data() + cursor);
+        std::memcpy(out, data.data() + cursor, sizeof(double));
         cursor += sizeof(double);
         return true;
     }
