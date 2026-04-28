@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import queue
 import time
 
@@ -103,6 +104,7 @@ def expect_failed_result(
 
 def main() -> int:
     args = parse_args()
+    started_at = time.perf_counter()
     ground = Runtime.start(
         RuntimeConfig(
             args.ground_udp_bind,
@@ -116,12 +118,15 @@ def main() -> int:
         events = ground.subscribe()
         peer1 = ground.connect(args.ip, args.uav1_port)
         peer2 = ground.connect(args.ip, args.uav2_port)
+        connected_at = time.perf_counter()
         session1 = ground.open_session(peer1, "python-ground-uav1")
         session2 = ground.open_session(peer2, "python-ground-uav2")
+        session_ready_at = time.perf_counter()
         target1 = TargetSelector.entity(AgentType.UAV, 1)
         target2 = TargetSelector.entity(AgentType.UAV, 2)
         goto = GotoCommand(5.0, 1.0, 3.0, 0.25)
 
+        authority_started_at = time.perf_counter()
         ground.request_authority(
             peer1, session1, target1, ControlSource.GROUND_STATION, 3000, False
         )
@@ -136,6 +141,7 @@ def main() -> int:
         )
 
         wait_for_state(events, session1.session_id, 71.0, timeout_s=4.0)
+        first_state_at = time.perf_counter()
         expect_no_state(events, 91.0, timeout_s=0.4)
         wait_for_state(events, session2.session_id, 82.0, timeout_s=4.0)
 
@@ -143,14 +149,25 @@ def main() -> int:
         ground.publish_goto(peer1, session1, target2, goto)
         expect_failed_result(events, session1.session_id, "wrong-target", timeout_s=1.0)
 
+        command_started_at = time.perf_counter()
         ground.publish_goto(peer1, session1, target1, goto)
         expect_result_count(events, session1.session_id, timeout_s=3.0, minimum=4)
+        first_command_result_at = time.perf_counter()
 
         ground.publish_goto(peer2, session2, target2, goto)
         expect_result_count(events, session2.session_id, timeout_s=3.0, minimum=4)
 
         ground.release_authority(peer2, session2, target2)
         ground.release_authority(peer1, session1, target1)
+        metrics = {
+            "connect_ms": (connected_at - started_at) * 1000.0,
+            "session_ready_ms": (session_ready_at - connected_at) * 1000.0,
+            "authority_acquire_ms": (first_state_at - authority_started_at) * 1000.0,
+            "command_result_ms": (first_command_result_at - command_started_at) * 1000.0,
+            "state_first_seen_ms": (first_state_at - authority_started_at) * 1000.0,
+            "recovery_ms": 0.0,
+        }
+        print(f"YUNLINK_METRICS {json.dumps(metrics)}")
         print("python-ground-dual-uav ok")
         return 0
     finally:

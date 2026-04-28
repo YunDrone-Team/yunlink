@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import queue
 import time
 
@@ -94,6 +95,7 @@ def expect_failed_result(
 
 def main() -> int:
     args = parse_args()
+    started_at = time.perf_counter()
     ground_a = Runtime.start(
         RuntimeConfig(
             args.ground_a_udp_bind,
@@ -118,12 +120,15 @@ def main() -> int:
 
         peer_a = ground_a.connect(args.ip, args.port)
         peer_b = ground_b.connect(args.ip, args.port)
+        connected_at = time.perf_counter()
         session_a = ground_a.open_session(peer_a, "python-ground-a")
         _unused_session_b = ground_b.open_session(peer_b, "python-ground-b-unused")
         session_b = ground_b.open_session(peer_b, "python-ground-b")
+        session_ready_at = time.perf_counter()
         target = TargetSelector.entity(AgentType.UAV, 1)
         goto = GotoCommand(5.0, 1.0, 3.0, 0.25)
 
+        authority_started_at = time.perf_counter()
         ground_a.request_authority(
             peer_a, session_a, target, ControlSource.GROUND_STATION, 3000, False
         )
@@ -131,8 +136,11 @@ def main() -> int:
             peer_a, session_a, target, ControlSource.GROUND_STATION, 4500
         )
         wait_for_state(events_a, session_a.session_id, 71.0, timeout_s=4.0)
+        first_state_at = time.perf_counter()
+        command_started_at = time.perf_counter()
         ground_a.publish_goto(peer_a, session_a, target, goto)
         expect_result_count(events_a, session_a.session_id, timeout_s=3.0, minimum=4)
+        first_command_result_at = time.perf_counter()
 
         drain_events(events_b)
         ground_b.request_authority(
@@ -158,6 +166,7 @@ def main() -> int:
         ground_b.release_authority(peer_b, session_b, target)
         time.sleep(0.2)
 
+        recovery_started_at = time.perf_counter()
         ground_a.request_authority(
             peer_a, session_a, target, ControlSource.GROUND_STATION, 3000, False
         )
@@ -167,8 +176,18 @@ def main() -> int:
         wait_for_state(events_a, session_a.session_id, 73.0, timeout_s=4.0)
         ground_a.publish_goto(peer_a, session_a, target, goto)
         expect_result_count(events_a, session_a.session_id, timeout_s=3.0, minimum=4)
+        recovered_at = time.perf_counter()
 
         ground_a.release_authority(peer_a, session_a, target)
+        metrics = {
+            "connect_ms": (connected_at - started_at) * 1000.0,
+            "session_ready_ms": (session_ready_at - connected_at) * 1000.0,
+            "authority_acquire_ms": (first_state_at - authority_started_at) * 1000.0,
+            "command_result_ms": (first_command_result_at - command_started_at) * 1000.0,
+            "state_first_seen_ms": (first_state_at - authority_started_at) * 1000.0,
+            "recovery_ms": (recovered_at - recovery_started_at) * 1000.0,
+        }
+        print(f"YUNLINK_METRICS {json.dumps(metrics)}")
         print("python-ground-competition ok")
         return 0
     finally:
