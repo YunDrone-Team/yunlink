@@ -19,6 +19,15 @@
 
 正式结果目录约定为 `output/testing/<date>/<suite>/`。
 
+`run_suite.py` 当前会为每个 case 额外写出：
+
+- `logs/<case>/air-stdout.log`
+- `logs/<case>/air-stderr.log`
+- `logs/<case>/<ground-step>-stdout.log`
+- `logs/<case>/<ground-step>-stderr.log`
+
+case JSON 里同步记录 `generated_artifacts` 与 `log_dir`，便于后续报告和失败复盘直接消费。
+
 双机/弱网/soak 套件的 case 规格统一支持以下元数据字段：
 
 - `required_env`
@@ -55,6 +64,13 @@
   `Python air ↔ Python ground` 的 `2 GCS -> 1 UAV` 控制权竞争矩阵，验证 claim 冲突、preempt、旧 session 失效、release 后再次接管。
 - `dual-host-routing`
   `Python air ↔ Python ground` 的 `1 GCS -> 2 UAV` 路由与状态隔离矩阵，验证多 UAV 同时连接、错误 target 拒绝、定向 state 不泄漏。
+- `dual-host-scale`
+  `Python air ↔ Python ground` 的 `2 GCS -> 2 UAV` 规模/隔离矩阵，验证双控制端分别持有不同 UAV authority、交叉 target 命令失败、状态与结果不串线。
+
+本轮还新增了两类 Office Wi-Fi 恢复 case：
+
+- authority 自然过期后，ground 显式重新申请 authority 并恢复命令/状态闭环。
+- ground 主动关闭 TCP peer 后，显式执行 `reconnect -> reopen -> reacquire` 并恢复命令/状态闭环。
 
 截至 2026 年 4 月 24 日：
 

@@ -46,9 +46,9 @@
 | domain | scenario | status | evidence | gate_tier | env_requirement |
 | --- | --- | --- | --- | --- | --- |
 | dual-host | wired LAN baseline | `blocked-external` | [hosts.example.yaml](../../tools/testing/dual_host/hosts.example.yaml), [run_suite.py](../../tools/testing/dual_host/run_suite.py) | `manual-external` | `2-host-lan-lab` |
-| dual-host | Office Wi-Fi baseline / recovery / competition / routing | `blocked-external` | [office_wifi_lab.yaml](../../tools/testing/dual_host/office_wifi_lab.yaml), [tools/testing/README.md](../../tools/testing/README.md) | `manual-external` | `office-wifi-lab` |
-| network | Wi-Fi + netem `delay` / `delay+jitter` / `loss` / `loss+reorder` / `duplication` / short disconnect | `blocked-external` | [profiles](../../tools/testing/netem/profiles), [README](../../tests/network/README.md) | `manual-external` | `linux-netem-lab` |
-| scale | `2 GCS -> 2 UAV` | `blocked-external` | [test-world-map.md](./test-world-map.md), [tools/testing/README.md](../../tools/testing/README.md) | `manual-external` | `2-gcs-2-uav-lab` |
+| dual-host | Office Wi-Fi baseline / recovery / competition / routing / scale | `blocked-external` | [office_wifi_lab.yaml](../../tools/testing/dual_host/office_wifi_lab.yaml), [tools/testing/README.md](../../tools/testing/README.md) | `manual-external` | `office-wifi-lab` |
+| network | Wi-Fi + netem `delay` / `delay+jitter` / `loss` / `loss+reorder` / `duplication` / short disconnect | `blocked-external` | [profiles](../../tools/testing/netem/profiles), [tools/testing/README.md](../../tools/testing/README.md) | `manual-external` | `linux-netem-lab` |
+| scale | `2 GCS -> 2 UAV` | `blocked-external` | [office_wifi_lab.yaml](../../tools/testing/dual_host/office_wifi_lab.yaml), [tools/testing/README.md](../../tools/testing/README.md) | `manual-external` | `office-wifi-lab` |
 | scale | `1 GCS -> N UAV` capacity entry | `blocked-external` | [test-world-map.md](./test-world-map.md), [tests/perf/README.md](../../tests/perf/README.md) | `nightly-local` | `multi-uav-lab` |
 | perf | `connect_ms` / `session_ready_ms` / `authority_acquire_ms` / `command_result_ms` / `state_first_seen_ms` / `recovery_ms` reports | `blocked-external` | [run_perf_suite.py](../../tools/testing/perf/run_perf_suite.py), [render_summary.py](../../tools/testing/report/render_summary.py) | `nightly-local` | `metric-producing-suites` |
 | soak | `30min` / `2h` / `overnight` soak | `blocked-external` | [tests/soak/README.md](../../tests/soak/README.md) | `release-external` | `long-running-lab` |

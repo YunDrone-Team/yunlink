@@ -161,9 +161,9 @@
 
 ### 3.11 可观测性与结果采集测试
 
-- [ ] 为双机测试定义统一日志命名和目录布局。
-- [ ] 为每轮测试采集 runtime stdout/stderr、时间戳、host 标识、网络 profile。
-- [ ] 采集 connect、session、authority、command、state、recovery 五类关键时间点。
+- [x] 为双机测试定义统一日志命名和目录布局。
+- [x] 为每轮测试采集 runtime stdout/stderr、时间戳、host 标识、网络 profile。
+- [x] 采集 connect、session、authority、command、state、recovery 五类关键时间点。
 - [x] 生成统一 JSON / Markdown 测试摘要。
 - [ ] 在失败时输出最小可定位信息，而不是只报“timeout”。
 
@@ -175,7 +175,7 @@
 
 - [x] 准备两台固定角色主机：`host-ground`、`host-air`。
 - [x] 固定 IP、固定端口、固定 shared secret、固定测试用户。
-- [ ] 在两台主机上都准备统一的 repo 路径和构建产物位置。
+- [x] 在两台主机上都准备统一的 repo 路径和构建产物位置。
 - [x] 在两台主机上准备统一的 Python venv、Rust toolchain、CMake preset。
 - [x] 验证 `C++ air + Rust ground` 双机链路。
 - [x] 验证 `C++ air + Python ground` 双机链路。
@@ -187,8 +187,8 @@
 - [x] 覆盖 ground 重启，air 保持运行。
 - [x] 覆盖 air 重启，ground 保持运行。
 - [x] 覆盖 release 后 ground 手动 reconnect / reopen / reacquire。
-- [ ] 覆盖 authority 自然过期后手动恢复。
-- [ ] 覆盖 TCP 断链后手动恢复。
+- [x] 覆盖 authority 自然过期后手动恢复。
+- [x] 覆盖 TCP 断链后手动恢复。
 - [ ] 为恢复测试记录每一步耗时。
 - [x] 定义恢复验收：不依赖自动恢复，脚本显式步骤成功。
 
@@ -232,7 +232,7 @@
 - [x] `C++ air` ↔ `Python ground`
 - [x] `Rust air` ↔ `Python ground`
 - [x] `Python air` ↔ `Rust ground`
-- [ ] `Rust air` ↔ `Rust ground`
+- [x] `Rust air` ↔ `Rust ground`
 - [x] `Python air` ↔ `Python ground`
 
 ### 5.2 规模矩阵
@@ -240,7 +240,7 @@
 - [x] `1 GCS -> 1 UAV`
 - [x] `2 GCS -> 1 UAV`
 - [x] `1 GCS -> 2 UAV`
-- [ ] `2 GCS -> 2 UAV`
+- [x] `2 GCS -> 2 UAV`
 - [ ] 预留 `1 GCS -> N UAV`
 
 ### 5.3 网络矩阵

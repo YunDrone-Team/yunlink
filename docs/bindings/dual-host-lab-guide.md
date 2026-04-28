@@ -56,10 +56,14 @@ python3 tools/testing/dual_host/run_suite.py \
 - `dual-host-recovery`
   `Python air + Rust ground` 显式恢复
   `Python air restart + Rust ground` air 重启恢复
+  `Python air + Python ground` authority 自然过期后显式恢复
+  `Python air + C++ ground` peer 断链后显式恢复
 - `dual-host-competition`
   `Python air + Python ground` 的 `2 GCS -> 1 UAV` 控制权竞争矩阵
 - `dual-host-routing`
   `Python air + Python ground` 的 `1 GCS -> 2 UAV` 路由与状态隔离矩阵
+- `dual-host-scale`
+  `Python air + Python ground` 的 `2 GCS -> 2 UAV` 规模与隔离矩阵
 
 截至 2026 年 4 月 24 日，Office Wi-Fi 双机环境已经得到下面的稳定性证据：
 
@@ -75,10 +79,14 @@ python3 tools/testing/dual_host/run_suite.py \
 - `dual-host-routing`
   已验证一个 ground 可同时连接两个 UAV、错误 target 不形成成功命令、错误定向 state 不应泄漏、正确 target 的状态与命令结果回到正确 session。
 
+- `dual-host-scale`
+  已验证两个 ground runtime 可分别控制两个 UAV、交叉 target 命令形成稳定 `no-authority` 失败、两个 UAV 的状态与结果不串线。
+
 当前仍未覆盖：
 
 - A release 后 B 接管的镜像顺序用例
 - broadcast target 下多个 UAV 同时回包时的来源区分
+- Wi-Fi + netem 的 delay/loss/reorder/duplication/short-disconnect 矩阵
 
 ## 日志建议
 

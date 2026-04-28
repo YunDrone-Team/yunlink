@@ -17,6 +17,15 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 REPORT_RENDERER = ROOT_DIR / "tools" / "testing" / "report" / "render_summary.py"
+METRICS_PREFIX = "YUNLINK_METRICS "
+METRIC_KEYS = (
+    "connect_ms",
+    "session_ready_ms",
+    "authority_acquire_ms",
+    "command_result_ms",
+    "state_first_seen_ms",
+    "recovery_ms",
+)
 
 
 @dataclass
@@ -202,6 +211,43 @@ def run_once(argv: list[str], timeout_s: float) -> ProcResult:
         return ProcResult(None, "", f"timeout after {timeout_s}s", timed_out=True)
 
 
+def write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def write_role_logs(log_dir: Path, role: str, result: ProcResult) -> list[str]:
+    stdout_path = log_dir / f"{role}-stdout.log"
+    stderr_path = log_dir / f"{role}-stderr.log"
+    write_text(stdout_path, result.stdout)
+    write_text(stderr_path, result.stderr)
+    return [str(stdout_path), str(stderr_path)]
+
+
+def extract_metrics(text: str) -> dict[str, float]:
+    metrics: dict[str, float] = {}
+    for line in text.splitlines():
+        if not line.startswith(METRICS_PREFIX):
+            continue
+        payload = json.loads(line[len(METRICS_PREFIX) :].strip())
+        if not isinstance(payload, dict):
+            raise ValueError("metrics payload must be an object")
+        for key in METRIC_KEYS:
+            value = payload.get(key)
+            if value is None:
+                continue
+            metrics[key] = float(value)
+    return metrics
+
+
+def merge_metrics(base: dict, *texts: str) -> dict[str, float]:
+    merged = {key: float(base.get(key, 0.0)) for key in METRIC_KEYS}
+    for text in texts:
+        for key, value in extract_metrics(text).items():
+            merged[key] = value
+    return merged
+
+
 def wait_for_tcp_listener(host: str, port: int, timeout_s: float) -> None:
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
@@ -243,6 +289,7 @@ def run_case(config: dict, case: dict, dry_run: bool, output_dir: Path) -> dict:
     startup_delay_s = float(case.get("startup_delay_s", 0.0))
     case_slug = sanitize_case_name(case["name"])
     case_path = output_dir / "cases" / f"{case_slug}.json"
+    log_dir = output_dir / "logs" / case_slug
 
     record = {
         "name": case["name"],
@@ -280,6 +327,8 @@ def run_case(config: dict, case: dict, dry_run: bool, output_dir: Path) -> dict:
         "manual_gate": "",
         "metrics": {},
         "artifacts": [],
+        "generated_artifacts": [],
+        "log_dir": str(log_dir),
         "orchestrator_error": "",
     }
     record.update(normalize_case_metadata(case))
@@ -323,6 +372,7 @@ def run_case(config: dict, case: dict, dry_run: bool, output_dir: Path) -> dict:
     record["duration_s"] = duration_s
     record["ended_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     record["air"].update(air_result.as_dict())
+    generated_artifacts = write_role_logs(log_dir, "air", air_result)
     if ground_results:
         final_ground_result = ground_results[-1]
         record["ground"].update(final_ground_result.as_dict())
@@ -330,6 +380,12 @@ def run_case(config: dict, case: dict, dry_run: bool, output_dir: Path) -> dict:
         record["ground"].update(ProcResult(None, "", "ground not started").as_dict())
     for index, result in enumerate(ground_results):
         record["ground_steps"][index].update(result.as_dict())
+        generated_artifacts.extend(write_role_logs(log_dir, ground_steps[index].name, result))
+    record["generated_artifacts"] = generated_artifacts
+    metric_texts = [air_result.stdout, air_result.stderr]
+    for result in ground_results:
+        metric_texts.extend([result.stdout, result.stderr])
+    record["metrics"] = merge_metrics(record["metrics"], *metric_texts)
     record["status"] = case_status(air_result, ground_results, record["orchestrator_error"])
 
     case_path.write_text(json.dumps(record, indent=2), encoding="utf-8")

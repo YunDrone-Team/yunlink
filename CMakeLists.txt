@@ -146,6 +146,12 @@ if (YUNLINK_BUILD_EXAMPLES)
 
   add_executable(example_cxx_air_roundtrip examples/cxx_air_roundtrip/main.cpp)
   target_link_libraries(example_cxx_air_roundtrip PRIVATE yunlink)
+
+  add_executable(
+    example_cxx_ground_peer_recovery
+    examples/cxx_ground_peer_recovery/main.cpp
+  )
+  target_link_libraries(example_cxx_ground_peer_recovery PRIVATE yunlink)
 endif()
 
 if (YUNLINK_BUILD_TESTS)

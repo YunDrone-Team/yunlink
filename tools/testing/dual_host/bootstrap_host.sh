@@ -75,7 +75,9 @@ fi
 
 if [[ "$SKIP_CMAKE" -eq 0 ]]; then
   run_cmd cmake --preset "$PRESET"
-  run_cmd cmake --build "build/${PRESET}" --target example_cxx_air_roundtrip
+  run_cmd cmake --build "build/${PRESET}" --target \
+    example_cxx_air_roundtrip \
+    example_cxx_ground_peer_recovery
 fi
 
 if [[ "$WITH_RUST" -eq 1 && "$SKIP_RUST_BUILD" -eq 0 ]]; then

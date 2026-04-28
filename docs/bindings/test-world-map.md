@@ -33,7 +33,7 @@
 | --- | ---: | ---: | --- | --- |
 | Protocol substrate | 10 | 8 | `partial-strong` | 线包、checksum、TTL codec、parser resilience、protocol mismatch 与 corruption 检测已覆盖；持续 fuzz 仍只提供 opt-in harness。 |
 | SDK / ABI substrate | 8 | 7 | `partial-strong` | C ABI、Rust、Python、editable/wheel smoke 和 loader 已覆盖主路径，struct layout / `struct_size`、Rust drop/lagged/recovery、Python poll-thread/queue parity 也已有回归；长期资源压力与外部安装矩阵仍需补齐。 |
-| Single-host / dual-host protocol semantics | 12 | 7 | `partial-strong` | 单机互操作与 Office Wi-Fi 双机 baseline/recovery/competition/routing 已实测。 |
+| Single-host / dual-host protocol semantics | 12 | 8 | `partial-strong` | 单机互操作与 Office Wi-Fi 双机 baseline/recovery/competition/routing/scale 已实测，并新增 authority expiry 与 peer disconnect 的显式恢复用例。 |
 | Runtime session / authority ownership | 10 | 7 | `partial-strong` | authority 主路径、session active/invalid/lost、断链收敛和目标域分片已有仓内证据；closed/draining 仍不是公开可单独驱动的仓内入口。 |
 | Command result under real executor | 12 | 3 | `weak` | runtime/bridge 有结果流测试，但真实 Sunray 执行器下的失败分支尚未闭环。 |
 | State uplink freshness and semantics | 8 | 3 | `weak` | snapshot 类型与 ROS mapping 已测，但真实频率、freshness、丢包退化和业务一致性未实测。 |
@@ -105,11 +105,15 @@
 - [x] 双机 Office Wi-Fi recovery。
 - [x] 双机 Office Wi-Fi competition。
 - [x] 双机 Office Wi-Fi routing。
+- [x] 双机 Office Wi-Fi `Rust air ↔ Rust ground` baseline。
+- [x] 双机 authority 自然过期后的显式恢复。
+- [x] 双机 peer 断链后的显式 `reconnect -> reopen -> reacquire`。
 - [x] `dual-host-competition` 连续 10 次通过。
 - [x] `dual-host-routing` 连续 10 次通过。
+- [x] `2 GCS -> 2 UAV`。
 - [ ] 双机有线 LAN 基线。
 - [ ] host 间时钟不同步、网卡切换、短时断网。
-- [ ] `2 GCS -> 2 UAV` 与 `1 GCS -> N UAV` 容量入口。
+- [ ] `1 GCS -> N UAV` 容量入口。
 
 ![Topology Matrix](../diagrams/plantuml/svg/test_world_map_topology_matrix.svg)
 
@@ -182,6 +186,9 @@
 - `test_testing_tooling`
 - `tools/testing/dual_host/run_suite.py`
 - `tools/testing/dual_host/office_wifi_lab.yaml`
+- `tools/bindings/python_ground_authority_expiry_recovery.py`
+- `tools/bindings/python_ground_2gcs_2uav.py`
+- `example_cxx_ground_peer_recovery`
 - `tools/testing/netem/apply_profile.sh`
 - `tools/testing/netem/clear_profile.sh`
 - `tools/testing/report/render_summary.py`

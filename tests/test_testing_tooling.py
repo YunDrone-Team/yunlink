@@ -56,6 +56,7 @@ class TestingToolingTests(unittest.TestCase):
 
             air_py = (
                 "import socket; "
+                "import json; "
                 "s=socket.socket(); "
                 "s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); "
                 f"s.bind(('127.0.0.1', {port})); "
@@ -64,12 +65,14 @@ class TestingToolingTests(unittest.TestCase):
                 "conn.close(); "
                 "conn,_=s.accept(); "
                 "conn.close(); "
-                "s.close()"
+                "s.close(); "
+                "print('YUNLINK_METRICS ' + json.dumps({'state_first_seen_ms': 56.0}))"
             )
             ground_py = (
-                "import socket; "
+                "import json, socket; "
                 f"s=socket.create_connection(('127.0.0.1', {port}), timeout=2.0); "
-                "s.close()"
+                "s.close(); "
+                "print('YUNLINK_METRICS ' + json.dumps({'connect_ms': 12.0, 'session_ready_ms': 34.0, 'authority_acquire_ms': 45.0, 'command_result_ms': 67.0, 'recovery_ms': 0.0}))"
             )
             cfg = {
                 "hosts": {
@@ -99,7 +102,7 @@ class TestingToolingTests(unittest.TestCase):
                                 "required_env": ["local-loopback"],
                                 "network_profile": "none",
                                 "manual_gate": "nightly-local",
-                                "metrics": {"connect_ms": 12.0, "session_ready_ms": 34.0},
+                                "metrics": {"connect_ms": 0.0, "session_ready_ms": 0.0},
                                 "artifacts": ["logs/local-loop.txt"],
                                 "ground_timeout_s": 3,
                                 "air_timeout_s": 3,
@@ -136,7 +139,15 @@ class TestingToolingTests(unittest.TestCase):
             self.assertEqual(case_payload["network_profile"], "none")
             self.assertEqual(case_payload["manual_gate"], "nightly-local")
             self.assertEqual(case_payload["metrics"]["connect_ms"], 12.0)
+            self.assertEqual(case_payload["metrics"]["session_ready_ms"], 34.0)
+            self.assertEqual(case_payload["metrics"]["authority_acquire_ms"], 45.0)
+            self.assertEqual(case_payload["metrics"]["command_result_ms"], 67.0)
+            self.assertEqual(case_payload["metrics"]["state_first_seen_ms"], 56.0)
             self.assertEqual(case_payload["artifacts"], ["logs/local-loop.txt"])
+            generated = case_payload["generated_artifacts"]
+            self.assertEqual(len(generated), 4)
+            for path in generated:
+                self.assertTrue(Path(path).exists(), path)
             self.assertTrue((out_dir / "summary.json").exists())
 
     def test_dual_host_runner_executes_multiple_ground_steps(self) -> None:
