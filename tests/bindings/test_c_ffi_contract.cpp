@@ -15,6 +15,10 @@ int main() {
                   "shared secret buffer contract changed");
     static_assert(sizeof(yunlink_runtime_config_t().multicast_group) == 64,
                   "multicast group buffer contract changed");
+    static_assert(sizeof(yunlink_error_event_t().message) == 256,
+                  "error event message buffer contract changed");
+    static_assert(sizeof(yunlink_command_result_event_t().detail) == 256,
+                  "command result detail buffer contract changed");
     static_assert(sizeof(yunlink_session_info_t().node_name) == 128,
                   "session node_name buffer contract changed");
     static_assert(offsetof(yunlink_runtime_config_t, struct_size) == 0,
@@ -23,6 +27,17 @@ int main() {
                   "target selector struct_size must remain the first field");
     static_assert(offsetof(yunlink_session_info_t, struct_size) == 0,
                   "session info struct_size must remain the first field");
+    static_assert(offsetof(yunlink_target_selector_t, group_id) >
+                      offsetof(yunlink_target_selector_t, entity_id),
+                  "target selector field order changed");
+    static_assert(offsetof(yunlink_command_handle_t, correlation_id) >
+                      offsetof(yunlink_command_handle_t, message_id),
+                  "command handle field order changed");
+    static_assert(offsetof(yunlink_authority_lease_t, peer) >
+                      offsetof(yunlink_authority_lease_t, expires_at_ms),
+                  "authority lease field order changed");
+    static_assert(offsetof(yunlink_runtime_event_t, data) > offsetof(yunlink_runtime_event_t, type),
+                  "runtime event union field order changed");
     static_assert(offsetof(yunlink_command_result_event_t, detail) >
                       offsetof(yunlink_command_result_event_t, progress_percent),
                   "command result event field order changed");
@@ -122,10 +137,14 @@ int main() {
         std::cerr << "runtime stop failed\n";
         return 12;
     }
+    if (yunlink_runtime_stop(runtime) != YUNLINK_RESULT_OK) {
+        std::cerr << "repeated runtime stop failed\n";
+        return 13;
+    }
     if (yunlink_peer_connect(runtime, "127.0.0.1", 13300, &fake_peer) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "runtime stopped mismatch\n";
-        return 13;
+        return 14;
     }
 
     yunlink_target_selector_t valid_target{};
@@ -138,7 +157,7 @@ int main() {
     if (yunlink_session_open(runtime, &fake_peer, "stopped", &stopped_session) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "session open on stopped runtime mismatch\n";
-        return 14;
+        return 15;
     }
 
     stopped_session.session_id = 42;
@@ -151,7 +170,7 @@ int main() {
             runtime, &fake_peer, &stopped_session, &valid_target, &goto_cmd, nullptr) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "command publish on stopped runtime mismatch\n";
-        return 15;
+        return 16;
     }
     if (yunlink_authority_request(runtime,
                                   &fake_peer,
@@ -161,7 +180,7 @@ int main() {
                                   3000,
                                   0) != YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "authority request on stopped runtime mismatch\n";
-        return 16;
+        return 17;
     }
 
     yunlink_vehicle_core_state_t state{};
@@ -171,7 +190,14 @@ int main() {
             runtime, &fake_peer, &valid_target, &state, stopped_session.session_id) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "state publish on stopped runtime mismatch\n";
-        return 17;
+        return 18;
+    }
+
+    yunlink_runtime_event_t stopped_event{};
+    if (yunlink_runtime_poll_event(runtime, &stopped_event) != YUNLINK_RESULT_OK ||
+        stopped_event.type != YUNLINK_RUNTIME_EVENT_NONE) {
+        std::cerr << "stopped runtime empty poll mismatch\n";
+        return 19;
     }
 
     yunlink_runtime_destroy(runtime);

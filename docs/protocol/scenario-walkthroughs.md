@@ -137,7 +137,7 @@
 
 - `TargetScope::kGroup`、`FormationTaskCommand`、`target.group_id` 的线包与 payload 表达已存在
 - 当前没有 swarm coordinator / group executor 样例
-- 当前 `TargetSelector::matches()` 对 `kGroup` 只按 `target_type` 粗匹配，不检查 `group_id` 或成员关系
+- 当前 `TargetSelector::matches()` 已按 endpoint `group_ids` 精确匹配 `group_id`，但 repo 内仍没有真实 swarm coordinator / group executor 样例
 
 ### 参与方
 
@@ -172,7 +172,7 @@
 ### 当前 repo 需要额外注意
 
 - 这是协议参考场景，不应被误读为“仓库已经具备真实群组执行语义”。
-- 当前如果直接把 `kGroup` 命令喂给 runtime，目标匹配仍是粗粒度的 `agent_type` 级别，而不是组成员级别。
+- 当前如果直接把 `kGroup` 命令喂给 runtime，线包目标匹配与 formation payload 一致性会被校验，但真实成员调度、群组聚合器与部分成功策略仍属于业务层。
 
 ### SDK 映射
 

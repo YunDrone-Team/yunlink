@@ -109,6 +109,25 @@ def load_config(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def normalize_case_metadata(case: dict) -> dict:
+    metrics = case.get("metrics", {})
+    if not isinstance(metrics, dict):
+        raise ValueError("case metrics must be an object")
+    artifacts = case.get("artifacts", [])
+    if not isinstance(artifacts, list):
+        raise ValueError("case artifacts must be a list")
+    required_env = case.get("required_env", [])
+    if not isinstance(required_env, list):
+        raise ValueError("case required_env must be a list")
+    return {
+        "required_env": required_env,
+        "network_profile": case.get("network_profile", ""),
+        "manual_gate": case.get("manual_gate", ""),
+        "metrics": metrics,
+        "artifacts": artifacts,
+    }
+
+
 def timestamp_dir() -> str:
     return time.strftime("%Y%m%d-%H%M%S")
 
@@ -256,8 +275,14 @@ def run_case(config: dict, case: dict, dry_run: bool, output_dir: Path) -> dict:
             "startup_timeout_s": startup_timeout_s,
             "startup_delay_s": startup_delay_s,
         },
+        "required_env": [],
+        "network_profile": "",
+        "manual_gate": "",
+        "metrics": {},
+        "artifacts": [],
         "orchestrator_error": "",
     }
+    record.update(normalize_case_metadata(case))
 
     if dry_run:
         case_path.write_text(json.dumps(record, indent=2), encoding="utf-8")

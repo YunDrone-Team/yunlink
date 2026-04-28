@@ -168,6 +168,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_target_selector PRIVATE yunlink)
   add_test(NAME test_target_selector COMMAND test_target_selector)
 
+  add_executable(test_protocol_corruption tests/core/test_protocol_corruption.cpp)
+  target_link_libraries(test_protocol_corruption PRIVATE yunlink)
+  add_test(NAME test_protocol_corruption COMMAND test_protocol_corruption)
+
   add_executable(test_compat_roundtrip tests/test_compat_roundtrip.cpp)
   target_link_libraries(test_compat_roundtrip PRIVATE yunlink)
   add_test(NAME test_compat_roundtrip COMMAND test_compat_roundtrip)
@@ -208,6 +212,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_session_lifecycle PRIVATE yunlink)
   add_test(NAME test_session_lifecycle COMMAND test_session_lifecycle)
 
+  add_executable(test_state_plane_semantics tests/runtime/test_state_plane_semantics.cpp)
+  target_link_libraries(test_state_plane_semantics PRIVATE yunlink)
+  add_test(NAME test_state_plane_semantics COMMAND test_state_plane_semantics)
+
   add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
   target_link_libraries(test_capability_negotiation PRIVATE yunlink)
   add_test(NAME test_capability_negotiation COMMAND test_capability_negotiation)
@@ -223,6 +231,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_external_command_handling tests/runtime/test_external_command_handling.cpp)
   target_link_libraries(test_external_command_handling PRIVATE yunlink)
   add_test(NAME test_external_command_handling COMMAND test_external_command_handling)
+
+  add_executable(test_command_result_edges tests/runtime/test_command_result_edges.cpp)
+  target_link_libraries(test_command_result_edges PRIVATE yunlink)
+  add_test(NAME test_command_result_edges COMMAND test_command_result_edges)
 
   add_executable(test_runtime_ttl_freshness tests/runtime/test_runtime_ttl_freshness.cpp)
   target_link_libraries(test_runtime_ttl_freshness PRIVATE yunlink)
@@ -308,6 +320,11 @@ if (YUNLINK_BUILD_TESTS)
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_testing_tooling.py
   )
 
+  add_test(
+    NAME test_docs_consistency
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_docs_consistency.py
+  )
+
   if (YUNLINK_BUILD_EXAMPLES)
     add_test(
       NAME smoke_examples_local
@@ -318,3 +335,6 @@ if (YUNLINK_BUILD_TESTS)
     set_tests_properties(smoke_examples_local PROPERTIES TIMEOUT 30 LABELS "smoke")
   endif()
 endif()
+
+add_executable(yunlink_codec_fuzz_harness tests/core/fuzz_protocol_codec.cpp)
+target_link_libraries(yunlink_codec_fuzz_harness PRIVATE yunlink)

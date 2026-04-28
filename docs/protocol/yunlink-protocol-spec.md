@@ -282,11 +282,12 @@ header_len = 76 + target_count * 4 + auth_tag_len
 2. `scope = kGroup` 时按组成员关系匹配。
 3. `scope = kEntity` 时按 `target_ids` 精确匹配。
 
-当前 repo 的最小实现仍有边界：
+当前 repo 的实现状态如下：
 
 - `kEntity` 已按 `target_ids` 精确匹配。
-- `kGroup` 当前还没有真实组成员关系，runtime 只按 `target_type` 做粗匹配。
-- 这些实现限制不改变本规范的应然要求，但接入当前仓库时必须联读 [implementation-status.md](implementation-status.md)。
+- `kGroup` 已按 endpoint `group_ids` 精确匹配 `group_id`，对应回归见 `tests/core/test_target_selector.cpp`。
+- repo 内仍没有真实 swarm coordinator / group executor 的业务闭环，因此群组语义目前停留在 target 匹配与路由层，而不是完整集群任务执行层。
+- 接入当前仓库时仍应联读 [implementation-status.md](implementation-status.md) 了解哪些是协议层保证、哪些只是当前实现范围。
 
 ## 8. QoS 与传输语义
 

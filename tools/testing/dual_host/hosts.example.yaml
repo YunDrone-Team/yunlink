@@ -29,6 +29,18 @@
           "name": "cxx-air-rust-ground",
           "ground_host": "host-ground",
           "air_host": "host-air",
+          "required_env": ["2-host-lan-lab"],
+          "network_profile": "none",
+          "manual_gate": "manual-external",
+          "metrics": {
+            "connect_ms": 0,
+            "session_ready_ms": 0,
+            "authority_acquire_ms": 0,
+            "command_result_ms": 0,
+            "state_first_seen_ms": 0,
+            "recovery_ms": 0
+          },
+          "artifacts": ["logs/cxx-air-rust-ground.txt"],
           "ground_command": "bindings/rust/target/debug/examples/ground_roundtrip 10.0.0.2 16130 16031 16031 16131",
           "air_command": "build/ninja-debug/example_cxx_air_roundtrip 16030 16030 16130"
         }
@@ -41,6 +53,18 @@
           "name": "python-air-rust-ground-recovery",
           "ground_host": "host-ground",
           "air_host": "host-air",
+          "required_env": ["2-host-lan-lab"],
+          "network_profile": "none",
+          "manual_gate": "manual-external",
+          "metrics": {
+            "connect_ms": 0,
+            "session_ready_ms": 0,
+            "authority_acquire_ms": 0,
+            "command_result_ms": 0,
+            "state_first_seen_ms": 0,
+            "recovery_ms": 0
+          },
+          "artifacts": ["logs/python-air-rust-ground-recovery.txt"],
           "ground_steps": [
             {
               "name": "ground-round-1",
@@ -62,6 +86,18 @@
           "name": "python-air-python-ground-competition",
           "ground_host": "host-ground",
           "air_host": "host-air",
+          "required_env": ["2-host-lan-lab"],
+          "network_profile": "none",
+          "manual_gate": "manual-external",
+          "metrics": {
+            "connect_ms": 0,
+            "session_ready_ms": 0,
+            "authority_acquire_ms": 0,
+            "command_result_ms": 0,
+            "state_first_seen_ms": 0,
+            "recovery_ms": 0
+          },
+          "artifacts": ["logs/python-air-python-ground-competition.txt"],
           "air_command": "tools/bindings/python_air_competition.py 16090 16090 16190",
           "ground_command": "tools/bindings/python_ground_competition.py 10.0.0.2 16190 16091 16091 16191 16092 16092 16192"
         }
@@ -74,6 +110,18 @@
           "name": "python-air-python-ground-dual-uav",
           "ground_host": "host-ground",
           "air_host": "host-air",
+          "required_env": ["2-host-lan-lab"],
+          "network_profile": "none",
+          "manual_gate": "manual-external",
+          "metrics": {
+            "connect_ms": 0,
+            "session_ready_ms": 0,
+            "authority_acquire_ms": 0,
+            "command_result_ms": 0,
+            "state_first_seen_ms": 0,
+            "recovery_ms": 0
+          },
+          "artifacts": ["logs/python-air-python-ground-dual-uav.txt"],
           "air_command": "tools/bindings/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
           "ground_command": "tools/bindings/python_ground_dual_uav.py 10.0.0.2 16200 16201 16102 16102 16202"
         }

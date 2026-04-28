@@ -19,6 +19,19 @@
 
 正式结果目录约定为 `output/testing/<date>/<suite>/`。
 
+双机/弱网/soak 套件的 case 规格统一支持以下元数据字段：
+
+- `required_env`
+  运行该 case 所需的外部环境标签列表。
+- `network_profile`
+  `none`、`delay`、`delay+jitter`、`loss`、`loss+reorder`、`duplication`、`short-disconnect` 等固定网络画像。
+- `manual_gate`
+  `nightly-local`、`manual-external`、`release-external` 等门禁口径。
+- `metrics`
+  当前统一指标键为 `connect_ms`、`session_ready_ms`、`authority_acquire_ms`、`command_result_ms`、`state_first_seen_ms`、`recovery_ms`。
+- `artifacts`
+  该 case 期望生成的日志、报告、pcap 或摘要产物路径。
+
 双机常用入口：
 
 - `tools/testing/dual_host/sync_repo.sh`

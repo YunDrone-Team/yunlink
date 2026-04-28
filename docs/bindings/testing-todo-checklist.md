@@ -43,29 +43,29 @@
 - [x] 覆盖 message family / message type 编码与解码一致性。
 - [x] 覆盖 source / target selector 的 entity / group / broadcast 三类语义。
 - [x] 覆盖 TTL 超时行为。
-- [ ] 覆盖 checksum / header / payload corruption 检测。
-- [ ] 覆盖 protocol version mismatch 的拒绝路径。
-- [ ] 覆盖 payload 边界值、空字符串、长字符串、固定容量字段截断规则。
+- [x] 覆盖 checksum / header / payload corruption 检测。
+- [x] 覆盖 protocol version mismatch 的拒绝路径。
+- [x] 覆盖 payload 边界值、空字符串、长字符串、固定容量字段截断规则。
 - [x] 覆盖 parser 的 partial frame、split frame、multiple frame glued together。
 - [x] 覆盖 malformed frame、truncated frame、garbage prefix、garbage suffix。
-- [ ] 预留 codec fuzz 入口，后续引入持续 fuzz。
+- [x] 预留 codec fuzz 入口，后续引入持续 fuzz。
 
 ### 3.2 Runtime 生命周期与状态机测试
 
 - [x] 覆盖 `start -> stop -> start` 重复生命周期。
-- [ ] 覆盖 session open / active / invalid / lost 的状态切换。
+- [x] 覆盖 session open / active / invalid / lost 的状态切换。
 - [x] 覆盖 authority `claim -> renew -> release -> expire -> reacquire -> preempt` 全路径。
-- [ ] 覆盖 command `publish -> received -> accepted -> in_progress -> succeeded/failed/cancelled`。
-- [ ] 覆盖 state snapshot 与 state event 的投递顺序和来源标识。
+- [x] 覆盖 command `publish -> received -> accepted -> in_progress -> succeeded/failed/cancelled`。
+- [x] 覆盖 state snapshot 与 state event 的投递顺序和来源标识。
 - [x] 覆盖单端停止、双端停止、停止后调用 API 的返回码。
 - [x] 覆盖 runtime restart 后 peer/session/authority 的显式恢复流程。
-- [ ] 覆盖无 authority 时命令应被拒绝或不执行的路径。
+- [x] 覆盖无 authority 时命令应被拒绝或不执行的路径。
 - [x] 覆盖 session 存在但 authority 不存在的边界条件。
 - [x] 覆盖 authority lease 自然过期，而不仅是手动 release。
 
 ### 3.3 传输与网络测试
 
-- [ ] 覆盖 TCP connect / reconnect / duplicate connect。
+- [x] 覆盖 TCP connect / reconnect / duplicate connect。
 - [ ] 覆盖 TCP half-open、RST、listener 不可达、端口被占用。
 - [x] 覆盖 UDP source isolation。
 - [ ] 覆盖消息乱序、重复包、丢包、延迟、抖动、短暂断网。
@@ -77,33 +77,33 @@
 ### 3.4 FFI / ABI 契约测试
 
 - [x] 覆盖 ABI version 常量与共享库命名。
-- [ ] 覆盖结构体布局、字段大小、对齐和 `struct_size` 契约。
+- [x] 覆盖结构体布局、字段大小、对齐和 `struct_size` 契约。
 - [ ] 覆盖 handle 生命周期、失效后的错误返回和重复释放防护。
 - [x] 覆盖 `result code -> result name` 映射。
 - [x] 覆盖无效 peer / session / target / runtime 参数。
 - [x] 覆盖 runtime stopped 后的 API 行为。
 - [x] 覆盖 event poll 空队列与事件顺序。
 - [x] 覆盖 authority renew、release、current 的边界条件。
-- [ ] 覆盖共享库在 tri-platform 的加载与符号暴露预期。
+- [x] 覆盖共享库在 tri-platform 的加载与符号暴露预期。
 
 ### 3.5 语言绑定测试
 
 #### Rust
 
-- [ ] 覆盖 `FfiErrorCode` 映射完整性。
-- [ ] 覆盖 Tokio task cancel 不影响 runtime 存活。
-- [ ] 覆盖 broadcast channel 背压与 `Lagged` 语义。
-- [ ] 覆盖 `Drop` 后线程、channel、socket 资源释放。
-- [ ] 覆盖 reconnect / reopen / reacquire 的显式恢复链路。
+- [x] 覆盖 `FfiErrorCode` 映射完整性。
+- [x] 覆盖 Tokio task cancel 不影响 runtime 存活。
+- [x] 覆盖 broadcast channel 背压与 `Lagged` 语义。
+- [x] 覆盖 `Drop` 后线程、channel、socket 资源释放。
+- [x] 覆盖 reconnect / reopen / reacquire 的显式恢复链路。
 - [x] 覆盖 examples 作为 smoke 程序可运行。
 
 #### Python
 
-- [ ] 覆盖 `YunlinkError` 及各异常子类映射。
-- [ ] 覆盖 polling 线程启动、停止、退出、错误传播。
-- [ ] 覆盖 `queue.Queue` 与 `asyncio.Queue` 共用同一 domain model。
-- [ ] 覆盖 `close()` 后端口和线程资源释放。
-- [ ] 覆盖 editable install 与 wheel install 两条路径。
+- [x] 覆盖 `YunlinkError` 及各异常子类映射。
+- [x] 覆盖 polling 线程启动、停止、退出、错误传播。
+- [x] 覆盖 `queue.Queue` 与 `asyncio.Queue` 共用同一 domain model。
+- [x] 覆盖 `close()` 后端口和线程资源释放。
+- [x] 覆盖 editable install 与 wheel install 两条路径。
 - [x] 覆盖 Python helper scripts 作为 smoke 程序可运行。
 
 ### 3.6 单机多进程互操作测试
@@ -133,7 +133,7 @@
 - [x] 覆盖 shared secret mismatch。
 - [x] 覆盖 protocol mismatch。
 - [x] 覆盖非法 target / 非法 authority source。
-- [ ] 覆盖 session 存在但 peer 已断开。
+- [x] 覆盖 session 存在但 peer 已断开。
 - [ ] 覆盖 command 发出后对端重启。
 - [ ] 覆盖 authority lease 即将过期时的续租失败。
 - [ ] 覆盖 state flood 导致的队列积压。
@@ -253,9 +253,9 @@
 
 ### 5.4 操作系统矩阵
 
-- [ ] Linux 作为全量主平台。
-- [ ] macOS 作为开发平台 smoke。
-- [ ] Windows 作为 bindings 与安装 smoke。
+- [x] Linux 作为全量主平台。
+- [x] macOS 作为开发平台 smoke。
+- [x] Windows 作为 bindings 与安装 smoke。
 - [ ] 预留 Linux ground + Linux air 的正式双机主线。
 - [ ] 预留 Linux ground + macOS air 的实验组合。
 
@@ -317,10 +317,10 @@
 
 - [x] command publish 返回 handle 合法
 - [ ] `message_id` 唯一
-- [ ] `correlation_id` 与结果流匹配
+- [x] `correlation_id` 与结果流匹配
 - [x] result phase 顺序稳定
-- [ ] result detail 可追踪
-- [ ] 无 authority 时命令不应形成成功结果
+- [x] result detail 可追踪
+- [x] 无 authority 时命令不应形成成功结果
 
 ### 7.3 状态平面
 

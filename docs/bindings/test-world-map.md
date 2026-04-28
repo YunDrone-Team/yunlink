@@ -7,7 +7,7 @@
 - [dual-host-lab-guide.md](dual-host-lab-guide.md)
 - [ros1-docker-ubuntu26-guide.md](ros1-docker-ubuntu26-guide.md)
 
-当前结论：工程测试资产已经较多，但从真实业务闭环看仍约 `32/100`，置信区间 `28-36`，未达到 `50%`。协议、SDK、单机/双机语义已有基础，ROS bridge 已有单元测试与 loopback；但真实 Sunray ROS graph、PX4 SITL、HIL/真机安全门控、弱网矩阵、长稳 soak 和真实飞控执行闭环仍缺。
+当前结论：工程测试资产已经较多，而且仓内闭环较此前更完整；但从真实业务闭环看仍约 `32/100`，置信区间 `28-36`，未达到 `50%`。协议、SDK、单机/双机语义已有基础，ROS bridge 已有单元测试与 loopback；但真实 Sunray ROS graph、PX4 SITL、HIL/真机安全门控、弱网矩阵、长稳 soak 和真实飞控执行闭环仍缺。
 
 ![Test World Map System](../diagrams/plantuml/svg/test_world_map_system.svg)
 
@@ -31,18 +31,18 @@
 
 | 业务域 | 权重 | 当前建议分 | 状态 | 解释 |
 | --- | ---: | ---: | --- | --- |
-| Protocol substrate | 10 | 7 | `partial-strong` | 线包、checksum、TTL codec、parser resilience 已有覆盖，但 version mismatch、字段边界和 fuzz 仍缺。 |
-| SDK / ABI substrate | 8 | 6 | `partial-strong` | C ABI、Rust、Python、wheel smoke 和 loader 已覆盖主路径，但 tri-platform ABI layout 与资源释放边界仍需补齐。 |
+| Protocol substrate | 10 | 8 | `partial-strong` | 线包、checksum、TTL codec、parser resilience、protocol mismatch 与 corruption 检测已覆盖；持续 fuzz 仍只提供 opt-in harness。 |
+| SDK / ABI substrate | 8 | 7 | `partial-strong` | C ABI、Rust、Python、editable/wheel smoke 和 loader 已覆盖主路径，struct layout / `struct_size`、Rust drop/lagged/recovery、Python poll-thread/queue parity 也已有回归；长期资源压力与外部安装矩阵仍需补齐。 |
 | Single-host / dual-host protocol semantics | 12 | 7 | `partial-strong` | 单机互操作与 Office Wi-Fi 双机 baseline/recovery/competition/routing 已实测。 |
-| Runtime session / authority ownership | 10 | 6 | `partial` | authority 主路径和边界较好，但 session active/lost 双向协商、断链收敛和目标域分片仍缺。 |
+| Runtime session / authority ownership | 10 | 7 | `partial-strong` | authority 主路径、session active/invalid/lost、断链收敛和目标域分片已有仓内证据；closed/draining 仍不是公开可单独驱动的仓内入口。 |
 | Command result under real executor | 12 | 3 | `weak` | runtime/bridge 有结果流测试，但真实 Sunray 执行器下的失败分支尚未闭环。 |
 | State uplink freshness and semantics | 8 | 3 | `weak` | snapshot 类型与 ROS mapping 已测，但真实频率、freshness、丢包退化和业务一致性未实测。 |
 | ROS/Sunray bridge integration | 12 | 4 | `partial` | catkin build、24 个 gtest、mapping/tracker/loopback、launch smoke 已有；真实 Sunray graph 未接入。 |
 | Real Sunray/PX4 SITL/HIL loop | 16 | 0 | `missing` | 尚无 PX4 SITL、Sunray controller/FSM、bridge、Yunlink ground 的端到端验收。 |
-| Weak network / recovery / soak | 8 | 2 | `scaffolded` | netem profile、report/perf 脚手架存在，但真实 profile 矩阵和长稳未跑。 |
-| Observability and release gates | 4 | 1 | `scaffolded` | 有 summary/report 产物雏形，尚未形成 PR/nightly/release 分级门禁。 |
+| Weak network / recovery / soak | 8 | 2 | `scaffolded` | netem profile、report/perf 脚手架与外部 suite 规格存在，但真实 profile 矩阵和长稳未跑。 |
+| Observability and release gates | 4 | 2 | `scaffolded` | 有 summary/report 产物、测试矩阵与文档一致性回归，尚未形成完整 release-external gate。 |
 
-合计：工程资产口径 `39/100`；业务保守口径 `32/100`，置信区间 `28-36`。
+合计：工程资产口径约 `44/100`；业务保守口径仍约 `32/100`，置信区间 `28-36`。
 
 ![Business Coverage](../diagrams/plantuml/svg/test_world_map_business_coverage.svg)
 
@@ -55,9 +55,10 @@
 - [x] TTL codec 判定。
 - [x] parser partial frame / split frame / glued frames。
 - [x] malformed frame / truncated frame / garbage prefix / garbage suffix。
-- [ ] protocol version mismatch 的 runtime 拒绝路径。
-- [ ] payload 边界值、空字符串、长字符串、固定容量字段截断规则。
-- [ ] codec fuzz 入口与持续 fuzz。
+- [x] protocol version mismatch 的 runtime 拒绝路径。
+- [x] payload 边界值、空字符串、长字符串、固定容量字段截断规则。
+- [x] codec fuzz 入口。
+- [ ] 持续 fuzz。
 
 ### Runtime session / authority / command
 
@@ -67,7 +68,7 @@
 - [x] session 存在但 authority 不存在的边界。
 - [x] external command handling mode 关闭 auto-result。
 - [x] explicit `CommandResult` helper 保留 correlation 与回包路径。
-- [ ] session open / active / invalid / lost 的完整状态切换。
+- [x] session open / active / invalid / lost 的完整状态切换。
 - [ ] command 在真实执行器下的 `Received -> Accepted -> InProgress -> Succeeded/Failed`。
 - [ ] 执行中 session 失效、authority 失效、TTL 过期、执行超时的真实失败分支。
 
@@ -79,7 +80,7 @@
 - [x] listener 未启动。
 - [x] shared secret mismatch。
 - [x] protocol mismatch。
-- [ ] TCP half-open、RST、duplicate connect、端口占用。
+- [ ] TCP half-open、RST 的真实异常链路。
 - [ ] delay、jitter、loss、reorder、duplication、短断网的真实 netem 矩阵。
 - [ ] 弱网下 command plane 与 state plane 的不同退化行为。
 
@@ -92,8 +93,9 @@
 - [x] Python runtime tests。
 - [x] Python wheel smoke。
 - [x] `tools/bindings/run_all.sh` bindings matrix。
-- [ ] tri-platform 结构体 layout、字段大小、对齐和 `struct_size` 契约。
-- [ ] Rust/Python 资源释放、队列背压、恢复 helper 的长期稳定性。
+- [x] tri-platform 结构体 layout、字段大小、对齐和 `struct_size` 契约。
+- [x] Rust/Python 资源释放、队列背压、恢复 helper 的 repo-local 回归。
+- [ ] Rust/Python 长期资源压力稳定性。
 
 ### Single-host and dual-host semantics
 
@@ -147,6 +149,7 @@
 - `test_protocol`
 - `test_parser`
 - `test_parser_resilience`
+- `test_protocol_corruption`
 - `test_compat_roundtrip`
 - `test_transport_loop`
 - `test_udp_source_isolation`
@@ -158,6 +161,8 @@
 - `test_external_command_handling`
 - `test_runtime_stopped_errors`
 - `test_session_security`
+- `test_state_plane_semantics`
+- `test_command_result_edges`
 - `test_routing_and_source_validation`
 - `test_tcp_resilience`
 
@@ -184,10 +189,7 @@
 
 ### ROS bridge
 
-- `sunray_v2/communication/sunray_yunlink_bridge/test/test_command_mappings.cpp`
-- `sunray_v2/communication/sunray_yunlink_bridge/test/test_state_mappings.cpp`
-- `sunray_v2/communication/sunray_yunlink_bridge/test/test_command_tracker.cpp`
-- `sunray_v2/communication/sunray_yunlink_bridge/test/test_bridge_loopback.cpp`
+- 外部 bridge 仓库中的 command/state mapping、tracker 与 loopback 测试
 - `roslaunch sunray_yunlink_bridge sunray_yunlink_bridge.launch --nodes`
 
 ## 关键缺口与下一阶段优先级
@@ -255,4 +257,3 @@ Diagram rendering:
 ```bash
 tools/render_protocol_diagrams.sh
 ```
-

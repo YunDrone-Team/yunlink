@@ -41,8 +41,18 @@
 
 - `test_protocol`
   线包 roundtrip、checksum、TTL codec 判定、`AuthorityStatus.session_id` 64 位 roundtrip。
+- `test_protocol_corruption`
+  `magic`、`header_len`、`payload_len`、`target_count/auth_tag_len` 推导不一致与 checksum corruption 检测。
 - `test_parser`
   流式拆包与广播/命令混合路径。
+- `test_session_lifecycle`
+  client/server 双视角 session `active -> lost` 收敛，以及 authority 随 session loss 清理。
+- `test_runtime_version_rejection`
+  runtime 对 `protocol_major`、`header_version`、`schema_version` mismatch 的稳定拒绝路径。
+- `test_state_plane_semantics`
+  state snapshot / event 的来源身份与按 message_id 递增的投递顺序。
+- `test_command_result_edges`
+  external-handler 模式下 `Received -> Accepted -> InProgress -> Cancelled` 显式结果流。
 - `test_transport_loop`
   TCP 传输下的 `VehicleCoreState` 发布与订阅。
 - `test_udp_source_isolation`
@@ -51,6 +61,14 @@
   单 UAV 最小控制闭环。
 - `test_runtime_control_paths`
   会话建立、控制权申请/续租/释放/抢占，以及默认命令结果流。
+- `test_authority_edges`
+  无 session、无 authority、authority 自然过期与重新获取后的结果流边界。
+- `test_tcp_resilience`
+  duplicate connect、listener 不可达、bind conflict 与本地 TCP 韧性基础回归。
+- `test_session_security`
+  `shared_secret` mismatch 与 protocol mismatch 的 session invalid 收敛。
+- `test_security_tags`
+  auth tag、replay window 与 key epoch 拒绝路径。
 - `test_uav_state_snapshots`
   UAV 专用快照类型的发布与订阅。
 - `smoke_examples_local`

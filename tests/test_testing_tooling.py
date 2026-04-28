@@ -43,6 +43,7 @@ class TestingToolingTests(unittest.TestCase):
             payload = json.loads(manifest.read_text(encoding="utf-8"))
             self.assertTrue(payload["dry_run"])
             self.assertEqual(payload["suite"], "dual-host-baseline")
+            self.assertTrue(payload["cases"])
             self.assertTrue((out_dir / "summary.json").exists())
             self.assertTrue((out_dir / "summary.md").exists())
 
@@ -95,6 +96,11 @@ class TestingToolingTests(unittest.TestCase):
                                 "ground_command": f"{shlex.quote(sys.executable)} -c {shlex.quote(ground_py)}",
                                 "air_probe_host": "127.0.0.1",
                                 "air_probe_port": port,
+                                "required_env": ["local-loopback"],
+                                "network_profile": "none",
+                                "manual_gate": "nightly-local",
+                                "metrics": {"connect_ms": 12.0, "session_ready_ms": 34.0},
+                                "artifacts": ["logs/local-loop.txt"],
                                 "ground_timeout_s": 3,
                                 "air_timeout_s": 3,
                             }
@@ -126,6 +132,11 @@ class TestingToolingTests(unittest.TestCase):
                 (out_dir / "cases" / "local-loop.json").read_text(encoding="utf-8")
             )
             self.assertEqual(case_payload["status"], "passed")
+            self.assertEqual(case_payload["required_env"], ["local-loopback"])
+            self.assertEqual(case_payload["network_profile"], "none")
+            self.assertEqual(case_payload["manual_gate"], "nightly-local")
+            self.assertEqual(case_payload["metrics"]["connect_ms"], 12.0)
+            self.assertEqual(case_payload["artifacts"], ["logs/local-loop.txt"])
             self.assertTrue((out_dir / "summary.json").exists())
 
     def test_dual_host_runner_executes_multiple_ground_steps(self) -> None:
@@ -267,12 +278,38 @@ class TestingToolingTests(unittest.TestCase):
             cases_dir = input_dir / "cases"
             output_dir = Path(tmp_dir) / "output"
             cases_dir.mkdir(parents=True)
-            for idx, value in enumerate([10.0, 20.0, 30.0], start=1):
+            metric_rows = [
+                {
+                    "connect_ms": 10.0,
+                    "session_ready_ms": 20.0,
+                    "authority_acquire_ms": 30.0,
+                    "command_result_ms": 40.0,
+                    "state_first_seen_ms": 50.0,
+                    "recovery_ms": 60.0,
+                },
+                {
+                    "connect_ms": 20.0,
+                    "session_ready_ms": 30.0,
+                    "authority_acquire_ms": 40.0,
+                    "command_result_ms": 50.0,
+                    "state_first_seen_ms": 60.0,
+                    "recovery_ms": 70.0,
+                },
+                {
+                    "connect_ms": 30.0,
+                    "session_ready_ms": 40.0,
+                    "authority_acquire_ms": 50.0,
+                    "command_result_ms": 60.0,
+                    "state_first_seen_ms": 70.0,
+                    "recovery_ms": 80.0,
+                },
+            ]
+            for idx, metrics in enumerate(metric_rows, start=1):
                 (cases_dir / f"{idx}.json").write_text(
                     json.dumps(
                         {
                             "name": f"case-{idx}",
-                            "metrics": {"command_publish_to_success_ms": value},
+                            "metrics": metrics,
                         }
                     ),
                     encoding="utf-8",
@@ -293,10 +330,18 @@ class TestingToolingTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
             summary = json.loads((output_dir / "perf-summary.json").read_text(encoding="utf-8"))
-            stats = summary["command_publish_to_success_ms"]
-            self.assertEqual(stats["min"], 10.0)
-            self.assertEqual(stats["max"], 30.0)
-            self.assertGreaterEqual(stats["p95"], stats["p50"])
+            for key, expected_min, expected_max in [
+                ("connect_ms", 10.0, 30.0),
+                ("session_ready_ms", 20.0, 40.0),
+                ("authority_acquire_ms", 30.0, 50.0),
+                ("command_result_ms", 40.0, 60.0),
+                ("state_first_seen_ms", 50.0, 70.0),
+                ("recovery_ms", 60.0, 80.0),
+            ]:
+                stats = summary[key]
+                self.assertEqual(stats["min"], expected_min)
+                self.assertEqual(stats["max"], expected_max)
+                self.assertGreaterEqual(stats["p95"], stats["p50"])
 
     def test_netem_scripts_support_dry_run(self) -> None:
         apply_result = subprocess.run(
