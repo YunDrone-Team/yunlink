@@ -18,12 +18,12 @@
 
 ## 关键指标
 
-- `connect_to_session_ready_ms`:
+- `connect_ms`:
+- `session_ready_ms`:
 - `authority_acquire_ms`:
-- `authority_renew_ms`:
-- `command_publish_to_success_ms`:
-- `state_snapshot_end_to_end_ms`:
-- `reconnect_to_ready_ms`:
+- `command_result_ms`:
+- `state_first_seen_ms`:
+- `recovery_ms`:
 
 ## 资源指标
 
@@ -38,6 +38,7 @@
 - Symptom:
 - Suspected Layer:
 - Logs:
+- Generated Artifacts / `log_dir`:
 
 ## 结论
 

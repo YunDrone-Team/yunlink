@@ -4,10 +4,10 @@ title Yunlink Test World Map - Business Coverage
 
 left to right direction
 
-rectangle "Protocol substrate\n7 / 10" as Protocol <<StatePlane>>
-rectangle "SDK / ABI substrate\n6 / 8" as Sdk <<StatePlane>>
-rectangle "Single / dual-host semantics\n7 / 12" as Dual <<StatePlane>>
-rectangle "Session / authority ownership\n6 / 10" as Authority <<Control>>
+rectangle "Protocol substrate\n8 / 10" as Protocol <<StatePlane>>
+rectangle "SDK / ABI substrate\n7 / 8" as Sdk <<StatePlane>>
+rectangle "Single / dual-host semantics\n8 / 12" as Dual <<StatePlane>>
+rectangle "Session / authority ownership\n7 / 10" as Authority <<Control>>
 rectangle "CommandResult real executor\n3 / 12" as CommandResult <<Risk>>
 rectangle "State uplink freshness\n3 / 8" as State <<Risk>>
 rectangle "ROS / Sunray bridge\n4 / 12" as Ros <<Control>>
@@ -26,9 +26,8 @@ Hil --> WeakNet
 WeakNet --> Gates
 
 note bottom
-Engineering asset score: 39/100.
+Engineering asset score: 44/100.
 Business-conservative score: 32/100 (confidence 28-36).
 The delta is caused by missing real Sunray/PX4/SITL/HIL evidence.
 end note
 @enduml
-

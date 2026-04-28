@@ -48,9 +48,9 @@
 ### 失败分支
 
 - 共享密钥不匹配：会话不进入 `Active`
-- 未申请到控制权：`GotoCommand` 不应被执行；当前 runtime 也不会主动发 `Rejected`
-- 目标 UAV ID 不匹配：UAV 端应忽略该命令
-- 命令过期：协议上应进入 `Expired` 或被拒绝执行；当前 runtime 收包路径不会自动做 TTL 过期拒绝
+- 未申请到控制权：`GotoCommand` 不应被执行；当前 runtime 会返回稳定 `CommandResult.Failed(detail=no-authority)`
+- 目标 UAV ID 不匹配：当前 runtime 会返回稳定 `CommandResult.Failed(detail=wrong-target)`
+- 命令过期：当前 runtime 会返回稳定 `CommandResult.Expired(detail=runtime-ttl-expired)`
 
 ### SDK 映射
 
@@ -190,4 +190,4 @@
 
 - 单 UAV 最小闭环已经有较完整的测试和示例覆盖
 - 单 UGV 与 Swarm 目前更偏协议语义、消息建模和字段一致性表达
-- 真实执行器、群组聚合器、TTL 强制执行与 bulk 运行时能力，请参考 [implementation-status.md](implementation-status.md)
+- 真实执行器、群组聚合器与 bulk sidecar/data plane 的现实边界，请参考 [implementation-status.md](implementation-status.md)

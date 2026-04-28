@@ -94,10 +94,11 @@ doxygen docs/Doxyfile
 
 ## 当前边界
 
-- 当前最小会话路径以 `Hello -> Authenticate -> Capabilities -> Ready` 为主，尚未完成完整双向协商、重连恢复与会话续接。
-- `Authority` 当前仍是单全局租约，不按目标域分片，也不会自动对外发送 `AuthorityStatus`。
-- `TargetScope::kGroup` 已能在线包与 payload 中表达，但 runtime 还没有接入真实组成员关系。
-- `BulkChannelDescriptor` 已具备类型与编解码，runtime 侧尚未接入 bulk 消费者。
+- 当前最小会话路径已经覆盖 ready ack、显式 `reconnect -> reopen -> reacquire` 恢复与旧 session 失效收敛；但仓库仍不提供隐藏式自动重连、自动重建 session 或自动续租。
+- `Authority` 已按 normalized target 分片，并会主动发送 `AuthorityStatus`；真正的多业务控制策略、调度器和外部执行器仍属于集成层。
+- `TargetScope::kGroup` 已支持精确 `group_id` 匹配与 `FormationTaskCommand.group_id` 一致性校验；真实 swarm coordinator / group executor 仍未随仓库提供。
+- `BulkChannelDescriptor` 已有 runtime typed publish/subscribe 与 active descriptor registry；真实 bulk sidecar/data plane 仍需业务层接入。
+- 真实 Sunray/PX4/SITL/HIL、弱网矩阵和长稳 soak 仍是仓外或外部环境门禁项。
 
 覆盖矩阵与限制细节见 `docs/protocol/implementation-status.md`。
 

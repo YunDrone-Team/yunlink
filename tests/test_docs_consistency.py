@@ -12,11 +12,22 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 
 DOCS_TO_SCAN = [
     ROOT_DIR / "README.md",
+    ROOT_DIR / "docs" / "README.md",
+    ROOT_DIR / "docs" / "protocol" / "README.md",
+    ROOT_DIR / "docs" / "protocol" / "integration-guide.md",
+    ROOT_DIR / "docs" / "protocol" / "yunlink-protocol-spec.md",
+    ROOT_DIR / "docs" / "bindings" / "dual-host-lab-guide.md",
+    ROOT_DIR / "docs" / "bindings" / "overview.md",
+    ROOT_DIR / "docs" / "bindings" / "python-sdk.md",
+    ROOT_DIR / "docs" / "bindings" / "rust-sdk.md",
+    ROOT_DIR / "docs" / "bindings" / "ros-sunray-bridge-overview.md",
     ROOT_DIR / "docs" / "bindings" / "test-matrix.md",
+    ROOT_DIR / "docs" / "bindings" / "test-report-template.md",
     ROOT_DIR / "docs" / "bindings" / "test-world-map.md",
     ROOT_DIR / "docs" / "bindings" / "testing-todo-checklist.md",
     ROOT_DIR / "docs" / "protocol" / "implementation-status.md",
     ROOT_DIR / "docs" / "protocol" / "scenario-walkthroughs.md",
+    ROOT_DIR / "tools" / "testing" / "README.md",
 ]
 
 EXPECTED_EXISTING_REFERENCES = [
@@ -39,6 +50,15 @@ EXPECTED_STATES = {
         "group target matched wrong group id",
     ],
 }
+
+EXPECTED_METRIC_KEYS = [
+    "`connect_ms`",
+    "`session_ready_ms`",
+    "`authority_acquire_ms`",
+    "`command_result_ms`",
+    "`state_first_seen_ms`",
+    "`recovery_ms`",
+]
 
 
 def markdown_local_links(text: str) -> list[str]:
@@ -123,6 +143,29 @@ class DocsConsistencyTests(unittest.TestCase):
                 continue
             self.assertIn(cells[2], allowed_status, line)
             self.assertIn(cells[4], allowed_gate, line)
+
+    def test_reporting_docs_use_current_metric_keys(self) -> None:
+        template = (
+            ROOT_DIR / "docs" / "bindings" / "test-report-template.md"
+        ).read_text(encoding="utf-8")
+        todo = (
+            ROOT_DIR / "docs" / "bindings" / "testing-todo-checklist.md"
+        ).read_text(encoding="utf-8")
+        tooling = (ROOT_DIR / "tools" / "testing" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        for key in EXPECTED_METRIC_KEYS:
+            self.assertIn(key, template)
+            self.assertIn(key, todo)
+            self.assertIn(key, tooling)
+        for legacy in [
+            "connect_to_session_ready_ms",
+            "authority_renew_ms",
+            "command_publish_to_success_ms",
+            "state_snapshot_end_to_end_ms",
+            "reconnect_to_ready_ms",
+        ]:
+            self.assertNotIn(legacy, template)
 
 
 if __name__ == "__main__":

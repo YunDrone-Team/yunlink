@@ -780,10 +780,10 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 特别是以下条目，不能只从规范正文推断“仓库已经具备”：
 
-- `AuthorityStatus` 主动回执
-- `kGroup` 的真实成员级匹配与群组执行
-- TTL 在 runtime 收包路径中的自动强制执行
-- bulk 通道的运行时消费与管理
+- 真实 swarm coordinator / group executor，以及群组级部分成功策略
+- Sunray / PX4 / SITL / HIL 一类真实业务执行器闭环
+- bulk sidecar/data plane 本身，而不仅是 `BulkChannelDescriptor` 控制面建模
+- 弱网矩阵、长稳 soak 与发布级外部门禁
 
 ## 18. 接入与联读导航
 

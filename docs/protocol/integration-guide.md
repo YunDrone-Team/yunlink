@@ -74,7 +74,7 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 需要注意：
 
 - C++ 接口是当前仓库的主接入面。
-- C ABI 目前更像“原始 transport + 事件轮询层”，不是完整的语义 SDK。
+- C ABI 目前是 bindings-oriented 的 typed runtime bridge，不是完整高层业务 SDK。
 
 ## 4. 最小接入路径
 
@@ -165,17 +165,17 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 ## 8. 常见问题
 
 - 看到状态但控制命令不生效：
-  优先检查 `Session` 是否为 `Active`、当前租约是否属于该 `session_id`。当前 runtime 不会主动给客户端发送 `AuthorityStatus`，所以不能把“申请已发送”当成“租约已生效”。
+  优先检查 `Session` 是否为 `Active`、当前租约是否属于该 `session_id`。当前 runtime 会主动发送 `AuthorityStatus`，但仍不能把“申请已发送”误当成“租约已生效”；应同时核对回执或 `current_authority()`。
 - 会话一直没有进入 `Active`：
-  先检查 `shared_secret` 是否一致。当前最小实现没有双向协商回执，排障时更应该看受控端是否把该 `session_id` 推进到了 `Active`。
+  先检查 `shared_secret` 是否一致，并确认双方都完成了 `SessionReady`/ready ack。当前最小实现已经有 ready ack 收敛，所以排障时应同时看发起端和受控端是否都把该 `session_id` 推进到了 `Active`。
 - 命令发出后没有结果流：
-  当前默认结果流只会在命令真正进入 runtime 命中路径时触发；如果会话未激活、租约不属于该 `session_id`，或者目标不匹配，就不会出现显式 `Rejected`。
+  先区分“没有结果”还是“拿到稳定拒绝结果”。当前 runtime 对 `target/session/authority/TTL` gate 失败会返回稳定 `Failed/Expired`；如果完全没有结果，更应检查是否没订阅结果流、或 external handler 没有显式 `reply_command_result(...)`。
 - 群组命令无效：
-  先检查 `target.scope` 是否为 `kGroup`，以及 `group_id` 在 envelope 与 payload 内是否一致。还要注意：当前 repo 还没有真实组成员路由与群组执行器，`kGroup` 仍主要停留在线包与语义建模层。
+  先检查 `target.scope` 是否为 `kGroup`，以及 `group_id` 在 envelope 与 payload 内是否一致。当前 repo 已有精确 group target 匹配和 formation payload 一致性校验，但真实群组执行器、成员调度与部分成功策略仍属于业务层。
 - TTL 看起来没有生效：
-  当前 runtime 收包路径不会自动做 TTL 过期拒绝；如果你依赖 TTL，请把这件事视为待补齐能力，而不是现成功能。
+  当前 runtime 收包入口会执行 TTL freshness；过期 command 应返回 `CommandResult.Expired(detail=runtime-ttl-expired)`。如果没有看到该结果，优先检查发送端是否真的设置了 `ttl_ms`，以及命令是否在 executor 前就被别的 gate 拦截。
 - 想接大流：
-  先通过 `BulkChannelDescriptor` 做发现建模，不要把视频或点云直接塞进主控制链路。当前 repo 还没有 bulk consumer/runtime。
+  先通过 `BulkChannelDescriptor` 做发现建模，不要把视频或点云直接塞进主控制链路。当前 repo 已有 bulk descriptor registry 与 typed publish/subscribe，但真正的大流 sidecar/data plane 仍需业务层接入。
 
 ## 9. 参考入口
 

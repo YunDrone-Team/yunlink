@@ -143,7 +143,7 @@
 
 - [ ] 建立 command latency 基线。
 - [ ] 建立 state snapshot latency 基线。
-- [ ] 建立 reconnect-to-ready latency 基线。
+- [ ] 建立 `recovery_ms` / reconnect-to-ready latency 基线。
 - [ ] 建立 authority acquire / renew latency 基线。
 - [ ] 建立单连接 telemetry rate 基线。
 - [ ] 建立双机条件下 CPU / memory / thread / fd 基线。
@@ -189,7 +189,7 @@
 - [x] 覆盖 release 后 ground 手动 reconnect / reopen / reacquire。
 - [x] 覆盖 authority 自然过期后手动恢复。
 - [x] 覆盖 TCP 断链后手动恢复。
-- [ ] 为恢复测试记录每一步耗时。
+- [x] 为恢复测试记录每一步耗时。
 - [x] 定义恢复验收：不依赖自动恢复，脚本显式步骤成功。
 
 ### 4.3 Phase C: 双机竞争与隔离
@@ -386,13 +386,12 @@
 
 ### 9.1 建议观测指标
 
-- [ ] `connect_to_session_ready_ms`
-- [ ] `authority_acquire_ms`
-- [ ] `authority_renew_ms`
-- [ ] `command_publish_to_first_result_ms`
-- [ ] `command_publish_to_success_ms`
-- [ ] `state_snapshot_end_to_end_ms`
-- [ ] `reconnect_to_ready_ms`
+- [x] `connect_ms`
+- [x] `session_ready_ms`
+- [x] `authority_acquire_ms`
+- [x] `command_result_ms`
+- [x] `state_first_seen_ms`
+- [x] `recovery_ms`
 - [ ] `process_rss_mb`
 - [ ] `cpu_percent`
 - [ ] `thread_count`
@@ -506,22 +505,31 @@
 - [ ] 至少一个弱网 profile 已纳入自动化。
 - [ ] 30min soak 已纳入 nightly。
 - [ ] PR / nightly / release 三层门禁已定义并落地。
-- [ ] 失败时可自动收集足够日志并复盘。
-- [ ] 文档、脚本、测试入口保持一致，不存在“只有人记得怎么跑”的隐性流程。
+- [x] 失败时可自动收集足够日志并复盘。
+- [x] 文档、脚本、测试入口保持一致，不存在“只有人记得怎么跑”的隐性流程。
 
 ---
 
-## 15. 2026-04-24 实测进展
+## 15. 2026-04-28 实测进展
 
-以下回填基于 2026 年 4 月 24 日 Office Wi-Fi 双机实测产物：
+以下回填基于 2026 年 4 月 24 日到 2026 年 4 月 28 日的 Office Wi-Fi 双机实测产物：
 
+- [x] `dual-host-baseline` 最新通过产物位于 `output/testing/20260428-175748/dual-host-baseline/`。
+- [x] `dual-host-recovery` 最新通过产物位于 `output/testing/20260428-175102/dual-host-recovery/`。
 - [x] `dual-host-competition` 首次通过产物位于 `output/testing/20260424-232756/dual-host-competition/`。
 - [x] `dual-host-routing` 首次通过产物位于 `output/testing/20260424-232756/dual-host-routing/`。
+- [x] `dual-host-scale` 最新通过产物位于 `output/testing/20260428-175153/dual-host-scale/`。
 - [x] `dual-host-competition` 已在 `20260424-232841` 到 `20260424-232901` 之间连续稳定通过 10 次。
 - [x] `dual-host-routing` 已在 `20260424-232841` 到 `20260424-232856` 之间连续稳定通过 10 次。
+- [x] Office Wi-Fi 当前五个 suite 都会输出统一的 `connect_ms`、`session_ready_ms`、`authority_acquire_ms`、`command_result_ms`、`state_first_seen_ms`、`recovery_ms` 六类指标。
+- [x] Office Wi-Fi 当前五个 suite 都会自动落每个角色的 stdout/stderr 日志、`generated_artifacts` 和 `log_dir`。
 - [x] `2 GCS -> 1 UAV` 当前已验证：
   GCS-A claim 成功、GCS-B 非抢占 claim 不应形成成功命令、GCS-B preempt 成功、GCS-A 旧 session 不应继续形成成功命令、GCS-B release 后 GCS-A 可显式重新接管。
 - [x] `1 GCS -> 2 UAV` 当前已验证：
   一个 ground 可同时连接两个 UAV、错误 target 不应形成成功命令、错误定向 state 不应泄漏到 ground 7、正确 target 的状态和命令结果按各自 session 回到正确 ground。
+- [x] `2 GCS -> 2 UAV` 当前已验证：
+  两个 ground runtime 可分别控制不同 UAV、交叉 target 命令形成稳定 `no-authority` 失败、两个 UAV 的状态与结果不串线。
+- [x] 双机恢复当前已验证：
+  release 后显式恢复、air restart 恢复、authority 自然过期恢复、peer 主动断链恢复。
 - [ ] 当前尚未补齐“GCS-A release 后 GCS-B 接管”的镜像顺序用例；现有竞争脚本覆盖的是 “GCS-B release 后 GCS-A reacquire”。
 - [ ] 当前尚未补齐广播 target 下多个 UAV 同时回包时的来源区分。

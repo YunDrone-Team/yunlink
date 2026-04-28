@@ -65,20 +65,30 @@ python3 tools/testing/dual_host/run_suite.py \
 - `dual-host-scale`
   `Python air + Python ground` 的 `2 GCS -> 2 UAV` 规模与隔离矩阵
 
-截至 2026 年 4 月 24 日，Office Wi-Fi 双机环境已经得到下面的稳定性证据：
+截至 2026 年 4 月 28 日，Office Wi-Fi 双机环境已经得到下面的最新实测证据：
 
+- `dual-host-baseline`
+  最新通过产物位于 `output/testing/20260428-175748/dual-host-baseline/`，覆盖 `C++ air ↔ Rust ground`、`C++ air ↔ Python ground`、`Rust air ↔ Rust ground`，并为每个 case 生成非零 `connect/session/authority/command/state` 指标。
+- `dual-host-recovery`
+  最新通过产物位于 `output/testing/20260428-175102/dual-host-recovery/`，覆盖显式 release/reconnect/reopen/reacquire、air restart、authority 自然过期恢复、peer 主动断链恢复。
 - `dual-host-competition`
-  首次通过产物位于 `output/testing/20260424-232756/dual-host-competition/`，随后在 `20260424-232841` 到 `20260424-232901` 间连续通过 10 次。
+  首次通过产物位于 `output/testing/20260424-232756/dual-host-competition/`，随后在 `20260424-232841` 到 `20260424-232901` 间连续通过 10 次；最新带非零 metrics 的产物位于 `output/testing/20260428-175805/dual-host-competition/`。
 - `dual-host-routing`
-  首次通过产物位于 `output/testing/20260424-232756/dual-host-routing/`，随后在 `20260424-232841` 到 `20260424-232856` 间连续通过 10 次。
+  首次通过产物位于 `output/testing/20260424-232756/dual-host-routing/`，随后在 `20260424-232841` 到 `20260424-232856` 间连续通过 10 次；最新带非零 metrics 的产物位于 `output/testing/20260428-175825/dual-host-routing/`。
+- `dual-host-scale`
+  最新通过产物位于 `output/testing/20260428-175153/dual-host-scale/`，覆盖 `2 GCS -> 2 UAV` 的 authority 隔离、cross-target `no-authority` 失败和状态/结果不串线。
 
-当前这两类 suite 的语义边界如下：
+当前这些 suite 的语义边界如下：
+
+- `dual-host-baseline`
+  已验证 `1 GCS -> 1 UAV` 基础链路、跨语言 ground/air 组合、稳定的 `CommandResult`/`VehicleCoreState` 闭环，以及 per-case 日志与指标产物。
+- `dual-host-recovery`
+  已验证 release 后显式恢复、air 真重启恢复、authority 自然过期恢复、peer 主动断链后的显式 `reconnect -> reopen -> reacquire`。
 
 - `dual-host-competition`
   已验证 A 先 claim、B 非抢占 claim 不得形成成功命令、B preempt 接管、A 旧 session 不再形成成功命令、B release 后 A 可重新接管。
 - `dual-host-routing`
   已验证一个 ground 可同时连接两个 UAV、错误 target 不形成成功命令、错误定向 state 不应泄漏、正确 target 的状态与命令结果回到正确 session。
-
 - `dual-host-scale`
   已验证两个 ground runtime 可分别控制两个 UAV、交叉 target 命令形成稳定 `no-authority` 失败、两个 UAV 的状态与结果不串线。
 
@@ -90,8 +100,8 @@ python3 tools/testing/dual_host/run_suite.py \
 
 ## 日志建议
 
-- 每台主机单独保留 `stdout.log`、`stderr.log`。
-- 每个 case 记录开始/结束时间、suite、profile、角色组合。
+- 当前 runner 会为每个 case 自动保留 `logs/<case>/air-stdout.log`、`air-stderr.log`、`<ground-step>-stdout.log`、`<ground-step>-stderr.log`。
+- 每个 case JSON 会记录 `generated_artifacts`、`log_dir`、六类固定 metrics 和开始/结束耗时。
 - 所有结果统一汇总到 `output/testing/...`。
 
 ## 注意事项

@@ -7,7 +7,7 @@
 - [dual-host-lab-guide.md](dual-host-lab-guide.md)
 - [ros1-docker-ubuntu26-guide.md](ros1-docker-ubuntu26-guide.md)
 
-当前结论：工程测试资产已经较多，而且仓内闭环较此前更完整；但从真实业务闭环看仍约 `32/100`，置信区间 `28-36`，未达到 `50%`。协议、SDK、单机/双机语义已有基础，ROS bridge 已有单元测试与 loopback；但真实 Sunray ROS graph、PX4 SITL、HIL/真机安全门控、弱网矩阵、长稳 soak 和真实飞控执行闭环仍缺。
+当前结论：工程测试资产已经较多，而且仓内闭环较此前更完整；截至 2026 年 4 月 28 日，Office Wi-Fi 双机 `baseline / recovery / competition / routing / scale` 已有最新实测、统一日志和固定 metrics 证据链。但从真实业务闭环看仍约 `32/100`，置信区间 `28-36`，未达到 `50%`。协议、SDK、单机/双机语义已有基础，ROS bridge 已有单元测试与 loopback；但真实 Sunray ROS graph、PX4 SITL、HIL/真机安全门控、弱网矩阵、长稳 soak 和真实飞控执行闭环仍缺。
 
 ![Test World Map System](../diagrams/plantuml/svg/test_world_map_system.svg)
 
@@ -23,7 +23,7 @@
 - Office Wi-Fi 双机实测可以证明网络语义，但不能代替弱网、soak 或 HIL。
 - `32/100` 是业务可交付覆盖，不是代码覆盖率，也不是 case 数量覆盖率。
 
-如果只按当前工程资产计分，可以写到约 `39/100`；保守业务口径折损为 `32/100`，因为真实 Sunray/PX4/SITL/HIL 域尚未进入验收。
+如果只按当前工程资产计分，可以写到约 `44/100`；保守业务口径折损为 `32/100`，因为真实 Sunray/PX4/SITL/HIL 域尚未进入验收。
 
 ![Test Pyramid](../diagrams/plantuml/svg/test_world_map_pyramid.svg)
 
@@ -33,14 +33,14 @@
 | --- | ---: | ---: | --- | --- |
 | Protocol substrate | 10 | 8 | `partial-strong` | 线包、checksum、TTL codec、parser resilience、protocol mismatch 与 corruption 检测已覆盖；持续 fuzz 仍只提供 opt-in harness。 |
 | SDK / ABI substrate | 8 | 7 | `partial-strong` | C ABI、Rust、Python、editable/wheel smoke 和 loader 已覆盖主路径，struct layout / `struct_size`、Rust drop/lagged/recovery、Python poll-thread/queue parity 也已有回归；长期资源压力与外部安装矩阵仍需补齐。 |
-| Single-host / dual-host protocol semantics | 12 | 8 | `partial-strong` | 单机互操作与 Office Wi-Fi 双机 baseline/recovery/competition/routing/scale 已实测，并新增 authority expiry 与 peer disconnect 的显式恢复用例。 |
+| Single-host / dual-host protocol semantics | 12 | 8 | `partial-strong` | 单机互操作与 Office Wi-Fi 双机 baseline/recovery/competition/routing/scale 已实测，并为当前 suite 统一产出 per-case 日志与六类固定 metrics。 |
 | Runtime session / authority ownership | 10 | 7 | `partial-strong` | authority 主路径、session active/invalid/lost、断链收敛和目标域分片已有仓内证据；closed/draining 仍不是公开可单独驱动的仓内入口。 |
 | Command result under real executor | 12 | 3 | `weak` | runtime/bridge 有结果流测试，但真实 Sunray 执行器下的失败分支尚未闭环。 |
 | State uplink freshness and semantics | 8 | 3 | `weak` | snapshot 类型与 ROS mapping 已测，但真实频率、freshness、丢包退化和业务一致性未实测。 |
 | ROS/Sunray bridge integration | 12 | 4 | `partial` | catkin build、24 个 gtest、mapping/tracker/loopback、launch smoke 已有；真实 Sunray graph 未接入。 |
 | Real Sunray/PX4 SITL/HIL loop | 16 | 0 | `missing` | 尚无 PX4 SITL、Sunray controller/FSM、bridge、Yunlink ground 的端到端验收。 |
 | Weak network / recovery / soak | 8 | 2 | `scaffolded` | netem profile、report/perf 脚手架与外部 suite 规格存在，但真实 profile 矩阵和长稳未跑。 |
-| Observability and release gates | 4 | 2 | `scaffolded` | 有 summary/report 产物、测试矩阵与文档一致性回归，尚未形成完整 release-external gate。 |
+| Observability and release gates | 4 | 2 | `scaffolded` | 有 summary/report 产物、双机 per-case stdout/stderr 与 metrics、测试矩阵与文档一致性回归，尚未形成完整 release-external gate。 |
 
 合计：工程资产口径约 `44/100`；业务保守口径仍约 `32/100`，置信区间 `28-36`。
 
@@ -137,6 +137,7 @@
 - [x] netem profile 脚手架。
 - [x] report renderer 脚手架。
 - [x] perf aggregator 脚手架。
+- [x] Office Wi-Fi 当前 suite 的固定 metrics 与 per-role stdout/stderr 证据链。
 - [ ] netem profile 真实执行矩阵。
 - [ ] 30min soak。
 - [ ] 2h soak。
@@ -212,7 +213,7 @@ P0：把 `32/100` 推到 `50/100`。
 P1：把 `50/100` 推到 `70/100`。
 
 - 增加有线 LAN、Wi-Fi + netem、air restart、ground restart 的组合矩阵。
-- 让 state freshness、command latency、reconnect-to-ready latency 进入报告。
+- 把 `connect/session/authority/command/state/recovery` 六类固定 metrics 持续汇总进报告与 nightly 产物。
 - 把双机 baseline/recovery/competition/routing 变成 nightly gate。
 - 增加 `2 GCS -> 2 UAV` 与 `1 GCS -> N UAV` 容量入口。
 

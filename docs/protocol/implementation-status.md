@@ -53,6 +53,10 @@
   state snapshot / event 的来源身份与按 message_id 递增的投递顺序。
 - `test_command_result_edges`
   external-handler 模式下 `Received -> Accepted -> InProgress -> Cancelled` 显式结果流。
+- `test_authority_status`
+  `AuthorityStatus` 的 grant / reject / preempt / release 语义与双客户端竞争收敛。
+- `test_runtime_ttl_freshness`
+  runtime 收包入口的 TTL freshness 判定与 `runtime-ttl-expired` 拒绝路径。
 - `test_transport_loop`
   TCP 传输下的 `VehicleCoreState` 发布与订阅。
 - `test_udp_source_isolation`
@@ -69,6 +73,10 @@
   `shared_secret` mismatch 与 protocol mismatch 的 session invalid 收敛。
 - `test_security_tags`
   auth tag、replay window 与 key epoch 拒绝路径。
+- `test_routing_and_source_validation`
+  wrong-target command/state 的稳定拒绝与 source / target 隔离。
+- `test_bulk_channel_runtime`
+  bulk descriptor registry、`Failed/Closed` 释放与 bulk 失败不阻塞主 command plane。
 - `test_uav_state_snapshots`
   UAV 专用快照类型的发布与订阅。
 - `smoke_examples_local`
