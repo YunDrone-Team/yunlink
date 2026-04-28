@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
         iterations = static_cast<size_t>(std::stoull(argv[1]));
     }
 
+    // Keep the harness deterministic so crashes can be reproduced locally.
+    // NOLINTNEXTLINE(bugprone-random-generator-seed)
     std::mt19937_64 rng(0xC0DEC0DEULL);
     std::uniform_int_distribution<size_t> length_dist(0, 256);
     std::uniform_int_distribution<uint32_t> byte_dist(0, 255);

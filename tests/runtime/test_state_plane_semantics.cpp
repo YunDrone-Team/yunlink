@@ -93,18 +93,16 @@ int main() {
     const size_t state_token = ground.state_subscriber().subscribe_vehicle_core(
         [&](const yunlink::TypedMessage<yunlink::VehicleCoreState>& message) {
             std::lock_guard<std::mutex> lock(mu);
-            state_messages.push_back(
-                {message.envelope.message_id,
-                 message.envelope.source.agent_id,
-                 static_cast<uint8_t>(message.envelope.source.role)});
+            state_messages.push_back({message.envelope.message_id,
+                                      message.envelope.source.agent_id,
+                                      static_cast<uint8_t>(message.envelope.source.role)});
         });
     const size_t event_token = ground.event_subscriber().subscribe_vehicle_event(
         [&](const yunlink::TypedMessage<yunlink::VehicleEvent>& message) {
             std::lock_guard<std::mutex> lock(mu);
-            event_messages.push_back(
-                {message.envelope.message_id,
-                 message.envelope.source.agent_id,
-                 static_cast<uint8_t>(message.envelope.source.role)});
+            event_messages.push_back({message.envelope.message_id,
+                                      message.envelope.source.agent_id,
+                                      static_cast<uint8_t>(message.envelope.source.role)});
         });
 
     yunlink::VehicleCoreState first{};

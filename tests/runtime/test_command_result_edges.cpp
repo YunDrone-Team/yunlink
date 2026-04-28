@@ -68,7 +68,8 @@ int main() {
         return 2;
     }
 
-    const uint64_t session_id = ground.session_client().open_active_session(peer_id, "phase-ground");
+    const uint64_t session_id =
+        ground.session_client().open_active_session(peer_id, "phase-ground");
     const auto target = yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 31);
     if (session_id == 0 ||
         !wait_until([&]() { return air.session_server().has_active_session(session_id); }) ||
@@ -97,18 +98,17 @@ int main() {
 
     const size_t handler_token = air.command_subscriber().subscribe_goto(
         [&](const yunlink::InboundCommandView<yunlink::GotoCommand>& view) {
-            auto reply_phase = [&](yunlink::CommandPhase phase,
-                                   uint8_t progress,
-                                   const std::string& detail) {
-                yunlink::CommandResult result{};
-                result.command_kind = yunlink::CommandKind::kGoto;
-                result.phase = phase;
-                result.progress_percent = progress;
-                result.detail = detail;
-                if (air.reply_command_result(view.inbound, result) != yunlink::ErrorCode::kOk) {
-                    std::cerr << "reply_command_result failed\n";
-                }
-            };
+            auto reply_phase =
+                [&](yunlink::CommandPhase phase, uint8_t progress, const std::string& detail) {
+                    yunlink::CommandResult result{};
+                    result.command_kind = yunlink::CommandKind::kGoto;
+                    result.phase = phase;
+                    result.progress_percent = progress;
+                    result.detail = detail;
+                    if (air.reply_command_result(view.inbound, result) != yunlink::ErrorCode::kOk) {
+                        std::cerr << "reply_command_result failed\n";
+                    }
+                };
 
             reply_phase(yunlink::CommandPhase::kReceived, 0, "manual-received");
             reply_phase(yunlink::CommandPhase::kAccepted, 10, "manual-accepted");

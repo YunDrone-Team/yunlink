@@ -51,9 +51,7 @@ struct Observed {
 
 bool roundtrip_complete(const std::vector<Observed>& observed, uint64_t session_id) {
     for (const auto& item : observed) {
-        if (item.session_id == session_id &&
-            item.state_message_id != 0 &&
-            item.result_count >= 4) {
+        if (item.session_id == session_id && item.state_message_id != 0 && item.result_count >= 4) {
             return true;
         }
     }
@@ -64,8 +62,7 @@ bool roundtrip_complete(const std::vector<Observed>& observed, uint64_t session_
 
 int main(int argc, char** argv) {
     if (argc != 6) {
-        std::cerr << "usage: " << argv[0]
-                  << " <ip> <port> <udp-bind> <udp-target> <tcp-listen>\n";
+        std::cerr << "usage: " << argv[0] << " <ip> <port> <udp-bind> <udp-target> <tcp-listen>\n";
         return 2;
     }
 
@@ -73,10 +70,8 @@ int main(int argc, char** argv) {
     uint16_t udp_bind = 0;
     uint16_t udp_target = 0;
     uint16_t tcp_listen = 0;
-    if (!parse_u16_arg(argv[2], &port) ||
-        !parse_u16_arg(argv[3], &udp_bind) ||
-        !parse_u16_arg(argv[4], &udp_target) ||
-        !parse_u16_arg(argv[5], &tcp_listen)) {
+    if (!parse_u16_arg(argv[2], &port) || !parse_u16_arg(argv[3], &udp_bind) ||
+        !parse_u16_arg(argv[4], &udp_target) || !parse_u16_arg(argv[5], &tcp_listen)) {
         std::cerr << "invalid ports\n";
         return 2;
     }
@@ -150,8 +145,7 @@ int main(int argc, char** argv) {
     const auto session_started = Clock::now();
     const uint64_t session1 = runtime.session_client().open_active_session(peer_id, "cxx-ground-1");
     yunlink::SessionDescriptor session_desc{};
-    if (session1 == 0 ||
-        !wait_until([&]() {
+    if (session1 == 0 || !wait_until([&]() {
             return runtime.session_server().describe_session(peer_id, session1, &session_desc) &&
                    session_desc.state == yunlink::SessionState::kActive;
         })) {
@@ -217,8 +211,7 @@ int main(int argc, char** argv) {
         return 11;
     }
     const uint64_t session2 = runtime.session_client().open_active_session(peer_id, "cxx-ground-2");
-    if (session2 == 0 ||
-        !wait_until([&]() {
+    if (session2 == 0 || !wait_until([&]() {
             return runtime.session_server().describe_session(peer_id, session2, &session_desc) &&
                    session_desc.state == yunlink::SessionState::kActive;
         })) {
@@ -268,13 +261,11 @@ int main(int argc, char** argv) {
     runtime.event_subscriber().unsubscribe(result_token);
     runtime.stop();
     std::cout << "YUNLINK_METRICS "
-              << "{\"connect_ms\":" << connect_ms
-              << ",\"session_ready_ms\":" << session_ready_ms
+              << "{\"connect_ms\":" << connect_ms << ",\"session_ready_ms\":" << session_ready_ms
               << ",\"authority_acquire_ms\":" << state_first_seen_ms
               << ",\"command_result_ms\":" << command_result_ms
               << ",\"state_first_seen_ms\":" << state_first_seen_ms
-              << ",\"recovery_ms\":" << recovery_ms
-              << "}\n";
+              << ",\"recovery_ms\":" << recovery_ms << "}\n";
     std::cout << "cxx-ground-peer-recovery ok\n";
     return 0;
 }
