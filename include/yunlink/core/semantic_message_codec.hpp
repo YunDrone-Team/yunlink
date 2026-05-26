@@ -35,6 +35,11 @@ ByteBuffer encode_payload(const UavControllerStateSnapshot& payload);
 ByteBuffer encode_payload(const GimbalParamsSnapshot& payload);
 ByteBuffer encode_payload(const VehicleEvent& payload);
 ByteBuffer encode_payload(const BulkChannelDescriptor& payload);
+// 新增
+ByteBuffer encode_payload(const LocalOdomSnapshot& payload);
+ByteBuffer encode_payload(const MavrosStateSnapshot& payload);
+ByteBuffer encode_payload(const UavControlStateSnapshot& payload);
+ByteBuffer encode_payload(const OdomStateSnapshot& payload);
 
 bool decode_payload(const ByteBuffer& bytes, SessionHello* payload);
 bool decode_payload(const ByteBuffer& bytes, SessionAuthenticate* payload);
@@ -58,6 +63,10 @@ bool decode_payload(const ByteBuffer& bytes, UavControllerStateSnapshot* payload
 bool decode_payload(const ByteBuffer& bytes, GimbalParamsSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, VehicleEvent* payload);
 bool decode_payload(const ByteBuffer& bytes, BulkChannelDescriptor* payload);
+bool decode_payload(const ByteBuffer& bytes, LocalOdomSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, MavrosStateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, UavControlStateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, OdomStateSnapshot* payload);
 
 template <typename T> ByteBuffer encode_typed_payload(const T& payload) {
     return encode_payload(payload);

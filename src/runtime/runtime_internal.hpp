@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -47,6 +48,10 @@ struct Runtime::Impl {
     std::unordered_map<size_t, StateSubscriber::UavControllerStateHandler>
         uav_controller_state_handlers;
     std::unordered_map<size_t, StateSubscriber::GimbalParamsHandler> gimbal_params_handlers;
+    std::unordered_map<size_t, StateSubscriber::LocalOdomHandler> local_odom_handlers;
+    std::unordered_map<size_t, StateSubscriber::MavrosStateHandler> mavros_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::UavControlStateHandler> uav_control_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::OdomStateHandler> odom_state_handlers;
     std::unordered_map<size_t, EventSubscriber::VehicleEventHandler> vehicle_event_handlers;
     std::unordered_map<size_t, EventSubscriber::CommandResultHandler> command_result_handlers;
     std::unordered_map<size_t, EventSubscriber::AuthorityStatusHandler> authority_status_handlers;

@@ -94,5 +94,87 @@ int main() {
         return 8;
     }
 
+    yunlink::LocalOdomSnapshot local_odom{};
+    local_odom.position_m = {1.0F, -2.0F, 3.0F};
+    local_odom.orientation_x = 0.1F;
+    local_odom.orientation_y = 0.2F;
+    local_odom.orientation_z = 0.3F;
+    local_odom.orientation_w = 0.9F;
+    local_odom.linear_velocity_mps = {0.4F, 0.5F, 0.6F};
+
+    const auto local_odom_bytes = yunlink::encode_payload(local_odom);
+    yunlink::LocalOdomSnapshot local_odom_decoded{};
+    if (!yunlink::decode_typed_payload(local_odom_bytes, &local_odom_decoded) ||
+        local_odom_decoded.position_m.y != local_odom.position_m.y ||
+        local_odom_decoded.orientation_w != local_odom.orientation_w ||
+        local_odom_decoded.linear_velocity_mps.z != local_odom.linear_velocity_mps.z) {
+        std::cerr << "local odom roundtrip failed\n";
+        return 9;
+    }
+
+    yunlink::MavrosStateSnapshot mavros_state{};
+    mavros_state.connected = true;
+    mavros_state.armed = true;
+    mavros_state.guided = false;
+    mavros_state.mode_name = "OFFBOARD";
+    mavros_state.system_status = 4;
+
+    const auto mavros_bytes = yunlink::encode_payload(mavros_state);
+    yunlink::MavrosStateSnapshot mavros_decoded{};
+    if (!yunlink::decode_typed_payload(mavros_bytes, &mavros_decoded) ||
+        mavros_decoded.mode_name != mavros_state.mode_name ||
+        mavros_decoded.system_status != mavros_state.system_status) {
+        std::cerr << "mavros state roundtrip failed\n";
+        return 10;
+    }
+
+    yunlink::UavControlStateSnapshot control_state{};
+    control_state.controller_types = 3;
+    control_state.takeoff_relative_height_m = 2.5;
+    control_state.takeoff_max_velocity_mps = 1.5;
+    control_state.land_type = 2;
+    control_state.land_max_velocity_mps = 0.8;
+    control_state.home_point_m = {4.0F, 5.0F, 6.0F};
+    control_state.control_state = 7;
+    control_state.last_control_cmd = 9;
+    control_state.last_cmd_source = 1;
+    control_state.odometry_lost = false;
+    control_state.odometry_valid = true;
+    control_state.self_odom_z_m = 1.75F;
+
+    const auto control_state_bytes = yunlink::encode_payload(control_state);
+    yunlink::UavControlStateSnapshot control_state_decoded{};
+    if (!yunlink::decode_typed_payload(control_state_bytes, &control_state_decoded) ||
+        control_state_decoded.controller_types != control_state.controller_types ||
+        control_state_decoded.home_point_m.z != control_state.home_point_m.z ||
+        !control_state_decoded.odometry_valid ||
+        control_state_decoded.self_odom_z_m != control_state.self_odom_z_m) {
+        std::cerr << "uav control state roundtrip failed\n";
+        return 11;
+    }
+
+    yunlink::OdomStateSnapshot odom_state{};
+    odom_state.external_source = 2;
+    odom_state.subtopic_name_external_odom = "/uav1/sunray/localization/external_odom";
+    odom_state.odometry_valid = true;
+    odom_state.odometry_update_hz = 47.5F;
+    odom_state.subtopic_name_external_relocalization = "/uav1/sunray/localization/relocalization";
+    odom_state.pubtopic_name_local_odom = "/uav1/sunray/localization/local_odom";
+    odom_state.pubtopic_name_global_odom = "/uav1/sunray/localization/global_odom";
+    odom_state.world_frame_name = "world";
+    odom_state.global_frame_name = "map";
+    odom_state.local_frame_name = "odom";
+    odom_state.base_frame_name = "base_link";
+
+    const auto odom_state_bytes = yunlink::encode_payload(odom_state);
+    yunlink::OdomStateSnapshot odom_state_decoded{};
+    if (!yunlink::decode_typed_payload(odom_state_bytes, &odom_state_decoded) ||
+        odom_state_decoded.external_source != odom_state.external_source ||
+        odom_state_decoded.pubtopic_name_local_odom != odom_state.pubtopic_name_local_odom ||
+        odom_state_decoded.base_frame_name != odom_state.base_frame_name) {
+        std::cerr << "odom state roundtrip failed\n";
+        return 12;
+    }
+
     return 0;
 }

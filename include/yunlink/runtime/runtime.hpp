@@ -6,6 +6,7 @@
 #ifndef YUNLINK_RUNTIME_RUNTIME_HPP
 #define YUNLINK_RUNTIME_RUNTIME_HPP
 
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
@@ -102,6 +103,10 @@ class StateSubscriber {
     using UavControllerStateHandler =
         std::function<void(const TypedMessage<UavControllerStateSnapshot>&)>;
     using GimbalParamsHandler = std::function<void(const TypedMessage<GimbalParamsSnapshot>&)>;
+    using LocalOdomHandler = std::function<void(const TypedMessage<LocalOdomSnapshot>&)>;
+    using MavrosStateHandler = std::function<void(const TypedMessage<MavrosStateSnapshot>&)>;
+    using UavControlStateHandler = std::function<void(const TypedMessage<UavControlStateSnapshot>&)>;
+    using OdomStateHandler = std::function<void(const TypedMessage<OdomStateSnapshot>&)>;
 
     explicit StateSubscriber(Runtime* runtime = nullptr);
 
@@ -111,6 +116,10 @@ class StateSubscriber {
     size_t subscribe_uav_control_fsm_state(UavControlFsmStateHandler cb);
     size_t subscribe_uav_controller_state(UavControllerStateHandler cb);
     size_t subscribe_gimbal_params(GimbalParamsHandler cb);
+    size_t subscribe_local_odom(LocalOdomHandler cb);
+    size_t subscribe_mavros_state(MavrosStateHandler cb);
+    size_t subscribe_uav_control_state(UavControlStateHandler cb);
+    size_t subscribe_odom_state(OdomStateHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 
@@ -257,6 +266,22 @@ class Runtime {
                                     const TargetSelector& target,
                                     const GimbalParamsSnapshot& payload,
                                     uint64_t session_id = 0);
+    ErrorCode publish_local_odom(const std::string& peer_id,
+                                 const TargetSelector& target,
+                                 const LocalOdomSnapshot& payload,
+                                 uint64_t session_id = 0);
+    ErrorCode publish_mavros_state(const std::string& peer_id,
+                                   const TargetSelector& target,
+                                   const MavrosStateSnapshot& payload,
+                                   uint64_t session_id = 0);
+    ErrorCode publish_uav_control_state(const std::string& peer_id,
+                                        const TargetSelector& target,
+                                        const UavControlStateSnapshot& payload,
+                                        uint64_t session_id = 0);
+    ErrorCode publish_odom_state(const std::string& peer_id,
+                                 const TargetSelector& target,
+                                 const OdomStateSnapshot& payload,
+                                 uint64_t session_id = 0);
     ErrorCode publish_vehicle_event(const std::string& peer_id,
                                     const TargetSelector& target,
                                     const VehicleEvent& payload,
@@ -326,6 +351,10 @@ class Runtime {
     size_t subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb);
     size_t subscribe_command_result_internal(EventSubscriber::CommandResultHandler cb);
     size_t subscribe_authority_status_internal(EventSubscriber::AuthorityStatusHandler cb);
+    size_t subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler cb);
+    size_t subscribe_mavros_state_internal(StateSubscriber::MavrosStateHandler cb);
+    size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);
+    size_t subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb);
     size_t
     subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);

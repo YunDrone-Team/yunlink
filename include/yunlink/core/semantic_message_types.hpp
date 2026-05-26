@@ -6,6 +6,7 @@
 #ifndef YUNLINK_CORE_SEMANTIC_MESSAGE_TYPES_HPP
 #define YUNLINK_CORE_SEMANTIC_MESSAGE_TYPES_HPP
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,10 @@ enum class StateSnapshotType : uint16_t {
     kUavControlFsmState = 4,
     kUavControllerState = 5,
     kGimbalParams = 6,
+    kLocalOdom = 7,
+    kMavrosState = 8,
+    kUavControlState = 9,
+    kOdomState = 10,
 };
 
 enum class StateEventType : uint16_t {
@@ -186,6 +191,8 @@ struct Px4StateSnapshot {
     std::string flight_mode_name;
     uint8_t system_status = 0;
     uint8_t landed_state = 0;
+    float battery_voltage_v = 0.0F;
+    float battery_current_a = 0.0F;
     float battery_percentage = 0.0F;
     Vector3f local_position_m;
     Vector3f local_velocity_mps;
@@ -247,6 +254,52 @@ struct GimbalParamsSnapshot {
     uint16_t resolution_height = 0;
     uint16_t bitrate_kbps = 0;
     float frame_rate = 0.0F;
+};
+
+struct LocalOdomSnapshot{
+    Vector3f position_m;
+    float orientation_x = 0.0F;
+    float orientation_y = 0.0F;
+    float orientation_z = 0.0F;
+    float orientation_w = 1.0F;
+    Vector3f linear_velocity_mps;
+};
+
+struct MavrosStateSnapshot{
+    bool connected = false;
+    bool armed = false;
+    bool guided = false;
+    std::string mode_name;
+    uint8_t system_status = 0;
+};
+
+struct UavControlStateSnapshot{
+    uint8_t controller_types = 0;
+    double takeoff_relative_height_m = 0.0;
+    double takeoff_max_velocity_mps = 0.0;
+    uint8_t land_type = 0;
+    double land_max_velocity_mps = 0.0;
+    Vector3f home_point_m;
+    uint8_t control_state = 0;
+    uint8_t last_control_cmd = 0;
+    uint8_t last_cmd_source = 0;
+    bool odometry_lost = false;
+    bool odometry_valid = false;
+    float self_odom_z_m = 0.0F;
+};
+
+struct OdomStateSnapshot{
+    uint8_t external_source = 0;
+    std::string subtopic_name_external_odom;
+    bool odometry_valid = false;
+    float odometry_update_hz = 0.0F;
+    std::string subtopic_name_external_relocalization;
+    std::string pubtopic_name_local_odom;
+    std::string pubtopic_name_global_odom;
+    std::string world_frame_name;
+    std::string global_frame_name;
+    std::string local_frame_name;
+    std::string base_frame_name;
 };
 
 struct VehicleEvent {

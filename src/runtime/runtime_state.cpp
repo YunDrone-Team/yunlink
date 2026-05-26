@@ -4,6 +4,7 @@
  */
 
 #include "runtime_internal.hpp"
+#include <cstddef>
 
 namespace yunlink {
 
@@ -70,6 +71,22 @@ size_t StateSubscriber::subscribe_uav_controller_state(UavControllerStateHandler
 
 size_t StateSubscriber::subscribe_gimbal_params(GimbalParamsHandler cb) {
     return runtime_ ? runtime_->subscribe_gimbal_params_internal(std::move(cb)) : 0;
+}
+
+size_t StateSubscriber::subscribe_local_odom(LocalOdomHandler cb) {
+    return runtime_ ? runtime_->subscribe_local_odom_internal(std::move(cb)) : 0;
+}
+
+size_t StateSubscriber::subscribe_mavros_state(MavrosStateHandler cb) {
+    return runtime_ ? runtime_->subscribe_mavros_state_internal(std::move(cb)) : 0;
+}
+
+size_t StateSubscriber::subscribe_uav_control_state(UavControlStateHandler cb) {
+    return runtime_ ? runtime_->subscribe_uav_control_state_internal(std::move(cb)) : 0;
+}
+
+size_t StateSubscriber::subscribe_odom_state(OdomStateHandler cb) {
+    return runtime_ ? runtime_->subscribe_odom_state_internal(std::move(cb)) : 0;
 }
 
 void StateSubscriber::unsubscribe(size_t token) {
@@ -235,6 +252,34 @@ size_t Runtime::subscribe_gimbal_params_internal(StateSubscriber::GimbalParamsHa
     return token;
 }
 
+size_t Runtime::subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->local_odom_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_mavros_state_internal(StateSubscriber::MavrosStateHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->mavros_state_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->uav_control_state_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->odom_state_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
@@ -279,6 +324,10 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->uav_control_fsm_state_handlers.erase(token);
     impl_->uav_controller_state_handlers.erase(token);
     impl_->gimbal_params_handlers.erase(token);
+    impl_->local_odom_handlers.erase(token);
+    impl_->mavros_state_handlers.erase(token);
+    impl_->uav_control_state_handlers.erase(token);
+    impl_->odom_state_handlers.erase(token);
     impl_->vehicle_event_handlers.erase(token);
     impl_->command_result_handlers.erase(token);
     impl_->authority_status_handlers.erase(token);
@@ -341,6 +390,29 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
             publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case StateSnapshotType::kLocalOdom:
+        if (!fanout_snapshot<LocalOdomSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->local_odom_handlers)) {
+            publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case StateSnapshotType::kMavrosState:
+        if (!fanout_snapshot<MavrosStateSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->mavros_state_handlers)) {
+            publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case StateSnapshotType::kUavControlState:
+        if (!fanout_snapshot<UavControlStateSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->uav_control_state_handlers)) {
+            publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case StateSnapshotType::kOdomState:
+        if (!fanout_snapshot<OdomStateSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->odom_state_handlers)) {
+            publish_semantic_decode_error(bus_, ev);
+        }
     }
 }
 

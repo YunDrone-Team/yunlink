@@ -39,6 +39,10 @@ YUNLINK_DEFINE_TRAITS(OdomStatusSnapshot, MessageFamily::kStateSnapshot, 3);
 YUNLINK_DEFINE_TRAITS(UavControlFsmStateSnapshot, MessageFamily::kStateSnapshot, 4);
 YUNLINK_DEFINE_TRAITS(UavControllerStateSnapshot, MessageFamily::kStateSnapshot, 5);
 YUNLINK_DEFINE_TRAITS(GimbalParamsSnapshot, MessageFamily::kStateSnapshot, 6);
+YUNLINK_DEFINE_TRAITS(LocalOdomSnapshot, MessageFamily::kStateSnapshot, 7);
+YUNLINK_DEFINE_TRAITS(MavrosStateSnapshot, MessageFamily::kStateSnapshot, 8);
+YUNLINK_DEFINE_TRAITS(UavControlStateSnapshot, MessageFamily::kStateSnapshot, 9);
+YUNLINK_DEFINE_TRAITS(OdomStateSnapshot, MessageFamily::kStateSnapshot, 10);
 YUNLINK_DEFINE_TRAITS(VehicleEvent, MessageFamily::kStateEvent, 1);
 YUNLINK_DEFINE_TRAITS(BulkChannelDescriptor, MessageFamily::kBulkChannelDescriptor, 1);
 
