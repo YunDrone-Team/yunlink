@@ -256,7 +256,7 @@ struct GimbalParamsSnapshot {
     float frame_rate = 0.0F;
 };
 
-struct LocalOdomSnapshot{
+struct LocalOdomSnapshot {
     Vector3f position_m;
     float orientation_x = 0.0F;
     float orientation_y = 0.0F;
@@ -265,7 +265,7 @@ struct LocalOdomSnapshot{
     Vector3f linear_velocity_mps;
 };
 
-struct MavrosStateSnapshot{
+struct MavrosStateSnapshot {
     bool connected = false;
     bool armed = false;
     bool guided = false;
@@ -273,7 +273,7 @@ struct MavrosStateSnapshot{
     uint8_t system_status = 0;
 };
 
-struct UavControlStateSnapshot{
+struct UavControlStateSnapshot {
     uint8_t controller_types = 0;
     double takeoff_relative_height_m = 0.0;
     double takeoff_max_velocity_mps = 0.0;
@@ -288,7 +288,7 @@ struct UavControlStateSnapshot{
     float self_odom_z_m = 0.0F;
 };
 
-struct OdomStateSnapshot{
+struct OdomStateSnapshot {
     uint8_t external_source = 0;
     std::string subtopic_name_external_odom;
     bool odometry_valid = false;

@@ -312,8 +312,7 @@ int main() {
         return 13;
     }
     if (control_state_seen.controller_types != 3 || !control_state_seen.odometry_valid ||
-        control_state_seen.home_point_m.z != 23.0F ||
-        control_state_seen.self_odom_z_m != 2.2F) {
+        control_state_seen.home_point_m.z != 23.0F || control_state_seen.self_odom_z_m != 2.2F) {
         std::cerr << "uav control state snapshot mismatch\n";
         return 14;
     }

@@ -105,7 +105,8 @@ class StateSubscriber {
     using GimbalParamsHandler = std::function<void(const TypedMessage<GimbalParamsSnapshot>&)>;
     using LocalOdomHandler = std::function<void(const TypedMessage<LocalOdomSnapshot>&)>;
     using MavrosStateHandler = std::function<void(const TypedMessage<MavrosStateSnapshot>&)>;
-    using UavControlStateHandler = std::function<void(const TypedMessage<UavControlStateSnapshot>&)>;
+    using UavControlStateHandler =
+        std::function<void(const TypedMessage<UavControlStateSnapshot>&)>;
     using OdomStateHandler = std::function<void(const TypedMessage<OdomStateSnapshot>&)>;
 
     explicit StateSubscriber(Runtime* runtime = nullptr);

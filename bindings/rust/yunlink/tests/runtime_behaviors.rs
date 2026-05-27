@@ -156,44 +156,56 @@ async fn slow_receivers_observe_lagged_backpressure() {
     .await
     .unwrap();
 
-    let burst = EVENT_CHANNEL_CAPACITY + 16;
-    for index in 0..burst {
-        air.publish_vehicle_core_state(
-            &lease.peer,
-            &TargetSelector::entity(AgentType::GroundStation, 7),
-            VehicleCoreState {
-                armed: true,
-                nav_mode: 3,
-                x_m: index as f32,
-                y_m: 1.0,
-                z_m: 3.0,
-                vx_mps: 0.1,
-                vy_mps: 0.2,
-                vz_mps: 0.3,
-                battery_percent: index as f32,
-            },
-            session.session_id,
-        )
-        .await
-        .unwrap();
-    }
-
-    sleep(Duration::from_millis(100)).await;
-
-    let lagged = timeout(Duration::from_secs(4), async {
-        loop {
-            match rx.recv().await {
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
-                    return skipped > 0;
-                }
-                Err(tokio::sync::broadcast::error::RecvError::Closed) => return false,
-                Ok(Event::VehicleCoreState(_)) => {}
-                Ok(_) => {}
-            }
+    let mut lagged = false;
+    for round in 0..4 {
+        let burst = EVENT_CHANNEL_CAPACITY * (round + 2);
+        for index in 0..burst {
+            let sample = round * burst + index;
+            air.publish_vehicle_core_state(
+                &lease.peer,
+                &TargetSelector::entity(AgentType::GroundStation, 7),
+                VehicleCoreState {
+                    armed: true,
+                    nav_mode: 3,
+                    x_m: sample as f32,
+                    y_m: 1.0,
+                    z_m: 3.0,
+                    vx_mps: 0.1,
+                    vy_mps: 0.2,
+                    vz_mps: 0.3,
+                    battery_percent: sample as f32,
+                },
+                session.session_id,
+            )
+            .await
+            .unwrap();
         }
-    })
-    .await
-    .unwrap();
+
+        // Give the poll thread enough time to enqueue the burst before this
+        // receiver starts draining. Slower CI runners, especially on macOS,
+        // may need longer than the original single 100 ms window.
+        sleep(Duration::from_millis(250)).await;
+
+        let observed = timeout(Duration::from_secs(2), async {
+            loop {
+                match rx.recv().await {
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        return skipped > 0;
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => return false,
+                    Ok(Event::VehicleCoreState(_)) => {}
+                    Ok(_) => {}
+                }
+            }
+        })
+        .await
+        .unwrap_or(false);
+
+        if observed {
+            lagged = true;
+            break;
+        }
+    }
 
     assert!(
         lagged,
