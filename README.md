@@ -5,9 +5,9 @@
 [![Windows CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-windows.yml?branch=main&style=for-the-badge&label=Windows%20CI&logo=windows)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-windows.yml)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B)
 ![Build](https://img.shields.io/badge/CMake%20%2B%20Ninja-Ready-064F8C?style=for-the-badge&logo=cmake)
-![Bindings](https://img.shields.io/badge/Bindings-Rust%20%7C%20Python%20%7C%20JavaScript-F28C28?style=for-the-badge)
+![Bindings](https://img.shields.io/badge/Bindings-Rust%20%7C%20Python-F28C28?style=for-the-badge)
 
-`yunlink` 是面向无人机、无人车、地面站与集群系统的统一通信协议与基础通信库。这个仓库聚焦同一套 `yunlink` 协议核心，提供 `SecureEnvelope` 线包、语义消息模型、统一 `Runtime`、类型化 C++ SDK，以及可供 Rust、Python、JavaScript 复用的最小 C ABI。
+`yunlink` 是面向无人机、无人车、地面站与集群系统的统一通信协议与基础通信库。这个仓库聚焦同一套 `yunlink` 协议核心，提供 `SecureEnvelope` 线包、语义消息模型、统一 `Runtime`、类型化 C++ SDK，以及可供 Rust、Python 复用的最小 C ABI。
 
 ## 命名统一
 
@@ -89,7 +89,7 @@ doxygen docs/Doxyfile
 `yunlink` 的演进方向保持“单协议核心，多语言薄封装”：
 
 1. 稳定 `yunlink` 的 C++ 核心与 C ABI。
-2. 让 Rust、Python、JavaScript 通过 FFI 或绑定层共享同一套协议语义。
+2. 让 Rust、Python 通过 FFI 或绑定层共享同一套协议语义。
 3. 在需要的语言侧逐步补齐高层 typed SDK 与更贴近业务的开发体验。
 
 ## 当前边界

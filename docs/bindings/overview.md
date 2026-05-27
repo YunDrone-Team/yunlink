@@ -17,8 +17,6 @@
   Rust workspace，拆成 `yunlink-sys` 和高层 `yunlink`。
 - `bindings/python/`
   Python package、native extension 和 wheel 构建入口。
-- `bindings/js/`
-  预留目录，当前不实现。
 - `tests/bindings/`
   FFI 合约测试与 bindings 相关测试。
 - `tools/bindings/`
@@ -39,7 +37,7 @@
 - 没有自动重连
 - 没有自动重建 session
 - 没有自动续租 / 自动重新申请 authority
-- 没有 JavaScript SDK
+- JavaScript SDK 不纳入第一阶段，未来按真实需求重新设计绑定路线
 - 没有完整 codec API 对外暴露
 
 这意味着语言层 API 会更透明，也要求上层业务明确感知连接、session 和 authority 的生命周期。
