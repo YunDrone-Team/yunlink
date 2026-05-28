@@ -45,15 +45,25 @@ std::string delta_float(const std::string& lhs, const std::string& rhs) {
 
 double field_epsilon(const std::string& topic_key, const std::string& field_key) {
     if (topic_key == "local_odom") {
-        if (has_prefix(field_key, "position_m.") ||
-            has_prefix(field_key, "linear_velocity_mps.")) {
+        if (has_prefix(field_key, "pose.position_m.") ||
+            has_prefix(field_key, "twist.linear_mps.") ||
+            has_prefix(field_key, "twist.angular_radps.")) {
             return kDynamicFloatEpsilon;
         }
     }
     if (topic_key == "px4_state") {
-        if (has_prefix(field_key, "local_position_m.") ||
-            has_prefix(field_key, "local_velocity_mps.") ||
-            field_key == "yaw_setpoint_rad" || field_key == "yaw_rate_setpoint_radps") {
+        if (has_prefix(field_key, "external_pose.position_m.") ||
+            has_prefix(field_key, "external_velocity.linear_mps.") ||
+            has_prefix(field_key, "external_velocity.angular_radps.") ||
+            has_prefix(field_key, "local_pose.position_m.") ||
+            has_prefix(field_key, "local_velocity.linear_mps.") ||
+            has_prefix(field_key, "local_velocity.angular_radps.") ||
+            has_prefix(field_key, "pos_setpoint_m.") ||
+            has_prefix(field_key, "vel_setpoint_mps.") ||
+            has_prefix(field_key, "acc_setpoint_mps2.") ||
+            has_prefix(field_key, "body_rate_setpoint_radps.") ||
+            field_key == "yaw_setpoint_rad" || field_key == "yaw_rate_setpoint_radps" ||
+            field_key == "thrust_setpoint") {
             return kDynamicFloatEpsilon;
         }
     }
@@ -105,11 +115,17 @@ ComparisonSelection make_aligned_selection(const TopicState& topic, double align
 
     if (best_ros == nullptr || best_dt_ms > align_window_ms) {
         selection.receive_dt_ms = best_dt_ms;
+        selection.within_align_window = false;
+        if (best_ros != nullptr) {
+            selection.ros = *best_ros;
+            selection.matched = true;
+        }
         return selection;
     }
 
     selection.ros = *best_ros;
     selection.matched = true;
+    selection.within_align_window = true;
     selection.receive_dt_ms = best_dt_ms;
     return selection;
 }

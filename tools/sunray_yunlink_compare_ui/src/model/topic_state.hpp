@@ -12,6 +12,7 @@
 #include <ros/ros.h>
 
 struct FieldView {
+    std::string key;
     std::string label;
     std::string ros_value;
     std::string yunlink_value;
@@ -46,11 +47,12 @@ struct ComparisonSelection {
     SnapshotSide ros;
     SnapshotSide yunlink;
     bool matched = false;
+    bool within_align_window = true;
     double receive_dt_ms = std::numeric_limits<double>::quiet_NaN();
 };
 
 constexpr size_t kDefaultHistoryLimit = 120;
-constexpr double kDefaultAlignWindowMs = 80.0;
+constexpr double kDefaultAlignWindowMs = 300.0;
 constexpr double kDefaultFloatEpsilon = 1e-4;
 constexpr double kDynamicFloatEpsilon = 1e-3;
 

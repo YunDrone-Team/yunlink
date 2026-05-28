@@ -19,9 +19,9 @@
 
 比对原则：
 
-- 只比较 `yunros_node.cpp` 当前实际上行到 Yunlink 的字段。
-- 没有进入 Yunlink 的 ROS 字段会在界面里标记为“未覆盖”，不会误报为不一致。
-- UI 同时提供“最新值直比”和“时间对齐比”两种视图，时间对齐窗口默认是 `80 ms`。
+- 每个页面只比较对应 ROS 话题、Yunlink snapshot 和 UI 显示字段三者共同定义的字段。
+- 当前 `yunros_node.cpp` 对上述 5 个上行话题执行逐字段映射，UI 不再把这些话题的 `.msg` 字段列为“未覆盖”。
+- UI 同时提供“最新值直比”和“时间对齐比”两种视图，时间对齐窗口默认是 `300 ms`；超出窗口时仍保留最近样本显示，避免短暂采样不同步导致整页闪成 `WAIT`。
 
 ## 构建
 
@@ -110,14 +110,14 @@ cd <YUNLINK_ROOT>/tools/sunray_yunlink_compare_ui
 ./build/devel/lib/sunray_yunlink_compare_ui/sunray_yunlink_compare_ui \
   _agent_name:=uav \
   _agent_id:=2 \
-  _align_window_ms:=80
+  _align_window_ms:=300
 ```
 
 常用私有参数：
 
 - `~agent_name`，默认 `uav`
 - `~agent_id`，默认 `1`
-- `~align_window_ms`，默认 `80`
+- `~align_window_ms`，默认 `300`
 - `~shared_secret`，默认 `yunlink-default-secret`
 
 ## 本地辅助脚本示例

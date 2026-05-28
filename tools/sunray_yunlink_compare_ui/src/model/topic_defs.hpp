@@ -9,6 +9,5 @@
 
 std::unordered_map<std::string, TopicState> make_default_topics();
 std::vector<std::string> topic_display_order();
-std::string row_key(const std::string& topic_key, int row);
 
 #endif  // SUNRAY_YUNLINK_COMPARE_UI_MODEL_TOPIC_DEFS_HPP

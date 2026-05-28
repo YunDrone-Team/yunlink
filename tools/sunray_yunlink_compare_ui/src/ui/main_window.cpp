@@ -116,7 +116,8 @@ void MainWindow::refresh_view() {
 
     std::ostringstream summary;
     summary << "范围：local_odom、odom_state、uav_control_state、mavros_state、px4_state\n";
-    summary << "模式：最新值直比 | 时间对齐比（窗口 <= " << fmt_ms(align_window_ms_) << " ms）";
+    summary << "模式：最新值直比 | 时间对齐比（窗口 <= " << fmt_ms(align_window_ms_)
+            << " ms，超出窗口时保留最近样本）";
     summary_label_->setText(QString::fromStdString(summary.str()));
 
     for (const auto& item : topics) {
@@ -153,7 +154,11 @@ void MainWindow::refresh_topic(const std::string& key, const TopicState& topic) 
     info_ss << "\n最新 dt "
             << (latest_selection.matched ? fmt_ms(latest_selection.receive_dt_ms) : "--") << " ms";
     if (aligned_selection.matched) {
-        info_ss << " | 对齐 dt " << fmt_ms(aligned_selection.receive_dt_ms) << " ms";
+        if (aligned_selection.within_align_window) {
+            info_ss << " | 对齐 dt " << fmt_ms(aligned_selection.receive_dt_ms) << " ms";
+        } else {
+            info_ss << " | 最近 dt " << fmt_ms(aligned_selection.receive_dt_ms) << " ms（超过窗口）";
+        }
     } else if (has_snapshot(aligned_selection.yunlink)) {
         info_ss << " | 对齐 dt > " << fmt_ms(align_window_ms_) << " ms";
     } else {
@@ -164,15 +169,19 @@ void MainWindow::refresh_topic(const std::string& key, const TopicState& topic) 
     populate_compare_table(latest_table, topic, latest_selection);
     populate_compare_table(aligned_table, topic, aligned_selection);
 
-    std::ostringstream uncovered_ss;
-    uncovered_ss << "未覆盖字段：";
-    for (size_t i = 0; i < topic.uncovered_fields.size(); ++i) {
-        if (i > 0) {
-            uncovered_ss << ", ";
+    if (topic.uncovered_fields.empty()) {
+        uncovered->clear();
+    } else {
+        std::ostringstream uncovered_ss;
+        uncovered_ss << "未覆盖字段：";
+        for (size_t i = 0; i < topic.uncovered_fields.size(); ++i) {
+            if (i > 0) {
+                uncovered_ss << ", ";
+            }
+            uncovered_ss << topic.uncovered_fields[i];
         }
-        uncovered_ss << topic.uncovered_fields[i];
+        uncovered->setText(QString::fromStdString(uncovered_ss.str()));
     }
-    uncovered->setText(QString::fromStdString(uncovered_ss.str()));
 }
 
 QTableWidget* MainWindow::create_compare_table(QWidget* parent, const QStringList& headers) {
@@ -201,7 +210,7 @@ void MainWindow::populate_compare_table(QTableWidget* table,
     table->setRowCount(static_cast<int>(topic.rows.size()));
     for (int row = 0; row < static_cast<int>(topic.rows.size()); ++row) {
         const auto& template_row = topic.rows[row];
-        const std::string key_name = row_key(topic.key, row);
+        const std::string& key_name = template_row.key;
         const auto ros_it = selection.ros.values.find(key_name);
         const auto yn_it = selection.yunlink.values.find(key_name);
         const std::string ros_value = ros_it == selection.ros.values.end() ? "--" : ros_it->second;
