@@ -24,6 +24,17 @@ bool valid_bulk_channel_state(uint8_t value) {
            value <= static_cast<uint8_t>(BulkChannelState::kClosed);
 }
 
+void write_header(BufferWriter& writer, const HeaderSnapshot& value) {
+    writer.write_u32(value.seq);
+    writer.write_double(value.stamp_sec);
+    writer.write_string(value.frame_id);
+}
+
+bool read_header(BufferReader& reader, HeaderSnapshot* out) {
+    return reader.read_u32(&out->seq) && reader.read_double(&out->stamp_sec) &&
+           reader.read_string(&out->frame_id);
+}
+
 void write_vec3(BufferWriter& writer, const Vector3f& value) {
     writer.write_float(value.x);
     writer.write_float(value.y);
@@ -32,6 +43,36 @@ void write_vec3(BufferWriter& writer, const Vector3f& value) {
 
 bool read_vec3(BufferReader& reader, Vector3f* out) {
     return reader.read_float(&out->x) && reader.read_float(&out->y) && reader.read_float(&out->z);
+}
+
+void write_quat(BufferWriter& writer, const Quaternionf& value) {
+    writer.write_float(value.x);
+    writer.write_float(value.y);
+    writer.write_float(value.z);
+    writer.write_float(value.w);
+}
+
+bool read_quat(BufferReader& reader, Quaternionf* out) {
+    return reader.read_float(&out->x) && reader.read_float(&out->y) &&
+           reader.read_float(&out->z) && reader.read_float(&out->w);
+}
+
+void write_pose(BufferWriter& writer, const PoseSnapshot& value) {
+    write_vec3(writer, value.position_m);
+    write_quat(writer, value.orientation);
+}
+
+bool read_pose(BufferReader& reader, PoseSnapshot* out) {
+    return read_vec3(reader, &out->position_m) && read_quat(reader, &out->orientation);
+}
+
+void write_twist(BufferWriter& writer, const TwistSnapshot& value) {
+    write_vec3(writer, value.linear_mps);
+    write_vec3(writer, value.angular_radps);
+}
+
+bool read_twist(BufferReader& reader, TwistSnapshot* out) {
+    return read_vec3(reader, &out->linear_mps) && read_vec3(reader, &out->angular_radps);
 }
 
 }  // namespace
@@ -62,44 +103,73 @@ bool decode_payload(const ByteBuffer& bytes, VehicleCoreState* payload) {
 
 ByteBuffer encode_payload(const Px4StateSnapshot& payload) {
     return build_payload([&](BufferWriter& writer) {
+        write_header(writer, payload.header);
         writer.write_bool(payload.connected);
         writer.write_bool(payload.rc_available);
         writer.write_bool(payload.armed);
         writer.write_u8(payload.flight_mode);
-        writer.write_string(payload.flight_mode_name);
         writer.write_u8(payload.system_status);
         writer.write_u8(payload.landed_state);
         writer.write_float(payload.battery_voltage_v);
         writer.write_float(payload.battery_current_a);
         writer.write_float(payload.battery_percentage);
-        write_vec3(writer, payload.local_position_m);
-        write_vec3(writer, payload.local_velocity_mps);
+        writer.write_u16(payload.fcu_load);
+        write_pose(writer, payload.external_pose);
+        write_twist(writer, payload.external_velocity);
+        write_pose(writer, payload.local_pose);
+        write_twist(writer, payload.local_velocity);
+        writer.write_u8(payload.setpoint_coordinate_frame);
+        writer.write_u16(payload.setpoint_local_type_mask);
+        write_vec3(writer, payload.pos_setpoint_m);
+        write_vec3(writer, payload.vel_setpoint_mps);
+        write_vec3(writer, payload.acc_setpoint_mps2);
         writer.write_float(payload.yaw_setpoint_rad);
         writer.write_float(payload.yaw_rate_setpoint_radps);
+        writer.write_u16(payload.setpoint_att_type_mask);
+        write_quat(writer, payload.orientation_setpoint);
+        write_vec3(writer, payload.body_rate_setpoint_radps);
+        writer.write_float(payload.thrust_setpoint);
         writer.write_u8(payload.satellites);
         writer.write_i8(payload.gps_status);
         writer.write_u8(payload.gps_service);
         writer.write_double(payload.latitude_deg);
         writer.write_double(payload.longitude_deg);
         writer.write_double(payload.altitude_m);
+        writer.write_double(payload.latitude_raw_deg);
+        writer.write_double(payload.longitude_raw_deg);
+        writer.write_double(payload.altitude_amsl_m);
     });
 }
 
 bool decode_payload(const ByteBuffer& bytes, Px4StateSnapshot* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, Px4StateSnapshot* out) {
-        return reader.read_bool(&out->connected) && reader.read_bool(&out->rc_available) &&
+        return read_header(reader, &out->header) && reader.read_bool(&out->connected) &&
+               reader.read_bool(&out->rc_available) &&
                reader.read_bool(&out->armed) && reader.read_u8(&out->flight_mode) &&
-               reader.read_string(&out->flight_mode_name) && reader.read_u8(&out->system_status) &&
+               reader.read_u8(&out->system_status) &&
                reader.read_u8(&out->landed_state) && reader.read_float(&out->battery_voltage_v) &&
                reader.read_float(&out->battery_current_a) &&
-               reader.read_float(&out->battery_percentage) &&
-               read_vec3(reader, &out->local_position_m) &&
-               read_vec3(reader, &out->local_velocity_mps) &&
+               reader.read_float(&out->battery_percentage) && reader.read_u16(&out->fcu_load) &&
+               read_pose(reader, &out->external_pose) &&
+               read_twist(reader, &out->external_velocity) &&
+               read_pose(reader, &out->local_pose) && read_twist(reader, &out->local_velocity) &&
+               reader.read_u8(&out->setpoint_coordinate_frame) &&
+               reader.read_u16(&out->setpoint_local_type_mask) &&
+               read_vec3(reader, &out->pos_setpoint_m) &&
+               read_vec3(reader, &out->vel_setpoint_mps) &&
+               read_vec3(reader, &out->acc_setpoint_mps2) &&
                reader.read_float(&out->yaw_setpoint_rad) &&
                reader.read_float(&out->yaw_rate_setpoint_radps) &&
+               reader.read_u16(&out->setpoint_att_type_mask) &&
+               read_quat(reader, &out->orientation_setpoint) &&
+               read_vec3(reader, &out->body_rate_setpoint_radps) &&
+               reader.read_float(&out->thrust_setpoint) &&
                reader.read_u8(&out->satellites) && reader.read_i8(&out->gps_status) &&
                reader.read_u8(&out->gps_service) && reader.read_double(&out->latitude_deg) &&
-               reader.read_double(&out->longitude_deg) && reader.read_double(&out->altitude_m);
+               reader.read_double(&out->longitude_deg) && reader.read_double(&out->altitude_m) &&
+               reader.read_double(&out->latitude_raw_deg) &&
+               reader.read_double(&out->longitude_raw_deg) &&
+               reader.read_double(&out->altitude_amsl_m);
     });
 }
 

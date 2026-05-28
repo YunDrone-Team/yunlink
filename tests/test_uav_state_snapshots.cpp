@@ -135,13 +135,12 @@ int main() {
     px4.connected = true;
     px4.armed = true;
     px4.flight_mode = 7;
-    px4.flight_mode_name = "OFFBOARD";
     px4.landed_state = 2;
     px4.battery_voltage_v = 15.2F;
     px4.battery_current_a = 6.4F;
     px4.battery_percentage = 0.63F;
-    px4.local_position_m = {1.0F, 2.0F, 3.0F};
-    px4.local_velocity_mps = {0.1F, 0.2F, 0.3F};
+    px4.local_pose.position_m = {1.0F, 2.0F, 3.0F};
+    px4.local_velocity.linear_mps = {0.1F, 0.2F, 0.3F};
     px4.yaw_setpoint_rad = 0.5F;
     px4.satellites = 14;
     px4.latitude_deg = 31.1234;
@@ -193,18 +192,15 @@ int main() {
     gimbal.frame_rate = 30.0F;
 
     yunlink::LocalOdomSnapshot local_odom{};
-    local_odom.position_m = {11.0F, 12.0F, 13.0F};
-    local_odom.orientation_x = 0.1F;
-    local_odom.orientation_y = 0.2F;
-    local_odom.orientation_z = 0.3F;
-    local_odom.orientation_w = 0.9F;
-    local_odom.linear_velocity_mps = {1.1F, 1.2F, 1.3F};
+    local_odom.pose.position_m = {11.0F, 12.0F, 13.0F};
+    local_odom.pose.orientation = {0.1F, 0.2F, 0.3F, 0.9F};
+    local_odom.twist.linear_mps = {1.1F, 1.2F, 1.3F};
 
     yunlink::MavrosStateSnapshot mavros{};
     mavros.connected = true;
     mavros.armed = true;
     mavros.guided = false;
-    mavros.mode_name = "OFFBOARD";
+    mavros.mode = "OFFBOARD";
     mavros.system_status = 4;
 
     yunlink::UavControlStateSnapshot control_state{};
@@ -215,11 +211,11 @@ int main() {
     control_state.land_max_velocity_mps = 0.7;
     control_state.home_point_m = {21.0F, 22.0F, 23.0F};
     control_state.control_state = 5;
-    control_state.last_control_cmd = 8;
-    control_state.last_cmd_source = 2;
+    control_state.last_cmd.control_cmd = 8;
+    control_state.last_cmd.cmd_source = 2;
     control_state.odometry_lost = false;
     control_state.odometry_valid = true;
-    control_state.self_odom_z_m = 2.2F;
+    control_state.self_odom.pose.position_m.z = 2.2F;
 
     yunlink::OdomStateSnapshot odom_state{};
     odom_state.external_source = 2;
@@ -275,8 +271,8 @@ int main() {
     ground.stop();
     uav.stop();
 
-    if (!px4_seen.connected || !px4_seen.armed || px4_seen.flight_mode_name != "OFFBOARD" ||
-        px4_seen.local_position_m.z != 3.0F || px4_seen.satellites != 14 ||
+    if (!px4_seen.connected || !px4_seen.armed || px4_seen.flight_mode != 7 ||
+        px4_seen.local_pose.position_m.z != 3.0F || px4_seen.satellites != 14 ||
         px4_seen.battery_voltage_v != 15.2F || px4_seen.battery_current_a != 6.4F) {
         std::cerr << "px4 snapshot mismatch\n";
         return 7;
@@ -301,18 +297,20 @@ int main() {
         std::cerr << "gimbal snapshot mismatch\n";
         return 11;
     }
-    if (local_odom_seen.position_m.x != 11.0F || local_odom_seen.orientation_w != 0.9F ||
-        local_odom_seen.linear_velocity_mps.y != 1.2F) {
+    if (local_odom_seen.pose.position_m.x != 11.0F ||
+        local_odom_seen.pose.orientation.w != 0.9F ||
+        local_odom_seen.twist.linear_mps.y != 1.2F) {
         std::cerr << "local odom snapshot mismatch\n";
         return 12;
     }
-    if (!mavros_seen.connected || !mavros_seen.armed || mavros_seen.mode_name != "OFFBOARD" ||
+    if (!mavros_seen.connected || !mavros_seen.armed || mavros_seen.mode != "OFFBOARD" ||
         mavros_seen.system_status != 4) {
         std::cerr << "mavros snapshot mismatch\n";
         return 13;
     }
     if (control_state_seen.controller_types != 3 || !control_state_seen.odometry_valid ||
-        control_state_seen.home_point_m.z != 23.0F || control_state_seen.self_odom_z_m != 2.2F) {
+        control_state_seen.home_point_m.z != 23.0F ||
+        control_state_seen.self_odom.pose.position_m.z != 2.2F) {
         std::cerr << "uav control state snapshot mismatch\n";
         return 14;
     }

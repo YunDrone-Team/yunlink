@@ -95,19 +95,16 @@ int main() {
     }
 
     yunlink::LocalOdomSnapshot local_odom{};
-    local_odom.position_m = {1.0F, -2.0F, 3.0F};
-    local_odom.orientation_x = 0.1F;
-    local_odom.orientation_y = 0.2F;
-    local_odom.orientation_z = 0.3F;
-    local_odom.orientation_w = 0.9F;
-    local_odom.linear_velocity_mps = {0.4F, 0.5F, 0.6F};
+    local_odom.pose.position_m = {1.0F, -2.0F, 3.0F};
+    local_odom.pose.orientation = {0.1F, 0.2F, 0.3F, 0.9F};
+    local_odom.twist.linear_mps = {0.4F, 0.5F, 0.6F};
 
     const auto local_odom_bytes = yunlink::encode_payload(local_odom);
     yunlink::LocalOdomSnapshot local_odom_decoded{};
     if (!yunlink::decode_typed_payload(local_odom_bytes, &local_odom_decoded) ||
-        local_odom_decoded.position_m.y != local_odom.position_m.y ||
-        local_odom_decoded.orientation_w != local_odom.orientation_w ||
-        local_odom_decoded.linear_velocity_mps.z != local_odom.linear_velocity_mps.z) {
+        local_odom_decoded.pose.position_m.y != local_odom.pose.position_m.y ||
+        local_odom_decoded.pose.orientation.w != local_odom.pose.orientation.w ||
+        local_odom_decoded.twist.linear_mps.z != local_odom.twist.linear_mps.z) {
         std::cerr << "local odom roundtrip failed\n";
         return 9;
     }
@@ -116,13 +113,13 @@ int main() {
     mavros_state.connected = true;
     mavros_state.armed = true;
     mavros_state.guided = false;
-    mavros_state.mode_name = "OFFBOARD";
+    mavros_state.mode = "OFFBOARD";
     mavros_state.system_status = 4;
 
     const auto mavros_bytes = yunlink::encode_payload(mavros_state);
     yunlink::MavrosStateSnapshot mavros_decoded{};
     if (!yunlink::decode_typed_payload(mavros_bytes, &mavros_decoded) ||
-        mavros_decoded.mode_name != mavros_state.mode_name ||
+        mavros_decoded.mode != mavros_state.mode ||
         mavros_decoded.system_status != mavros_state.system_status) {
         std::cerr << "mavros state roundtrip failed\n";
         return 10;
@@ -136,11 +133,11 @@ int main() {
     control_state.land_max_velocity_mps = 0.8;
     control_state.home_point_m = {4.0F, 5.0F, 6.0F};
     control_state.control_state = 7;
-    control_state.last_control_cmd = 9;
-    control_state.last_cmd_source = 1;
+    control_state.last_cmd.control_cmd = 9;
+    control_state.last_cmd.cmd_source = 1;
     control_state.odometry_lost = false;
     control_state.odometry_valid = true;
-    control_state.self_odom_z_m = 1.75F;
+    control_state.self_odom.pose.position_m.z = 1.75F;
 
     const auto control_state_bytes = yunlink::encode_payload(control_state);
     yunlink::UavControlStateSnapshot control_state_decoded{};
@@ -148,7 +145,7 @@ int main() {
         control_state_decoded.controller_types != control_state.controller_types ||
         control_state_decoded.home_point_m.z != control_state.home_point_m.z ||
         !control_state_decoded.odometry_valid ||
-        control_state_decoded.self_odom_z_m != control_state.self_odom_z_m) {
+        control_state_decoded.self_odom.pose.position_m.z != control_state.self_odom.pose.position_m.z) {
         std::cerr << "uav control state roundtrip failed\n";
         return 11;
     }

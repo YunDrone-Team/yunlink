@@ -6,6 +6,7 @@
 #ifndef YUNLINK_CORE_SEMANTIC_STATE_TYPES_HPP
 #define YUNLINK_CORE_SEMANTIC_STATE_TYPES_HPP
 
+#include <array>
 #include <cstdint>
 #include <string>
 
@@ -31,27 +32,128 @@ struct Vector3f {
     float z = 0.0F;
 };
 
+struct Vector2f {
+    float x = 0.0F;
+    float y = 0.0F;
+};
+
+struct HeaderSnapshot {
+    uint32_t seq = 0;
+    double stamp_sec = 0.0;
+    std::string frame_id;
+};
+
+struct Quaternionf {
+    float x = 0.0F;
+    float y = 0.0F;
+    float z = 0.0F;
+    float w = 1.0F;
+};
+
+struct GeoPointSnapshot {
+    double latitude_deg = 0.0;
+    double longitude_deg = 0.0;
+    double altitude_m = 0.0;
+};
+
+struct PoseSnapshot {
+    Vector3f position_m;
+    Quaternionf orientation;
+};
+
+struct TwistSnapshot {
+    Vector3f linear_mps;
+    Vector3f angular_radps;
+};
+
+struct TransformSnapshot {
+    HeaderSnapshot header;
+    std::string child_frame_id;
+    Vector3f translation_m;
+    Quaternionf rotation;
+};
+
+struct OdometrySnapshot {
+    HeaderSnapshot header;
+    std::string child_frame_id;
+    PoseSnapshot pose;
+    std::array<double, 36> pose_covariance{};
+    TwistSnapshot twist;
+    std::array<double, 36> twist_covariance{};
+};
+
+struct UavControlCmdSnapshot {
+    HeaderSnapshot header;
+    uint8_t cmd_source = 0;
+    uint8_t control_cmd = 0;
+    Vector3f desired_pos_m;
+    Vector3f desired_vel_mps;
+    Vector3f desired_acc_mps2;
+    Vector3f desired_jerk;
+    Vector2f desired_body_xy_pos_m;
+    Vector2f desired_body_xy_vel_mps;
+    float fixed_height_m = 0.0F;
+    GeoPointSnapshot desired_wgs84_pos;
+    uint8_t yaw_mode = 0;
+    float desired_yaw_rad = 0.0F;
+    float desired_yaw_rate_radps = 0.0F;
+};
+
+struct PositionTargetSnapshot {
+    HeaderSnapshot header;
+    uint8_t coordinate_frame = 0;
+    uint16_t type_mask = 0;
+    Vector3f position_m;
+    Vector3f velocity_mps;
+    Vector3f acceleration_or_force;
+    float yaw_rad = 0.0F;
+    float yaw_rate_radps = 0.0F;
+};
+
+struct AttitudeTargetSnapshot {
+    HeaderSnapshot header;
+    uint8_t type_mask = 0;
+    Quaternionf orientation;
+    Vector3f body_rate_radps;
+    float thrust = 0.0F;
+};
+
 struct Px4StateSnapshot {
+    HeaderSnapshot header;
     bool connected = false;
     bool rc_available = false;
     bool armed = false;
     uint8_t flight_mode = 0;
-    std::string flight_mode_name;
     uint8_t system_status = 0;
     uint8_t landed_state = 0;
     float battery_voltage_v = 0.0F;
     float battery_current_a = 0.0F;
     float battery_percentage = 0.0F;
-    Vector3f local_position_m;
-    Vector3f local_velocity_mps;
+    uint16_t fcu_load = 0;
+    PoseSnapshot external_pose;
+    TwistSnapshot external_velocity;
+    PoseSnapshot local_pose;
+    TwistSnapshot local_velocity;
+    uint8_t setpoint_coordinate_frame = 0;
+    uint16_t setpoint_local_type_mask = 0;
+    Vector3f pos_setpoint_m;
+    Vector3f vel_setpoint_mps;
+    Vector3f acc_setpoint_mps2;
     float yaw_setpoint_rad = 0.0F;
     float yaw_rate_setpoint_radps = 0.0F;
+    uint16_t setpoint_att_type_mask = 0;
+    Quaternionf orientation_setpoint;
+    Vector3f body_rate_setpoint_radps;
+    float thrust_setpoint = 0.0F;
     uint8_t satellites = 0;
     int8_t gps_status = 0;
     uint8_t gps_service = 0;
     double latitude_deg = 0.0;
     double longitude_deg = 0.0;
     double altitude_m = 0.0;
+    double latitude_raw_deg = 0.0;
+    double longitude_raw_deg = 0.0;
+    double altitude_amsl_m = 0.0;
 };
 
 struct OdomStatusSnapshot {
@@ -105,23 +207,28 @@ struct GimbalParamsSnapshot {
 };
 
 struct LocalOdomSnapshot {
-    Vector3f position_m;
-    float orientation_x = 0.0F;
-    float orientation_y = 0.0F;
-    float orientation_z = 0.0F;
-    float orientation_w = 1.0F;
-    Vector3f linear_velocity_mps;
+    HeaderSnapshot header;
+    std::string child_frame_id;
+    PoseSnapshot pose;
+    std::array<double, 36> pose_covariance{};
+    TwistSnapshot twist;
+    std::array<double, 36> twist_covariance{};
 };
 
 struct MavrosStateSnapshot {
+    HeaderSnapshot header;
     bool connected = false;
     bool armed = false;
     bool guided = false;
-    std::string mode_name;
+    bool manual_input = false;
+    std::string mode;
     uint8_t system_status = 0;
 };
 
 struct UavControlStateSnapshot {
+    HeaderSnapshot header;
+    std::string agent_name;
+    uint8_t agent_id = 0;
     uint8_t controller_types = 0;
     double takeoff_relative_height_m = 0.0;
     double takeoff_max_velocity_mps = 0.0;
@@ -129,14 +236,17 @@ struct UavControlStateSnapshot {
     double land_max_velocity_mps = 0.0;
     Vector3f home_point_m;
     uint8_t control_state = 0;
-    uint8_t last_control_cmd = 0;
-    uint8_t last_cmd_source = 0;
+    UavControlCmdSnapshot last_cmd;
+    OdometrySnapshot self_odom;
     bool odometry_lost = false;
     bool odometry_valid = false;
-    float self_odom_z_m = 0.0F;
+    uint8_t controller_output_type = 0;
+    PositionTargetSnapshot position_target;
+    AttitudeTargetSnapshot attitude_target;
 };
 
 struct OdomStateSnapshot {
+    HeaderSnapshot header;
     uint8_t external_source = 0;
     std::string subtopic_name_external_odom;
     bool odometry_valid = false;
@@ -144,10 +254,15 @@ struct OdomStateSnapshot {
     std::string subtopic_name_external_relocalization;
     std::string pubtopic_name_local_odom;
     std::string pubtopic_name_global_odom;
+    OdometrySnapshot local_odom;
+    OdometrySnapshot global_odom;
     std::string world_frame_name;
     std::string global_frame_name;
     std::string local_frame_name;
     std::string base_frame_name;
+    TransformSnapshot world_to_global_tf;
+    TransformSnapshot global_to_local_tf;
+    TransformSnapshot local_to_base_tf;
 };
 
 struct VehicleEvent {
