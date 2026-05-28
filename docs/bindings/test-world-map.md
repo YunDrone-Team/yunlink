@@ -187,8 +187,8 @@
 - `test_testing_tooling`
 - `tools/testing/dual_host/run_suite.py`
 - `tools/testing/dual_host/office_wifi_lab.yaml`
-- `tools/bindings/python_ground_authority_expiry_recovery.py`
-- `tools/bindings/python_ground_2gcs_2uav.py`
+- `tools/bindings/scenarios/ground/python_ground_authority_expiry_recovery.py`
+- `tools/bindings/scenarios/ground/python_ground_2gcs_2uav.py`
 - `example_cxx_ground_peer_recovery`
 - `tools/testing/netem/apply_profile.sh`
 - `tools/testing/netem/clear_profile.sh`

@@ -54,7 +54,7 @@ add_custom_target(check-core-maxline
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_core_maxline.sh
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   USES_TERMINAL
-  COMMENT "Checking maxline limits for core code"
+  COMMENT "Checking MaxLine and source directory fanout limits"
 )
 
 add_custom_target(lint
@@ -86,13 +86,30 @@ set(YUNLINK_LIBRARY_SOURCES
   src/transport/udp_transport.cpp
   src/transport/tcp_client_pool.cpp
   src/transport/tcp_server.cpp
-  src/runtime/runtime_core.cpp
-  src/runtime/runtime_session.cpp
-  src/runtime/runtime_authority.cpp
-  src/runtime/runtime_command.cpp
-  src/runtime/runtime_state.cpp
-  src/runtime/runtime_state_publish.cpp
-  src/c/yunlink_c.cpp
+  src/runtime/authority/authority.cpp
+  src/runtime/authority/client.cpp
+  src/runtime/authority/query.cpp
+  src/runtime/command/command.cpp
+  src/runtime/command/receive.cpp
+  src/runtime/command/results.cpp
+  src/runtime/core/dispatch.cpp
+  src/runtime/core/lifecycle.cpp
+  src/runtime/core/security.cpp
+  src/runtime/session/session.cpp
+  src/runtime/state/fanout.cpp
+  src/runtime/state/publish.cpp
+  src/runtime/state/receive.cpp
+  src/runtime/state/registry.cpp
+  src/runtime/state/subscriptions.cpp
+  src/c/abi/commands/authority.cpp
+  src/c/abi/commands/command.cpp
+  src/c/abi/commands/state.cpp
+  src/c/abi/core/helpers.cpp
+  src/c/abi/core/result.cpp
+  src/c/abi/runtime/event_queue.cpp
+  src/c/abi/runtime/events.cpp
+  src/c/abi/runtime/runtime.cpp
+  src/c/abi/runtime/session.cpp
 )
 
 add_library(yunlink STATIC ${YUNLINK_LIBRARY_SOURCES})

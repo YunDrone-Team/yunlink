@@ -75,7 +75,7 @@
               "command": "bindings/rust/target/debug/examples/ground_roundtrip 10.0.0.2 16170 16072 16072 16172"
             }
           ],
-          "air_command": "tools/bindings/python_air_recovery.py 16070 16070 16170 --rounds 2"
+          "air_command": "tools/bindings/scenarios/air/python_air_recovery.py 16070 16070 16170 --rounds 2"
         }
       ]
     },
@@ -98,8 +98,8 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/python-air-python-ground-competition.txt"],
-          "air_command": "tools/bindings/python_air_competition.py 16090 16090 16190",
-          "ground_command": "tools/bindings/python_ground_competition.py 10.0.0.2 16190 16091 16091 16191 16092 16092 16192"
+          "air_command": "tools/bindings/scenarios/air/python_air_competition.py 16090 16090 16190",
+          "ground_command": "tools/bindings/scenarios/ground/python_ground_competition.py 10.0.0.2 16190 16091 16091 16191 16092 16092 16192"
         }
       ]
     },
@@ -122,8 +122,8 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/python-air-python-ground-dual-uav.txt"],
-          "air_command": "tools/bindings/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
-          "ground_command": "tools/bindings/python_ground_dual_uav.py 10.0.0.2 16200 16201 16102 16102 16202"
+          "air_command": "tools/bindings/scenarios/air/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
+          "ground_command": "tools/bindings/scenarios/ground/python_ground_dual_uav.py 10.0.0.2 16200 16201 16102 16102 16202"
         }
       ]
     }

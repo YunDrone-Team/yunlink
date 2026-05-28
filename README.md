@@ -106,6 +106,7 @@ doxygen docs/Doxyfile
 
 - `.clang-format`
 - `.clang-tidy`
+- `.codex/maxline.json`：生产源码单文件不超过 300 行，单目录源码扇出不超过 8 个文件
 - `tools/check_core_maxline.sh`
 - GitHub Actions 构建与测试流程
 

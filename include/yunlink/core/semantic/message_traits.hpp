@@ -1,12 +1,12 @@
 /**
- * @file include/yunlink/core/semantic_message_traits.hpp
- * @brief 新协议语义消息 traits 定义。
+ * @file include/yunlink/core/semantic/message_traits.hpp
+ * @brief Semantic message trait mapping.
  */
 
 #ifndef YUNLINK_CORE_SEMANTIC_MESSAGE_TRAITS_HPP
 #define YUNLINK_CORE_SEMANTIC_MESSAGE_TRAITS_HPP
 
-#include "yunlink/core/semantic_message_types.hpp"
+#include "yunlink/core/semantic/message_types.hpp"
 
 namespace yunlink {
 

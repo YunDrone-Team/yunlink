@@ -6,8 +6,8 @@
 #ifndef YUNLINK_CORE_SEMANTIC_MESSAGES_HPP
 #define YUNLINK_CORE_SEMANTIC_MESSAGES_HPP
 
+#include "yunlink/core/semantic/message_traits.hpp"
+#include "yunlink/core/semantic/message_types.hpp"
 #include "yunlink/core/semantic_message_codec.hpp"
-#include "yunlink/core/semantic_message_traits.hpp"
-#include "yunlink/core/semantic_message_types.hpp"
 
 #endif  // YUNLINK_CORE_SEMANTIC_MESSAGES_HPP

@@ -44,5 +44,5 @@ output/testing/
 
 
 .codex/*
-!.codex/check-maxline.json
+!.codex/maxline.json
 rsync2testdevice.sh

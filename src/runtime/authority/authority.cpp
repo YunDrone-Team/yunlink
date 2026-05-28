@@ -1,9 +1,9 @@
 /**
- * @file src/runtime/runtime_authority.cpp
- * @brief Runtime 控制权相关实现。
+ * @file src/runtime/authority/authority.cpp
+ * @brief Runtime inbound authority handling.
  */
 
-#include "runtime_internal.hpp"
+#include "../core/internal.hpp"
 
 namespace yunlink {
 
@@ -35,118 +35,6 @@ AuthorityStatus make_authority_status(AuthorityState state,
 }
 
 }  // namespace
-
-ErrorCode Runtime::request_authority(const std::string& peer_id,
-                                     uint64_t session_id,
-                                     const TargetSelector& target,
-                                     ControlSource source,
-                                     uint32_t lease_ttl_ms,
-                                     bool allow_preempt) {
-    if (source == ControlSource::kUnknown) {
-        return ErrorCode::kInvalidArgument;
-    }
-    AuthorityRequest payload{};
-    payload.action = allow_preempt ? AuthorityAction::kPreempt : AuthorityAction::kClaim;
-    payload.source = source;
-    payload.lease_ttl_ms = lease_ttl_ms;
-    payload.allow_preempt = allow_preempt;
-
-    SecureEnvelope envelope = make_typed_envelope(config_.self_identity,
-                                                  target,
-                                                  session_id,
-                                                  session_id,
-                                                  QosClass::kReliableOrdered,
-                                                  payload,
-                                                  lease_ttl_ms);
-    envelope.message_id = allocate_message_id();
-    envelope.correlation_id = envelope.message_id;
-    return send_envelope_to_peer(peer_id, envelope);
-}
-
-ErrorCode Runtime::renew_authority(const std::string& peer_id,
-                                   uint64_t session_id,
-                                   const TargetSelector& target,
-                                   ControlSource source,
-                                   uint32_t lease_ttl_ms) {
-    if (source == ControlSource::kUnknown) {
-        return ErrorCode::kInvalidArgument;
-    }
-    AuthorityRequest payload{};
-    payload.action = AuthorityAction::kRenew;
-    payload.source = source;
-    payload.lease_ttl_ms = lease_ttl_ms;
-    payload.allow_preempt = false;
-
-    SecureEnvelope envelope = make_typed_envelope(config_.self_identity,
-                                                  target,
-                                                  session_id,
-                                                  session_id,
-                                                  QosClass::kReliableOrdered,
-                                                  payload,
-                                                  lease_ttl_ms);
-    envelope.message_id = allocate_message_id();
-    envelope.correlation_id = envelope.message_id;
-    return send_envelope_to_peer(peer_id, envelope);
-}
-
-ErrorCode Runtime::release_authority(const std::string& peer_id,
-                                     uint64_t session_id,
-                                     const TargetSelector& target) {
-    AuthorityRequest payload{};
-    payload.action = AuthorityAction::kRelease;
-    payload.source = ControlSource::kGroundStation;
-    payload.allow_preempt = false;
-
-    SecureEnvelope envelope = make_typed_envelope(config_.self_identity,
-                                                  target,
-                                                  session_id,
-                                                  session_id,
-                                                  QosClass::kReliableOrdered,
-                                                  payload,
-                                                  1000);
-    envelope.message_id = allocate_message_id();
-    envelope.correlation_id = envelope.message_id;
-    return send_envelope_to_peer(peer_id, envelope);
-}
-
-bool Runtime::current_authority(AuthorityLease* out) const {
-    std::lock_guard<std::mutex> lock(impl_->mu);
-    const uint64_t now_ms = runtime_now_millis();
-    for (const auto& item : impl_->authorities) {
-        const AuthorityLease& lease = item.second;
-        if (lease.state != AuthorityState::kController) {
-            continue;
-        }
-        if (lease.expires_at_ms > 0 && lease.expires_at_ms < now_ms) {
-            continue;
-        }
-        if (out != nullptr) {
-            *out = lease;
-        }
-        return true;
-    }
-    return false;
-}
-
-bool Runtime::current_authority_for_target(const TargetSelector& target,
-                                           AuthorityLease* out) const {
-    std::lock_guard<std::mutex> lock(impl_->mu);
-    const auto it = impl_->authorities.find(runtime_target_key(target));
-    if (it == impl_->authorities.end()) {
-        return false;
-    }
-    const AuthorityLease& lease = it->second;
-    if (lease.state != AuthorityState::kController) {
-        return false;
-    }
-    if (lease.expires_at_ms > 0 && lease.expires_at_ms < runtime_now_millis()) {
-        return false;
-    }
-    if (out != nullptr) {
-        *out = lease;
-    }
-    return true;
-}
 
 void Runtime::handle_authority_envelope(const EnvelopeEvent& ev) {
     if (ev.envelope.message_type == static_cast<uint16_t>(AuthorityMessageType::kStatus)) {

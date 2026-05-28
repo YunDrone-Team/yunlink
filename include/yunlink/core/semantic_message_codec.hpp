@@ -9,7 +9,7 @@
 #include <chrono>
 
 #include "yunlink/core/protocol_codec.hpp"
-#include "yunlink/core/semantic_message_traits.hpp"
+#include "yunlink/core/semantic/message_traits.hpp"
 
 namespace yunlink {
 

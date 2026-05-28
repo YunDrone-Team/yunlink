@@ -3,7 +3,7 @@
  * @brief Runtime 会话相关实现。
  */
 
-#include "runtime_internal.hpp"
+#include "../core/internal.hpp"
 
 namespace yunlink {
 

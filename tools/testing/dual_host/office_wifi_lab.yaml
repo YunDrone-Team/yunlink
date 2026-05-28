@@ -61,7 +61,7 @@
           },
           "artifacts": ["logs/office-wifi-cxx-air-python-ground.txt"],
           "air_command": "build/ninja-debug/example_cxx_air_roundtrip 16040 16040 16140",
-          "ground_command": ".venv/bin/python tools/bindings/python_ground_roundtrip.py 192.168.10.32 16140 16041 16041 16141",
+          "ground_command": ".venv/bin/python tools/bindings/scenarios/ground/python_ground_roundtrip.py 192.168.10.32 16140 16041 16041 16141",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16140,
           "ground_timeout_s": 15,
@@ -111,7 +111,7 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-rust-ground-recovery.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_recovery.py 16070 16070 16170 --rounds 2",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_recovery.py 16070 16070 16170 --rounds 2",
           "ground_steps": [
             {
               "name": "ground-round-1",
@@ -143,7 +143,7 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-restart-rust-ground.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_restart.py 16080 16080 16180 --rounds 2",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_restart.py 16080 16080 16180 --rounds 2",
           "ground_command": "bindings/rust/target/debug/examples/ground_recovery 192.168.10.32 16180 16081 16081 16181 2",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16180,
@@ -166,8 +166,8 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-authority-expiry-python-ground.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_recovery.py 16160 16160 16260 --rounds 2",
-          "ground_command": ".venv/bin/python tools/bindings/python_ground_authority_expiry_recovery.py 192.168.10.32 16260 16161 16161 16261",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_recovery.py 16160 16160 16260 --rounds 2",
+          "ground_command": ".venv/bin/python tools/bindings/scenarios/ground/python_ground_authority_expiry_recovery.py 192.168.10.32 16260 16161 16161 16261",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16260,
           "ground_timeout_s": 20,
@@ -189,7 +189,7 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-peer-disconnect-cxx-ground.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_recovery.py 16170 16170 16270 --rounds 2",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_recovery.py 16170 16170 16270 --rounds 2",
           "ground_command": "build/ninja-debug/example_cxx_ground_peer_recovery 192.168.10.32 16270 16171 16171 16271",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16270,
@@ -217,8 +217,8 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-python-ground-competition.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_competition.py 16090 16090 16190",
-          "ground_command": ".venv/bin/python tools/bindings/python_ground_competition.py 192.168.10.32 16190 16091 16091 16191 16092 16092 16192",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_competition.py 16090 16090 16190",
+          "ground_command": ".venv/bin/python tools/bindings/scenarios/ground/python_ground_competition.py 192.168.10.32 16190 16091 16091 16191 16092 16092 16192",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16190,
           "ground_timeout_s": 20,
@@ -245,8 +245,8 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-python-ground-dual-uav.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
-          "ground_command": ".venv/bin/python tools/bindings/python_ground_dual_uav.py 192.168.10.32 16200 16201 16102 16102 16202",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_dual_uav.py 16100 16100 16200 16101 16101 16201",
+          "ground_command": ".venv/bin/python tools/bindings/scenarios/ground/python_ground_dual_uav.py 192.168.10.32 16200 16201 16102 16102 16202",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16200,
           "ground_timeout_s": 20,
@@ -273,8 +273,8 @@
             "recovery_ms": 0
           },
           "artifacts": ["logs/office-wifi-python-air-python-ground-2gcs-2uav.txt"],
-          "air_command": ".venv/bin/python tools/bindings/python_air_2gcs_2uav.py 16110 16110 16210 16111 16111 16211",
-          "ground_command": ".venv/bin/python tools/bindings/python_ground_2gcs_2uav.py 192.168.10.32 16210 16211 16112 16112 16212 16113 16113 16213",
+          "air_command": ".venv/bin/python tools/bindings/scenarios/air/python_air_2gcs_2uav.py 16110 16110 16210 16111 16111 16211",
+          "ground_command": ".venv/bin/python tools/bindings/scenarios/ground/python_ground_2gcs_2uav.py 192.168.10.32 16210 16211 16112 16112 16212 16113 16113 16213",
           "air_probe_host": "192.168.10.32",
           "air_probe_port": 16210,
           "ground_timeout_s": 25,

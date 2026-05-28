@@ -1,0 +1,171 @@
+/**
+ * @file include/yunlink/core/semantic/state_types.hpp
+ * @brief Semantic state, event and bulk descriptor models.
+ */
+
+#ifndef YUNLINK_CORE_SEMANTIC_STATE_TYPES_HPP
+#define YUNLINK_CORE_SEMANTIC_STATE_TYPES_HPP
+
+#include <cstdint>
+#include <string>
+
+#include "yunlink/core/types.hpp"
+
+namespace yunlink {
+
+struct VehicleCoreState {
+    bool armed = false;
+    uint8_t nav_mode = 0;
+    float x_m = 0.0F;
+    float y_m = 0.0F;
+    float z_m = 0.0F;
+    float vx_mps = 0.0F;
+    float vy_mps = 0.0F;
+    float vz_mps = 0.0F;
+    float battery_percent = 0.0F;
+};
+
+struct Vector3f {
+    float x = 0.0F;
+    float y = 0.0F;
+    float z = 0.0F;
+};
+
+struct Px4StateSnapshot {
+    bool connected = false;
+    bool rc_available = false;
+    bool armed = false;
+    uint8_t flight_mode = 0;
+    std::string flight_mode_name;
+    uint8_t system_status = 0;
+    uint8_t landed_state = 0;
+    float battery_voltage_v = 0.0F;
+    float battery_current_a = 0.0F;
+    float battery_percentage = 0.0F;
+    Vector3f local_position_m;
+    Vector3f local_velocity_mps;
+    float yaw_setpoint_rad = 0.0F;
+    float yaw_rate_setpoint_radps = 0.0F;
+    uint8_t satellites = 0;
+    int8_t gps_status = 0;
+    uint8_t gps_service = 0;
+    double latitude_deg = 0.0;
+    double longitude_deg = 0.0;
+    double altitude_m = 0.0;
+};
+
+struct OdomStatusSnapshot {
+    std::string external_source_name;
+    uint8_t external_source_id = 0;
+    std::string localization_mode_name;
+    uint8_t localization_mode = 0;
+    bool has_odometry = false;
+    bool has_relocalization = false;
+    bool odom_timeout = false;
+    bool relocalization_data_valid = false;
+    uint32_t last_odometry_age_ms = 0;
+    std::string global_frame_id;
+    std::string local_frame_id;
+    std::string base_frame_id;
+};
+
+struct UavControlFsmStateSnapshot {
+    double takeoff_relative_height_m = 0.0;
+    double takeoff_max_velocity_mps = 0.0;
+    uint8_t land_type = 0;
+    double land_max_velocity_mps = 0.0;
+    Vector3f home_point_m;
+    uint8_t control_command = 0;
+    uint8_t yunlink_fsm_state = 0;
+};
+
+struct UavControllerStateSnapshot {
+    uint8_t reference_frame = 0;
+    uint8_t controller_type = 0;
+    Vector3f desired_position_m;
+    Vector3f desired_velocity_mps;
+    Vector3f current_position_m;
+    Vector3f current_velocity_mps;
+    Vector3f position_error_m;
+    Vector3f velocity_error_mps;
+    double desired_yaw_rad = 0.0;
+    double current_yaw_rad = 0.0;
+    double yaw_error_rad = 0.0;
+    double thrust_from_px4 = 0.0;
+    double thrust_from_controller = 0.0;
+};
+
+struct GimbalParamsSnapshot {
+    uint8_t stream_type = 0;
+    uint8_t encoding_type = 0;
+    uint16_t resolution_width = 0;
+    uint16_t resolution_height = 0;
+    uint16_t bitrate_kbps = 0;
+    float frame_rate = 0.0F;
+};
+
+struct LocalOdomSnapshot {
+    Vector3f position_m;
+    float orientation_x = 0.0F;
+    float orientation_y = 0.0F;
+    float orientation_z = 0.0F;
+    float orientation_w = 1.0F;
+    Vector3f linear_velocity_mps;
+};
+
+struct MavrosStateSnapshot {
+    bool connected = false;
+    bool armed = false;
+    bool guided = false;
+    std::string mode_name;
+    uint8_t system_status = 0;
+};
+
+struct UavControlStateSnapshot {
+    uint8_t controller_types = 0;
+    double takeoff_relative_height_m = 0.0;
+    double takeoff_max_velocity_mps = 0.0;
+    uint8_t land_type = 0;
+    double land_max_velocity_mps = 0.0;
+    Vector3f home_point_m;
+    uint8_t control_state = 0;
+    uint8_t last_control_cmd = 0;
+    uint8_t last_cmd_source = 0;
+    bool odometry_lost = false;
+    bool odometry_valid = false;
+    float self_odom_z_m = 0.0F;
+};
+
+struct OdomStateSnapshot {
+    uint8_t external_source = 0;
+    std::string subtopic_name_external_odom;
+    bool odometry_valid = false;
+    float odometry_update_hz = 0.0F;
+    std::string subtopic_name_external_relocalization;
+    std::string pubtopic_name_local_odom;
+    std::string pubtopic_name_global_odom;
+    std::string world_frame_name;
+    std::string global_frame_name;
+    std::string local_frame_name;
+    std::string base_frame_name;
+};
+
+struct VehicleEvent {
+    VehicleEventKind kind = VehicleEventKind::kInfo;
+    uint8_t severity = 0;
+    std::string detail;
+};
+
+struct BulkChannelDescriptor {
+    uint32_t channel_id = 0;
+    BulkStreamType stream_type = BulkStreamType::kPointCloud;
+    BulkChannelState state = BulkChannelState::kReady;
+    std::string uri;
+    uint32_t mtu_bytes = 0;
+    bool reliable = false;
+    std::string detail;
+};
+
+}  // namespace yunlink
+
+#endif  // YUNLINK_CORE_SEMANTIC_STATE_TYPES_HPP

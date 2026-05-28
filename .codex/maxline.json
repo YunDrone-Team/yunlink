@@ -1,0 +1,31 @@
+{
+  "max_lines": 300,
+  "max_files_per_dir": 8,
+  "include_exts": ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "py", "rs"],
+  "scan_roots": [
+    "include",
+    "src",
+    "bindings/rust",
+    "bindings/python/src",
+    "tools"
+  ],
+  "exclude_dirs": [
+    ".git",
+    ".hg",
+    ".svn",
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "target",
+    "build",
+    "dist",
+    "thirdparty"
+  ],
+  "exclude_globs": [
+    "tools/sunray_yunlink_compare_ui/build/**"
+  ]
+}

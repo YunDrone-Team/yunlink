@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.16)
 project(sunray_yunlink_compare_ui)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -34,10 +34,22 @@ catkin_package()
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${YUNLINK_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 add_executable(sunray_yunlink_compare_ui
+  src/backend/compare_backend.cpp
   src/main.cpp
+  src/mapping/control_state.cpp
+  src/mapping/local_odom.cpp
+  src/mapping/mavros_state.cpp
+  src/mapping/odom_state.cpp
+  src/mapping/px4_state.cpp
+  src/mapping/value_setters.cpp
+  src/model/comparison.cpp
+  src/model/format.cpp
+  src/model/topic_defs.cpp
+  src/ui/main_window.cpp
 )
 
 target_link_libraries(sunray_yunlink_compare_ui
