@@ -1,6 +1,7 @@
 #include "backend/compare_backend.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <utility>
 
 #include "mapping/value_map.hpp"
@@ -8,9 +9,44 @@
 #include "model/format.hpp"
 #include "model/topic_defs.hpp"
 
+namespace {
+
+std::string level_token(const LogLevel level) {
+    switch (level) {
+    case LogLevel::kInfo:
+        return "INFO";
+    case LogLevel::kWarn:
+        return "WARN";
+    case LogLevel::kError:
+        return "ERROR";
+    }
+    return "INFO";
+}
+
+std::string source_token(const LogSource source) {
+    switch (source) {
+    case LogSource::kCompare:
+        return "Compare";
+    case LogSource::kRos:
+        return "ROS";
+    case LogSource::kYunlink:
+        return "Yunlink";
+    case LogSource::kSession:
+        return "Session";
+    }
+    return "Compare";
+}
+
+std::string make_log_key(const LogLevel level, const LogSource source, const std::string& line) {
+    return level_token(level) + "|" + source_token(source) + "|" + line;
+}
+
+}  // namespace
+
 CompareBackend::CompareBackend() : nh_(), pnh_("~"), topics_(make_default_topics()) {
     load_params();
     start_runtime();
+    bind_runtime_diagnostics();
     bind_yunlink_subscribers();
     bind_ros_subscribers();
     setup_reconnect_timer();
@@ -21,13 +57,20 @@ std::unordered_map<std::string, TopicState> CompareBackend::snapshot_topics() co
     return topics_;
 }
 
-std::vector<std::string> CompareBackend::snapshot_logs() const {
+std::vector<LogEntry> CompareBackend::snapshot_logs() const {
     std::lock_guard<std::mutex> lock(mu_);
     return logs_;
 }
 
 double CompareBackend::align_window_ms() const {
     return align_window_ms_;
+}
+
+void CompareBackend::clear_logs() {
+    std::lock_guard<std::mutex> lock(mu_);
+    logs_.clear();
+    once_logs_.clear();
+    throttled_logs_.clear();
 }
 
 void CompareBackend::load_params() {
@@ -42,8 +85,11 @@ void CompareBackend::load_params() {
     pnh_.param<std::string>("node_name", node_name_, "sunray_yunlink_compare_ui");
     pnh_.param<double>("align_window_ms", align_window_ms_, kDefaultAlignWindowMs);
     pnh_.param<int>("history_limit", history_limit_raw_, static_cast<int>(kDefaultHistoryLimit));
+    int log_limit_raw = static_cast<int>(log_limit_);
+    pnh_.param<int>("log_limit", log_limit_raw, static_cast<int>(log_limit_));
     align_window_ms_ = std::max(1.0, align_window_ms_);
     history_limit_ = static_cast<size_t>(std::max(8, history_limit_raw_));
+    log_limit_ = static_cast<size_t>(std::max(100, log_limit_raw));
 
     const std::string agent_key = "/" + agent_name_ + std::to_string(agent_id_);
     topics_["local_odom"].ros_topic = agent_key + "/sunray/localization/local_odom";
@@ -64,10 +110,42 @@ void CompareBackend::start_runtime() {
     cfg.self_identity.role = yunlink::EndpointRole::kObserver;
     const auto ec = runtime_.start(cfg);
     if (ec != yunlink::ErrorCode::kOk) {
-        log("Yunlink Runtime 启动失败");
+        log(LogLevel::kError,
+            LogSource::kYunlink,
+            "Runtime 启动失败，ec=" + fmt_num(static_cast<int>(ec)));
         return;
     }
-    log("Yunlink Runtime 已启动");
+    log(LogLevel::kInfo, LogSource::kYunlink, "Runtime 已启动");
+}
+
+void CompareBackend::bind_runtime_diagnostics() {
+    runtime_.event_bus().subscribe_link([this](const yunlink::LinkEvent& ev) {
+        log(ev.is_up ? LogLevel::kInfo : LogLevel::kWarn,
+            LogSource::kSession,
+            "link " + std::string(ev.is_up ? "UP" : "DOWN") +
+                " transport=" + fmt_num(static_cast<int>(ev.transport)) + " peer=" + ev.peer.id +
+                " (" + ev.peer.ip + ":" + fmt_num(ev.peer.port) + ")");
+    });
+
+    runtime_.event_bus().subscribe_error([this](const yunlink::ErrorEvent& ev) {
+        log(LogLevel::kError,
+            LogSource::kYunlink,
+            "error code=" + fmt_num(static_cast<int>(ev.code)) +
+                " transport=" + fmt_num(static_cast<int>(ev.transport)) + " peer=" + ev.peer.id +
+                " (" + ev.peer.ip + ":" + fmt_num(ev.peer.port) + ") msg=" + ev.message);
+    });
+
+    runtime_.event_bus().subscribe_envelope([this](const yunlink::EnvelopeEvent& ev) {
+        if (ev.envelope.message_family != yunlink::MessageFamily::kStateSnapshot) {
+            return;
+        }
+        log_once(LogLevel::kInfo,
+                 LogSource::kYunlink,
+                 "收到 state envelope type=" + fmt_num(ev.envelope.message_type) +
+                     " session=" + fmt_num(ev.envelope.session_id) +
+                     " from=" + fmt_num(static_cast<int>(ev.envelope.source.agent_type)) + ":" +
+                     fmt_num(ev.envelope.source.agent_id));
+    });
 }
 
 void CompareBackend::bind_yunlink_subscribers() {
@@ -75,6 +153,7 @@ void CompareBackend::bind_yunlink_subscribers() {
         [this](const yunlink::TypedMessage<yunlink::LocalOdomSnapshot>& message) {
             std::unordered_map<std::string, std::string> values;
             fill_local_odom_from_yunlink(message.payload, values);
+            log_once(LogLevel::kInfo, LogSource::kYunlink, "收到 snapshot: local_odom");
             update_yunlink("local_odom",
                            std::move(values),
                            "session=" + fmt_num(message.envelope.session_id) +
@@ -87,6 +166,7 @@ void CompareBackend::bind_yunlink_subscribers() {
         [this](const yunlink::TypedMessage<yunlink::OdomStateSnapshot>& message) {
             std::unordered_map<std::string, std::string> values;
             fill_odom_state_from_yunlink(message.payload, values);
+            log_once(LogLevel::kInfo, LogSource::kYunlink, "收到 snapshot: odom_state");
             update_yunlink("odom_state",
                            std::move(values),
                            "session=" + fmt_num(message.envelope.session_id) +
@@ -99,6 +179,7 @@ void CompareBackend::bind_yunlink_subscribers() {
         [this](const yunlink::TypedMessage<yunlink::UavControlStateSnapshot>& message) {
             std::unordered_map<std::string, std::string> values;
             fill_control_state_from_yunlink(message.payload, values);
+            log_once(LogLevel::kInfo, LogSource::kYunlink, "收到 snapshot: uav_control_state");
             update_yunlink("uav_control_state",
                            std::move(values),
                            "session=" + fmt_num(message.envelope.session_id) +
@@ -111,6 +192,7 @@ void CompareBackend::bind_yunlink_subscribers() {
         [this](const yunlink::TypedMessage<yunlink::MavrosStateSnapshot>& message) {
             std::unordered_map<std::string, std::string> values;
             fill_mavros_state_from_yunlink(message.payload, values);
+            log_once(LogLevel::kInfo, LogSource::kYunlink, "收到 snapshot: mavros_state");
             update_yunlink("mavros_state",
                            std::move(values),
                            "session=" + fmt_num(message.envelope.session_id) +
@@ -123,6 +205,7 @@ void CompareBackend::bind_yunlink_subscribers() {
         [this](const yunlink::TypedMessage<yunlink::Px4StateSnapshot>& message) {
             std::unordered_map<std::string, std::string> values;
             fill_px4_state_from_yunlink(message.payload, values);
+            log_once(LogLevel::kInfo, LogSource::kYunlink, "收到 snapshot: px4_state");
             update_yunlink("px4_state",
                            std::move(values),
                            "session=" + fmt_num(message.envelope.session_id) +
@@ -131,12 +214,12 @@ void CompareBackend::bind_yunlink_subscribers() {
                            message.envelope.created_at_ms);
         });
 
-    log("Yunlink 状态快照订阅器已就绪");
+    log(LogLevel::kInfo, LogSource::kYunlink, "状态快照订阅器已就绪");
 }
 
 void CompareBackend::bind_ros_subscribers() {
-    local_odom_sub_ = nh_.subscribe(
-        topics_["local_odom"].ros_topic, 20, &CompareBackend::on_local_odom, this);
+    local_odom_sub_ =
+        nh_.subscribe(topics_["local_odom"].ros_topic, 20, &CompareBackend::on_local_odom, this);
     odom_state_sub_ =
         nh_.subscribe(topics_["odom_state"].ros_topic, 20, &CompareBackend::on_odom_state, this);
     control_state_sub_ = nh_.subscribe(
@@ -145,130 +228,10 @@ void CompareBackend::bind_ros_subscribers() {
         topics_["mavros_state"].ros_topic, 20, &CompareBackend::on_mavros_state, this);
     px4_state_sub_ =
         nh_.subscribe(topics_["px4_state"].ros_topic, 20, &CompareBackend::on_px4_state, this);
-    log("ROS 原始话题订阅器已就绪");
+    log(LogLevel::kInfo, LogSource::kRos, "原始话题订阅器已就绪");
 }
 
 void CompareBackend::setup_reconnect_timer() {
     reconnect_timer_ =
         nh_.createTimer(ros::Duration(1.0), &CompareBackend::on_reconnect_timer, this);
-}
-
-uint16_t CompareBackend::clamp_port(int value) {
-    if (value < 0) {
-        return 0;
-    }
-    if (value > 65535) {
-        return 65535;
-    }
-    return static_cast<uint16_t>(value);
-}
-
-void CompareBackend::on_reconnect_timer(const ros::TimerEvent&) {
-    if (peer_ready_) {
-        yunlink::SessionDescriptor desc{};
-        if (!runtime_.session_server().describe_session(peer_id_, session_id_, &desc) ||
-            desc.state != yunlink::SessionState::kActive) {
-            peer_ready_ = false;
-            session_id_ = 0;
-            peer_id_.clear();
-            log("Yunlink 会话已断开，准备重连");
-        }
-        return;
-    }
-
-    std::string peer_id;
-    const auto ec =
-        runtime_.tcp_clients().connect_peer(remote_ip_, clamp_port(remote_tcp_port_), &peer_id);
-    if (ec != yunlink::ErrorCode::kOk) {
-        log_throttle("连接 yunros 对端失败");
-        return;
-    }
-
-    const uint64_t session_id = runtime_.session_client().open_active_session(peer_id, node_name_);
-    if (session_id == 0) {
-        log_throttle("打开 Yunlink 会话失败");
-        return;
-    }
-
-    peer_ready_ = true;
-    peer_id_ = peer_id;
-    session_id_ = session_id;
-    log("已连接 yunros，对端 peer_id=" + peer_id_ + "，session_id=" + fmt_num(session_id_));
-}
-
-void CompareBackend::on_local_odom(const nav_msgs::Odometry::ConstPtr& msg) {
-    std::unordered_map<std::string, std::string> values;
-    fill_local_odom_from_ros(*msg, values);
-    update_ros("local_odom", std::move(values), msg->header.stamp);
-}
-
-void CompareBackend::on_odom_state(const sunray_msgs::OdomState::ConstPtr& msg) {
-    std::unordered_map<std::string, std::string> values;
-    fill_odom_state_from_ros(*msg, values);
-    update_ros("odom_state", std::move(values), msg->header.stamp);
-}
-
-void CompareBackend::on_control_state(const sunray_msgs::UAVControlState::ConstPtr& msg) {
-    std::unordered_map<std::string, std::string> values;
-    fill_control_state_from_ros(*msg, values);
-    update_ros("uav_control_state", std::move(values), msg->header.stamp);
-}
-
-void CompareBackend::on_mavros_state(const mavros_msgs::State::ConstPtr& msg) {
-    std::unordered_map<std::string, std::string> values;
-    fill_mavros_state_from_ros(*msg, values);
-    update_ros("mavros_state", std::move(values), ros::Time::now());
-}
-
-void CompareBackend::on_px4_state(const sunray_msgs::Px4State::ConstPtr& msg) {
-    std::unordered_map<std::string, std::string> values;
-    fill_px4_state_from_ros(*msg, values);
-    update_ros("px4_state", std::move(values), msg->header.stamp);
-}
-
-void CompareBackend::update_ros(const std::string& key,
-                                std::unordered_map<std::string, std::string>&& values,
-                                const ros::Time& stamp) {
-    std::lock_guard<std::mutex> lock(mu_);
-    auto& topic = topics_.at(key);
-    SnapshotSide snapshot;
-    snapshot.values = std::move(values);
-    snapshot.msg_stamp = stamp;
-    snapshot.receive_time = ros::Time::now();
-    topic.ros = snapshot;
-    push_snapshot_history(topic.ros_history, topic.ros, history_limit_);
-}
-
-void CompareBackend::update_yunlink(const std::string& key,
-                                    std::unordered_map<std::string, std::string>&& values,
-                                    std::string note,
-                                    uint64_t message_id,
-                                    uint64_t created_at_ms) {
-    std::lock_guard<std::mutex> lock(mu_);
-    auto& topic = topics_.at(key);
-    SnapshotSide snapshot;
-    snapshot.values = std::move(values);
-    snapshot.receive_time = ros::Time::now();
-    snapshot.note = std::move(note);
-    snapshot.message_id = message_id;
-    snapshot.created_at_ms = created_at_ms;
-    topic.yunlink = snapshot;
-    push_snapshot_history(topic.yunlink_history, topic.yunlink, history_limit_);
-}
-
-void CompareBackend::log(const std::string& line) {
-    std::lock_guard<std::mutex> lock(mu_);
-    logs_.push_back(line);
-    if (logs_.size() > 16) {
-        logs_.erase(logs_.begin());
-    }
-}
-
-void CompareBackend::log_throttle(const std::string& line) {
-    const ros::Time now = ros::Time::now();
-    if ((now - last_log_time_).toSec() < 2.0) {
-        return;
-    }
-    last_log_time_ = now;
-    log(line);
 }

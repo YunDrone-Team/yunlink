@@ -1,13 +1,25 @@
 #include "ui/main_window.hpp"
 
 #include <cstdlib>
+#include <ctime>
 #include <sstream>
 
 #include <QBrush>
 #include <QColor>
+#include <QDateTime>
+#include <QFileDialog>
+#include <QFile>
 #include <QFont>
 #include <QHeaderView>
+#include <QHBoxLayout>
+#include <QMessageBox>
+#include <QScrollBar>
+#include <QSplitter>
+#include <QSyntaxHighlighter>
 #include <QTabWidget>
+#include <QTextBlock>
+#include <QTextCharFormat>
+#include <QTextCursor>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -15,6 +27,39 @@
 #include "model/comparison.hpp"
 #include "model/format.hpp"
 #include "model/topic_defs.hpp"
+
+namespace {
+
+class LogViewHighlighter : public QSyntaxHighlighter {
+  public:
+    explicit LogViewHighlighter(QTextDocument* parent = nullptr) : QSyntaxHighlighter(parent) {
+        info_format_.setForeground(QColor("#cde9d1"));
+        warning_format_.setForeground(QColor("#f6d06d"));
+        warning_format_.setFontWeight(QFont::DemiBold);
+        error_format_.setForeground(QColor("#ff8e8e"));
+        error_format_.setFontWeight(QFont::Bold);
+    }
+
+  protected:
+    void highlightBlock(const QString& text) override {
+        if (text.contains("[ERROR]")) {
+            setFormat(0, text.size(), error_format_);
+            return;
+        }
+        if (text.contains("[WARNING]")) {
+            setFormat(0, text.size(), warning_format_);
+            return;
+        }
+        setFormat(0, text.size(), info_format_);
+    }
+
+  private:
+    QTextCharFormat info_format_;
+    QTextCharFormat warning_format_;
+    QTextCharFormat error_format_;
+};
+
+}  // namespace
 
 MainWindow::MainWindow(CompareBackend* backend, QWidget* parent)
     : QMainWindow(parent), backend_(backend), align_window_ms_(backend->align_window_ms()) {
@@ -46,10 +91,19 @@ void MainWindow::build_ui() {
         "padding:10px;");
     root_layout->addWidget(summary_label_);
 
+    auto* vertical_splitter = new QSplitter(Qt::Vertical, central);
+    vertical_splitter->setChildrenCollapsible(false);
+    vertical_splitter->setHandleWidth(10);
+
+    auto* main_area = new QWidget(vertical_splitter);
+    auto* main_layout = new QVBoxLayout(main_area);
+    main_layout->setContentsMargins(0, 0, 0, 0);
+    main_layout->setSpacing(0);
+
     auto* tabs = new QTabWidget(central);
     tabs->setStyleSheet("QTabBar::tab { background:#d7e6da; padding:8px 14px; }"
                         "QTabBar::tab:selected { background:#f2f6f0; }");
-    root_layout->addWidget(tabs, 1);
+    main_layout->addWidget(tabs, 1);
 
     const auto topics = backend_->snapshot_topics();
     for (const auto& key : topic_display_order()) {
@@ -99,170 +153,112 @@ void MainWindow::build_ui() {
         tabs->addTab(page, QString::fromStdString(topics.at(key).title));
     }
 
-    logs_ = new QTextEdit(central);
-    logs_->setReadOnly(true);
-    logs_->setMinimumHeight(140);
-    logs_->setStyleSheet(
-        "QTextEdit { background:#13211b;color:#cde9d1;border-radius:8px;padding:6px;"
-        "font-family:'DejaVu Sans Mono'; }");
-    root_layout->addWidget(logs_);
+    vertical_splitter->addWidget(main_area);
+    vertical_splitter->addWidget(build_log_panel(vertical_splitter));
+    vertical_splitter->setStretchFactor(0, 8);
+    vertical_splitter->setStretchFactor(1, 2);
+    vertical_splitter->setSizes({760, 260});
+    root_layout->addWidget(vertical_splitter, 1);
 
     setCentralWidget(central);
+    setStyleSheet(styleSheet() +
+                  "QSplitter::handle:vertical { background:#d1ddd0; border-radius:4px; }"
+                  "QSplitter::handle:vertical:hover { background:#b9cab9; }");
 }
 
-void MainWindow::refresh_view() {
-    const auto topics = backend_->snapshot_topics();
-    const auto logs = backend_->snapshot_logs();
+QWidget* MainWindow::build_log_panel(QWidget* parent) {
+    auto* panel = new QWidget(parent);
+    auto* layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(8);
 
-    std::ostringstream summary;
-    summary << "范围：local_odom、odom_state、uav_control_state、mavros_state、px4_state\n";
-    summary << "模式：最新值直比 | 时间对齐比（窗口 <= " << fmt_ms(align_window_ms_)
-            << " ms，超出窗口时保留最近样本）";
-    summary_label_->setText(QString::fromStdString(summary.str()));
+    auto* title_row = new QHBoxLayout();
+    auto* title = new QLabel("操作日志", panel);
+    QFont title_font("DejaVu Sans", 12, QFont::Bold);
+    title->setFont(title_font);
+    title->setStyleSheet("color:#173127;");
+    title_row->addWidget(title);
+    title_row->addStretch(1);
+    log_status_label_ = new QLabel("等待日志", panel);
+    log_status_label_->setStyleSheet("color:#567061;");
+    title_row->addWidget(log_status_label_);
+    layout->addLayout(title_row);
 
-    for (const auto& item : topics) {
-        refresh_topic(item.first, item.second);
-    }
+    auto* controls_row = new QHBoxLayout();
+    controls_row->setSpacing(8);
+    follow_latest_checkbox_ = new QCheckBox("跟随最新", panel);
+    follow_latest_checkbox_->setChecked(true);
+    pause_logs_checkbox_ = new QCheckBox("暂停刷新", panel);
+    clear_logs_button_ = new QPushButton("清空", panel);
+    copy_selected_button_ = new QPushButton("复制选中", panel);
+    export_logs_button_ = new QPushButton("导出日志", panel);
+    jump_to_latest_button_ = new QPushButton("查看新日志", panel);
+    jump_to_latest_button_->setVisible(false);
 
-    std::ostringstream log_ss;
-    for (const auto& line : logs) {
-        log_ss << line << "\n";
-    }
-    logs_->setPlainText(QString::fromStdString(log_ss.str()));
-}
+    controls_row->addWidget(follow_latest_checkbox_);
+    controls_row->addWidget(pause_logs_checkbox_);
+    controls_row->addWidget(clear_logs_button_);
+    controls_row->addWidget(copy_selected_button_);
+    controls_row->addWidget(export_logs_button_);
+    controls_row->addStretch(1);
+    controls_row->addWidget(jump_to_latest_button_);
+    layout->addLayout(controls_row);
 
-void MainWindow::refresh_topic(const std::string& key, const TopicState& topic) {
-    auto* info = topic_info_[key];
-    auto* uncovered = uncovered_labels_[key];
-    auto* latest_table = topic_latest_tables_[key];
-    auto* aligned_table = topic_aligned_tables_[key];
-    const ComparisonSelection latest_selection = make_latest_selection(topic);
-    const ComparisonSelection aligned_selection = make_aligned_selection(topic, align_window_ms_);
+    logs_ = new QPlainTextEdit(panel);
+    logs_->setReadOnly(true);
+    logs_->setMinimumHeight(160);
+    logs_->setLineWrapMode(QPlainTextEdit::NoWrap);
+    logs_->setStyleSheet(
+        "QPlainTextEdit { background:#13211b;color:#cde9d1;border-radius:8px;padding:8px;"
+        "font-family:'DejaVu Sans Mono'; selection-background-color:#2b5c49; }");
+    new LogViewHighlighter(logs_->document());
+    layout->addWidget(logs_, 1);
 
-    std::ostringstream info_ss;
-    info_ss << "ROS: " << topic.ros_topic << "\n";
-    info_ss << "Yunlink: " << topic.yunlink_name << "\n";
-    info_ss << "ROS stamp " << fmt_ros_time(topic.ros.msg_stamp) << " | ROS rx "
-            << fmt_ros_time(topic.ros.receive_time) << "\n";
-    info_ss << "Yunlink rx " << fmt_ros_time(topic.yunlink.receive_time);
-    if (topic.yunlink.message_id != 0) {
-        info_ss << " | msg_id " << topic.yunlink.message_id;
-    }
-    if (!topic.yunlink.note.empty()) {
-        info_ss << " | " << topic.yunlink.note;
-    }
-    info_ss << "\n最新 dt "
-            << (latest_selection.matched ? fmt_ms(latest_selection.receive_dt_ms) : "--") << " ms";
-    if (aligned_selection.matched) {
-        if (aligned_selection.within_align_window) {
-            info_ss << " | 对齐 dt " << fmt_ms(aligned_selection.receive_dt_ms) << " ms";
-        } else {
-            info_ss << " | 最近 dt " << fmt_ms(aligned_selection.receive_dt_ms) << " ms（超过窗口）";
+    connect(logs_->verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int) {
+        if (suppress_log_scroll_events_) {
+            return;
         }
-    } else if (has_snapshot(aligned_selection.yunlink)) {
-        info_ss << " | 对齐 dt > " << fmt_ms(align_window_ms_) << " ms";
-    } else {
-        info_ss << " | 对齐 dt --";
-    }
-    info->setText(QString::fromStdString(info_ss.str()));
-
-    populate_compare_table(latest_table, topic, latest_selection);
-    populate_compare_table(aligned_table, topic, aligned_selection);
-
-    if (topic.uncovered_fields.empty()) {
-        uncovered->clear();
-    } else {
-        std::ostringstream uncovered_ss;
-        uncovered_ss << "未覆盖字段：";
-        for (size_t i = 0; i < topic.uncovered_fields.size(); ++i) {
-            if (i > 0) {
-                uncovered_ss << ", ";
-            }
-            uncovered_ss << topic.uncovered_fields[i];
+        if (is_log_view_at_bottom() && pending_new_log_count_ > 0) {
+            pending_new_log_count_ = 0;
+            jump_to_latest_button_->setVisible(false);
+            sync_log_status();
         }
-        uncovered->setText(QString::fromStdString(uncovered_ss.str()));
-    }
-}
+    });
 
-QTableWidget* MainWindow::create_compare_table(QWidget* parent, const QStringList& headers) {
-    auto* table = new QTableWidget(parent);
-    table->setColumnCount(headers.size());
-    table->setHorizontalHeaderLabels(headers);
-    table->horizontalHeader()->setStretchLastSection(false);
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-    table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
-    table->verticalHeader()->setVisible(false);
-    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    table->setSelectionMode(QAbstractItemView::NoSelection);
-    table->setAlternatingRowColors(true);
-    table->setWordWrap(false);
-    table->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    table->setStyleSheet("QTableWidget { background:#fbfdfb; alternate-background-color:#f1f6f1; }");
-    return table;
-}
+    connect(jump_to_latest_button_, &QPushButton::clicked, this, [this]() {
+        pause_logs_checkbox_->setChecked(false);
+        follow_latest_checkbox_->setChecked(true);
+        pending_new_log_count_ = 0;
+        jump_to_latest_button_->setVisible(false);
+        rebuild_log_view_from_entries(backend_->snapshot_logs());
+        sync_log_status();
+    });
 
-void MainWindow::populate_compare_table(QTableWidget* table,
-                                        const TopicState& topic,
-                                        const ComparisonSelection& selection) {
-    table->setRowCount(static_cast<int>(topic.rows.size()));
-    for (int row = 0; row < static_cast<int>(topic.rows.size()); ++row) {
-        const auto& template_row = topic.rows[row];
-        const std::string& key_name = template_row.key;
-        const auto ros_it = selection.ros.values.find(key_name);
-        const auto yn_it = selection.yunlink.values.find(key_name);
-        const std::string ros_value = ros_it == selection.ros.values.end() ? "--" : ros_it->second;
-        const std::string yn_value =
-            yn_it == selection.yunlink.values.end() ? "--" : yn_it->second;
-        const bool has_both =
-            ros_it != selection.ros.values.end() && yn_it != selection.yunlink.values.end();
-        const bool numeric = has_both && is_numeric(ros_value) && is_numeric(yn_value);
-        const bool equal =
-            has_both && (numeric ? equal_float(ros_value, yn_value, field_epsilon(topic.key, key_name))
-                                 : equal_text(ros_value, yn_value));
-        const std::string delta = numeric ? delta_float(ros_value, yn_value) : "--";
-        const std::string match = has_both ? (equal ? "OK" : "DIFF") : "WAIT";
+    connect(clear_logs_button_, &QPushButton::clicked, this, [this]() {
+        backend_->clear_logs();
+        pending_new_log_count_ = 0;
+        log_overflow_since_render_ = false;
+        jump_to_latest_button_->setVisible(false);
+        reset_log_view();
+        sync_log_status();
+    });
 
-        set_item(table, row, 0, template_row.label);
-        set_item(table, row, 1, ros_value);
-        set_item(table, row, 2, yn_value);
-        set_item(table, row, 3, delta);
-        auto* match_item = set_item(table, row, 4, match);
-        table->item(row, 0)->setToolTip(QString::fromStdString(template_row.label));
-        table->item(row, 1)->setToolTip(QString::fromStdString(ros_value));
-        table->item(row, 2)->setToolTip(QString::fromStdString(yn_value));
-        if (match == "OK") {
-            match_item->setBackground(QBrush(QColor("#d7f0d6")));
-        } else if (match == "DIFF") {
-            match_item->setBackground(QBrush(QColor("#f7d7d7")));
-        } else {
-            match_item->setBackground(QBrush(QColor("#efe8c8")));
+    connect(copy_selected_button_, &QPushButton::clicked, this, [this]() { copy_selected_logs(); });
+    connect(export_logs_button_, &QPushButton::clicked, this, [this]() { export_logs(); });
+    connect(follow_latest_checkbox_, &QCheckBox::toggled, this, [this](bool checked) {
+        if (checked && !pause_logs_checkbox_->isChecked()) {
+            pending_new_log_count_ = 0;
+            jump_to_latest_button_->setVisible(false);
+            scroll_logs_to_bottom();
+            sync_log_status();
         }
-    }
-}
+    });
+    connect(pause_logs_checkbox_, &QCheckBox::toggled, this, [this](bool checked) {
+        if (!checked) {
+            rebuild_log_view_from_entries(backend_->snapshot_logs());
+        }
+        sync_log_status();
+    });
 
-bool MainWindow::is_numeric(const std::string& value) {
-    if (value.empty() || value == "--") {
-        return false;
-    }
-    char* end = nullptr;
-    std::strtod(value.c_str(), &end);
-    return end != nullptr && *end == '\0';
-}
-
-QTableWidgetItem* MainWindow::set_item(QTableWidget* table,
-                                       int row,
-                                       int col,
-                                       const std::string& text) {
-    auto* item = table->item(row, col);
-    if (item == nullptr) {
-        item = new QTableWidgetItem();
-        table->setItem(row, col, item);
-    }
-    item->setText(QString::fromStdString(text));
-    item->setTextAlignment((col == 3 || col == 4) ? Qt::AlignCenter
-                                                  : (Qt::AlignLeft | Qt::AlignVCenter));
-    return item;
+    return panel;
 }

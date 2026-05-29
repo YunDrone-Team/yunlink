@@ -39,6 +39,7 @@ include_directories(
 
 add_executable(sunray_yunlink_compare_ui
   src/backend/compare_backend.cpp
+  src/backend/compare_backend_runtime.cpp
   src/main.cpp
   src/mapping/control_state.cpp
   src/mapping/local_odom.cpp
@@ -50,6 +51,8 @@ add_executable(sunray_yunlink_compare_ui
   src/model/format.cpp
   src/model/topic_defs.cpp
   src/ui/main_window.cpp
+  src/ui/main_window_logs.cpp
+  src/ui/main_window_tables.cpp
 )
 
 target_link_libraries(sunray_yunlink_compare_ui

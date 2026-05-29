@@ -1,9 +1,11 @@
 #ifndef SUNRAY_YUNLINK_COMPARE_UI_BACKEND_COMPARE_BACKEND_HPP
 #define SUNRAY_YUNLINK_COMPARE_UI_BACKEND_COMPARE_BACKEND_HPP
 
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <mavros_msgs/State.h>
@@ -16,17 +18,40 @@
 
 #include "model/topic_state.hpp"
 
+enum class LogLevel {
+    kInfo,
+    kWarn,
+    kError,
+};
+
+enum class LogSource {
+    kCompare,
+    kRos,
+    kYunlink,
+    kSession,
+};
+
+struct LogEntry {
+    uint64_t sequence{0};
+    uint64_t timestamp_ms{0};
+    LogLevel level{LogLevel::kInfo};
+    LogSource source{LogSource::kCompare};
+    std::string message;
+};
+
 class CompareBackend {
   public:
     CompareBackend();
 
     std::unordered_map<std::string, TopicState> snapshot_topics() const;
-    std::vector<std::string> snapshot_logs() const;
+    std::vector<LogEntry> snapshot_logs() const;
     double align_window_ms() const;
+    void clear_logs();
 
   private:
     void load_params();
     void start_runtime();
+    void bind_runtime_diagnostics();
     void bind_yunlink_subscribers();
     void bind_ros_subscribers();
     void setup_reconnect_timer();
@@ -47,12 +72,16 @@ class CompareBackend {
                         std::string note,
                         uint64_t message_id,
                         uint64_t created_at_ms);
-    void log(const std::string& line);
-    void log_throttle(const std::string& line);
+    void log(LogLevel level, LogSource source, const std::string& line);
+    void log_once(LogLevel level, LogSource source, const std::string& line);
+    void log_throttle(LogLevel level, LogSource source, const std::string& line);
+    static uint64_t wall_time_ms();
 
     mutable std::mutex mu_;
     std::unordered_map<std::string, TopicState> topics_;
-    std::vector<std::string> logs_;
+    std::vector<LogEntry> logs_;
+    std::unordered_set<std::string> once_logs_;
+    std::unordered_map<std::string, ros::Time> throttled_logs_;
 
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
@@ -77,9 +106,11 @@ class CompareBackend {
     int agent_id_{1};
     int history_limit_raw_{static_cast<int>(kDefaultHistoryLimit)};
     uint64_t session_id_{0};
+    uint64_t next_log_sequence_{1};
     bool peer_ready_{false};
     double align_window_ms_{kDefaultAlignWindowMs};
     size_t history_limit_{kDefaultHistoryLimit};
+    size_t log_limit_{500};
 };
 
 #endif  // SUNRAY_YUNLINK_COMPARE_UI_BACKEND_COMPARE_BACKEND_HPP
