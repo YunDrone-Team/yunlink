@@ -297,8 +297,7 @@ int main() {
         std::cerr << "gimbal snapshot mismatch\n";
         return 11;
     }
-    if (local_odom_seen.pose.position_m.x != 11.0F ||
-        local_odom_seen.pose.orientation.w != 0.9F ||
+    if (local_odom_seen.pose.position_m.x != 11.0F || local_odom_seen.pose.orientation.w != 0.9F ||
         local_odom_seen.twist.linear_mps.y != 1.2F) {
         std::cerr << "local odom snapshot mismatch\n";
         return 12;

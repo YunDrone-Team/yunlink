@@ -15,16 +15,12 @@ void set_float(std::unordered_map<std::string, std::string>& values,
 void set_header(std::unordered_map<std::string, std::string>& values,
                 const std::string& prefix,
                 const std_msgs::Header& msg) {
-    set_numeric(values, prefix + "header.seq", msg.seq);
-    set_float(values, prefix + "header.stamp_sec", msg.stamp.toSec());
     set_value(values, prefix + "header.frame_id", msg.frame_id);
 }
 
 void set_header(std::unordered_map<std::string, std::string>& values,
                 const std::string& prefix,
                 const yunlink::HeaderSnapshot& msg) {
-    set_numeric(values, prefix + "header.seq", msg.seq);
-    set_float(values, prefix + "header.stamp_sec", msg.stamp_sec);
     set_value(values, prefix + "header.frame_id", msg.frame_id);
 }
 

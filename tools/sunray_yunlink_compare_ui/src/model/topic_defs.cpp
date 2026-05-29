@@ -12,8 +12,6 @@ FieldView field(std::string key, std::string label) {
 }
 
 void append_header_rows(std::vector<FieldView>& rows, const std::string& prefix) {
-    rows.push_back(field(prefix + "header.seq", "Header seq | " + prefix + "header.seq"));
-    rows.push_back(field(prefix + "header.stamp_sec", "Header stamp | " + prefix + "header.stamp_sec"));
     rows.push_back(field(prefix + "header.frame_id", "Header frame | " + prefix + "header.frame_id"));
 }
 
@@ -141,8 +139,6 @@ TopicState make_odom_state_topic() {
     topic.ros_topic = "/uav1/sunray/localization/odom_state";
     topic.yunlink_name = "OdomStateSnapshot";
     topic.rows = {
-        field("header.seq", "Header seq | header.seq"),
-        field("header.stamp_sec", "Header stamp | header.stamp_sec"),
         field("header.frame_id", "Header frame | header.frame_id"),
         field("external_source", "外部定位源 | external_source"),
         field("subtopic_name_external_odom", "外部里程计输入话题 | subtopic_name_external_odom"),
@@ -171,8 +167,6 @@ TopicState make_control_state_topic() {
     topic.ros_topic = "/uav1/sunray/uav_control/control_state";
     topic.yunlink_name = "UavControlStateSnapshot";
     topic.rows = {
-        field("header.seq", "Header seq | header.seq"),
-        field("header.stamp_sec", "Header stamp | header.stamp_sec"),
         field("header.frame_id", "Header frame | header.frame_id"),
         field("agent_name", "机器人名称 | agent_name"),
         field("agent_id", "机器人编号 | agent_id"),
@@ -201,8 +195,6 @@ TopicState make_mavros_state_topic() {
     topic.ros_topic = "/uav1/mavros/state";
     topic.yunlink_name = "MavrosStateSnapshot";
     topic.rows = {
-        field("header.seq", "Header seq | header.seq"),
-        field("header.stamp_sec", "Header stamp | header.stamp_sec"),
         field("header.frame_id", "Header frame | header.frame_id"),
         field("connected", "飞控连接状态 | connected"),
         field("armed", "解锁状态 | armed"),
@@ -221,8 +213,6 @@ TopicState make_px4_state_topic() {
     topic.ros_topic = "/uav1/sunray/px4_state";
     topic.yunlink_name = "Px4StateSnapshot";
     topic.rows = {
-        field("header.seq", "Header seq | header.seq"),
-        field("header.stamp_sec", "Header stamp | header.stamp_sec"),
         field("header.frame_id", "Header frame | header.frame_id"),
         field("connected", "飞控连接状态 | connected"),
         field("rc_available", "遥控链路可用 | rc_available"),

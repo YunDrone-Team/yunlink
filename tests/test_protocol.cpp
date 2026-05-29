@@ -145,7 +145,8 @@ int main() {
         control_state_decoded.controller_types != control_state.controller_types ||
         control_state_decoded.home_point_m.z != control_state.home_point_m.z ||
         !control_state_decoded.odometry_valid ||
-        control_state_decoded.self_odom.pose.position_m.z != control_state.self_odom.pose.position_m.z) {
+        control_state_decoded.self_odom.pose.position_m.z !=
+            control_state.self_odom.pose.position_m.z) {
         std::cerr << "uav control state roundtrip failed\n";
         return 11;
     }

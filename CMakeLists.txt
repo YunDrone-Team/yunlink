@@ -81,8 +81,10 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/envelope_stream_parser.cpp
   src/core/semantic_messages_session_authority.cpp
   src/core/semantic_messages_command.cpp
-  src/core/semantic_messages_state_bulk.cpp
-  src/core/semantic_messages_state_snapshots.cpp
+  src/core/state/semantic_messages_state_bulk_core.cpp
+  src/core/state/semantic_messages_state_bulk_extended.cpp
+  src/core/state/semantic_messages_state_snapshots_core.cpp
+  src/core/state/semantic_messages_state_snapshots_extended.cpp
   src/transport/udp_transport.cpp
   src/transport/tcp_client_pool.cpp
   src/transport/tcp_server.cpp

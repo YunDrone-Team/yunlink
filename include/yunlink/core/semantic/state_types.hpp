@@ -38,8 +38,6 @@ struct Vector2f {
 };
 
 struct HeaderSnapshot {
-    uint32_t seq = 0;
-    double stamp_sec = 0.0;
     std::string frame_id;
 };
 
