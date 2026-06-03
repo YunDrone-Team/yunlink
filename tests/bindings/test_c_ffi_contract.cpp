@@ -3,11 +3,42 @@
  * @brief yunlink FFI v1 contract checks.
  */
 
+#include <array>
 #include <cstring>
 #include <cstddef>
 #include <iostream>
 
+#include "test_socket_utils.hpp"
 #include "yunlink/c/yunlink_c.h"
+
+namespace {
+
+using yunlink::test_socket::SocketProtocol;
+
+struct ContractPorts {
+    uint16_t udp_bind{0};
+    uint16_t tcp_listen{0};
+};
+
+bool allocate_contract_ports(ContractPorts* ports) {
+    if (ports == nullptr) {
+        return false;
+    }
+
+    const std::array<uint16_t, 2> empty_ports{};
+    ports->udp_bind =
+        yunlink::test_socket::find_unique_free_port(SocketProtocol::kUdp, empty_ports);
+    if (ports->udp_bind == 0) {
+        return false;
+    }
+
+    const std::array<uint16_t, 2> used_ports{ports->udp_bind, 0};
+    ports->tcp_listen =
+        yunlink::test_socket::find_unique_free_port(SocketProtocol::kTcp, used_ports);
+    return ports->tcp_listen != 0;
+}
+
+}  // namespace
 
 int main() {
     static_assert(sizeof(yunlink_peer_t().id) == 128, "peer buffer contract changed");
@@ -58,11 +89,18 @@ int main() {
         return 3;
     }
 
+    ContractPorts ports{};
+    if (!allocate_contract_ports(&ports)) {
+        std::cerr << "failed to allocate contract ports\n";
+        yunlink_runtime_destroy(runtime);
+        return 4;
+    }
+
     yunlink_runtime_config_t cfg{};
     cfg.struct_size = sizeof(cfg);
-    cfg.udp_bind_port = 13200;
-    cfg.udp_target_port = 13200;
-    cfg.tcp_listen_port = 13300;
+    cfg.udp_bind_port = ports.udp_bind;
+    cfg.udp_target_port = ports.udp_bind;
+    cfg.tcp_listen_port = ports.tcp_listen;
     cfg.connect_timeout_ms = 5000;
     cfg.io_poll_interval_ms = 5;
     cfg.max_buffer_bytes_per_peer = 1 << 20;
@@ -74,33 +112,38 @@ int main() {
 
     if (yunlink_runtime_start(runtime, &cfg) != YUNLINK_RESULT_OK) {
         std::cerr << "runtime start failed\n";
-        return 4;
+        yunlink_runtime_destroy(runtime);
+        return 5;
     }
 
     yunlink_runtime_event_t event{};
     if (yunlink_runtime_poll_event(runtime, &event) != YUNLINK_RESULT_OK ||
         event.type != YUNLINK_RUNTIME_EVENT_NONE) {
         std::cerr << "empty poll mismatch\n";
-        return 5;
+        yunlink_runtime_destroy(runtime);
+        return 6;
     }
 
     yunlink_authority_lease_t lease{};
     if (yunlink_authority_current(runtime, &lease) != YUNLINK_RESULT_NOT_FOUND) {
         std::cerr << "authority current mismatch\n";
-        return 6;
+        yunlink_runtime_destroy(runtime);
+        return 7;
     }
 
-    if (yunlink_peer_connect(nullptr, "127.0.0.1", 13300, nullptr) !=
+    if (yunlink_peer_connect(nullptr, "127.0.0.1", ports.tcp_listen, nullptr) !=
         YUNLINK_RESULT_INVALID_ARGUMENT) {
         std::cerr << "peer connect invalid argument mismatch\n";
-        return 7;
+        yunlink_runtime_destroy(runtime);
+        return 8;
     }
 
     yunlink_session_t invalid_session{};
     if (yunlink_session_open(runtime, nullptr, "ffi-ground", &invalid_session) !=
         YUNLINK_RESULT_INVALID_ARGUMENT) {
         std::cerr << "session open invalid peer mismatch\n";
-        return 8;
+        yunlink_runtime_destroy(runtime);
+        return 9;
     }
 
     yunlink_peer_t fake_peer{};
@@ -116,7 +159,8 @@ int main() {
                                   3000,
                                   0) != YUNLINK_RESULT_INVALID_ARGUMENT) {
         std::cerr << "authority request invalid argument mismatch\n";
-        return 9;
+        yunlink_runtime_destroy(runtime);
+        return 10;
     }
     if (yunlink_authority_renew(runtime,
                                 &fake_peer,
@@ -125,26 +169,31 @@ int main() {
                                 YUNLINK_CONTROL_SOURCE_GROUND_STATION,
                                 3000) != YUNLINK_RESULT_INVALID_ARGUMENT) {
         std::cerr << "authority renew invalid argument mismatch\n";
-        return 10;
+        yunlink_runtime_destroy(runtime);
+        return 11;
     }
     if (yunlink_authority_release(runtime, &fake_peer, &invalid_session, &invalid_target) !=
         YUNLINK_RESULT_INVALID_ARGUMENT) {
         std::cerr << "authority release invalid argument mismatch\n";
-        return 11;
+        yunlink_runtime_destroy(runtime);
+        return 12;
     }
 
     if (yunlink_runtime_stop(runtime) != YUNLINK_RESULT_OK) {
         std::cerr << "runtime stop failed\n";
-        return 12;
+        yunlink_runtime_destroy(runtime);
+        return 13;
     }
     if (yunlink_runtime_stop(runtime) != YUNLINK_RESULT_OK) {
         std::cerr << "repeated runtime stop failed\n";
-        return 13;
+        yunlink_runtime_destroy(runtime);
+        return 14;
     }
-    if (yunlink_peer_connect(runtime, "127.0.0.1", 13300, &fake_peer) !=
+    if (yunlink_peer_connect(runtime, "127.0.0.1", ports.tcp_listen, &fake_peer) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "runtime stopped mismatch\n";
-        return 14;
+        yunlink_runtime_destroy(runtime);
+        return 15;
     }
 
     yunlink_target_selector_t valid_target{};
@@ -157,7 +206,8 @@ int main() {
     if (yunlink_session_open(runtime, &fake_peer, "stopped", &stopped_session) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "session open on stopped runtime mismatch\n";
-        return 15;
+        yunlink_runtime_destroy(runtime);
+        return 16;
     }
 
     stopped_session.session_id = 42;
@@ -170,7 +220,8 @@ int main() {
             runtime, &fake_peer, &stopped_session, &valid_target, &goto_cmd, nullptr) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "command publish on stopped runtime mismatch\n";
-        return 16;
+        yunlink_runtime_destroy(runtime);
+        return 17;
     }
     if (yunlink_authority_request(runtime,
                                   &fake_peer,
@@ -180,7 +231,8 @@ int main() {
                                   3000,
                                   0) != YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "authority request on stopped runtime mismatch\n";
-        return 17;
+        yunlink_runtime_destroy(runtime);
+        return 18;
     }
 
     yunlink_vehicle_core_state_t state{};
@@ -190,14 +242,16 @@ int main() {
             runtime, &fake_peer, &valid_target, &state, stopped_session.session_id) !=
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "state publish on stopped runtime mismatch\n";
-        return 18;
+        yunlink_runtime_destroy(runtime);
+        return 19;
     }
 
     yunlink_runtime_event_t stopped_event{};
     if (yunlink_runtime_poll_event(runtime, &stopped_event) != YUNLINK_RESULT_OK ||
         stopped_event.type != YUNLINK_RUNTIME_EVENT_NONE) {
         std::cerr << "stopped runtime empty poll mismatch\n";
-        return 19;
+        yunlink_runtime_destroy(runtime);
+        return 20;
     }
 
     yunlink_runtime_destroy(runtime);

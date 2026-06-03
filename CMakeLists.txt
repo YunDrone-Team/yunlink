@@ -334,6 +334,14 @@ if (YUNLINK_BUILD_TESTS)
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/ffi/test_c_ffi_loader.py
             ${CMAKE_CURRENT_BINARY_DIR}
   )
+  if (WIN32)
+    set_tests_properties(
+      test_c_ffi_loader
+      PROPERTIES
+        ENVIRONMENT_MODIFICATION
+          "PATH=path_list_prepend:$<TARGET_FILE_DIR:yunlink_ffi>"
+    )
+  endif()
 
   add_test(
     NAME test_dev_tooling_config

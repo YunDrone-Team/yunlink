@@ -4,6 +4,7 @@
  */
 
 #include <chrono>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -11,51 +12,19 @@
 #include <thread>
 #include <vector>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
-
+#include "test_socket_utils.hpp"
 #include "yunlink/c/yunlink_c.h"
 
 namespace {
 
-#ifdef _WIN32
-using TestSocketHandle = SOCKET;
-constexpr TestSocketHandle kInvalidTestSocket = INVALID_SOCKET;
+using yunlink::test_socket::SocketProtocol;
 
-bool init_test_socket_env() {
-    WSADATA dat;
-    return WSAStartup(MAKEWORD(2, 2), &dat) == 0;
-}
-
-void cleanup_test_socket_env() {
-    WSACleanup();
-}
-
-void close_test_socket(TestSocketHandle fd) {
-    closesocket(fd);
-}
-#else
-using TestSocketHandle = int;
-constexpr TestSocketHandle kInvalidTestSocket = -1;
-
-bool init_test_socket_env() {
-    return true;
-}
-
-void cleanup_test_socket_env() {}
-
-void close_test_socket(TestSocketHandle fd) {
-    close(fd);
-}
-#endif
+struct RuntimePorts {
+    uint16_t air_udp_bind{0};
+    uint16_t ground_udp_bind{0};
+    uint16_t air_tcp_listen{0};
+    uint16_t ground_tcp_listen{0};
+};
 
 bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_ms = 20) {
     for (int i = 0; i < retries; ++i) {
@@ -67,37 +36,42 @@ bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_
     return false;
 }
 
-uint16_t find_free_port() {
-    if (!init_test_socket_env()) {
-        return 0;
+bool allocate_runtime_ports(RuntimePorts* ports) {
+    if (ports == nullptr) {
+        return false;
     }
 
-    const TestSocketHandle fd = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == kInvalidTestSocket) {
-        cleanup_test_socket_env();
-        return 0;
-    }
+    std::array<uint16_t, 4> used_ports{};
 
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = htons(0);
-    if (::bind(fd, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) != 0) {
-        close_test_socket(fd);
-        cleanup_test_socket_env();
-        return 0;
+    ports->air_udp_bind =
+        yunlink::test_socket::find_unique_free_port(SocketProtocol::kUdp, used_ports);
+    if (ports->air_udp_bind == 0) {
+        return false;
     }
+    used_ports[0] = ports->air_udp_bind;
 
-    socklen_t len = sizeof(addr);
-    if (::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-        close_test_socket(fd);
-        cleanup_test_socket_env();
-        return 0;
+    ports->ground_udp_bind =
+        yunlink::test_socket::find_unique_free_port(SocketProtocol::kUdp, used_ports);
+    if (ports->ground_udp_bind == 0) {
+        return false;
     }
-    const uint16_t port = ntohs(addr.sin_port);
-    close_test_socket(fd);
-    cleanup_test_socket_env();
-    return port;
+    used_ports[1] = ports->ground_udp_bind;
+
+    ports->air_tcp_listen =
+        yunlink::test_socket::find_unique_free_port(SocketProtocol::kTcp, used_ports);
+    if (ports->air_tcp_listen == 0) {
+        return false;
+    }
+    used_ports[2] = ports->air_tcp_listen;
+
+    ports->ground_tcp_listen =
+        yunlink::test_socket::find_unique_free_port(SocketProtocol::kTcp, used_ports);
+    if (ports->ground_tcp_listen == 0) {
+        return false;
+    }
+    used_ports[3] = ports->ground_tcp_listen;
+
+    return true;
 }
 
 yunlink_runtime_config_t make_config(uint16_t udp_bind,
@@ -123,6 +97,47 @@ yunlink_runtime_config_t make_config(uint16_t udp_bind,
     return cfg;
 }
 
+bool start_runtimes_with_retry(yunlink_runtime_t* air,
+                               yunlink_runtime_t* ground,
+                               yunlink_runtime_config_t* air_cfg,
+                               yunlink_runtime_config_t* ground_cfg,
+                               int attempts = 8) {
+    if (air == nullptr || ground == nullptr || air_cfg == nullptr || ground_cfg == nullptr) {
+        return false;
+    }
+
+    for (int i = 0; i < attempts; ++i) {
+        RuntimePorts ports{};
+        if (!allocate_runtime_ports(&ports)) {
+            continue;
+        }
+
+        *air_cfg = make_config(ports.air_udp_bind,
+                               ports.air_udp_bind,
+                               ports.air_tcp_listen,
+                               YUNLINK_AGENT_TYPE_UAV,
+                               1,
+                               YUNLINK_ROLE_VEHICLE);
+        *ground_cfg = make_config(ports.ground_udp_bind,
+                                  ports.ground_udp_bind,
+                                  ports.ground_tcp_listen,
+                                  YUNLINK_AGENT_TYPE_GROUND_STATION,
+                                  7,
+                                  YUNLINK_ROLE_CONTROLLER);
+
+        const auto air_result = yunlink_runtime_start(air, air_cfg);
+        const auto ground_result = yunlink_runtime_start(ground, ground_cfg);
+        if (air_result == YUNLINK_RESULT_OK && ground_result == YUNLINK_RESULT_OK) {
+            return true;
+        }
+
+        yunlink_runtime_stop(ground);
+        yunlink_runtime_stop(air);
+    }
+
+    return false;
+}
+
 }  // namespace
 
 int main() {
@@ -135,16 +150,6 @@ int main() {
         return 2;
     }
 
-    const uint16_t air_udp_bind = find_free_port();
-    const uint16_t ground_udp_bind = find_free_port();
-    const uint16_t air_tcp_listen = find_free_port();
-    const uint16_t ground_tcp_listen = find_free_port();
-    if (air_udp_bind == 0 || ground_udp_bind == 0 || air_tcp_listen == 0 ||
-        ground_tcp_listen == 0) {
-        std::cerr << "failed to allocate free ports\n";
-        return 21;
-    }
-
     yunlink_runtime_t* air = nullptr;
     yunlink_runtime_t* ground = nullptr;
     if (yunlink_runtime_create(&air) != YUNLINK_RESULT_OK ||
@@ -153,26 +158,20 @@ int main() {
         return 3;
     }
 
-    const auto air_cfg = make_config(air_udp_bind,
-                                     air_udp_bind,
-                                     air_tcp_listen,
-                                     YUNLINK_AGENT_TYPE_UAV,
-                                     1,
-                                     YUNLINK_ROLE_VEHICLE);
-    const auto ground_cfg = make_config(ground_udp_bind,
-                                        ground_udp_bind,
-                                        ground_tcp_listen,
-                                        YUNLINK_AGENT_TYPE_GROUND_STATION,
-                                        7,
-                                        YUNLINK_ROLE_CONTROLLER);
-
-    if (yunlink_runtime_start(air, &air_cfg) != YUNLINK_RESULT_OK ||
-        yunlink_runtime_start(ground, &ground_cfg) != YUNLINK_RESULT_OK) {
-        std::cerr << "runtime start failed\n";
+    yunlink_runtime_config_t air_cfg{};
+    yunlink_runtime_config_t ground_cfg{};
+    if (!start_runtimes_with_retry(air, ground, &air_cfg, &ground_cfg)) {
+        std::cerr << "runtime start failed after port retries\n";
+        yunlink_runtime_destroy(ground);
+        yunlink_runtime_destroy(air);
         return 4;
     }
     if (yunlink_runtime_start(ground, &ground_cfg) != YUNLINK_RESULT_OK) {
         std::cerr << "runtime repeated start failed\n";
+        yunlink_runtime_stop(ground);
+        yunlink_runtime_stop(air);
+        yunlink_runtime_destroy(ground);
+        yunlink_runtime_destroy(air);
         return 5;
     }
 
