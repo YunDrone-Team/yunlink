@@ -28,7 +28,7 @@ using SocketLength = int;
 constexpr SocketHandle kInvalidSocketHandle = INVALID_SOCKET;
 
 class SocketEnvGuard {
-public:
+  public:
     SocketEnvGuard() : ok_(WSAStartup(MAKEWORD(2, 2), &data_) == 0) {}
 
     ~SocketEnvGuard() {
@@ -41,7 +41,7 @@ public:
         return ok_;
     }
 
-private:
+  private:
     WSADATA data_{};
     bool ok_{false};
 };
@@ -55,7 +55,7 @@ using SocketLength = socklen_t;
 constexpr SocketHandle kInvalidSocketHandle = -1;
 
 class SocketEnvGuard {
-public:
+  public:
     bool ok() const {
         return true;
     }
@@ -80,8 +80,7 @@ inline uint16_t find_free_port(SocketProtocol protocol) {
         return 0;
     }
 
-    const SocketHandle fd =
-        ::socket(AF_INET, socket_type(protocol), socket_ip_protocol(protocol));
+    const SocketHandle fd = ::socket(AF_INET, socket_type(protocol), socket_ip_protocol(protocol));
     if (fd == kInvalidSocketHandle) {
         return 0;
     }
