@@ -182,6 +182,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_protocol PRIVATE yunlink)
   add_test(NAME test_protocol COMMAND test_protocol)
 
+  add_executable(test_compare_ui_format tests/test_compare_ui_format.cpp)
+  target_include_directories(test_compare_ui_format PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  add_test(NAME test_compare_ui_format COMMAND test_compare_ui_format)
+
   add_executable(test_parser tests/test_parser.cpp)
   target_link_libraries(test_parser PRIVATE yunlink)
   add_test(NAME test_parser COMMAND test_parser)
