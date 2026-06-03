@@ -4,10 +4,16 @@
  */
 
 #include <chrono>
+#include <arpa/inet.h>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <netinet/in.h>
+#include <string>
+#include <sys/socket.h>
+#include <system_error>
+#include <unistd.h>
 #include <thread>
 #include <vector>
 
@@ -23,6 +29,31 @@ bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
     }
     return false;
+}
+
+uint16_t find_free_port() {
+    const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) {
+        return 0;
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(0);
+    if (::bind(fd, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) != 0) {
+        ::close(fd);
+        return 0;
+    }
+
+    socklen_t len = sizeof(addr);
+    if (::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
+        ::close(fd);
+        return 0;
+    }
+    const uint16_t port = ntohs(addr.sin_port);
+    ::close(fd);
+    return port;
 }
 
 yunlink_runtime_config_t make_config(uint16_t udp_bind,
@@ -60,6 +91,16 @@ int main() {
         return 2;
     }
 
+    const uint16_t air_udp_bind = find_free_port();
+    const uint16_t ground_udp_bind = find_free_port();
+    const uint16_t air_tcp_listen = find_free_port();
+    const uint16_t ground_tcp_listen = find_free_port();
+    if (air_udp_bind == 0 || ground_udp_bind == 0 || air_tcp_listen == 0 ||
+        ground_tcp_listen == 0) {
+        std::cerr << "failed to allocate free ports\n";
+        return 21;
+    }
+
     yunlink_runtime_t* air = nullptr;
     yunlink_runtime_t* ground = nullptr;
     if (yunlink_runtime_create(&air) != YUNLINK_RESULT_OK ||
@@ -68,10 +109,18 @@ int main() {
         return 3;
     }
 
-    const auto air_cfg =
-        make_config(13030, 13030, 13130, YUNLINK_AGENT_TYPE_UAV, 1, YUNLINK_ROLE_VEHICLE);
-    const auto ground_cfg = make_config(
-        13031, 13031, 13131, YUNLINK_AGENT_TYPE_GROUND_STATION, 7, YUNLINK_ROLE_CONTROLLER);
+    const auto air_cfg = make_config(air_udp_bind,
+                                     air_udp_bind,
+                                     air_tcp_listen,
+                                     YUNLINK_AGENT_TYPE_UAV,
+                                     1,
+                                     YUNLINK_ROLE_VEHICLE);
+    const auto ground_cfg = make_config(ground_udp_bind,
+                                        ground_udp_bind,
+                                        ground_tcp_listen,
+                                        YUNLINK_AGENT_TYPE_GROUND_STATION,
+                                        7,
+                                        YUNLINK_ROLE_CONTROLLER);
 
     if (yunlink_runtime_start(air, &air_cfg) != YUNLINK_RESULT_OK ||
         yunlink_runtime_start(ground, &ground_cfg) != YUNLINK_RESULT_OK) {

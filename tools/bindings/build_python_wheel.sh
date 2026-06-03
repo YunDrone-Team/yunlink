@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VENV_DIR="${ROOT_DIR}/.venv-bindings-wheel"
 WHEEL_DIR="${ROOT_DIR}/output/python-wheel"
 
+mkdir -p "${WHEEL_DIR}"
 python3 -m venv "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
 python -m pip install -q --upgrade pip

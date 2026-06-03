@@ -127,12 +127,19 @@ def wait_for_tcp_listener(host: str, port: int, timeout_s: float) -> bool:
     return False
 
 
+def reserve_port(host: str = "127.0.0.1") -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind((host, 0))
+        return int(probe.getsockname()[1])
+
+
 def scenario_tcp_direct(bin_dir: Path, cwd: Path) -> None:
     print("== Scenario 1: TCP direct ==")
-    tcp_listen = 21096
-    receiver_udp_bind = 21097
-    sender_udp_bind = 21197
-    sender_udp_target = 21198
+    tcp_listen = reserve_port()
+    receiver_udp_bind = reserve_port()
+    sender_udp_bind = reserve_port()
+    sender_udp_target = reserve_port()
+    sender_tcp_listen = reserve_port()
 
     receiver = ManagedProc(
         "telemetry_receiver_tcp",
@@ -163,7 +170,7 @@ def scenario_tcp_direct(bin_dir: Path, cwd: Path) -> None:
             "--udp-target",
             str(sender_udp_target),
             "--tcp-listen",
-            "21099",
+            str(sender_tcp_listen),
         ],
         cwd,
         timeout=4.0,
@@ -181,10 +188,10 @@ def scenario_tcp_direct(bin_dir: Path, cwd: Path) -> None:
 
 def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
     print("== Scenario 2: UDP -> TCP bridge ==")
-    sink_udp_bind = 22097
-    sink_tcp_listen = 22096
-    bridge_udp_bind = 22098
-    bridge_tcp_listen = 22099
+    sink_udp_bind = reserve_port()
+    sink_tcp_listen = reserve_port()
+    bridge_udp_bind = reserve_port()
+    bridge_tcp_listen = reserve_port()
 
     sink = ManagedProc(
         "telemetry_receiver_sink",
@@ -227,11 +234,12 @@ def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
 
     try:
         for attempt in range(1, 4):
+            discovery_udp_bind = reserve_port()
             discovery = run_checked(
                 [
                     exe(bin_dir, "example_discovery_udp"),
                     "--udp-bind",
-                    str(22100 + attempt),
+                    str(discovery_udp_bind),
                     "--udp-target",
                     str(bridge_udp_bind),
                     "--udp-target-ip",
