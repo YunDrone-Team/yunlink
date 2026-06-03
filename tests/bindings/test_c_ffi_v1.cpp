@@ -4,22 +4,58 @@
  */
 
 #include <chrono>
-#include <arpa/inet.h>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iostream>
-#include <netinet/in.h>
-#include <string>
-#include <sys/socket.h>
-#include <system_error>
-#include <unistd.h>
 #include <thread>
 #include <vector>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 
 #include "yunlink/c/yunlink_c.h"
 
 namespace {
+
+#ifdef _WIN32
+using TestSocketHandle = SOCKET;
+constexpr TestSocketHandle kInvalidTestSocket = INVALID_SOCKET;
+
+bool init_test_socket_env() {
+    WSADATA dat;
+    return WSAStartup(MAKEWORD(2, 2), &dat) == 0;
+}
+
+void cleanup_test_socket_env() {
+    WSACleanup();
+}
+
+void close_test_socket(TestSocketHandle fd) {
+    closesocket(fd);
+}
+#else
+using TestSocketHandle = int;
+constexpr TestSocketHandle kInvalidTestSocket = -1;
+
+bool init_test_socket_env() {
+    return true;
+}
+
+void cleanup_test_socket_env() {}
+
+void close_test_socket(TestSocketHandle fd) {
+    close(fd);
+}
+#endif
 
 bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_ms = 20) {
     for (int i = 0; i < retries; ++i) {
@@ -32,8 +68,13 @@ bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_
 }
 
 uint16_t find_free_port() {
-    const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0) {
+    if (!init_test_socket_env()) {
+        return 0;
+    }
+
+    const TestSocketHandle fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == kInvalidTestSocket) {
+        cleanup_test_socket_env();
         return 0;
     }
 
@@ -42,17 +83,20 @@ uint16_t find_free_port() {
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     addr.sin_port = htons(0);
     if (::bind(fd, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) != 0) {
-        ::close(fd);
+        close_test_socket(fd);
+        cleanup_test_socket_env();
         return 0;
     }
 
     socklen_t len = sizeof(addr);
     if (::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-        ::close(fd);
+        close_test_socket(fd);
+        cleanup_test_socket_env();
         return 0;
     }
     const uint16_t port = ntohs(addr.sin_port);
-    ::close(fd);
+    close_test_socket(fd);
+    cleanup_test_socket_env();
     return port;
 }
 
