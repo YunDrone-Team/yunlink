@@ -1,5 +1,4 @@
 #include <QApplication>
-#include <QTimer>
 
 #include <ros/ros.h>
 
@@ -14,9 +13,10 @@ int main(int argc, char** argv) {
     MainWindow window(&backend);
     window.show();
 
-    QTimer ros_timer;
-    QObject::connect(&ros_timer, &QTimer::timeout, []() { ros::spinOnce(); });
-    ros_timer.start(20);
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
 
-    return app.exec();
+    const int exit_code = app.exec();
+    spinner.stop();
+    return exit_code;
 }

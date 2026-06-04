@@ -39,6 +39,7 @@ struct Vector2f {
 
 struct HeaderSnapshot {
     std::string frame_id;
+    uint64_t stamp_ns = 0;
 };
 
 struct Quaternionf {

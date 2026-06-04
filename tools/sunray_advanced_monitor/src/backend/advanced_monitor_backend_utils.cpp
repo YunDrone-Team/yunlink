@@ -131,6 +131,7 @@ uint64_t AdvancedMonitorBackend::wall_time_ms() {
 void AdvancedMonitorBackend::update_yunlink(const std::string& key,
                                             std::unordered_map<std::string, std::string>&& values,
                                             std::string note,
+                                            uint64_t source_stamp_ns,
                                             uint64_t message_id,
                                             uint64_t created_at_ms,
                                             uint64_t session_id) {
@@ -141,11 +142,14 @@ void AdvancedMonitorBackend::update_yunlink(const std::string& key,
     }
     auto& snapshot = it->second.latest;
     snapshot.values = std::move(values);
+    snapshot.msg_stamp.fromNSec(source_stamp_ns);
     snapshot.receive_time = ros::Time::now();
     snapshot.note = std::move(note);
     snapshot.message_id = message_id;
     snapshot.created_at_ms = created_at_ms;
     snapshot.session_id = session_id;
+    refresh_source_dt_unlocked(key, it->second);
+    refresh_aligned_delay_unlocked(key, it->second);
 }
 
 void AdvancedMonitorBackend::log(MonitorLogLevel level,

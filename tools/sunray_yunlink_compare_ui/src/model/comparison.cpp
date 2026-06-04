@@ -27,6 +27,9 @@ bool equal_float(const std::string& lhs, const std::string& rhs, double eps) {
     try {
         const double lv = std::stod(lhs);
         const double rv = std::stod(rhs);
+        if (std::isnan(lv) || std::isnan(rv)) {
+            return std::isnan(lv) && std::isnan(rv);
+        }
         return std::fabs(lv - rv) <= eps;
     } catch (...) {
         return false;

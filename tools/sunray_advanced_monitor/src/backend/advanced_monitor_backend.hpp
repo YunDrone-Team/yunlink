@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -74,12 +75,15 @@ class AdvancedMonitorBackend {
     void on_control_state(const sunray_msgs::UAVControlState::ConstPtr& msg);
     void on_mavros_state(const mavros_msgs::State::ConstPtr& msg);
     void on_px4_state(const sunray_msgs::Px4State::ConstPtr& msg);
+    void refresh_source_dt_unlocked(const std::string& key, MonitorTopicState& topic) const;
+    void refresh_aligned_delay_unlocked(const std::string& key, MonitorTopicState& topic) const;
     void update_ros(const std::string& key,
                     std::unordered_map<std::string, std::string>&& values,
                     const ros::Time& stamp);
     void update_yunlink(const std::string& key,
                         std::unordered_map<std::string, std::string>&& values,
                         std::string note,
+                        uint64_t source_stamp_ns,
                         uint64_t message_id,
                         uint64_t created_at_ms,
                         uint64_t session_id);
@@ -95,8 +99,14 @@ class AdvancedMonitorBackend {
     void log(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     void log_throttle(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
 
+    struct RosStampRecord {
+        ros::Time msg_stamp;
+        ros::Time receive_time;
+    };
+
     mutable std::mutex mu_;
     std::unordered_map<std::string, MonitorTopicState> topics_;
+    std::unordered_map<std::string, std::deque<RosStampRecord>> ros_stamp_history_;
     std::vector<MonitorLogEntry> logs_;
     std::vector<MonitorCommandHistoryEntry> command_history_;
     std::unordered_map<std::string, ros::Time> throttled_logs_;

@@ -4,6 +4,12 @@
 
 namespace {
 
+constexpr size_t kRosStampHistoryLimit = 512;
+
+bool same_ros_time(const ros::Time& lhs, const ros::Time& rhs) {
+    return !lhs.isZero() && !rhs.isZero() && lhs.sec == rhs.sec && lhs.nsec == rhs.nsec;
+}
+
 std::string session_state_text(yunlink::SessionState state) {
     switch (state) {
     case yunlink::SessionState::kDiscovered:
@@ -30,6 +36,35 @@ std::string session_state_text(yunlink::SessionState state) {
 
 }  // namespace
 
+void AdvancedMonitorBackend::refresh_source_dt_unlocked(const std::string& key,
+                                                        MonitorTopicState& topic) const {
+    if (topic.ros_latest.msg_stamp.isZero() || topic.latest.msg_stamp.isZero()) {
+        topic.source_dt_ms = std::numeric_limits<double>::quiet_NaN();
+        return;
+    }
+    topic.source_dt_ms = (topic.ros_latest.msg_stamp - topic.latest.msg_stamp).toSec() * 1000.0;
+}
+
+void AdvancedMonitorBackend::refresh_aligned_delay_unlocked(const std::string& key,
+                                                            MonitorTopicState& topic) const {
+    topic.aligned_delay_ms = std::numeric_limits<double>::quiet_NaN();
+    if (topic.latest.msg_stamp.isZero() || topic.latest.receive_time.isZero()) {
+        return;
+    }
+    const auto history_it = ros_stamp_history_.find(key);
+    if (history_it == ros_stamp_history_.end()) {
+        return;
+    }
+    for (auto it = history_it->second.rbegin(); it != history_it->second.rend(); ++it) {
+        if (!same_ros_time(it->msg_stamp, topic.latest.msg_stamp)) {
+            continue;
+        }
+        const double delay_ms = (topic.latest.receive_time - it->receive_time).toSec() * 1000.0;
+        topic.aligned_delay_ms = std::max(0.0, delay_ms);
+        return;
+    }
+}
+
 void AdvancedMonitorBackend::on_local_odom(const nav_msgs::Odometry::ConstPtr& msg) {
     std::unordered_map<std::string, std::string> values;
     fill_local_odom_from_ros(*msg, values);
@@ -51,7 +86,7 @@ void AdvancedMonitorBackend::on_control_state(const sunray_msgs::UAVControlState
 void AdvancedMonitorBackend::on_mavros_state(const mavros_msgs::State::ConstPtr& msg) {
     std::unordered_map<std::string, std::string> values;
     fill_mavros_state_from_ros(*msg, values);
-    update_ros("mavros_state", std::move(values), ros::Time::now());
+    update_ros("mavros_state", std::move(values), msg->header.stamp);
 }
 
 void AdvancedMonitorBackend::on_px4_state(const sunray_msgs::Px4State::ConstPtr& msg) {
@@ -73,6 +108,19 @@ void AdvancedMonitorBackend::update_ros(const std::string& key,
     snapshot.msg_stamp = stamp;
     snapshot.receive_time = ros::Time::now();
     snapshot.note = "ros";
+    if (!stamp.isZero()) {
+        auto& history = ros_stamp_history_[key];
+        if (history.empty() || !same_ros_time(history.back().msg_stamp, stamp)) {
+            history.push_back(RosStampRecord{stamp, snapshot.receive_time});
+            while (history.size() > kRosStampHistoryLimit) {
+                history.pop_front();
+            }
+        } else {
+            history.back().receive_time = snapshot.receive_time;
+        }
+    }
+    refresh_source_dt_unlocked(key, it->second);
+    refresh_aligned_delay_unlocked(key, it->second);
 }
 
 void AdvancedMonitorBackend::on_reconnect_timer(const ros::TimerEvent&) {

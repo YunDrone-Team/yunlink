@@ -27,10 +27,11 @@ inline bool valid_bulk_channel_state(uint8_t value) {
 
 inline void write_header(BufferWriter& writer, const HeaderSnapshot& value) {
     writer.write_string(value.frame_id);
+    writer.write_u64(value.stamp_ns);
 }
 
 inline bool read_header(BufferReader& reader, HeaderSnapshot* out) {
-    return reader.read_string(&out->frame_id);
+    return reader.read_string(&out->frame_id) && reader.read_u64(&out->stamp_ns);
 }
 
 inline void write_vec2(BufferWriter& writer, const Vector2f& value) {

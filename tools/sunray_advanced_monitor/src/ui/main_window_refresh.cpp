@@ -154,22 +154,35 @@ void MainWindow::refresh_topic(const std::string& key, const MonitorTopicState& 
                                          : (yn_has_data ? std::string("--") : std::string("WAIT"));
         const std::string ros_display = normalize_topic_value(ros_value);
         const std::string yn_display = normalize_topic_value(yn_value);
-        std::string result = "WAIT";
-        if (ros_fresh && yn_fresh) {
-            result = monitor_compare_result(key, field.key, topic.ros_latest, topic.latest);
+        MonitorCompareResult outcome;
+        if (!ros_has_data || !yn_has_data || ros_it == topic.ros_latest.values.end() ||
+            yn_it == topic.latest.values.end()) {
+            outcome = {};
+        } else if (!ros_fresh || !yn_fresh) {
+            outcome = monitor_stale_result(topic.ros_latest, topic.latest, timeout_sec);
+        } else {
+            outcome =
+                monitor_compare_result(
+                    key, field.key, topic.ros_latest, topic.latest, topic.source_dt_ms, topic.aligned_delay_ms);
         }
 
         set_item(table, row, 0, field.label);
         auto* ros_item = set_item(table, row, 1, ros_display);
         auto* yn_item = set_item(table, row, 2, yn_display);
-        auto* result_item = set_item(table, row, 3, result);
+        auto* result_item = set_item(table, row, 3, outcome.text);
 
-        QColor bg(252, 248, 227);
-        QColor fg(122, 95, 25);
-        if (result == "OK") {
+        QColor bg(240, 243, 245);
+        QColor fg(98, 107, 115);
+        if (outcome.level == MonitorCompareLevel::kNormal) {
             bg = QColor(226, 245, 234);
             fg = QColor(26, 95, 56);
-        } else if (result == "DIFF") {
+        } else if (outcome.level == MonitorCompareLevel::kAttention) {
+            bg = QColor(255, 244, 208);
+            fg = QColor(128, 94, 24);
+        } else if (outcome.level == MonitorCompareLevel::kValueError ||
+                   outcome.level == MonitorCompareLevel::kTimingError ||
+                   outcome.level == MonitorCompareLevel::kStale ||
+                   outcome.level == MonitorCompareLevel::kLargeDelay) {
             bg = QColor(251, 228, 228);
             fg = QColor(142, 32, 32);
         }

@@ -16,13 +16,13 @@ MainWindow::MainWindow(AdvancedMonitorBackend* backend, QWidget* parent)
 
     auto* timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::refresh_view);
-    timer->start(250);
+    timer->start(500);
 }
 
 QTableWidget* MainWindow::create_topic_table(QWidget* parent) {
     auto* table = new QTableWidget(parent);
     table->setColumnCount(4);
-    table->setHorizontalHeaderLabels({"字段说明", "ROS 最新值", "YunLink 最新值", "结果"});
+    table->setHorizontalHeaderLabels({"字段说明", "ROS 最新值", "YunLink 最新值", "时差/异常"});
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setSelectionMode(QAbstractItemView::SingleSelection);

@@ -13,6 +13,7 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            std::move(values),
                            "session=" + std::to_string(message.envelope.session_id) +
                                " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
@@ -26,6 +27,7 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            std::move(values),
                            "session=" + std::to_string(message.envelope.session_id) +
                                " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
@@ -39,6 +41,7 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            std::move(values),
                            "session=" + std::to_string(message.envelope.session_id) +
                                " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
@@ -53,6 +56,7 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            std::move(values),
                            "session=" + std::to_string(message.envelope.session_id) +
                                " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
@@ -66,6 +70,7 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            std::move(values),
                            "session=" + std::to_string(message.envelope.session_id) +
                                " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
@@ -75,16 +80,18 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
 }
 
 void AdvancedMonitorBackend::bind_ros_subscribers() {
-    local_odom_sub_ =
-        nh_.subscribe(topics_["local_odom"].ros_topic, 20, &AdvancedMonitorBackend::on_local_odom, this);
+    ros::TransportHints latest_hints;
+    latest_hints.tcpNoDelay();
+    local_odom_sub_ = nh_.subscribe(
+        topics_["local_odom"].ros_topic, 1, &AdvancedMonitorBackend::on_local_odom, this, latest_hints);
     odom_state_sub_ =
-        nh_.subscribe(topics_["odom_state"].ros_topic, 20, &AdvancedMonitorBackend::on_odom_state, this);
+        nh_.subscribe(topics_["odom_state"].ros_topic, 1, &AdvancedMonitorBackend::on_odom_state, this, latest_hints);
     control_state_sub_ = nh_.subscribe(
-        topics_["uav_control_state"].ros_topic, 20, &AdvancedMonitorBackend::on_control_state, this);
+        topics_["uav_control_state"].ros_topic, 1, &AdvancedMonitorBackend::on_control_state, this, latest_hints);
     mavros_state_sub_ =
-        nh_.subscribe(topics_["mavros_state"].ros_topic, 20, &AdvancedMonitorBackend::on_mavros_state, this);
+        nh_.subscribe(topics_["mavros_state"].ros_topic, 1, &AdvancedMonitorBackend::on_mavros_state, this, latest_hints);
     px4_state_sub_ =
-        nh_.subscribe(topics_["px4_state"].ros_topic, 20, &AdvancedMonitorBackend::on_px4_state, this);
+        nh_.subscribe(topics_["px4_state"].ros_topic, 1, &AdvancedMonitorBackend::on_px4_state, this, latest_hints);
     log(MonitorLogLevel::kInfo, MonitorLogSource::kRuntime, "ROS 原始话题订阅器已就绪");
 }
 

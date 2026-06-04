@@ -2,6 +2,7 @@
 #define SUNRAY_ADVANCED_MONITOR_MODEL_MONITOR_TOPICS_HPP
 
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -31,6 +32,8 @@ struct MonitorTopicState {
     std::vector<MonitorFieldDef> rows;
     MonitorTopicSnapshot ros_latest;
     MonitorTopicSnapshot latest;
+    double source_dt_ms{std::numeric_limits<double>::quiet_NaN()};
+    double aligned_delay_ms{std::numeric_limits<double>::quiet_NaN()};
 };
 
 std::unordered_map<std::string, MonitorTopicState> make_default_monitor_topics();
