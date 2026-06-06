@@ -81,6 +81,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/envelope_stream_parser.cpp
   src/core/semantic_messages_session_authority.cpp
   src/core/semantic_messages_command.cpp
+  src/core/semantic_messages_system_service.cpp
   src/core/state/semantic_messages_state_bulk_core.cpp
   src/core/state/semantic_messages_state_bulk_extended.cpp
   src/core/state/semantic_messages_state_snapshots_core.cpp
@@ -97,6 +98,8 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/core/dispatch.cpp
   src/runtime/core/lifecycle.cpp
   src/runtime/core/security.cpp
+  src/runtime/system_service/publish.cpp
+  src/runtime/system_service/receive.cpp
   src/runtime/session/session.cpp
   src/runtime/state/fanout.cpp
   src/runtime/state/publish.cpp
@@ -257,6 +260,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_external_command_handling tests/runtime/test_external_command_handling.cpp)
   target_link_libraries(test_external_command_handling PRIVATE yunlink)
   add_test(NAME test_external_command_handling COMMAND test_external_command_handling)
+
+  add_executable(test_system_service_runtime tests/runtime/test_system_service_runtime.cpp)
+  target_link_libraries(test_system_service_runtime PRIVATE yunlink)
+  add_test(NAME test_system_service_runtime COMMAND test_system_service_runtime)
 
   add_executable(test_command_result_edges tests/runtime/test_command_result_edges.cpp)
   target_link_libraries(test_command_result_edges PRIVATE yunlink)

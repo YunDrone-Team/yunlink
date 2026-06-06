@@ -5,6 +5,7 @@
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSplitter>
@@ -29,13 +30,15 @@ void MainWindow::build_ui() {
     auto* main_splitter = new QSplitter(Qt::Vertical, central);
     main_splitter->addWidget(top_splitter);
     main_splitter->addWidget(build_command_history_panel(main_splitter));
+    main_splitter->addWidget(build_system_service_panel(main_splitter));
     main_splitter->addWidget(build_topics_panel(main_splitter));
     main_splitter->addWidget(build_log_panel(main_splitter));
     main_splitter->setStretchFactor(0, 0);
     main_splitter->setStretchFactor(1, 1);
-    main_splitter->setStretchFactor(2, 4);
-    main_splitter->setStretchFactor(3, 2);
-    main_splitter->setSizes({220, 180, 520, 220});
+    main_splitter->setStretchFactor(2, 2);
+    main_splitter->setStretchFactor(3, 4);
+    main_splitter->setStretchFactor(4, 2);
+    main_splitter->setSizes({220, 180, 260, 520, 220});
 
     layout->addWidget(main_splitter, 1);
 
@@ -168,9 +171,9 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
     layout->setSpacing(8);
 
     command_history_table_ = new QTableWidget(group);
-    command_history_table_->setColumnCount(7);
+    command_history_table_->setColumnCount(6);
     command_history_table_->setHorizontalHeaderLabels(
-        {"时间", "命令", "状态", "Session", "Message ID", "回执", "接纳依据"});
+        {"时间", "命令", "状态", "Session", "Message ID", "回执"});
     command_history_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     command_history_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     command_history_table_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -182,7 +185,6 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
     command_history_table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     command_history_table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
     command_history_table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
     command_history_table_->setWordWrap(false);
     layout->addWidget(command_history_table_);
     return group;

@@ -83,6 +83,49 @@ void EventSubscriber::unsubscribe(size_t token) {
         runtime_->unsubscribe_semantic(token);
 }
 
+SystemServiceSubscriber::SystemServiceSubscriber(Runtime* runtime) : runtime_(runtime) {}
+void SystemServiceSubscriber::bind(Runtime* runtime) {
+    runtime_ = runtime;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_list_requests(FeatureListRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_list_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_list_responses(FeatureListResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_list_response_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_get_requests(FeatureGetRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_get_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_get_responses(FeatureGetResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_get_response_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_start_requests(FeatureStartRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_start_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_start_responses(FeatureStartResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_start_response_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_stop_requests(FeatureStopRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_stop_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_feature_stop_responses(FeatureStopResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_feature_stop_response_internal(std::move(cb)) : 0;
+}
+
+void SystemServiceSubscriber::unsubscribe(size_t token) {
+    if (runtime_) {
+        runtime_->unsubscribe_semantic(token);
+    }
+}
+
 CommandSubscriber::CommandSubscriber(Runtime* runtime) : runtime_(runtime) {}
 void CommandSubscriber::bind(Runtime* runtime) {
     runtime_ = runtime;

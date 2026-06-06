@@ -18,6 +18,8 @@ std::string source_label(MonitorLogSource source) {
         return "Runtime";
     case MonitorLogSource::kSession:
         return "Session";
+    case MonitorLogSource::kSystemService:
+        return "SystemService";
     }
     return "Runtime";
 }
@@ -44,8 +46,6 @@ std::string command_lifecycle_label(MonitorCommandLifecycle lifecycle) {
         return "SENT";
     case MonitorCommandLifecycle::kReceived:
         return "RECEIVED";
-    case MonitorCommandLifecycle::kApplied:
-        return "APPLIED";
     case MonitorCommandLifecycle::kTimeout:
         return "TIMEOUT";
     }

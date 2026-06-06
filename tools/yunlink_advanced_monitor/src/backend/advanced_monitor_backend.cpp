@@ -23,6 +23,7 @@ AdvancedMonitorBackend::AdvancedMonitorBackend(Config config)
     bind_runtime_diagnostics();
     bind_yunlink_subscribers();
     bind_command_feedback();
+    bind_system_service_feedback();
 }
 
 AdvancedMonitorBackend::~AdvancedMonitorBackend() {
@@ -34,6 +35,18 @@ AdvancedMonitorBackend::~AdvancedMonitorBackend() {
     }
     if (authority_status_token_ != 0) {
         runtime_.event_subscriber().unsubscribe(authority_status_token_);
+    }
+    if (feature_list_response_token_ != 0) {
+        runtime_.system_service_subscriber().unsubscribe(feature_list_response_token_);
+    }
+    if (feature_get_response_token_ != 0) {
+        runtime_.system_service_subscriber().unsubscribe(feature_get_response_token_);
+    }
+    if (feature_start_response_token_ != 0) {
+        runtime_.system_service_subscriber().unsubscribe(feature_start_response_token_);
+    }
+    if (feature_stop_response_token_ != 0) {
+        runtime_.system_service_subscriber().unsubscribe(feature_stop_response_token_);
     }
     if (link_token_ != 0) {
         runtime_.event_bus().unsubscribe(link_token_);
@@ -62,6 +75,17 @@ std::vector<MonitorLogEntry> AdvancedMonitorBackend::snapshot_logs() const {
 std::vector<MonitorCommandHistoryEntry> AdvancedMonitorBackend::snapshot_command_history() const {
     std::lock_guard<std::mutex> lock(mu_);
     return command_history_;
+}
+
+MonitorSystemServiceState AdvancedMonitorBackend::snapshot_system_services() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return system_services_;
+}
+
+std::vector<MonitorSystemServiceHistoryEntry>
+AdvancedMonitorBackend::snapshot_system_service_history() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return system_service_history_;
 }
 
 bool AdvancedMonitorBackend::can_send_commands() const {

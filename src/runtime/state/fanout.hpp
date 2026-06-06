@@ -33,6 +33,29 @@ bool runtime_fanout_snapshot(std::mutex& mu,
     return true;
 }
 
+template <typename Payload, typename HandlerMap>
+bool runtime_fanout_inbound_request(std::mutex& mu,
+                                    const EnvelopeEvent& ev,
+                                    const ByteBuffer& bytes,
+                                    const HandlerMap& source_handlers) {
+    Payload payload{};
+    if (!decode_typed_payload(bytes, &payload)) {
+        return false;
+    }
+    InboundSystemServiceRequestView<Payload> view{ev, payload};
+    HandlerMap handlers;
+    {
+        std::lock_guard<std::mutex> lock(mu);
+        handlers = source_handlers;
+    }
+    for (const auto& item : handlers) {
+        if (item.second) {
+            item.second(view);
+        }
+    }
+    return true;
+}
+
 void runtime_publish_semantic_decode_error(EventBus& bus, const EnvelopeEvent& ev);
 
 }  // namespace yunlink

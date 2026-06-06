@@ -36,6 +36,7 @@ void MainWindow::refresh_view() {
     refresh_status();
     refresh_command_controls();
     refresh_command_history();
+    refresh_system_services();
     refresh_topics();
     refresh_logs();
 }
@@ -67,18 +68,30 @@ void MainWindow::refresh_command_controls() {
         return;
     }
 
-    const bool ready = backend_->can_send_commands();
+    const auto snapshot = backend_->snapshot_connection();
+    const bool session_ready =
+        snapshot.runtime_started && snapshot.peer_ready && snapshot.session_id != 0;
+    const bool authority_ready = backend_->can_send_commands();
     if (takeoff_button_ != nullptr) {
-        takeoff_button_->setEnabled(true);
-        land_button_->setEnabled(true);
-        return_button_->setEnabled(true);
-        point_button_->setEnabled(true);
-        velocity_button_->setEnabled(true);
+        takeoff_button_->setEnabled(session_ready);
+        land_button_->setEnabled(session_ready);
+        return_button_->setEnabled(session_ready);
+        point_button_->setEnabled(session_ready);
+        velocity_button_->setEnabled(session_ready);
+    }
+
+    if (!session_ready) {
+        command_hint_label_->setText("当前尚未拿到 active session，按钮已禁用。");
+        return;
+    }
+
+    if (authority_ready) {
+        command_hint_label_->setText("当前 session 与 authority 已就绪，按钮会直接下发 YunLink command。");
+        return;
     }
 
     command_hint_label_->setText(
-        ready ? "当前 session 与 authority 已就绪，按钮会真实下发 YunLink command。"
-              : "当前尚未拿到可发送状态，monitor 会继续等待会话与 authority。");
+        "当前 session 已就绪，按钮会直接下发 YunLink command；authority 是否接纳请看状态栏和命令回执。");
 }
 
 void MainWindow::refresh_command_history() {
@@ -110,10 +123,6 @@ void MainWindow::refresh_command_history() {
             result += "\n" + entry.result_detail;
         }
         set_item(command_history_table_, row, 5, result);
-        set_item(command_history_table_,
-                 row,
-                 6,
-                 entry.applied_detail.empty() ? std::string("--") : entry.applied_detail);
     }
 }
 

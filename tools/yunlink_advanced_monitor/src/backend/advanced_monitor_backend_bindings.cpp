@@ -59,7 +59,6 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
-            apply_uav_control_state_history(message.payload);
         }));
 
     state_sub_tokens_.push_back(runtime_.state_subscriber().subscribe_px4_state(

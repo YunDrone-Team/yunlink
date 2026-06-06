@@ -4,16 +4,19 @@
 #include <cstdint>
 
 #include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QDoubleSpinBox>
 #include <QTableWidget>
+#include <QCheckBox>
 
 #include "backend/advanced_monitor_backend.hpp"
 #include "model/command_model.hpp"
 #include "common/monitor_format.hpp"
 #include "model/monitor_topics.hpp"
+#include "model/system_service_model.hpp"
 
 class MainWindow : public QMainWindow {
   public:
@@ -24,12 +27,14 @@ class MainWindow : public QMainWindow {
     QWidget* build_status_panel(QWidget* parent);
     QWidget* build_command_panel(QWidget* parent);
     QWidget* build_command_history_panel(QWidget* parent);
+    QWidget* build_system_service_panel(QWidget* parent);
     QWidget* build_topics_panel(QWidget* parent);
     QWidget* build_log_panel(QWidget* parent);
     void refresh_view();
     void refresh_status();
     void refresh_command_controls();
     void refresh_command_history();
+    void refresh_system_services();
     void refresh_topics();
     void refresh_topic(const std::string& key, const MonitorTopicState& topic);
     void refresh_logs();
@@ -46,6 +51,10 @@ class MainWindow : public QMainWindow {
     void stage_return();
     void stage_move_point();
     void stage_move_velocity();
+    void stage_refresh_feature_list();
+    void stage_refresh_feature_detail();
+    void stage_start_feature();
+    void stage_stop_feature();
 
     AdvancedMonitorBackend* backend_{nullptr};
     QLabel* status_value_{nullptr};
@@ -58,6 +67,14 @@ class MainWindow : public QMainWindow {
     QLabel* error_value_{nullptr};
     QLabel* command_hint_label_{nullptr};
     QTableWidget* command_history_table_{nullptr};
+    QTableWidget* system_service_history_table_{nullptr};
+    QPlainTextEdit* feature_list_text_{nullptr};
+    QPlainTextEdit* feature_detail_text_{nullptr};
+    QLineEdit* feature_override_args_edit_{nullptr};
+    QLineEdit* feature_name_edit_{nullptr};
+    QCheckBox* feature_restart_checkbox_{nullptr};
+    QCheckBox* feature_terminal_checkbox_{nullptr};
+    QCheckBox* feature_force_stop_checkbox_{nullptr};
     std::unordered_map<std::string, QTableWidget*> topic_tables_;
     QPlainTextEdit* logs_{nullptr};
     QPushButton* reconnect_button_{nullptr};
@@ -67,6 +84,10 @@ class MainWindow : public QMainWindow {
     QPushButton* return_button_{nullptr};
     QPushButton* point_button_{nullptr};
     QPushButton* velocity_button_{nullptr};
+    QPushButton* refresh_feature_list_button_{nullptr};
+    QPushButton* refresh_feature_detail_button_{nullptr};
+    QPushButton* start_feature_button_{nullptr};
+    QPushButton* stop_feature_button_{nullptr};
     QDoubleSpinBox* takeoff_height_spin_{nullptr};
     QDoubleSpinBox* takeoff_velocity_spin_{nullptr};
     QDoubleSpinBox* land_velocity_spin_{nullptr};

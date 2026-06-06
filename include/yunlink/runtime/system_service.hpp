@@ -1,0 +1,103 @@
+/**
+ * @file include/yunlink/runtime/system_service.hpp
+ * @brief Runtime system service publish and subscription facades.
+ */
+
+#ifndef YUNLINK_RUNTIME_SYSTEM_SERVICE_HPP
+#define YUNLINK_RUNTIME_SYSTEM_SERVICE_HPP
+
+#include <cstddef>
+#include <functional>
+#include <string>
+
+#include "yunlink/core/semantic_messages.hpp"
+
+namespace yunlink {
+
+class Runtime;
+
+template <typename T> struct InboundSystemServiceRequestView {
+    EnvelopeEvent inbound;
+    T payload;
+};
+
+class SystemServicePublisher {
+  public:
+    explicit SystemServicePublisher(Runtime* runtime = nullptr);
+
+    ErrorCode publish_feature_list_request(const std::string& peer_id,
+                                           uint64_t session_id,
+                                           const TargetSelector& target,
+                                           const FeatureListRequest& payload,
+                                           SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_feature_get_request(const std::string& peer_id,
+                                          uint64_t session_id,
+                                          const TargetSelector& target,
+                                          const FeatureGetRequest& payload,
+                                          SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_feature_start_request(const std::string& peer_id,
+                                            uint64_t session_id,
+                                            const TargetSelector& target,
+                                            const FeatureStartRequest& payload,
+                                            SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_feature_stop_request(const std::string& peer_id,
+                                           uint64_t session_id,
+                                           const TargetSelector& target,
+                                           const FeatureStopRequest& payload,
+                                           SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_feature_list_response(const EnvelopeEvent& inbound,
+                                            const FeatureListResponse& payload,
+                                            uint32_t ttl_ms = 3000);
+    ErrorCode publish_feature_get_response(const EnvelopeEvent& inbound,
+                                           const FeatureGetResponse& payload,
+                                           uint32_t ttl_ms = 3000);
+    ErrorCode publish_feature_start_response(const EnvelopeEvent& inbound,
+                                             const FeatureStartResponse& payload,
+                                             uint32_t ttl_ms = 3000);
+    ErrorCode publish_feature_stop_response(const EnvelopeEvent& inbound,
+                                            const FeatureStopResponse& payload,
+                                            uint32_t ttl_ms = 3000);
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
+class SystemServiceSubscriber {
+  public:
+    using FeatureListRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<FeatureListRequest>&)>;
+    using FeatureListResponseHandler =
+        std::function<void(const TypedMessage<FeatureListResponse>&)>;
+    using FeatureGetRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<FeatureGetRequest>&)>;
+    using FeatureGetResponseHandler = std::function<void(const TypedMessage<FeatureGetResponse>&)>;
+    using FeatureStartRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<FeatureStartRequest>&)>;
+    using FeatureStartResponseHandler =
+        std::function<void(const TypedMessage<FeatureStartResponse>&)>;
+    using FeatureStopRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<FeatureStopRequest>&)>;
+    using FeatureStopResponseHandler =
+        std::function<void(const TypedMessage<FeatureStopResponse>&)>;
+
+    explicit SystemServiceSubscriber(Runtime* runtime = nullptr);
+
+    size_t subscribe_feature_list_requests(FeatureListRequestHandler cb);
+    size_t subscribe_feature_list_responses(FeatureListResponseHandler cb);
+    size_t subscribe_feature_get_requests(FeatureGetRequestHandler cb);
+    size_t subscribe_feature_get_responses(FeatureGetResponseHandler cb);
+    size_t subscribe_feature_start_requests(FeatureStartRequestHandler cb);
+    size_t subscribe_feature_start_responses(FeatureStartResponseHandler cb);
+    size_t subscribe_feature_stop_requests(FeatureStopRequestHandler cb);
+    size_t subscribe_feature_stop_responses(FeatureStopResponseHandler cb);
+    void unsubscribe(size_t token);
+    void bind(Runtime* runtime);
+
+  private:
+    Runtime* runtime_ = nullptr;
+};
+
+}  // namespace yunlink
+
+#endif  // YUNLINK_RUNTIME_SYSTEM_SERVICE_HPP

@@ -34,6 +34,7 @@ void AdvancedMonitorBackend::poll_runtime() {
     }
 
     refresh_command_timeouts(wall_time_ms());
+    refresh_system_service_timeouts(wall_time_ms());
 
     if (peer_ready_) {
         yunlink::SessionDescriptor desc{};
@@ -145,4 +146,9 @@ void AdvancedMonitorBackend::poll_runtime() {
         "已连接 YunLink 对端，peer_id=" + peer_id + "，session_id=" +
             std::to_string(session_id));
     request_command_authority_if_needed();
+}
+
+yunlink::TargetSelector AdvancedMonitorBackend::system_service_target() const {
+    return yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav,
+                                               static_cast<uint32_t>(std::max(agent_id_, 0)));
 }

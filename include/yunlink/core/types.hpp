@@ -72,6 +72,7 @@ enum class MessageFamily : uint8_t {
     kStateSnapshot = 5,
     kStateEvent = 6,
     kBulkChannelDescriptor = 7,
+    kSystemService = 8,
 };
 
 enum class QosClass : uint8_t {

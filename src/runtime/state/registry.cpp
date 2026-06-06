@@ -150,6 +150,70 @@ size_t Runtime::subscribe_authority_status_internal(EventSubscriber::AuthoritySt
     return token;
 }
 
+size_t Runtime::subscribe_feature_list_request_internal(
+    SystemServiceSubscriber::FeatureListRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_list_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_list_response_internal(
+    SystemServiceSubscriber::FeatureListResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_list_response_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_get_request_internal(
+    SystemServiceSubscriber::FeatureGetRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_get_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_get_response_internal(
+    SystemServiceSubscriber::FeatureGetResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_get_response_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_start_request_internal(
+    SystemServiceSubscriber::FeatureStartRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_start_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_start_response_internal(
+    SystemServiceSubscriber::FeatureStartResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_start_response_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_stop_request_internal(
+    SystemServiceSubscriber::FeatureStopRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_stop_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_feature_stop_response_internal(
+    SystemServiceSubscriber::FeatureStopResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->feature_stop_response_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_bulk_channel_descriptor_internal(
     EventSubscriber::BulkChannelDescriptorHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
@@ -180,6 +244,14 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->vehicle_event_handlers.erase(token);
     impl_->command_result_handlers.erase(token);
     impl_->authority_status_handlers.erase(token);
+    impl_->feature_list_request_handlers.erase(token);
+    impl_->feature_list_response_handlers.erase(token);
+    impl_->feature_get_request_handlers.erase(token);
+    impl_->feature_get_response_handlers.erase(token);
+    impl_->feature_start_request_handlers.erase(token);
+    impl_->feature_start_response_handlers.erase(token);
+    impl_->feature_stop_request_handlers.erase(token);
+    impl_->feature_stop_response_handlers.erase(token);
     impl_->bulk_channel_descriptor_handlers.erase(token);
 }
 

@@ -158,5 +158,100 @@ int main() {
         return 11;
     }
 
+    yunlink::FeatureListResponse feature_list{};
+    feature_list.success = true;
+    feature_list.message = "ok";
+    feature_list.feature_names = {"single_uav_basic", "mapping"};
+    const auto feature_list_bytes = yunlink::encode_payload(feature_list);
+    yunlink::FeatureListResponse feature_list_decoded{};
+    if (!yunlink::decode_typed_payload(feature_list_bytes, &feature_list_decoded) ||
+        !feature_list_decoded.success || feature_list_decoded.feature_names.size() != 2 ||
+        feature_list_decoded.feature_names[1] != "mapping") {
+        std::cerr << "feature list roundtrip failed\n";
+        return 12;
+    }
+
+    yunlink::FeatureGetResponse feature_get{};
+    feature_get.success = true;
+    feature_get.message = "ok";
+    feature_get.name = "single_uav_basic";
+    feature_get.group = "单机无人机";
+    feature_get.running = true;
+    feature_get.description = "desc";
+    feature_get.auto_start = false;
+    feature_get.depends_on = {"localization"};
+    feature_get.stop_timeout_sec = 8.0F;
+    feature_get.start_preview_units = {"localization", "uav_control"};
+    feature_get.start_preview_commands = {"roslaunch a", "roslaunch b"};
+    const auto feature_get_bytes = yunlink::encode_payload(feature_get);
+    yunlink::FeatureGetResponse feature_get_decoded{};
+    if (!yunlink::decode_typed_payload(feature_get_bytes, &feature_get_decoded) ||
+        !feature_get_decoded.success || !feature_get_decoded.running ||
+        feature_get_decoded.name != feature_get.name ||
+        feature_get_decoded.depends_on.size() != 1 ||
+        feature_get_decoded.start_preview_commands.size() != 2) {
+        std::cerr << "feature get roundtrip failed\n";
+        return 13;
+    }
+
+    yunlink::FeatureStartRequest feature_start_request{};
+    feature_start_request.feature_name = "single_uav_basic";
+    feature_start_request.override_args = {"use_sim:=true", "vehicle:=uav1"};
+    feature_start_request.restart_if_running = true;
+    feature_start_request.start_with_terminal = false;
+    const auto feature_start_request_bytes = yunlink::encode_payload(feature_start_request);
+    yunlink::FeatureStartRequest feature_start_request_decoded{};
+    if (!yunlink::decode_typed_payload(feature_start_request_bytes,
+                                       &feature_start_request_decoded) ||
+        feature_start_request_decoded.feature_name != feature_start_request.feature_name ||
+        feature_start_request_decoded.override_args.size() != 2 ||
+        !feature_start_request_decoded.restart_if_running ||
+        feature_start_request_decoded.start_with_terminal) {
+        std::cerr << "feature start request roundtrip failed\n";
+        return 14;
+    }
+
+    yunlink::FeatureStartResponse feature_start_response{};
+    feature_start_response.success = true;
+    feature_start_response.message = "feature started";
+    feature_start_response.feature_name = "single_uav_basic";
+    const auto feature_start_response_bytes = yunlink::encode_payload(feature_start_response);
+    yunlink::FeatureStartResponse feature_start_response_decoded{};
+    if (!yunlink::decode_typed_payload(feature_start_response_bytes,
+                                       &feature_start_response_decoded) ||
+        !feature_start_response_decoded.success ||
+        feature_start_response_decoded.message != feature_start_response.message ||
+        feature_start_response_decoded.feature_name != feature_start_response.feature_name) {
+        std::cerr << "feature start response roundtrip failed\n";
+        return 15;
+    }
+
+    yunlink::FeatureStopRequest feature_stop_request{};
+    feature_stop_request.feature_name = "single_uav_basic";
+    feature_stop_request.force = true;
+    const auto feature_stop_request_bytes = yunlink::encode_payload(feature_stop_request);
+    yunlink::FeatureStopRequest feature_stop_request_decoded{};
+    if (!yunlink::decode_typed_payload(feature_stop_request_bytes, &feature_stop_request_decoded) ||
+        feature_stop_request_decoded.feature_name != feature_stop_request.feature_name ||
+        !feature_stop_request_decoded.force) {
+        std::cerr << "feature stop request roundtrip failed\n";
+        return 16;
+    }
+
+    yunlink::FeatureStopResponse feature_stop_response{};
+    feature_stop_response.success = false;
+    feature_stop_response.message = "feature stop failed";
+    feature_stop_response.feature_name = "single_uav_basic";
+    const auto feature_stop_response_bytes = yunlink::encode_payload(feature_stop_response);
+    yunlink::FeatureStopResponse feature_stop_response_decoded{};
+    if (!yunlink::decode_typed_payload(feature_stop_response_bytes,
+                                       &feature_stop_response_decoded) ||
+        feature_stop_response_decoded.success ||
+        feature_stop_response_decoded.message != feature_stop_response.message ||
+        feature_stop_response_decoded.feature_name != feature_stop_response.feature_name) {
+        std::cerr << "feature stop response roundtrip failed\n";
+        return 17;
+    }
+
     return 0;
 }

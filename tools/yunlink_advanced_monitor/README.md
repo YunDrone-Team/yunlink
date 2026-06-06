@@ -31,7 +31,7 @@
   - `MOVE_POINT`
   - `MOVE_VELOCITY`
 - 命令历史
-  - 发送时间、命令、状态、session、message id、回执、接纳依据
+  - 发送时间、命令、状态、session、message id、回执
 - YunLink 状态页签
   - `local_odom`
   - `odom_state`
@@ -53,13 +53,9 @@
 - `SENT`
   - monitor 已经把 YunLink command 发出
 - `RECEIVED`
-  - 已收到 command result
-- `APPLIED`
-  - `uav_control_state.last_cmd` 表明机端已经锁存该命令
+  - 已收到 YunLink command result
 - `TIMEOUT`
-  - monitor 在超时时间内没有等到进一步确认
-
-`APPLIED` 只表示机端已接纳命令，不等于动作已经完成。
+  - monitor 在超时时间内没有等到 YunLink command result
 
 ## 构建依赖
 

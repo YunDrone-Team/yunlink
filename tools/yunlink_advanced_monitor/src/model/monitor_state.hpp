@@ -16,6 +16,7 @@ enum class MonitorLogLevel {
 enum class MonitorLogSource {
     kRuntime,
     kSession,
+    kSystemService,
 };
 
 struct MonitorLogEntry {
@@ -51,7 +52,6 @@ struct MonitorConnectionSnapshot {
 enum class MonitorCommandLifecycle {
     kSent,
     kReceived,
-    kApplied,
     kTimeout,
 };
 
@@ -67,7 +67,6 @@ struct MonitorCommandHistoryEntry {
     std::string detail;
     std::string result_phase;
     std::string result_detail;
-    std::string applied_detail;
 };
 
 std::string level_label(MonitorLogLevel level);

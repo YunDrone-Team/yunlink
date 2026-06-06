@@ -146,6 +146,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
     case MessageFamily::kBulkChannelDescriptor:
         handle_bulk_channel_descriptor_envelope(ev);
         return;
+    case MessageFamily::kSystemService:
+        handle_system_service_envelope(ev);
+        return;
     }
 }
 

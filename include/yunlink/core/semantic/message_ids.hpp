@@ -53,6 +53,17 @@ enum class BulkDescriptorType : uint16_t {
     kDescriptor = 1,
 };
 
+enum class SystemServiceType : uint16_t {
+    kFeatureListRequest = 1,
+    kFeatureListResponse = 2,
+    kFeatureGetRequest = 3,
+    kFeatureGetResponse = 4,
+    kFeatureStartRequest = 5,
+    kFeatureStartResponse = 6,
+    kFeatureStopRequest = 7,
+    kFeatureStopResponse = 8,
+};
+
 enum class CommandKind : uint16_t {
     kUnknown = 0,
     kTakeoff = 1,

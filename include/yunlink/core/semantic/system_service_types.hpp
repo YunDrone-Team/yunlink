@@ -1,0 +1,78 @@
+/**
+ * @file include/yunlink/core/semantic/system_service_types.hpp
+ * @brief Semantic system service payload models.
+ */
+
+#ifndef YUNLINK_CORE_SEMANTIC_SYSTEM_SERVICE_TYPES_HPP
+#define YUNLINK_CORE_SEMANTIC_SYSTEM_SERVICE_TYPES_HPP
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "yunlink/core/types.hpp"
+
+namespace yunlink {
+
+struct FeatureListRequest {
+    uint8_t reserved = 0;
+};
+
+struct FeatureListResponse {
+    bool success = false;
+    std::string message;
+    std::vector<std::string> feature_names;
+};
+
+struct FeatureGetRequest {
+    std::string feature_name;
+};
+
+struct FeatureGetResponse {
+    bool success = false;
+    std::string message;
+    std::string name;
+    std::string group;
+    bool running = false;
+    std::string description;
+    bool auto_start = false;
+    std::vector<std::string> depends_on;
+    float stop_timeout_sec = 0.0F;
+    std::vector<std::string> start_preview_units;
+    std::vector<std::string> start_preview_commands;
+};
+
+struct FeatureStartRequest {
+    std::string feature_name;
+    std::vector<std::string> override_args;
+    bool restart_if_running = false;
+    bool start_with_terminal = false;
+};
+
+struct FeatureStartResponse {
+    bool success = false;
+    std::string message;
+    std::string feature_name;
+};
+
+struct FeatureStopRequest {
+    std::string feature_name;
+    bool force = false;
+};
+
+struct FeatureStopResponse {
+    bool success = false;
+    std::string message;
+    std::string feature_name;
+};
+
+struct SystemServiceHandle {
+    uint64_t session_id = 0;
+    uint64_t message_id = 0;
+    uint64_t correlation_id = 0;
+    TargetSelector target;
+};
+
+}  // namespace yunlink
+
+#endif  // YUNLINK_CORE_SEMANTIC_SYSTEM_SERVICE_TYPES_HPP

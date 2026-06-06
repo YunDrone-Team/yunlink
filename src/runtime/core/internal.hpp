@@ -55,6 +55,22 @@ struct Runtime::Impl {
     std::unordered_map<size_t, EventSubscriber::VehicleEventHandler> vehicle_event_handlers;
     std::unordered_map<size_t, EventSubscriber::CommandResultHandler> command_result_handlers;
     std::unordered_map<size_t, EventSubscriber::AuthorityStatusHandler> authority_status_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureListRequestHandler>
+        feature_list_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureListResponseHandler>
+        feature_list_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureGetRequestHandler>
+        feature_get_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureGetResponseHandler>
+        feature_get_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureStartRequestHandler>
+        feature_start_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureStartResponseHandler>
+        feature_start_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureStopRequestHandler>
+        feature_stop_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::FeatureStopResponseHandler>
+        feature_stop_response_handlers;
     std::unordered_map<size_t, EventSubscriber::BulkChannelDescriptorHandler>
         bulk_channel_descriptor_handlers;
     std::unordered_map<uint32_t, BulkChannelDescriptor> active_bulk_channels;

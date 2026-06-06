@@ -17,6 +17,7 @@
 #include "yunlink/runtime/events.hpp"
 #include "yunlink/runtime/session.hpp"
 #include "yunlink/runtime/state.hpp"
+#include "yunlink/runtime/system_service.hpp"
 #include "yunlink/transport/tcp_client_pool.hpp"
 #include "yunlink/transport/tcp_server.hpp"
 #include "yunlink/transport/udp_transport.hpp"
@@ -64,6 +65,12 @@ class Runtime {
     }
     EventSubscriber& event_subscriber() {
         return event_subscriber_;
+    }
+    SystemServicePublisher& system_service_publisher() {
+        return system_service_publisher_;
+    }
+    SystemServiceSubscriber& system_service_subscriber() {
+        return system_service_subscriber_;
     }
 
     ErrorCode request_authority(const std::string& peer_id,
@@ -151,6 +158,8 @@ class Runtime {
     CommandSubscriber command_subscriber_;
     StateSubscriber state_subscriber_;
     EventSubscriber event_subscriber_;
+    SystemServicePublisher system_service_publisher_;
+    SystemServiceSubscriber system_service_subscriber_;
     bool is_started_ = false;
 
     uint64_t allocate_session_id();
@@ -168,6 +177,17 @@ class Runtime {
                                       const ByteBuffer& payload,
                                       CommandHandle* out_handle,
                                       uint32_t ttl_ms);
+    ErrorCode publish_system_service_request_payload(const std::string& peer_id,
+                                                     uint64_t session_id,
+                                                     const TargetSelector& target,
+                                                     uint16_t message_type,
+                                                     const ByteBuffer& payload,
+                                                     SystemServiceHandle* out_handle,
+                                                     uint32_t ttl_ms);
+    ErrorCode reply_system_service_payload(const EnvelopeEvent& inbound,
+                                           uint16_t message_type,
+                                           const ByteBuffer& payload,
+                                           uint32_t ttl_ms);
     ErrorCode send_envelope_to_peer(const std::string& peer_id, const SecureEnvelope& envelope);
     ErrorCode reply_on_route(const EnvelopeEvent& inbound, const SecureEnvelope& envelope);
     bool describe_session_internal(uint64_t session_id, SessionDescriptor* out) const;
@@ -197,6 +217,22 @@ class Runtime {
     size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);
     size_t subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb);
     size_t
+    subscribe_feature_list_request_internal(SystemServiceSubscriber::FeatureListRequestHandler cb);
+    size_t subscribe_feature_list_response_internal(
+        SystemServiceSubscriber::FeatureListResponseHandler cb);
+    size_t
+    subscribe_feature_get_request_internal(SystemServiceSubscriber::FeatureGetRequestHandler cb);
+    size_t
+    subscribe_feature_get_response_internal(SystemServiceSubscriber::FeatureGetResponseHandler cb);
+    size_t subscribe_feature_start_request_internal(
+        SystemServiceSubscriber::FeatureStartRequestHandler cb);
+    size_t subscribe_feature_start_response_internal(
+        SystemServiceSubscriber::FeatureStartResponseHandler cb);
+    size_t
+    subscribe_feature_stop_request_internal(SystemServiceSubscriber::FeatureStopRequestHandler cb);
+    size_t subscribe_feature_stop_response_internal(
+        SystemServiceSubscriber::FeatureStopResponseHandler cb);
+    size_t
     subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);
     void handle_authority_envelope(const EnvelopeEvent& ev);
@@ -205,6 +241,7 @@ class Runtime {
     void handle_state_event_envelope(const EnvelopeEvent& ev);
     void handle_command_result_envelope(const EnvelopeEvent& ev);
     void handle_bulk_channel_descriptor_envelope(const EnvelopeEvent& ev);
+    void handle_system_service_envelope(const EnvelopeEvent& ev);
     void handle_envelope(const EnvelopeEvent& ev);
     void handle_link_event(const LinkEvent& ev);
     void publish_command_result_sequence(const EnvelopeEvent& inbound, const SecureEnvelope& cmd);
@@ -215,6 +252,8 @@ class Runtime {
     friend class CommandSubscriber;
     friend class StateSubscriber;
     friend class EventSubscriber;
+    friend class SystemServicePublisher;
+    friend class SystemServiceSubscriber;
 };
 
 }  // namespace yunlink

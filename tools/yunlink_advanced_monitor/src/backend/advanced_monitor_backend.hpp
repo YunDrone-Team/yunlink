@@ -14,6 +14,7 @@
 #include "model/command_model.hpp"
 #include "model/monitor_state.hpp"
 #include "model/monitor_topics.hpp"
+#include "model/system_service_model.hpp"
 
 class AdvancedMonitorBackend {
   public:
@@ -42,6 +43,8 @@ class AdvancedMonitorBackend {
     std::unordered_map<std::string, MonitorTopicState> snapshot_topics() const;
     std::vector<MonitorLogEntry> snapshot_logs() const;
     std::vector<MonitorCommandHistoryEntry> snapshot_command_history() const;
+    MonitorSystemServiceState snapshot_system_services() const;
+    std::vector<MonitorSystemServiceHistoryEntry> snapshot_system_service_history() const;
     bool can_send_commands() const;
     void clear_logs();
     void request_reconnect_now();
@@ -50,6 +53,13 @@ class AdvancedMonitorBackend {
     void send_return(const yunlink::ReturnCommand& cmd);
     void send_goto(const yunlink::GotoCommand& cmd);
     void send_velocity_setpoint(const yunlink::VelocitySetpointCommand& cmd);
+    void request_feature_list();
+    void request_feature_get(const std::string& feature_name);
+    void request_feature_start(const std::string& feature_name,
+                               const std::vector<std::string>& override_args,
+                               bool restart_if_running,
+                               bool start_with_terminal);
+    void request_feature_stop(const std::string& feature_name, bool force);
 
   private:
     void load_params();
@@ -57,10 +67,12 @@ class AdvancedMonitorBackend {
     void bind_runtime_diagnostics();
     void bind_yunlink_subscribers();
     void bind_command_feedback();
+    void bind_system_service_feedback();
     void setup_reconnect_timer();
     void update_config_snapshot();
     void request_command_authority_if_needed();
     yunlink::TargetSelector command_target() const;
+    yunlink::TargetSelector system_service_target() const;
     bool snapshot_send_context(std::string* peer_id, uint64_t* session_id) const;
     bool authority_active_unlocked() const;
     void mark_authority_pending_unlocked(uint64_t now_ms);
@@ -89,11 +101,16 @@ class AdvancedMonitorBackend {
                              const std::string& detail,
                              const yunlink::CommandHandle& handle);
     void update_command_result_history(const yunlink::CommandResultView& message);
-    void apply_uav_control_state_history(const yunlink::UavControlStateSnapshot& snapshot);
     void refresh_command_timeouts(uint64_t now_ms);
-    static bool control_cmd_matches_history(const MonitorCommandHistoryEntry& entry,
-                                            const yunlink::UavControlCmdSnapshot& cmd);
-    static uint8_t control_cmd_code_for_action(const std::string& action);
+    void on_feature_list_response(const yunlink::TypedMessage<yunlink::FeatureListResponse>& message);
+    void on_feature_get_response(const yunlink::TypedMessage<yunlink::FeatureGetResponse>& message);
+    void on_feature_start_response(
+        const yunlink::TypedMessage<yunlink::FeatureStartResponse>& message);
+    void on_feature_stop_response(const yunlink::TypedMessage<yunlink::FeatureStopResponse>& message);
+    void record_system_service_request(const std::string& action,
+                                       const std::string& feature_name,
+                                       const yunlink::SystemServiceHandle& handle);
+    void refresh_system_service_timeouts(uint64_t now_ms);
     void log(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     void log_throttle(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
 
@@ -108,6 +125,10 @@ class AdvancedMonitorBackend {
     size_t error_token_{0};
     size_t command_result_token_{0};
     size_t authority_status_token_{0};
+    size_t feature_list_response_token_{0};
+    size_t feature_get_response_token_{0};
+    size_t feature_start_response_token_{0};
+    size_t feature_stop_response_token_{0};
     std::vector<size_t> state_sub_tokens_;
 
     std::string remote_ip_;
@@ -126,6 +147,7 @@ class AdvancedMonitorBackend {
     uint64_t authority_expires_at_ms_{0};
     uint64_t authority_request_at_ms_{0};
     uint64_t next_command_sequence_{1};
+    uint64_t next_system_service_sequence_{1};
     bool authority_pending_{false};
     uint64_t session_id_{0};
     uint64_t next_log_sequence_{1};
@@ -134,6 +156,10 @@ class AdvancedMonitorBackend {
     MonitorConnectionSnapshot connection_;
     size_t command_history_limit_{32};
     uint64_t command_timeout_ms_{3000};
+    MonitorSystemServiceState system_services_;
+    std::vector<MonitorSystemServiceHistoryEntry> system_service_history_;
+    size_t system_service_history_limit_{32};
+    uint64_t system_service_timeout_ms_{5000};
     std::chrono::steady_clock::time_point started_at_steady_;
 };
 
