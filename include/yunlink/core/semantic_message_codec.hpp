@@ -37,7 +37,7 @@ ByteBuffer encode_payload(const VehicleEvent& payload);
 ByteBuffer encode_payload(const BulkChannelDescriptor& payload);
 // 新增
 ByteBuffer encode_payload(const LocalOdomSnapshot& payload);
-ByteBuffer encode_payload(const MavrosStateSnapshot& payload);
+ByteBuffer encode_payload(const UavControlCmdSnapshot& payload);
 ByteBuffer encode_payload(const UavControlStateSnapshot& payload);
 ByteBuffer encode_payload(const OdomStateSnapshot& payload);
 
@@ -64,7 +64,7 @@ bool decode_payload(const ByteBuffer& bytes, GimbalParamsSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, VehicleEvent* payload);
 bool decode_payload(const ByteBuffer& bytes, BulkChannelDescriptor* payload);
 bool decode_payload(const ByteBuffer& bytes, LocalOdomSnapshot* payload);
-bool decode_payload(const ByteBuffer& bytes, MavrosStateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, UavControlCmdSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, UavControlStateSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, OdomStateSnapshot* payload);
 

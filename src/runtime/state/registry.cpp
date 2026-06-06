@@ -108,10 +108,10 @@ size_t Runtime::subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler 
     return token;
 }
 
-size_t Runtime::subscribe_mavros_state_internal(StateSubscriber::MavrosStateHandler cb) {
+size_t Runtime::subscribe_uav_control_cmd_internal(StateSubscriber::UavControlCmdHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
-    impl_->mavros_state_handlers[token] = std::move(cb);
+    impl_->uav_control_cmd_handlers[token] = std::move(cb);
     return token;
 }
 
@@ -174,7 +174,7 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->uav_controller_state_handlers.erase(token);
     impl_->gimbal_params_handlers.erase(token);
     impl_->local_odom_handlers.erase(token);
-    impl_->mavros_state_handlers.erase(token);
+    impl_->uav_control_cmd_handlers.erase(token);
     impl_->uav_control_state_handlers.erase(token);
     impl_->odom_state_handlers.erase(token);
     impl_->vehicle_event_handlers.erase(token);

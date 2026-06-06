@@ -109,22 +109,6 @@ int main() {
         return 9;
     }
 
-    yunlink::MavrosStateSnapshot mavros_state{};
-    mavros_state.connected = true;
-    mavros_state.armed = true;
-    mavros_state.guided = false;
-    mavros_state.mode = "OFFBOARD";
-    mavros_state.system_status = 4;
-
-    const auto mavros_bytes = yunlink::encode_payload(mavros_state);
-    yunlink::MavrosStateSnapshot mavros_decoded{};
-    if (!yunlink::decode_typed_payload(mavros_bytes, &mavros_decoded) ||
-        mavros_decoded.mode != mavros_state.mode ||
-        mavros_decoded.system_status != mavros_state.system_status) {
-        std::cerr << "mavros state roundtrip failed\n";
-        return 10;
-    }
-
     yunlink::UavControlStateSnapshot control_state{};
     control_state.controller_types = 3;
     control_state.takeoff_relative_height_m = 2.5;
@@ -148,7 +132,7 @@ int main() {
         control_state_decoded.self_odom.pose.position_m.z !=
             control_state.self_odom.pose.position_m.z) {
         std::cerr << "uav control state roundtrip failed\n";
-        return 11;
+        return 10;
     }
 
     yunlink::OdomStateSnapshot odom_state{};
@@ -171,7 +155,7 @@ int main() {
         odom_state_decoded.pubtopic_name_local_odom != odom_state.pubtopic_name_local_odom ||
         odom_state_decoded.base_frame_name != odom_state.base_frame_name) {
         std::cerr << "odom state roundtrip failed\n";
-        return 12;
+        return 11;
     }
 
     return 0;

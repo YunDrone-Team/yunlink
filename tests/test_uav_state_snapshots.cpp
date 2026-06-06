@@ -81,7 +81,6 @@ int main() {
     yunlink::UavControllerStateSnapshot ctrl_seen{};
     yunlink::GimbalParamsSnapshot gimbal_seen{};
     yunlink::LocalOdomSnapshot local_odom_seen{};
-    yunlink::MavrosStateSnapshot mavros_seen{};
     yunlink::UavControlStateSnapshot control_state_seen{};
     yunlink::OdomStateSnapshot odom_state_seen{};
 
@@ -113,11 +112,6 @@ int main() {
     const size_t local_odom_token = ground.state_subscriber().subscribe_local_odom(
         [&](const yunlink::TypedMessage<yunlink::LocalOdomSnapshot>& message) {
             local_odom_seen = message.payload;
-            ++received_count;
-        });
-    const size_t mavros_token = ground.state_subscriber().subscribe_mavros_state(
-        [&](const yunlink::TypedMessage<yunlink::MavrosStateSnapshot>& message) {
-            mavros_seen = message.payload;
             ++received_count;
         });
     const size_t control_state_token = ground.state_subscriber().subscribe_uav_control_state(
@@ -196,13 +190,6 @@ int main() {
     local_odom.pose.orientation = {0.1F, 0.2F, 0.3F, 0.9F};
     local_odom.twist.linear_mps = {1.1F, 1.2F, 1.3F};
 
-    yunlink::MavrosStateSnapshot mavros{};
-    mavros.connected = true;
-    mavros.armed = true;
-    mavros.guided = false;
-    mavros.mode = "OFFBOARD";
-    mavros.system_status = 4;
-
     yunlink::UavControlStateSnapshot control_state{};
     control_state.controller_types = 3;
     control_state.takeoff_relative_height_m = 2.8;
@@ -243,8 +230,6 @@ int main() {
             yunlink::ErrorCode::kOk ||
         uav.publish_local_odom(session.peer.id, target, local_odom, session_id) !=
             yunlink::ErrorCode::kOk ||
-        uav.publish_mavros_state(session.peer.id, target, mavros, session_id) !=
-            yunlink::ErrorCode::kOk ||
         uav.publish_uav_control_state(session.peer.id, target, control_state, session_id) !=
             yunlink::ErrorCode::kOk ||
         uav.publish_odom_state(session.peer.id, target, odom_state, session_id) !=
@@ -253,7 +238,7 @@ int main() {
         return 5;
     }
 
-    if (!wait_until([&]() { return received_count.load() == 9; })) {
+    if (!wait_until([&]() { return received_count.load() == 8; })) {
         std::cerr << "not all snapshots received\n";
         return 6;
     }
@@ -264,7 +249,6 @@ int main() {
     ground.state_subscriber().unsubscribe(ctrl_token);
     ground.state_subscriber().unsubscribe(gimbal_token);
     ground.state_subscriber().unsubscribe(local_odom_token);
-    ground.state_subscriber().unsubscribe(mavros_token);
     ground.state_subscriber().unsubscribe(control_state_token);
     ground.state_subscriber().unsubscribe(odom_state_token);
 
@@ -302,22 +286,17 @@ int main() {
         std::cerr << "local odom snapshot mismatch\n";
         return 12;
     }
-    if (!mavros_seen.connected || !mavros_seen.armed || mavros_seen.mode != "OFFBOARD" ||
-        mavros_seen.system_status != 4) {
-        std::cerr << "mavros snapshot mismatch\n";
-        return 13;
-    }
     if (control_state_seen.controller_types != 3 || !control_state_seen.odometry_valid ||
         control_state_seen.home_point_m.z != 23.0F ||
         control_state_seen.self_odom.pose.position_m.z != 2.2F) {
         std::cerr << "uav control state snapshot mismatch\n";
-        return 14;
+        return 13;
     }
     if (odom_state_seen.external_source != 2 || !odom_state_seen.odometry_valid ||
         odom_state_seen.pubtopic_name_local_odom != "/uav1/sunray/localization/local_odom" ||
         odom_state_seen.base_frame_name != "base_link") {
         std::cerr << "odom state snapshot mismatch\n";
-        return 15;
+        return 14;
     }
 
     return 0;

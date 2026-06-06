@@ -71,9 +71,9 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
-    case StateSnapshotType::kMavrosState:
-        if (!runtime_fanout_snapshot<MavrosStateSnapshot>(
-                impl_->mu, ev.envelope, ev.envelope.payload, impl_->mavros_state_handlers)) {
+    case StateSnapshotType::kUavControlCmd:
+        if (!runtime_fanout_snapshot<UavControlCmdSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->uav_control_cmd_handlers)) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;

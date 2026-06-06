@@ -214,16 +214,6 @@ struct LocalOdomSnapshot {
     std::array<double, 36> twist_covariance{};
 };
 
-struct MavrosStateSnapshot {
-    HeaderSnapshot header;
-    bool connected = false;
-    bool armed = false;
-    bool guided = false;
-    bool manual_input = false;
-    std::string mode;
-    uint8_t system_status = 0;
-};
-
 struct UavControlStateSnapshot {
     HeaderSnapshot header;
     std::string agent_name;

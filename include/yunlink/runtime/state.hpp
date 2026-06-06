@@ -26,7 +26,7 @@ class StateSubscriber {
         std::function<void(const TypedMessage<UavControllerStateSnapshot>&)>;
     using GimbalParamsHandler = std::function<void(const TypedMessage<GimbalParamsSnapshot>&)>;
     using LocalOdomHandler = std::function<void(const TypedMessage<LocalOdomSnapshot>&)>;
-    using MavrosStateHandler = std::function<void(const TypedMessage<MavrosStateSnapshot>&)>;
+    using UavControlCmdHandler = std::function<void(const TypedMessage<UavControlCmdSnapshot>&)>;
     using UavControlStateHandler =
         std::function<void(const TypedMessage<UavControlStateSnapshot>&)>;
     using OdomStateHandler = std::function<void(const TypedMessage<OdomStateSnapshot>&)>;
@@ -40,7 +40,7 @@ class StateSubscriber {
     size_t subscribe_uav_controller_state(UavControllerStateHandler cb);
     size_t subscribe_gimbal_params(GimbalParamsHandler cb);
     size_t subscribe_local_odom(LocalOdomHandler cb);
-    size_t subscribe_mavros_state(MavrosStateHandler cb);
+    size_t subscribe_uav_control_cmd(UavControlCmdHandler cb);
     size_t subscribe_uav_control_state(UavControlStateHandler cb);
     size_t subscribe_odom_state(OdomStateHandler cb);
     void unsubscribe(size_t token);

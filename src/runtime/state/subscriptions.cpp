@@ -40,8 +40,8 @@ size_t StateSubscriber::subscribe_local_odom(LocalOdomHandler cb) {
     return runtime_ ? runtime_->subscribe_local_odom_internal(std::move(cb)) : 0;
 }
 
-size_t StateSubscriber::subscribe_mavros_state(MavrosStateHandler cb) {
-    return runtime_ ? runtime_->subscribe_mavros_state_internal(std::move(cb)) : 0;
+size_t StateSubscriber::subscribe_uav_control_cmd(UavControlCmdHandler cb) {
+    return runtime_ ? runtime_->subscribe_uav_control_cmd_internal(std::move(cb)) : 0;
 }
 
 size_t StateSubscriber::subscribe_uav_control_state(UavControlStateHandler cb) {

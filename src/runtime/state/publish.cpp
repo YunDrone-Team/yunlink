@@ -77,10 +77,10 @@ ErrorCode Runtime::publish_local_odom(const std::string& peer_id,
     return send_envelope_to_peer(peer_id, envelope);
 }
 
-ErrorCode Runtime::publish_mavros_state(const std::string& peer_id,
-                                        const TargetSelector& target,
-                                        const MavrosStateSnapshot& payload,
-                                        uint64_t session_id) {
+ErrorCode Runtime::publish_uav_control_cmd(const std::string& peer_id,
+                                           const TargetSelector& target,
+                                           const UavControlCmdSnapshot& payload,
+                                           uint64_t session_id) {
     SecureEnvelope envelope = make_typed_envelope(
         config_.self_identity, target, session_id, 0, QosClass::kReliableLatest, payload);
     envelope.message_id = allocate_message_id();

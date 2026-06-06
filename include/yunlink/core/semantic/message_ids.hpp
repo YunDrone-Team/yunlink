@@ -40,7 +40,7 @@ enum class StateSnapshotType : uint16_t {
     kUavControllerState = 5,
     kGimbalParams = 6,
     kLocalOdom = 7,
-    kMavrosState = 8,
+    kUavControlCmd = 8,
     kUavControlState = 9,
     kOdomState = 10,
 };

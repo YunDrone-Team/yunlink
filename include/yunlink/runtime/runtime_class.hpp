@@ -111,10 +111,10 @@ class Runtime {
                                  const TargetSelector& target,
                                  const LocalOdomSnapshot& payload,
                                  uint64_t session_id = 0);
-    ErrorCode publish_mavros_state(const std::string& peer_id,
-                                   const TargetSelector& target,
-                                   const MavrosStateSnapshot& payload,
-                                   uint64_t session_id = 0);
+    ErrorCode publish_uav_control_cmd(const std::string& peer_id,
+                                      const TargetSelector& target,
+                                      const UavControlCmdSnapshot& payload,
+                                      uint64_t session_id = 0);
     ErrorCode publish_uav_control_state(const std::string& peer_id,
                                         const TargetSelector& target,
                                         const UavControlStateSnapshot& payload,
@@ -193,7 +193,7 @@ class Runtime {
     size_t subscribe_command_result_internal(EventSubscriber::CommandResultHandler cb);
     size_t subscribe_authority_status_internal(EventSubscriber::AuthorityStatusHandler cb);
     size_t subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler cb);
-    size_t subscribe_mavros_state_internal(StateSubscriber::MavrosStateHandler cb);
+    size_t subscribe_uav_control_cmd_internal(StateSubscriber::UavControlCmdHandler cb);
     size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);
     size_t subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb);
     size_t

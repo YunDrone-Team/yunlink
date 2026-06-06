@@ -22,7 +22,7 @@
 | 命令结果流 | `Implemented` | runtime gate 失败分支、TTL expired、显式 executor result helper 和 external-handler 关闭 auto-result 已覆盖；真实执行器结果仍属于业务集成层 |
 | `TrajectoryChunkCommand` runtime 聚合 | `Implemented` | runtime 已按 session/peer/target 缓存分块，校验递增顺序、重复块、缺块和 chunk timeout；final chunk 到达后合并后交给 executor |
 | `FormationTaskCommand` runtime 合同 | `Implemented` | runtime 已要求 formation 命令使用 `kGroup` target，且 payload `group_id` 必须与 envelope target 对齐；外部 group executor 可用同一 correlation 回群组/成员级结果 |
-| 状态快照订阅 | `Implemented` | 已支持 `VehicleCoreState`、`Px4StateSnapshot`、`OdomStatusSnapshot`、`UavControlFsmStateSnapshot`、`UavControllerStateSnapshot`、`GimbalParamsSnapshot` |
+| 状态快照订阅 | `Implemented` | 已支持 `VehicleCoreState`、`Px4StateSnapshot`、`OdomStatusSnapshot`、`UavControlFsmStateSnapshot`、`UavControllerStateSnapshot`、`GimbalParamsSnapshot`、`LocalOdomSnapshot`、`UavControlStateSnapshot`、`OdomStateSnapshot` |
 | 状态事件订阅 | `Implemented` | `VehicleEvent` 可订阅 |
 | Group target 线包表达 | `Implemented` | codec 与类型支持 |
 | Group target 成员语义 | `Implemented` | `TargetSelector::matches()` 已按 endpoint `group_ids` 精确匹配 group_id |
