@@ -2,6 +2,9 @@
 #define YUNLINK_ADVANCED_MONITOR_UI_MAIN_WINDOW_HPP
 
 #include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <QLabel>
 #include <QLineEdit>
@@ -9,12 +12,15 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QDoubleSpinBox>
+#include <QStackedWidget>
 #include <QTableWidget>
 #include <QCheckBox>
+#include <QComboBox>
 
 #include "backend/advanced_monitor_backend.hpp"
-#include "model/command_model.hpp"
 #include "common/monitor_format.hpp"
+#include "model/command_model.hpp"
+#include "model/monitor_state.hpp"
 #include "model/monitor_topics.hpp"
 #include "model/system_service_model.hpp"
 
@@ -24,28 +30,34 @@ class MainWindow : public QMainWindow {
 
   private:
     void build_ui();
+    QWidget* build_commands_page(QWidget* parent);
     QWidget* build_status_panel(QWidget* parent);
     QWidget* build_command_panel(QWidget* parent);
     QWidget* build_command_history_panel(QWidget* parent);
     QWidget* build_system_service_panel(QWidget* parent);
     QWidget* build_topics_panel(QWidget* parent);
+    QWidget* build_recent_issues_panel(QWidget* parent);
+    QWidget* build_log_page_body(QWidget* parent);
     QWidget* build_log_panel(QWidget* parent);
+    void set_current_page(int index);
     void refresh_view();
     void refresh_status();
+    void refresh_recent_issues();
     void refresh_command_controls();
     void refresh_command_history();
     void refresh_system_services();
     void refresh_topics();
     void refresh_topic(const std::string& key, const MonitorTopicState& topic);
     void refresh_logs();
+    bool log_entry_visible(const MonitorLogEntry& entry) const;
+    bool log_should_autofollow() const;
+    void stage_toggle_log_autofollow(bool checked);
     static QTableWidget* create_topic_table(QWidget* parent);
-    static QTableWidgetItem* set_item(QTableWidget* table, int row, int col, const std::string& text);
+    static QTableWidgetItem*
+    set_item(QTableWidget* table, int row, int col, const std::string& text);
     static QString format_timestamp(uint64_t timestamp_ms);
-    static QDoubleSpinBox* make_spin(double value,
-                                     double min_value,
-                                     double max_value,
-                                     double step,
-                                     int decimals = 2);
+    static QDoubleSpinBox*
+    make_spin(double value, double min_value, double max_value, double step, int decimals = 2);
     void stage_takeoff();
     void stage_land();
     void stage_return();
@@ -65,9 +77,12 @@ class MainWindow : public QMainWindow {
     QLabel* authority_value_{nullptr};
     QLabel* note_value_{nullptr};
     QLabel* error_value_{nullptr};
+    QLabel* recent_issues_value_{nullptr};
     QLabel* command_hint_label_{nullptr};
     QTableWidget* command_history_table_{nullptr};
     QTableWidget* system_service_history_table_{nullptr};
+    QStackedWidget* page_stack_{nullptr};
+    std::vector<QPushButton*> page_nav_buttons_;
     QPlainTextEdit* feature_list_text_{nullptr};
     QPlainTextEdit* feature_detail_text_{nullptr};
     QLineEdit* feature_override_args_edit_{nullptr};
@@ -77,6 +92,8 @@ class MainWindow : public QMainWindow {
     QCheckBox* feature_force_stop_checkbox_{nullptr};
     std::unordered_map<std::string, QTableWidget*> topic_tables_;
     QPlainTextEdit* logs_{nullptr};
+    QComboBox* log_filter_combo_{nullptr};
+    QCheckBox* log_autofollow_checkbox_{nullptr};
     QPushButton* reconnect_button_{nullptr};
     QPushButton* clear_logs_button_{nullptr};
     QPushButton* takeoff_button_{nullptr};
@@ -102,6 +119,8 @@ class MainWindow : public QMainWindow {
     QDoubleSpinBox* vel_yaw_rate_spin_{nullptr};
     uint64_t rendered_last_sequence_{0};
     size_t rendered_log_count_{0};
+    int rendered_visible_log_count_{-1};
+    bool log_autofollow_{true};
 };
 
 #endif  // YUNLINK_ADVANCED_MONITOR_UI_MAIN_WINDOW_HPP

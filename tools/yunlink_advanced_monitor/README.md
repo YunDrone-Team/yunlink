@@ -2,44 +2,64 @@
 
 `yunlink_advanced_monitor` 现在定位为一个纯 `Qt + libyunlink` 的 Ground Station UI。
 
-它只做四件事：
+它现在主要做这些事：
 
 - 显示 YunLink runtime / session / link / authority 状态
 - 通过 YunLink 下发控制命令
 - 展示通过 YunLink 收到的状态 snapshot
-- 展示命令回执、接纳依据和运行日志
+- 通过 YunLink system service 通道查询和操作 feature
+- 展示命令回执、system service 请求结果和运行日志
 
 它不再承担这些职责：
 
 - 直接订阅 ROS 原始 topic
 - 直接比较 ROS 值与 YunLink 值
-- 直接读取 `system_info`
-- 直接调用 `list_features / get_features / start_feature / stop_feature`
+- 直接读取 ROS `/sunray/system_info`
+- 直接调用 ROS service 形式的 `list_features / get_features / start_feature / stop_feature`
 
 如果后续还需要做 ROS 原始值和桥接结果的核对，应当放到 `Sunray_v2` 侧单独调试工具，不再塞回本工具。
 
 ## 当前界面
 
-- 会话状态
+当前界面改成左侧便签式导航 + 右侧内容区切换：
+
+- 左侧顶层导航
+  - `Commands`
+  - `System`
+  - `State`
+  - `Logs`
+- `Commands`
+  - 会话状态
   - `runtime / session / link / authority`
   - `peer id / session id / 对端地址 / 本地监听地址`
+  - 最近 3 条 `WARN / ERROR`
   - 最近说明与最近错误
-- 控制面板
-  - `TAKEOFF`
-  - `LAND`
-  - `RETURN`
-  - `MOVE_POINT`
-  - `MOVE_VELOCITY`
-- 命令历史
+  - `立即重连`
+  - 控制面板
+  - `TAKEOFF / LAND / RETURN / MOVE_POINT / MOVE_VELOCITY`
+  - 命令历史
   - 发送时间、命令、状态、session、message id、回执
-- YunLink 状态页签
+- `System`
+  - 页面标题仍为 `System Service`
+  - `FeatureList`
+  - `FeatureGet`
+  - `FeatureStart`
+  - `FeatureStop`
+  - `feature_name / override_args / restart_if_running / start_with_terminal / force_stop`
+  - feature 列表、feature 详情、请求历史、结果状态
+- `State`
+  - 页内仍按 topic tab 分页
   - `local_odom`
   - `odom_state`
   - `uav_control_cmd`
   - `uav_control_state`
   - `px4_state`
   - 每个页签只展示“字段说明 / YunLink 最新值”
-- 运行日志
+- `Logs`
+  - 运行日志
+  - `全部日志 / Warn+ / Connection / Authority / Command / System`
+  - `自动跟随`
+  - `清空日志`
 
 ## 显示语义
 
@@ -56,6 +76,17 @@
   - 已收到 YunLink command result
 - `TIMEOUT`
   - monitor 在超时时间内没有等到 YunLink command result
+
+System Service 请求历史语义：
+
+- `PENDING`
+  - 请求已经发出，仍在等待响应
+- `SUCCEEDED`
+  - 已收到成功响应
+- `FAILED`
+  - 已收到失败响应
+- `TIMEOUT`
+  - monitor 在超时时间内没有等到响应
 
 ## 构建依赖
 
@@ -128,9 +159,9 @@ cmake --build . -j4
 ## 当前运行逻辑
 
 1. 初始化 YunLink runtime
-2. 绑定 YunLink link / error / authority / command / state 事件
+2. 绑定 YunLink link / error / authority / command / state / system service 事件
 3. 由 Qt 定时轮询周期性尝试连接远端 peer
-4. 通过 YunLink 接收 snapshot 并刷新 UI model
+4. 通过 YunLink 接收 snapshot 和 system service 响应并刷新 UI model
 5. 以 `500 ms` 刷新界面
 
 ## 后续方向

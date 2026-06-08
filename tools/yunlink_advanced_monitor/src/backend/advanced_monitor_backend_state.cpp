@@ -33,7 +33,7 @@ void AdvancedMonitorBackend::on_authority_status(
     log(message.payload.state == yunlink::AuthorityState::kRejected
                 ? MonitorLogLevel::kWarn
                 : MonitorLogLevel::kInfo,
-        MonitorLogSource::kSession,
+        MonitorLogSource::kAuthority,
         line);
 }
 
@@ -53,7 +53,7 @@ void AdvancedMonitorBackend::on_command_result(const yunlink::CommandResultView&
                 message.payload.phase == yunlink::CommandPhase::kExpired
             ? MonitorLogLevel::kWarn
             : MonitorLogLevel::kInfo,
-        MonitorLogSource::kSession,
+        MonitorLogSource::kCommand,
         line);
 }
 
@@ -70,7 +70,7 @@ void AdvancedMonitorBackend::log_command_handle(const std::string& action,
     if (!detail.empty()) {
         line += " | " + detail;
     }
-    log(MonitorLogLevel::kInfo, MonitorLogSource::kSession, line);
+    log(MonitorLogLevel::kInfo, MonitorLogSource::kCommand, line);
 }
 
 void AdvancedMonitorBackend::record_command_sent(const std::string& action,
@@ -106,25 +106,34 @@ void AdvancedMonitorBackend::update_command_result_history(
         it->updated_at_ms = wall_time_ms();
         it->result_phase = command_phase_label(message.payload.phase);
         it->result_detail = message.payload.detail;
-        it->lifecycle = message.payload.phase == yunlink::CommandPhase::kExpired
-                            ? MonitorCommandLifecycle::kTimeout
-                            : MonitorCommandLifecycle::kReceived;
+        it->lifecycle = command_lifecycle_from_phase(message.payload.phase);
         return;
     }
 }
 
 void AdvancedMonitorBackend::refresh_command_timeouts(uint64_t now_ms) {
-    std::lock_guard<std::mutex> lock(mu_);
-    for (auto& entry : command_history_) {
-        if (entry.lifecycle == MonitorCommandLifecycle::kTimeout) {
-            continue;
-        }
-        if (entry.sent_at_ms != 0 && now_ms > entry.sent_at_ms + command_timeout_ms_) {
-            entry.lifecycle = MonitorCommandLifecycle::kTimeout;
-            entry.updated_at_ms = now_ms;
-            if (entry.result_detail.empty()) {
-                entry.result_detail = "monitor-timeout-no-apply";
+    std::vector<std::string> timed_out_lines;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        for (auto& entry : command_history_) {
+            if (command_lifecycle_is_terminal(entry.lifecycle)) {
+                continue;
+            }
+            const uint64_t deadline_base_ms =
+                entry.updated_at_ms != 0 ? entry.updated_at_ms : entry.sent_at_ms;
+            if (deadline_base_ms != 0 && now_ms > deadline_base_ms + command_timeout_ms_) {
+                entry.lifecycle = MonitorCommandLifecycle::kTimeout;
+                entry.updated_at_ms = now_ms;
+                if (entry.result_detail.empty()) {
+                    entry.result_detail = "monitor-timeout-no-apply";
+                }
+                timed_out_lines.push_back("命令结果超时: action=" + entry.action +
+                                          " session_id=" + std::to_string(entry.session_id) +
+                                          " message_id=" + std::to_string(entry.message_id));
             }
         }
+    }
+    for (const auto& line : timed_out_lines) {
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kCommand, line);
     }
 }

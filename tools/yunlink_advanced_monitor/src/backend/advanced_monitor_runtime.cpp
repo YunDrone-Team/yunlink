@@ -55,7 +55,7 @@ void AdvancedMonitorBackend::poll_runtime() {
                 connection_.last_note = "会话已断开，准备重连";
                 connection_.updated_at_ms = wall_time_ms();
             }
-            log(MonitorLogLevel::kWarn, MonitorLogSource::kSession, "会话已断开，准备重连");
+            log(MonitorLogLevel::kWarn, MonitorLogSource::kConnection, "会话已断开，准备重连");
             return;
         }
 
@@ -87,7 +87,7 @@ void AdvancedMonitorBackend::poll_runtime() {
             connection_.updated_at_ms = wall_time_ms();
         }
         log(MonitorLogLevel::kInfo,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kConnection,
             "复用现有会话，对端 peer_id=" + active_session.peer.id +
                 "，session_id=" + std::to_string(active_session.session_id));
         request_command_authority_if_needed();
@@ -106,7 +106,7 @@ void AdvancedMonitorBackend::poll_runtime() {
             connection_.updated_at_ms = wall_time_ms();
         }
         log_throttle(MonitorLogLevel::kWarn,
-                     MonitorLogSource::kSession,
+                     MonitorLogSource::kConnection,
                      "连接 YunLink 对端失败，ip=" + remote_ip_ +
                          " port=" + std::to_string(clamp_port(remote_tcp_port_)) +
                          " ec=" + std::to_string(static_cast<int>(ec)));
@@ -123,7 +123,7 @@ void AdvancedMonitorBackend::poll_runtime() {
             connection_.updated_at_ms = wall_time_ms();
         }
         log_throttle(MonitorLogLevel::kWarn,
-                     MonitorLogSource::kSession,
+                     MonitorLogSource::kConnection,
                      "打开会话失败，peer_id=" + peer_id + " node=" + node_name_);
         return;
     }
@@ -142,7 +142,7 @@ void AdvancedMonitorBackend::poll_runtime() {
         connection_.updated_at_ms = wall_time_ms();
     }
     log(MonitorLogLevel::kInfo,
-        MonitorLogSource::kSession,
+        MonitorLogSource::kConnection,
         "已连接 YunLink 对端，peer_id=" + peer_id + "，session_id=" +
             std::to_string(session_id));
     request_command_authority_if_needed();

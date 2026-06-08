@@ -16,10 +16,14 @@ std::string source_label(MonitorLogSource source) {
     switch (source) {
     case MonitorLogSource::kRuntime:
         return "Runtime";
-    case MonitorLogSource::kSession:
-        return "Session";
+    case MonitorLogSource::kConnection:
+        return "Connection";
+    case MonitorLogSource::kAuthority:
+        return "Authority";
+    case MonitorLogSource::kCommand:
+        return "Command";
     case MonitorLogSource::kSystemService:
-        return "SystemService";
+        return "System";
     }
     return "Runtime";
 }
@@ -44,10 +48,41 @@ std::string command_lifecycle_label(MonitorCommandLifecycle lifecycle) {
     switch (lifecycle) {
     case MonitorCommandLifecycle::kSent:
         return "SENT";
-    case MonitorCommandLifecycle::kReceived:
-        return "RECEIVED";
+    case MonitorCommandLifecycle::kActive:
+        return "ACTIVE";
+    case MonitorCommandLifecycle::kSucceeded:
+        return "SUCCEEDED";
+    case MonitorCommandLifecycle::kFailed:
+        return "FAILED";
+    case MonitorCommandLifecycle::kCancelled:
+        return "CANCELLED";
     case MonitorCommandLifecycle::kTimeout:
         return "TIMEOUT";
     }
     return "SENT";
+}
+
+bool command_lifecycle_is_terminal(MonitorCommandLifecycle lifecycle) {
+    return lifecycle == MonitorCommandLifecycle::kSucceeded ||
+           lifecycle == MonitorCommandLifecycle::kFailed ||
+           lifecycle == MonitorCommandLifecycle::kCancelled ||
+           lifecycle == MonitorCommandLifecycle::kTimeout;
+}
+
+MonitorCommandLifecycle command_lifecycle_from_phase(yunlink::CommandPhase phase) {
+    switch (phase) {
+    case yunlink::CommandPhase::kReceived:
+    case yunlink::CommandPhase::kAccepted:
+    case yunlink::CommandPhase::kInProgress:
+        return MonitorCommandLifecycle::kActive;
+    case yunlink::CommandPhase::kSucceeded:
+        return MonitorCommandLifecycle::kSucceeded;
+    case yunlink::CommandPhase::kFailed:
+        return MonitorCommandLifecycle::kFailed;
+    case yunlink::CommandPhase::kCancelled:
+        return MonitorCommandLifecycle::kCancelled;
+    case yunlink::CommandPhase::kExpired:
+        return MonitorCommandLifecycle::kTimeout;
+    }
+    return MonitorCommandLifecycle::kActive;
 }

@@ -49,6 +49,8 @@ add_executable(yunlink_advanced_monitor
   src/ui/main_window_commands.cpp
   src/ui/main_window.cpp
   src/ui/main_window_layout.cpp
+  src/ui/main_window_logs.cpp
+  src/ui/main_window_navigation.cpp
   src/ui/main_window_refresh.cpp
   src/ui/main_window_system_services.cpp
 )

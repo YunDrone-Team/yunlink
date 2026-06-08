@@ -73,7 +73,7 @@ void AdvancedMonitorBackend::bind_runtime_diagnostics() {
             connection_.updated_at_ms = wall_time_ms();
         }
         log(ev.is_up ? MonitorLogLevel::kInfo : MonitorLogLevel::kWarn,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kConnection,
             "link " + std::string(ev.is_up ? "UP" : "DOWN") +
                 " transport=" + transport_label(ev.transport) + " peer=" + ev.peer.id +
                 " (" + endpoint_text(ev.peer.ip, ev.peer.port) + ")");
@@ -161,7 +161,7 @@ void AdvancedMonitorBackend::request_command_authority_if_needed() {
                 authority_pending_ = false;
             }
             log_throttle(MonitorLogLevel::kWarn,
-                         MonitorLogSource::kSession,
+                         MonitorLogSource::kAuthority,
                          "控制权续租发送失败，target=uav/" +
                              std::to_string(std::max(agent_id_, 0)) + " ec=" +
                              error_code_label(ec));
@@ -181,13 +181,13 @@ void AdvancedMonitorBackend::request_command_authority_if_needed() {
             authority_pending_ = false;
         }
         log(MonitorLogLevel::kWarn,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kAuthority,
             "控制权申请发送失败，target=uav/" + std::to_string(std::max(agent_id_, 0)) +
                 " ec=" + error_code_label(ec));
         return;
     }
     log(MonitorLogLevel::kInfo,
-        MonitorLogSource::kSession,
+        MonitorLogSource::kAuthority,
         "已发送控制权申请，target=uav/" + std::to_string(std::max(agent_id_, 0)) +
             " ttl_ms=" + std::to_string(authority_ttl_ms_));
 }

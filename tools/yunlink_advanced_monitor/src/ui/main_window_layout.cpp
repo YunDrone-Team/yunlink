@@ -1,5 +1,6 @@
 #include "ui/main_window.hpp"
 
+#include <QFrame>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHeaderView>
@@ -7,43 +8,52 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QScrollBar>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>
 #include <QWidget>
 
-void MainWindow::build_ui() {
-    auto* central = new QWidget(this);
-    auto* layout = new QVBoxLayout(central);
-    layout->setContentsMargins(16, 16, 16, 16);
+QWidget* MainWindow::build_commands_page(QWidget* parent) {
+    auto* page = new QWidget(parent);
+    auto* layout = new QVBoxLayout(page);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(12);
 
-    auto* top_splitter = new QSplitter(Qt::Horizontal, central);
-    top_splitter->addWidget(build_status_panel(top_splitter));
-    top_splitter->addWidget(build_command_panel(top_splitter));
+    auto* top_splitter = new QSplitter(Qt::Horizontal, page);
+    auto* left_panel = new QWidget(top_splitter);
+    auto* left_layout = new QVBoxLayout(left_panel);
+    left_layout->setContentsMargins(0, 0, 0, 0);
+    left_layout->setSpacing(12);
+    left_layout->addWidget(build_status_panel(left_panel));
+    left_layout->addWidget(build_recent_issues_panel(left_panel));
+
+    auto* actions_frame = new QFrame(left_panel);
+    auto* actions_layout = new QHBoxLayout(actions_frame);
+    actions_layout->setContentsMargins(0, 0, 0, 0);
+    reconnect_button_ = new QPushButton("立即重连", actions_frame);
+    actions_layout->addWidget(reconnect_button_);
+    actions_layout->addStretch(1);
+    left_layout->addWidget(actions_frame);
+    left_layout->addStretch(1);
+
+    auto* right_panel = build_command_panel(top_splitter);
+    top_splitter->addWidget(left_panel);
+    top_splitter->addWidget(right_panel);
     top_splitter->setStretchFactor(0, 2);
     top_splitter->setStretchFactor(1, 3);
-    top_splitter->setSizes({440, 860});
+    top_splitter->setSizes({520, 760});
 
-    auto* main_splitter = new QSplitter(Qt::Vertical, central);
-    main_splitter->addWidget(top_splitter);
-    main_splitter->addWidget(build_command_history_panel(main_splitter));
-    main_splitter->addWidget(build_system_service_panel(main_splitter));
-    main_splitter->addWidget(build_topics_panel(main_splitter));
-    main_splitter->addWidget(build_log_panel(main_splitter));
-    main_splitter->setStretchFactor(0, 0);
-    main_splitter->setStretchFactor(1, 1);
-    main_splitter->setStretchFactor(2, 2);
-    main_splitter->setStretchFactor(3, 4);
-    main_splitter->setStretchFactor(4, 2);
-    main_splitter->setSizes({220, 180, 260, 520, 220});
+    auto* history_panel = build_command_history_panel(page);
+    layout->addWidget(top_splitter, 0);
+    layout->addWidget(history_panel, 1);
 
-    layout->addWidget(main_splitter, 1);
-
-    setCentralWidget(central);
-    refresh_view();
+    connect(reconnect_button_, &QPushButton::clicked, this, [this]() {
+        if (backend_ != nullptr) {
+            backend_->request_reconnect_now();
+        }
+    });
+    return page;
 }
 
 QWidget* MainWindow::build_status_panel(QWidget* parent) {
@@ -179,11 +189,16 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
     command_history_table_->setSelectionMode(QAbstractItemView::SingleSelection);
     command_history_table_->verticalHeader()->setVisible(false);
     command_history_table_->horizontalHeader()->setStretchLastSection(false);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(0,
+                                                                     QHeaderView::ResizeToContents);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(1,
+                                                                     QHeaderView::ResizeToContents);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(2,
+                                                                     QHeaderView::ResizeToContents);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(3,
+                                                                     QHeaderView::ResizeToContents);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(4,
+                                                                     QHeaderView::ResizeToContents);
     command_history_table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
     command_history_table_->setWordWrap(false);
     layout->addWidget(command_history_table_);
@@ -222,38 +237,5 @@ QWidget* MainWindow::build_topics_panel(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_log_panel(QWidget* parent) {
-    auto* group = new QGroupBox("运行日志", parent);
-    auto* root = new QVBoxLayout(group);
-    root->setSpacing(8);
-
-    auto* actions = new QHBoxLayout();
-    reconnect_button_ = new QPushButton("立即重连", group);
-    clear_logs_button_ = new QPushButton("清空日志", group);
-    actions->addWidget(reconnect_button_);
-    actions->addWidget(clear_logs_button_);
-    actions->addStretch(1);
-    root->addLayout(actions);
-
-    logs_ = new QPlainTextEdit(group);
-    logs_->setReadOnly(true);
-    logs_->setLineWrapMode(QPlainTextEdit::NoWrap);
-    logs_->setStyleSheet(
-        "QPlainTextEdit { background:#13211b;color:#cde9d1;border-radius:8px;padding:8px;"
-        "font-family:'DejaVu Sans Mono'; }");
-    root->addWidget(logs_, 1);
-
-    connect(reconnect_button_, &QPushButton::clicked, this, [this]() {
-        if (backend_ != nullptr) {
-            backend_->request_reconnect_now();
-        }
-    });
-    connect(clear_logs_button_, &QPushButton::clicked, this, [this]() {
-        if (backend_ != nullptr) {
-            backend_->clear_logs();
-        }
-        rendered_last_sequence_ = 0;
-        rendered_log_count_ = 0;
-        logs_->clear();
-    });
-    return group;
+    return build_log_page_body(parent);
 }

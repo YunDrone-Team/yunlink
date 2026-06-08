@@ -15,7 +15,9 @@ enum class MonitorLogLevel {
 
 enum class MonitorLogSource {
     kRuntime,
-    kSession,
+    kConnection,
+    kAuthority,
+    kCommand,
     kSystemService,
 };
 
@@ -51,7 +53,10 @@ struct MonitorConnectionSnapshot {
 
 enum class MonitorCommandLifecycle {
     kSent,
-    kReceived,
+    kActive,
+    kSucceeded,
+    kFailed,
+    kCancelled,
     kTimeout,
 };
 
@@ -73,5 +78,7 @@ std::string level_label(MonitorLogLevel level);
 std::string source_label(MonitorLogSource source);
 std::string transport_label(yunlink::TransportType transport);
 std::string command_lifecycle_label(MonitorCommandLifecycle lifecycle);
+bool command_lifecycle_is_terminal(MonitorCommandLifecycle lifecycle);
+MonitorCommandLifecycle command_lifecycle_from_phase(yunlink::CommandPhase phase);
 
 #endif  // YUNLINK_ADVANCED_MONITOR_MODEL_MONITOR_STATE_HPP

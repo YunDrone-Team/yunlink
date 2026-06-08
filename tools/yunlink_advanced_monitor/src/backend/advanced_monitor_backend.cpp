@@ -114,6 +114,6 @@ void AdvancedMonitorBackend::request_reconnect_now() {
         connection_.session_state = "FORCED_RECONNECT";
         connection_.last_note = "用户请求立即重连";
     }
-    log(MonitorLogLevel::kInfo, MonitorLogSource::kSession, "收到立即重连请求");
+    log(MonitorLogLevel::kInfo, MonitorLogSource::kConnection, "收到立即重连请求");
     poll_runtime();
 }

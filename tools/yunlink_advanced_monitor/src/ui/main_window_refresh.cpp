@@ -34,6 +34,7 @@ std::string topic_value_or_default(const MonitorTopicState& topic, const std::st
 
 void MainWindow::refresh_view() {
     refresh_status();
+    refresh_recent_issues();
     refresh_command_controls();
     refresh_command_history();
     refresh_system_services();
@@ -61,6 +62,32 @@ void MainWindow::refresh_status() {
                                   : QString::fromStdString(snapshot.authority_state));
     note_value_->setText(snapshot.last_note.empty() ? "-" : QString::fromStdString(snapshot.last_note));
     error_value_->setText(snapshot.last_error.empty() ? "-" : QString::fromStdString(snapshot.last_error));
+}
+
+void MainWindow::refresh_recent_issues() {
+    if (backend_ == nullptr || recent_issues_value_ == nullptr) {
+        return;
+    }
+
+    const auto entries = backend_->snapshot_logs();
+    QStringList lines;
+    for (auto it = entries.rbegin(); it != entries.rend(); ++it) {
+        if (it->level == MonitorLogLevel::kInfo) {
+            continue;
+        }
+        lines.append(QString("[%1][%2] %3")
+                         .arg(QString::fromStdString(source_label(it->source)))
+                         .arg(QString::fromStdString(level_label(it->level)))
+                         .arg(QString::fromStdString(it->message)));
+        if (lines.size() >= 3) {
+            break;
+        }
+    }
+    if (lines.isEmpty()) {
+        recent_issues_value_->setText("最近异常: 无");
+        return;
+    }
+    recent_issues_value_->setText("最近异常:\n" + lines.join('\n'));
 }
 
 void MainWindow::refresh_command_controls() {
@@ -157,27 +184,36 @@ void MainWindow::refresh_topic(const std::string& key, const MonitorTopicState& 
 }
 
 void MainWindow::refresh_logs() {
-    if (backend_ == nullptr) {
+    if (backend_ == nullptr || logs_ == nullptr) {
         return;
     }
 
     const auto entries = backend_->snapshot_logs();
     const uint64_t last_sequence = entries.empty() ? 0 : entries.back().sequence;
-    if (last_sequence == rendered_last_sequence_ && entries.size() == rendered_log_count_) {
-        return;
-    }
-
     QStringList lines;
     lines.reserve(static_cast<int>(entries.size()));
     for (const auto& entry : entries) {
+        if (!log_entry_visible(entry)) {
+            continue;
+        }
         lines.append(QString("[%1][%2][%3] %4")
                          .arg(format_timestamp(entry.timestamp_ms))
                          .arg(QString::fromStdString(level_label(entry.level)))
                          .arg(QString::fromStdString(source_label(entry.source)))
                          .arg(QString::fromStdString(entry.message)));
     }
+    const int visible_count = lines.size();
+    if (last_sequence == rendered_last_sequence_ && entries.size() == rendered_log_count_ &&
+        visible_count == rendered_visible_log_count_) {
+        return;
+    }
+
+    const bool follow = log_should_autofollow();
     logs_->setPlainText(lines.join('\n'));
-    logs_->verticalScrollBar()->setValue(logs_->verticalScrollBar()->maximum());
+    if (follow && logs_->verticalScrollBar() != nullptr) {
+        logs_->verticalScrollBar()->setValue(logs_->verticalScrollBar()->maximum());
+    }
     rendered_last_sequence_ = last_sequence;
     rendered_log_count_ = entries.size();
+    rendered_visible_log_count_ = visible_count;
 }

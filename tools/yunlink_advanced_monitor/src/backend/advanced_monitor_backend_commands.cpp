@@ -6,7 +6,7 @@ void AdvancedMonitorBackend::send_takeoff(const yunlink::TakeoffCommand& cmd) {
     std::string peer_id;
     uint64_t session_id = 0;
     if (!snapshot_send_context(&peer_id, &session_id)) {
-        log(MonitorLogLevel::kWarn, MonitorLogSource::kSession, "命令未发送，session 未就绪: " + action);
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kCommand, "命令未发送，session 未就绪: " + action);
         return;
     }
     request_command_authority_if_needed();
@@ -15,7 +15,7 @@ void AdvancedMonitorBackend::send_takeoff(const yunlink::TakeoffCommand& cmd) {
         peer_id, session_id, command_target(), cmd, &handle);
     if (ec != yunlink::ErrorCode::kOk) {
         log(MonitorLogLevel::kError,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kCommand,
             "命令发送失败: " + action + " | ec=" + error_code_label(ec) + " | detail=" + detail);
         return;
     }
@@ -29,7 +29,7 @@ void AdvancedMonitorBackend::send_land(const yunlink::LandCommand& cmd) {
     std::string peer_id;
     uint64_t session_id = 0;
     if (!snapshot_send_context(&peer_id, &session_id)) {
-        log(MonitorLogLevel::kWarn, MonitorLogSource::kSession, "命令未发送，session 未就绪: " + action);
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kCommand, "命令未发送，session 未就绪: " + action);
         return;
     }
     request_command_authority_if_needed();
@@ -38,7 +38,7 @@ void AdvancedMonitorBackend::send_land(const yunlink::LandCommand& cmd) {
         peer_id, session_id, command_target(), cmd, &handle);
     if (ec != yunlink::ErrorCode::kOk) {
         log(MonitorLogLevel::kError,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kCommand,
             "命令发送失败: " + action + " | ec=" + error_code_label(ec) + " | detail=" + detail);
         return;
     }
@@ -52,7 +52,7 @@ void AdvancedMonitorBackend::send_return(const yunlink::ReturnCommand& cmd) {
     std::string peer_id;
     uint64_t session_id = 0;
     if (!snapshot_send_context(&peer_id, &session_id)) {
-        log(MonitorLogLevel::kWarn, MonitorLogSource::kSession, "命令未发送，session 未就绪: " + action);
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kCommand, "命令未发送，session 未就绪: " + action);
         return;
     }
     request_command_authority_if_needed();
@@ -61,7 +61,7 @@ void AdvancedMonitorBackend::send_return(const yunlink::ReturnCommand& cmd) {
         peer_id, session_id, command_target(), cmd, &handle);
     if (ec != yunlink::ErrorCode::kOk) {
         log(MonitorLogLevel::kError,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kCommand,
             "命令发送失败: " + action + " | ec=" + error_code_label(ec) + " | detail=" + detail);
         return;
     }
@@ -75,7 +75,7 @@ void AdvancedMonitorBackend::send_goto(const yunlink::GotoCommand& cmd) {
     std::string peer_id;
     uint64_t session_id = 0;
     if (!snapshot_send_context(&peer_id, &session_id)) {
-        log(MonitorLogLevel::kWarn, MonitorLogSource::kSession, "命令未发送，session 未就绪: " + action);
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kCommand, "命令未发送，session 未就绪: " + action);
         return;
     }
     request_command_authority_if_needed();
@@ -84,7 +84,7 @@ void AdvancedMonitorBackend::send_goto(const yunlink::GotoCommand& cmd) {
         runtime_.command_publisher().publish_goto(peer_id, session_id, command_target(), cmd, &handle);
     if (ec != yunlink::ErrorCode::kOk) {
         log(MonitorLogLevel::kError,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kCommand,
             "命令发送失败: " + action + " | ec=" + error_code_label(ec) + " | detail=" + detail);
         return;
     }
@@ -98,7 +98,7 @@ void AdvancedMonitorBackend::send_velocity_setpoint(const yunlink::VelocitySetpo
     std::string peer_id;
     uint64_t session_id = 0;
     if (!snapshot_send_context(&peer_id, &session_id)) {
-        log(MonitorLogLevel::kWarn, MonitorLogSource::kSession, "命令未发送，session 未就绪: " + action);
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kCommand, "命令未发送，session 未就绪: " + action);
         return;
     }
     request_command_authority_if_needed();
@@ -107,7 +107,7 @@ void AdvancedMonitorBackend::send_velocity_setpoint(const yunlink::VelocitySetpo
         peer_id, session_id, command_target(), cmd, &handle);
     if (ec != yunlink::ErrorCode::kOk) {
         log(MonitorLogLevel::kError,
-            MonitorLogSource::kSession,
+            MonitorLogSource::kCommand,
             "命令发送失败: " + action + " | ec=" + error_code_label(ec) + " | detail=" + detail);
         return;
     }

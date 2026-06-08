@@ -41,7 +41,8 @@ void AdvancedMonitorBackend::on_feature_list_response(
     log(message.payload.success ? MonitorLogLevel::kInfo : MonitorLogLevel::kWarn,
         MonitorLogSource::kSystemService,
         "FeatureList response success=" + std::string(message.payload.success ? "true" : "false") +
-            " correlation_id=" + std::to_string(message.envelope.correlation_id));
+            " correlation_id=" + std::to_string(message.envelope.correlation_id) +
+            " message=" + (message.payload.message.empty() ? std::string("--") : message.payload.message));
 }
 
 void AdvancedMonitorBackend::on_feature_get_response(
@@ -87,7 +88,9 @@ void AdvancedMonitorBackend::on_feature_get_response(
     log(message.payload.success ? MonitorLogLevel::kInfo : MonitorLogLevel::kWarn,
         MonitorLogSource::kSystemService,
         "FeatureGet response success=" + std::string(message.payload.success ? "true" : "false") +
-            " correlation_id=" + std::to_string(message.envelope.correlation_id));
+            " feature=" + (feature_name.empty() ? std::string("<unknown>") : feature_name) +
+            " correlation_id=" + std::to_string(message.envelope.correlation_id) + " message=" +
+            (message.payload.message.empty() ? std::string("--") : message.payload.message));
 }
 
 void AdvancedMonitorBackend::on_feature_start_response(
@@ -124,7 +127,9 @@ void AdvancedMonitorBackend::on_feature_start_response(
     log(message.payload.success ? MonitorLogLevel::kInfo : MonitorLogLevel::kWarn,
         MonitorLogSource::kSystemService,
         "FeatureStart response success=" + std::string(message.payload.success ? "true" : "false") +
-            " correlation_id=" + std::to_string(message.envelope.correlation_id));
+            " feature=" + (feature_name.empty() ? std::string("<unknown>") : feature_name) +
+            " correlation_id=" + std::to_string(message.envelope.correlation_id) + " message=" +
+            (message.payload.message.empty() ? std::string("--") : message.payload.message));
 }
 
 void AdvancedMonitorBackend::on_feature_stop_response(
@@ -161,19 +166,32 @@ void AdvancedMonitorBackend::on_feature_stop_response(
     log(message.payload.success ? MonitorLogLevel::kInfo : MonitorLogLevel::kWarn,
         MonitorLogSource::kSystemService,
         "FeatureStop response success=" + std::string(message.payload.success ? "true" : "false") +
-            " correlation_id=" + std::to_string(message.envelope.correlation_id));
+            " feature=" + (feature_name.empty() ? std::string("<unknown>") : feature_name) +
+            " correlation_id=" + std::to_string(message.envelope.correlation_id) + " message=" +
+            (message.payload.message.empty() ? std::string("--") : message.payload.message));
 }
 
 void AdvancedMonitorBackend::refresh_system_service_timeouts(uint64_t now_ms) {
-    std::lock_guard<std::mutex> lock(mu_);
-    for (auto& entry : system_service_history_) {
-        if (entry.lifecycle != MonitorSystemServiceLifecycle::kPending) {
-            continue;
+    std::vector<std::string> timed_out_lines;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        for (auto& entry : system_service_history_) {
+            if (entry.lifecycle != MonitorSystemServiceLifecycle::kPending) {
+                continue;
+            }
+            if (entry.sent_at_ms != 0 && now_ms > entry.sent_at_ms + system_service_timeout_ms_) {
+                entry.lifecycle = MonitorSystemServiceLifecycle::kTimeout;
+                entry.updated_at_ms = now_ms;
+                entry.result_message = "monitor-timeout-no-response";
+                timed_out_lines.push_back("SystemService 超时: action=" + entry.action +
+                                          " feature=" +
+                                          (entry.feature_name.empty() ? std::string("--")
+                                                                      : entry.feature_name) +
+                                          " message_id=" + std::to_string(entry.message_id));
+            }
         }
-        if (entry.sent_at_ms != 0 && now_ms > entry.sent_at_ms + system_service_timeout_ms_) {
-            entry.lifecycle = MonitorSystemServiceLifecycle::kTimeout;
-            entry.updated_at_ms = now_ms;
-            entry.result_message = "monitor-timeout-no-response";
-        }
+    }
+    for (const auto& line : timed_out_lines) {
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kSystemService, line);
     }
 }
