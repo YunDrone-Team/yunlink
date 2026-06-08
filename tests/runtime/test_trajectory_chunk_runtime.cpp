@@ -4,6 +4,7 @@
  */
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -44,6 +45,84 @@ bool has_result_detail(const std::vector<yunlink::CommandResultView>& results,
         }
     }
     return false;
+}
+
+uint64_t now_millis() {
+    const auto now = std::chrono::system_clock::now();
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
+}
+
+const char* phase_name(yunlink::CommandPhase phase) {
+    switch (phase) {
+    case yunlink::CommandPhase::kReceived:
+        return "Received";
+    case yunlink::CommandPhase::kAccepted:
+        return "Accepted";
+    case yunlink::CommandPhase::kInProgress:
+        return "InProgress";
+    case yunlink::CommandPhase::kSucceeded:
+        return "Succeeded";
+    case yunlink::CommandPhase::kFailed:
+        return "Failed";
+    case yunlink::CommandPhase::kCancelled:
+        return "Cancelled";
+    case yunlink::CommandPhase::kExpired:
+        return "Expired";
+    }
+    return "Unknown";
+}
+
+void dump_results_for_correlation(const std::vector<yunlink::CommandResultView>& results,
+                                  uint64_t correlation_id) {
+    bool found = false;
+    for (const auto& result : results) {
+        if (result.envelope.correlation_id != correlation_id) {
+            continue;
+        }
+        found = true;
+        std::cerr << "  result correlation_id=" << result.envelope.correlation_id
+                  << " message_id=" << result.envelope.message_id
+                  << " phase=" << phase_name(result.payload.phase)
+                  << " code=" << result.payload.result_code << " detail=" << result.payload.detail
+                  << "\n";
+    }
+    if (!found) {
+        std::cerr << "  no command result observed for correlation_id=" << correlation_id << "\n";
+    }
+}
+
+void dump_recent_results(const std::vector<yunlink::CommandResultView>& results, size_t limit = 8) {
+    if (results.empty()) {
+        std::cerr << "  recent results: <empty>\n";
+        return;
+    }
+
+    const size_t start = results.size() > limit ? results.size() - limit : 0;
+    std::cerr << "  recent results (" << (results.size() - start) << " of " << results.size()
+              << "):\n";
+    for (size_t i = start; i < results.size(); ++i) {
+        const auto& result = results[i];
+        std::cerr << "    [" << i << "] correlation_id=" << result.envelope.correlation_id
+                  << " message_id=" << result.envelope.message_id
+                  << " phase=" << phase_name(result.payload.phase)
+                  << " code=" << result.payload.result_code << " detail=" << result.payload.detail
+                  << "\n";
+    }
+}
+
+void dump_authority_state(yunlink::Runtime& runtime, const yunlink::TargetSelector& target) {
+    yunlink::AuthorityLease lease{};
+    if (!runtime.current_authority_for_target(target, &lease)) {
+        std::cerr << "  authority state: missing\n";
+        return;
+    }
+
+    const uint64_t now_ms = now_millis();
+    const uint64_t remaining_ms = lease.expires_at_ms > now_ms ? lease.expires_at_ms - now_ms : 0;
+    std::cerr << "  authority state: present session_id=" << lease.session_id
+              << " ttl_ms=" << lease.lease_ttl_ms << " expires_at_ms=" << lease.expires_at_ms
+              << " remaining_ms=" << remaining_ms << "\n";
 }
 
 }  // namespace
@@ -90,7 +169,7 @@ int main() {
     if (session_id == 0 ||
         !wait_until([&]() { return air.session_server().has_active_session(session_id); }) ||
         ground.request_authority(
-            peer_id, session_id, target, yunlink::ControlSource::kGroundStation, 2000) !=
+            peer_id, session_id, target, yunlink::ControlSource::kGroundStation, 5000) !=
             yunlink::ErrorCode::kOk) {
         std::cerr << "session/authority setup failed\n";
         return 3;
@@ -274,6 +353,13 @@ int main() {
                                      "trajectory-chunk-timeout");
         })) {
         std::cerr << "trajectory chunk timeout did not fail stably\n";
+        {
+            std::lock_guard<std::mutex> lock(mu);
+            std::cerr << "debug timeout1 correlation_id=" << timeout1_handle.message_id << "\n";
+            dump_results_for_correlation(results, timeout1_handle.message_id);
+            dump_recent_results(results);
+        }
+        dump_authority_state(air, target);
         return 18;
     }
 
