@@ -6,9 +6,16 @@
 namespace {
 
 std::string endpoint_text(const std::string& ip, uint16_t port) {
+    if (ip.empty()) {
+        return "-";
+    }
     std::ostringstream oss;
     oss << ip << ":" << port;
     return oss.str();
+}
+
+bool has_remote_target(const std::string& ip, int port) {
+    return !ip.empty() && port > 0;
 }
 
 }  // namespace
@@ -18,6 +25,7 @@ void AdvancedMonitorBackend::load_params() {
     authority_ttl_ms_ = static_cast<uint32_t>(std::max<int>(1000, static_cast<int>(authority_ttl_ms_)));
     command_history_limit_ = static_cast<size_t>(std::max<int>(8, static_cast<int>(command_history_limit_)));
     command_timeout_ms_ = static_cast<uint64_t>(std::max<int>(1000, static_cast<int>(command_timeout_ms_)));
+    discovery_port_ = std::max(0, discovery_port_);
 }
 
 void AdvancedMonitorBackend::start_runtime() {
@@ -54,9 +62,12 @@ void AdvancedMonitorBackend::start_runtime() {
         runtime_started_ = true;
         connection_.runtime_started = true;
         connection_.runtime_status = "RUNNING";
-        connection_.session_state = "WAITING_CONNECT";
+        connection_.session_state = has_remote_target(remote_ip_, remote_tcp_port_) ? "WAITING_CONNECT"
+                                                                                    : "WAITING_SELECTION";
         connection_.authority_state = "WAIT";
-        connection_.last_note = "Runtime 已启动，等待会话";
+        connection_.last_note = has_remote_target(remote_ip_, remote_tcp_port_)
+                                    ? "Runtime 已启动，等待会话"
+                                    : "Runtime 已启动，等待发现设备并手动连接";
         connection_.updated_at_ms = wall_time_ms();
     }
     log(MonitorLogLevel::kInfo, MonitorLogSource::kRuntime, "Runtime 已启动");

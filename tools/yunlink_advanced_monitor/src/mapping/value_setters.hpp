@@ -53,6 +53,12 @@ void set_position_target(std::unordered_map<std::string, std::string>& values,
 void set_attitude_target(std::unordered_map<std::string, std::string>& values,
                          const std::string& prefix,
                          const yunlink::AttitudeTargetSnapshot& msg);
+void set_topic_diagnostic(std::unordered_map<std::string, std::string>& values,
+                          const std::string& prefix,
+                          const yunlink::SunrayTopicDiagnosticSnapshot& msg);
+void set_command_execution_status(std::unordered_map<std::string, std::string>& values,
+                                  const std::string& prefix,
+                                  const yunlink::CommandExecutionStatusSnapshot& msg);
 
 template <typename T>
 void set_numeric(std::unordered_map<std::string, std::string>& values,

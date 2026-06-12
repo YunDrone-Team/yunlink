@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <string>
 
+#include "yunlink/core/semantic/message_ids.hpp"
 #include "yunlink/core/types.hpp"
 
 namespace yunlink {

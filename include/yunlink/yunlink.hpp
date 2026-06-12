@@ -12,6 +12,7 @@
 #include "yunlink/core/runtime_config.hpp"
 #include "yunlink/core/semantic_messages.hpp"
 #include "yunlink/core/types.hpp"
+#include "yunlink/discovery/endpoint_discovery.hpp"
 #include "yunlink/runtime/runtime.hpp"
 #include "yunlink/transport/tcp_client_pool.hpp"
 #include "yunlink/transport/tcp_server.hpp"

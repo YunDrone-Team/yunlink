@@ -48,8 +48,16 @@ size_t StateSubscriber::subscribe_uav_control_state(UavControlStateHandler cb) {
     return runtime_ ? runtime_->subscribe_uav_control_state_internal(std::move(cb)) : 0;
 }
 
+size_t StateSubscriber::subscribe_command_execution_status(CommandExecutionStatusHandler cb) {
+    return runtime_ ? runtime_->subscribe_command_execution_status_internal(std::move(cb)) : 0;
+}
+
 size_t StateSubscriber::subscribe_odom_state(OdomStateHandler cb) {
     return runtime_ ? runtime_->subscribe_odom_state_internal(std::move(cb)) : 0;
+}
+
+size_t StateSubscriber::subscribe_sunray_runtime_diagnostic(SunrayRuntimeDiagnosticHandler cb) {
+    return runtime_ ? runtime_->subscribe_sunray_runtime_diagnostic_internal(std::move(cb)) : 0;
 }
 
 void StateSubscriber::unsubscribe(size_t token) {

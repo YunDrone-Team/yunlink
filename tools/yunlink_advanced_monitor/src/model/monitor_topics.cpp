@@ -13,6 +13,7 @@ MonitorFieldDef field(std::string key, std::string label) {
 
 void append_header_rows(std::vector<MonitorFieldDef>& rows, const std::string& prefix) {
     rows.push_back(field(prefix + "header.frame_id", "Header frame | " + prefix + "header.frame_id"));
+    rows.push_back(field(prefix + "header.stamp_ns", "Header stamp_ns | " + prefix + "header.stamp_ns"));
 }
 
 void append_vec2_rows(std::vector<MonitorFieldDef>& rows,
@@ -138,7 +139,9 @@ MonitorTopicState make_odom_state_topic() {
     topic.yunlink_name = "OdomStateSnapshot";
     topic.rows = {
         field("header.frame_id", "Header frame | header.frame_id"),
+        field("header.stamp_ns", "Header stamp_ns | header.stamp_ns"),
         field("external_source", "外部定位源 | external_source"),
+        field("external_source_name", "外部定位源名称 | external_source_name"),
         field("subtopic_name_external_odom", "外部里程计输入话题 | subtopic_name_external_odom"),
         field("odometry_valid", "里程计是否有效 | odometry_valid"),
         field("odometry_update_hz", "里程计更新频率 | odometry_update_hz"),
@@ -165,22 +168,33 @@ MonitorTopicState make_control_state_topic() {
     topic.yunlink_name = "UavControlStateSnapshot";
     topic.rows = {
         field("header.frame_id", "Header frame | header.frame_id"),
+        field("header.stamp_ns", "Header stamp_ns | header.stamp_ns"),
         field("agent_name", "机器人名称 | agent_name"),
         field("agent_id", "机器人编号 | agent_id"),
         field("controller_types", "控制器类型 | controller_types"),
+        field("controller_types_name", "控制器名称 | controller_types_name"),
         field("takeoff_relative_height_m", "起飞相对高度 | takeoff_relative_height_m"),
         field("takeoff_max_velocity_mps", "起飞最大速度 | takeoff_max_velocity_mps"),
         field("land_type", "降落类型 | land_type"),
+        field("land_type_name", "降落类型名称 | land_type_name"),
         field("land_max_velocity_mps", "降落最大速度 | land_max_velocity_mps"),
     };
     append_vec3_rows(topic.rows, "home_point_m", "Home 点");
     topic.rows.push_back(field("control_state", "控制状态（动作阶段） | control_state"));
+    topic.rows.push_back(field("control_state_name", "控制状态名称 | control_state_name"));
     append_control_cmd_rows(topic.rows, "last_cmd.", "last_cmd 已接纳命令 ");
+    topic.rows.push_back(field("last_cmd.cmd_source_name", "last_cmd 来源名称 | last_cmd.cmd_source_name"));
+    topic.rows.push_back(field("last_cmd.control_cmd_name", "last_cmd 命令名称 | last_cmd.control_cmd_name"));
+    topic.rows.push_back(field("last_cmd.yaw_mode_name", "last_cmd 偏航模式名称 | last_cmd.yaw_mode_name"));
     append_odometry_rows(topic.rows, "self_odom.", "self_odom ");
     topic.rows.push_back(field("odometry_lost", "里程计丢失 | odometry_lost"));
     topic.rows.push_back(field("odometry_valid", "里程计有效 | odometry_valid"));
     topic.rows.push_back(field("controller_output_type", "控制输出类型 | controller_output_type"));
+    topic.rows.push_back(
+        field("controller_output_type_name", "控制输出类型名称 | controller_output_type_name"));
     append_position_target_rows(topic.rows, "position_target.", "position_target ");
+    topic.rows.push_back(field("position_target.coordinate_frame_name",
+                               "position_target 坐标系名称 | position_target.coordinate_frame_name"));
     append_attitude_target_rows(topic.rows, "attitude_target.", "attitude_target ");
     return topic;
 }
@@ -190,7 +204,11 @@ MonitorTopicState make_control_cmd_topic() {
     topic.key = "uav_control_cmd";
     topic.title = "uav_control_cmd";
     topic.yunlink_name = "UavControlCmdSnapshot";
+    topic.freshness_policy = MonitorTopicFreshnessPolicy::kSparseCommand;
     append_control_cmd_rows(topic.rows, "", "原始命令 ");
+    topic.rows.push_back(field("cmd_source_name", "命令来源名称 | cmd_source_name"));
+    topic.rows.push_back(field("control_cmd_name", "控制命令名称 | control_cmd_name"));
+    topic.rows.push_back(field("yaw_mode_name", "偏航模式名称 | yaw_mode_name"));
     return topic;
 }
 
@@ -201,12 +219,14 @@ MonitorTopicState make_px4_state_topic() {
     topic.yunlink_name = "Px4StateSnapshot";
     topic.rows = {
         field("header.frame_id", "Header frame | header.frame_id"),
+        field("header.stamp_ns", "Header stamp_ns | header.stamp_ns"),
         field("connected", "飞控连接状态 | connected"),
         field("rc_available", "遥控链路可用 | rc_available"),
         field("armed", "解锁状态 | armed"),
         field("flight_mode", "飞行模式编号 | flight_mode"),
         field("system_status", "系统状态 | system_status"),
         field("landed_state", "落地状态 | landed_state"),
+        field("landed_state_name", "落地状态名称 | landed_state_name"),
         field("battery_voltage_v", "电池电压 | battery_voltage_v"),
         field("battery_current_a", "电池电流 | battery_current_a"),
         field("battery_percentage", "电池百分比 | battery_percentage"),
@@ -247,14 +267,22 @@ std::unordered_map<std::string, MonitorTopicState> make_default_monitor_topics()
                        make_odom_state_topic(),
                        make_control_cmd_topic(),
                        make_control_state_topic(),
-                       make_px4_state_topic()}) {
+                       make_command_execution_status_topic(),
+                       make_px4_state_topic(),
+                       make_sunray_runtime_diagnostic_topic()}) {
         topics[topic.key] = std::move(topic);
     }
     return topics;
 }
 
 std::vector<std::string> monitor_topic_display_order() {
-    return {"local_odom", "odom_state", "uav_control_cmd", "uav_control_state", "px4_state"};
+    return {"local_odom",
+            "odom_state",
+            "uav_control_cmd",
+            "uav_control_state",
+            "command_execution_status",
+            "px4_state",
+            "sunray_runtime_diagnostic"};
 }
 
 bool monitor_has_snapshot(const MonitorTopicSnapshot& snapshot) {

@@ -122,10 +122,26 @@ size_t Runtime::subscribe_uav_control_state_internal(StateSubscriber::UavControl
     return token;
 }
 
+size_t Runtime::subscribe_command_execution_status_internal(
+    StateSubscriber::CommandExecutionStatusHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->command_execution_status_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
     impl_->odom_state_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_sunray_runtime_diagnostic_internal(
+    StateSubscriber::SunrayRuntimeDiagnosticHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->sunray_runtime_diagnostic_handlers[token] = std::move(cb);
     return token;
 }
 
@@ -240,7 +256,9 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->local_odom_handlers.erase(token);
     impl_->uav_control_cmd_handlers.erase(token);
     impl_->uav_control_state_handlers.erase(token);
+    impl_->command_execution_status_handlers.erase(token);
     impl_->odom_state_handlers.erase(token);
+    impl_->sunray_runtime_diagnostic_handlers.erase(token);
     impl_->vehicle_event_handlers.erase(token);
     impl_->command_result_handlers.erase(token);
     impl_->authority_status_handlers.erase(token);

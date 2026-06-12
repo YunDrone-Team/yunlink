@@ -57,6 +57,37 @@ void AdvancedMonitorBackend::on_command_result(const yunlink::CommandResultView&
         line);
 }
 
+void AdvancedMonitorBackend::on_command_execution_status(
+    const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message) {
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        latest_command_execution_status_ = message.payload;
+        has_latest_command_execution_status_ = true;
+    }
+
+    update_command_execution_history(message);
+
+    std::string line = "command_execution_status kind=" +
+                       command_kind_label(message.payload.command_kind) + " exec=" +
+                       command_execution_state_label(message.payload.execution_state) +
+                       " progress=" + std::to_string(message.payload.progress_percent) +
+                       " active=" + std::string(message.payload.active ? "true" : "false") +
+                       " terminal=" + std::string(message.payload.terminal ? "true" : "false") +
+                       " msg_id=" + std::to_string(message.payload.command_message_id) +
+                       " correlation_id=" +
+                       std::to_string(message.payload.command_correlation_id);
+    if (!message.payload.busy_reason.empty()) {
+        line += " busy_reason=" + message.payload.busy_reason;
+    }
+    if (!message.payload.detail.empty()) {
+        line += " detail=" + message.payload.detail;
+    }
+    log(message.payload.terminal && !message.payload.success ? MonitorLogLevel::kWarn
+                                                             : MonitorLogLevel::kInfo,
+        MonitorLogSource::kCommand,
+        line);
+}
+
 void AdvancedMonitorBackend::log_command_handle(const std::string& action,
                                                 const yunlink::CommandHandle& handle,
                                                 const std::string& detail) {
@@ -107,6 +138,33 @@ void AdvancedMonitorBackend::update_command_result_history(
         it->result_phase = command_phase_label(message.payload.phase);
         it->result_detail = message.payload.detail;
         it->lifecycle = command_lifecycle_from_phase(message.payload.phase);
+        return;
+    }
+}
+
+void AdvancedMonitorBackend::update_command_execution_history(
+    const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message) {
+    std::lock_guard<std::mutex> lock(mu_);
+    for (auto it = command_history_.rbegin(); it != command_history_.rend(); ++it) {
+        if (it->message_id != message.payload.command_message_id) {
+            continue;
+        }
+        it->updated_at_ms = wall_time_ms();
+        it->execution_state = command_execution_state_label(message.payload.execution_state);
+        it->has_execution_status = true;
+        it->ready_for_takeoff = message.payload.ready_for_takeoff;
+        it->ready_for_land = message.payload.ready_for_land;
+        if (!message.payload.busy_reason.empty()) {
+            it->execution_detail = message.payload.busy_reason;
+        } else {
+            it->execution_detail = message.payload.detail;
+        }
+        if (message.payload.terminal) {
+            it->lifecycle = message.payload.success ? MonitorCommandLifecycle::kSucceeded
+                                                    : MonitorCommandLifecycle::kFailed;
+        } else {
+            it->lifecycle = MonitorCommandLifecycle::kActive;
+        }
         return;
     }
 }

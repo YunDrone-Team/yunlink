@@ -1,5 +1,47 @@
 #include "ui/main_window.hpp"
 
+#include <cctype>
+#include <chrono>
+
+#include "common/sunray_status_format.hpp"
+
+namespace {
+
+constexpr uint64_t kCommandExecutionStatusStaleMs = 10000;
+constexpr double kPi = 3.14159265358979323846;
+
+bool is_blank_topic_value(const std::string& value) {
+    if (value.empty()) {
+        return true;
+    }
+    for (unsigned char ch : value) {
+        if (!std::isspace(ch)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string normalize_topic_value(const std::string& value) {
+    return is_blank_topic_value(value) ? std::string("<empty>") : value;
+}
+
+std::string topic_value_or_default(const MonitorTopicState& topic, const std::string& key) {
+    const auto it = topic.latest.values.find(key);
+    if (it != topic.latest.values.end()) {
+        return normalize_topic_value(it->second);
+    }
+    return monitor_has_snapshot(topic.latest) ? std::string("--") : std::string("WAIT");
+}
+
+uint64_t wall_time_ms() {
+    const auto now = std::chrono::system_clock::now();
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
+}
+
+}  // namespace
+
 void MainWindow::stage_takeoff() {
     if (backend_ == nullptr) {
         return;
@@ -36,7 +78,7 @@ void MainWindow::stage_move_point() {
     cmd.x_m = static_cast<float>(point_x_spin_->value());
     cmd.y_m = static_cast<float>(point_y_spin_->value());
     cmd.z_m = static_cast<float>(point_z_spin_->value());
-    cmd.yaw_rad = static_cast<float>(point_yaw_spin_->value());
+    cmd.yaw_rad = static_cast<float>(point_yaw_spin_->value() * kPi / 180.0);
     backend_->send_goto(cmd);
 }
 
@@ -50,6 +92,182 @@ void MainWindow::stage_move_velocity() {
     cmd.vx_mps = static_cast<float>(vel_x_spin_->value());
     cmd.vy_mps = static_cast<float>(vel_y_spin_->value());
     cmd.vz_mps = static_cast<float>(vel_z_spin_->value());
-    cmd.yaw_rate_radps = static_cast<float>(vel_yaw_rate_spin_->value());
+    cmd.yaw_rate_radps = static_cast<float>(vel_yaw_rate_spin_->value() * kPi / 180.0);
     backend_->send_velocity_setpoint(cmd);
+}
+
+void MainWindow::refresh_command_controls() {
+    if (backend_ == nullptr) {
+        return;
+    }
+
+    const auto snapshot = backend_->snapshot_connection();
+    const auto topics = backend_->snapshot_topics();
+    const uint64_t now_ms = wall_time_ms();
+    const bool session_ready =
+        snapshot.runtime_started && snapshot.peer_ready && snapshot.session_id != 0;
+    const bool authority_ready = backend_->can_send_commands();
+    bool has_exec = false;
+    bool exec_stale = false;
+    bool ready_for_takeoff = false;
+    bool ready_for_land = false;
+    std::string command_name = "-";
+    std::string execution_name = "-";
+    std::string progress_text = "-";
+    std::string reason_text = "-";
+    std::string ready_takeoff_text = "no";
+    std::string ready_land_text = "no";
+
+    const auto exec_it = topics.find("command_execution_status");
+    if (exec_it != topics.end() && monitor_has_snapshot(exec_it->second.latest)) {
+        const auto& topic = exec_it->second;
+        const auto& values = topic.latest.values;
+        const uint64_t age_ms =
+            topic.latest.received_at_ms == 0 || now_ms < topic.latest.received_at_ms
+                ? 0
+                : now_ms - topic.latest.received_at_ms;
+        exec_stale =
+            topic.latest.received_at_ms == 0 || age_ms > kCommandExecutionStatusStaleMs;
+        if (!exec_stale) {
+            has_exec = true;
+            const auto kind_it = values.find("command_kind_name");
+            if (kind_it != values.end() && !kind_it->second.empty()) {
+                command_name = kind_it->second;
+            }
+            const auto state_it = values.find("execution_state_name");
+            if (state_it != values.end() && !state_it->second.empty()) {
+                execution_name = state_it->second;
+            }
+            const auto progress_it = values.find("progress_percent_text");
+            if (progress_it != values.end() && !progress_it->second.empty()) {
+                progress_text = progress_it->second;
+            }
+            const auto reason_it = values.find("busy_reason");
+            if (reason_it != values.end() && !is_blank_topic_value(reason_it->second)) {
+                reason_text = reason_it->second;
+            } else {
+                const auto detail_it = values.find("detail");
+                if (detail_it != values.end() && !is_blank_topic_value(detail_it->second)) {
+                    reason_text = detail_it->second;
+                }
+            }
+            monitor_parse_bool(topic_value_or_default(topic, "ready_for_takeoff"),
+                               &ready_for_takeoff);
+            monitor_parse_bool(topic_value_or_default(topic, "ready_for_land"),
+                               &ready_for_land);
+            ready_takeoff_text = ready_for_takeoff ? "yes" : "no";
+            ready_land_text = ready_for_land ? "yes" : "no";
+        } else {
+            const auto kind_it = values.find("command_kind_name");
+            if (kind_it != values.end() && !kind_it->second.empty()) {
+                command_name = kind_it->second;
+            }
+            execution_name = "STALE";
+            progress_text = "age=" + monitor_fmt_age_ms(age_ms);
+            reason_text =
+                "command_execution_status snapshot stale; ignore old ready/busy gate";
+            ready_takeoff_text = "stale";
+            ready_land_text = "stale";
+        }
+    }
+
+    if (current_command_value_ != nullptr) {
+        current_command_value_->setText(QString::fromStdString(command_name));
+    }
+    if (current_execution_state_value_ != nullptr) {
+        current_execution_state_value_->setText(QString::fromStdString(execution_name));
+    }
+    if (current_execution_progress_value_ != nullptr) {
+        current_execution_progress_value_->setText(QString::fromStdString(progress_text));
+    }
+    if (current_execution_reason_value_ != nullptr) {
+        current_execution_reason_value_->setText(QString::fromStdString(reason_text));
+    }
+    if (current_ready_takeoff_value_ != nullptr) {
+        current_ready_takeoff_value_->setText(QString::fromStdString(ready_takeoff_text));
+    }
+    if (current_ready_land_value_ != nullptr) {
+        current_ready_land_value_->setText(QString::fromStdString(ready_land_text));
+    }
+
+    if (takeoff_button_ != nullptr) {
+        takeoff_button_->setEnabled(session_ready && (!has_exec || ready_for_takeoff));
+        land_button_->setEnabled(session_ready && (!has_exec || ready_for_land));
+        return_button_->setEnabled(session_ready);
+        point_button_->setEnabled(session_ready);
+        velocity_button_->setEnabled(session_ready);
+    }
+    if (!session_ready) {
+        command_hint_label_->setText("当前尚未拿到 active session，按钮已禁用。");
+        return;
+    }
+    if (exec_stale) {
+        command_hint_label_->setText(
+            "command_execution_status 已过期，旧 ready/busy 门禁已忽略；请结合最新控制侧状态继续判断。");
+        return;
+    }
+    if (has_exec && !ready_for_takeoff && !ready_for_land && reason_text != "-") {
+        command_hint_label_->setText(QString::fromStdString(
+            "控制侧状态未就绪: " + reason_text + "。LAND/TAKEOFF 按钮按 ready/busy 字段门禁。"));
+        return;
+    }
+    if (has_exec) {
+        std::string hint = "控制侧执行状态: 当前命令=" + command_name + " exec=" + execution_name +
+                           " 可起飞=" + std::string(ready_for_takeoff ? "yes" : "no") +
+                           " 可降落=" + std::string(ready_for_land ? "yes" : "no");
+        if (reason_text != "-") {
+            hint += " 原因=" + reason_text;
+        }
+        command_hint_label_->setText(QString::fromStdString(hint));
+        return;
+    }
+    if (authority_ready) {
+        command_hint_label_->setText("当前 session 与 authority 已就绪，按钮会直接下发 YunLink command。");
+        return;
+    }
+    command_hint_label_->setText(
+        "当前 session 已就绪，按钮会直接下发 YunLink command；authority 是否接纳请看状态栏和命令回执。");
+}
+
+void MainWindow::refresh_command_history() {
+    if (backend_ == nullptr || command_history_table_ == nullptr) {
+        return;
+    }
+
+    const auto entries = backend_->snapshot_command_history();
+    command_history_table_->setRowCount(static_cast<int>(entries.size()));
+    for (int row = 0; row < static_cast<int>(entries.size()); ++row) {
+        const auto& entry = entries[entries.size() - 1 - static_cast<size_t>(row)];
+        set_item(command_history_table_, row, 0, format_timestamp(entry.sent_at_ms).toStdString());
+        set_item(command_history_table_,
+                 row,
+                 1,
+                 entry.action + (entry.detail.empty() ? std::string() : "\n" + entry.detail));
+        set_item(command_history_table_, row, 2, command_lifecycle_label(entry.lifecycle));
+        set_item(command_history_table_,
+                 row,
+                 3,
+                 entry.session_id == 0 ? std::string("--") : monitor_fmt_num(entry.session_id));
+        set_item(command_history_table_,
+                 row,
+                 4,
+                 entry.message_id == 0 ? std::string("--") : monitor_fmt_num(entry.message_id));
+
+        std::string execution =
+            entry.execution_state.empty() ? std::string("--") : entry.execution_state;
+        if (entry.has_execution_status) {
+            execution += "\nready_takeoff=" + std::string(entry.ready_for_takeoff ? "yes" : "no") +
+                         " ready_land=" + std::string(entry.ready_for_land ? "yes" : "no");
+        }
+        if (!entry.execution_detail.empty()) {
+            execution += "\n" + entry.execution_detail;
+        }
+        set_item(command_history_table_, row, 5, execution);
+
+        std::string result = entry.result_phase.empty() ? std::string("--") : entry.result_phase;
+        if (!entry.result_detail.empty()) {
+            result += "\n" + entry.result_detail;
+        }
+        set_item(command_history_table_, row, 6, result);
+    }
 }

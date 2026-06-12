@@ -43,6 +43,8 @@ enum class StateSnapshotType : uint16_t {
     kUavControlCmd = 8,
     kUavControlState = 9,
     kOdomState = 10,
+    kSunrayRuntimeDiagnostic = 11,
+    kCommandExecutionStatus = 12,
 };
 
 enum class StateEventType : uint16_t {

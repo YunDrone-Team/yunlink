@@ -1,5 +1,7 @@
 #include "mapping/value_setters.hpp"
 
+#include "common/sunray_status_format.hpp"
+
 void set_value(std::unordered_map<std::string, std::string>& values,
                const std::string& key,
                const std::string& value) {
@@ -16,6 +18,7 @@ void set_header(std::unordered_map<std::string, std::string>& values,
                 const std::string& prefix,
                 const yunlink::HeaderSnapshot& msg) {
     set_value(values, prefix + "header.frame_id", msg.frame_id);
+    set_numeric(values, prefix + "header.stamp_ns", msg.stamp_ns);
 }
 
 void set_vec2(std::unordered_map<std::string, std::string>& values,
@@ -131,4 +134,55 @@ void set_attitude_target(std::unordered_map<std::string, std::string>& values,
     set_quat(values, prefix + "orientation", msg.orientation);
     set_vec3(values, prefix + "body_rate_radps", msg.body_rate_radps);
     set_float(values, prefix + "thrust", msg.thrust);
+}
+
+void set_topic_diagnostic(std::unordered_map<std::string, std::string>& values,
+                          const std::string& prefix,
+                          const yunlink::SunrayTopicDiagnosticSnapshot& msg) {
+    set_value(values, prefix + "key", msg.key);
+    set_value(values, prefix + "topic", msg.topic);
+    set_value(values, prefix + "configured", monitor_fmt_bool(msg.configured));
+    set_value(values, prefix + "has_message", monitor_fmt_bool(msg.has_message));
+    set_numeric(values, prefix + "publisher_count", msg.publisher_count);
+    set_numeric(values, prefix + "message_count", msg.message_count);
+    set_float(values, prefix + "hz", msg.hz);
+    set_numeric(values, prefix + "age_ms", msg.age_ms);
+    set_value(values, prefix + "stale", monitor_fmt_bool(msg.stale));
+    set_value(values, prefix + "status", msg.status);
+    set_value(values, prefix + "detail", msg.detail);
+}
+
+void set_command_execution_status(std::unordered_map<std::string, std::string>& values,
+                                  const std::string& prefix,
+                                  const yunlink::CommandExecutionStatusSnapshot& msg) {
+    set_header(values, prefix, msg.header);
+    set_value(values, prefix + "agent_name", msg.agent_name);
+    set_numeric(values, prefix + "agent_id", msg.agent_id);
+    set_numeric(values, prefix + "session_id", msg.session_id);
+    set_numeric(values, prefix + "command_message_id", msg.command_message_id);
+    set_numeric(values, prefix + "command_correlation_id", msg.command_correlation_id);
+    set_numeric(values, prefix + "command_kind", static_cast<uint16_t>(msg.command_kind));
+    set_value(values,
+              prefix + "command_kind_name",
+              command_kind_name(static_cast<uint16_t>(msg.command_kind)));
+    set_numeric(values, prefix + "execution_state", msg.execution_state);
+    set_value(values,
+              prefix + "execution_state_name",
+              command_execution_state_name(msg.execution_state));
+    set_numeric(values, prefix + "progress_percent", msg.progress_percent);
+    set_value(values, prefix + "progress_percent_text", std::to_string(msg.progress_percent) + "%");
+    set_value(values, prefix + "active", monitor_fmt_bool(msg.active));
+    set_value(values, prefix + "terminal", monitor_fmt_bool(msg.terminal));
+    set_value(values, prefix + "success", monitor_fmt_bool(msg.success));
+    set_numeric(values, prefix + "result_code", msg.result_code);
+    set_value(values, prefix + "detail", msg.detail);
+    set_numeric(values, prefix + "control_state", msg.control_state);
+    set_value(values, prefix + "control_state_name", uav_control_fsm_name(msg.control_state));
+    set_numeric(values, prefix + "px4_landed_state", msg.px4_landed_state);
+    set_value(values,
+              prefix + "px4_landed_state_name",
+              px4_landed_state_name(msg.px4_landed_state));
+    set_value(values, prefix + "ready_for_takeoff", monitor_fmt_bool(msg.ready_for_takeoff));
+    set_value(values, prefix + "ready_for_land", monitor_fmt_bool(msg.ready_for_land));
+    set_value(values, prefix + "busy_reason", msg.busy_reason);
 }

@@ -106,6 +106,30 @@ inline bool read_transform(BufferReader& reader, TransformSnapshot* out) {
            read_vec3(reader, &out->translation_m) && read_quat(reader, &out->rotation);
 }
 
+inline void write_topic_diagnostic(BufferWriter& writer,
+                                   const SunrayTopicDiagnosticSnapshot& value) {
+    writer.write_string(value.key);
+    writer.write_string(value.topic);
+    writer.write_bool(value.configured);
+    writer.write_bool(value.has_message);
+    writer.write_u32(value.publisher_count);
+    writer.write_u64(value.message_count);
+    writer.write_float(value.hz);
+    writer.write_u32(value.age_ms);
+    writer.write_bool(value.stale);
+    writer.write_string(value.status);
+    writer.write_string(value.detail);
+}
+
+inline bool read_topic_diagnostic(BufferReader& reader, SunrayTopicDiagnosticSnapshot* out) {
+    return reader.read_string(&out->key) && reader.read_string(&out->topic) &&
+           reader.read_bool(&out->configured) && reader.read_bool(&out->has_message) &&
+           reader.read_u32(&out->publisher_count) && reader.read_u64(&out->message_count) &&
+           reader.read_float(&out->hz) && reader.read_u32(&out->age_ms) &&
+           reader.read_bool(&out->stale) && reader.read_string(&out->status) &&
+           reader.read_string(&out->detail);
+}
+
 inline void write_covariance(BufferWriter& writer, const std::array<double, 36>& value) {
     for (double item : value) {
         writer.write_double(item);
@@ -200,6 +224,14 @@ inline bool read_attitude_target(BufferReader& reader, AttitudeTargetSnapshot* o
     out->type_mask = mask;
     return read_quat(reader, &out->orientation) && read_vec3(reader, &out->body_rate_radps) &&
            reader.read_float(&out->thrust);
+}
+
+inline bool valid_command_kind(uint16_t value) {
+    return value <= static_cast<uint16_t>(CommandKind::kFormationTask);
+}
+
+inline bool valid_command_execution_state(uint8_t value) {
+    return value <= static_cast<uint8_t>(CommandExecutionState::kTimeout);
 }
 
 }  // namespace yunlink::state_codec_detail

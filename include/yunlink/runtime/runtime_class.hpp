@@ -126,10 +126,18 @@ class Runtime {
                                         const TargetSelector& target,
                                         const UavControlStateSnapshot& payload,
                                         uint64_t session_id = 0);
+    ErrorCode publish_command_execution_status(const std::string& peer_id,
+                                               const TargetSelector& target,
+                                               const CommandExecutionStatusSnapshot& payload,
+                                               uint64_t session_id = 0);
     ErrorCode publish_odom_state(const std::string& peer_id,
                                  const TargetSelector& target,
                                  const OdomStateSnapshot& payload,
                                  uint64_t session_id = 0);
+    ErrorCode publish_sunray_runtime_diagnostic(const std::string& peer_id,
+                                                const TargetSelector& target,
+                                                const SunrayRuntimeDiagnosticSnapshot& payload,
+                                                uint64_t session_id = 0);
     ErrorCode publish_vehicle_event(const std::string& peer_id,
                                     const TargetSelector& target,
                                     const VehicleEvent& payload,
@@ -215,7 +223,11 @@ class Runtime {
     size_t subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler cb);
     size_t subscribe_uav_control_cmd_internal(StateSubscriber::UavControlCmdHandler cb);
     size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);
+    size_t
+    subscribe_command_execution_status_internal(StateSubscriber::CommandExecutionStatusHandler cb);
     size_t subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb);
+    size_t subscribe_sunray_runtime_diagnostic_internal(
+        StateSubscriber::SunrayRuntimeDiagnosticHandler cb);
     size_t
     subscribe_feature_list_request_internal(SystemServiceSubscriber::FeatureListRequestHandler cb);
     size_t subscribe_feature_list_response_internal(

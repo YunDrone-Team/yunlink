@@ -16,5 +16,11 @@ void fill_control_state_from_yunlink(const yunlink::UavControlStateSnapshot& msg
                                      std::unordered_map<std::string, std::string>& values);
 void fill_px4_state_from_yunlink(const yunlink::Px4StateSnapshot& msg,
                                  std::unordered_map<std::string, std::string>& values);
+void fill_command_execution_status_from_yunlink(
+    const yunlink::CommandExecutionStatusSnapshot& msg,
+    std::unordered_map<std::string, std::string>& values);
+void fill_sunray_runtime_diagnostic_from_yunlink(
+    const yunlink::SunrayRuntimeDiagnosticSnapshot& msg,
+    std::unordered_map<std::string, std::string>& values);
 
 #endif  // YUNLINK_ADVANCED_MONITOR_MAPPING_VALUE_MAP_HPP

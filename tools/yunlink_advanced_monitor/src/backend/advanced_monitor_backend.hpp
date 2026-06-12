@@ -12,6 +12,7 @@
 #include <yunlink/yunlink.hpp>
 
 #include "model/command_model.hpp"
+#include "model/discovery/discovery_device.hpp"
 #include "model/monitor_state.hpp"
 #include "model/monitor_topics.hpp"
 #include "model/system_service_model.hpp"
@@ -19,11 +20,11 @@
 class AdvancedMonitorBackend {
   public:
     struct Config {
-        std::string remote_ip{"127.0.0.1"};
+        std::string remote_ip;
         std::string shared_secret{"yunlink-default-secret"};
         std::string node_name{"yunlink_advanced_monitor"};
         std::string agent_name{"uav"};
-        int remote_tcp_port{9696};
+        int remote_tcp_port{0};
         int udp_bind_port{9797};
         int udp_target_port{9898};
         int tcp_listen_port{9797};
@@ -32,6 +33,8 @@ class AdvancedMonitorBackend {
         int authority_ttl_ms{3000};
         int command_history_limit{32};
         int command_timeout_ms{3000};
+        int discovery_port{9966};
+        std::string discovery_target_ip{"255.255.255.255"};
     };
 
     AdvancedMonitorBackend();
@@ -42,12 +45,16 @@ class AdvancedMonitorBackend {
     MonitorConnectionSnapshot snapshot_connection() const;
     std::unordered_map<std::string, MonitorTopicState> snapshot_topics() const;
     std::vector<MonitorLogEntry> snapshot_logs() const;
+    std::vector<DiscoveryDevice> snapshot_discovery_devices() const;
     std::vector<MonitorCommandHistoryEntry> snapshot_command_history() const;
     MonitorSystemServiceState snapshot_system_services() const;
     std::vector<MonitorSystemServiceHistoryEntry> snapshot_system_service_history() const;
     bool can_send_commands() const;
     void clear_logs();
     void request_reconnect_now();
+    bool connect_to_discovered_device(const std::string& dedupe_key);
+    bool disconnect_current_device();
+    std::string selected_discovery_device_key() const;
     void send_takeoff(const yunlink::TakeoffCommand& cmd);
     void send_land(const yunlink::LandCommand& cmd);
     void send_return(const yunlink::ReturnCommand& cmd);
@@ -68,8 +75,10 @@ class AdvancedMonitorBackend {
     void bind_yunlink_subscribers();
     void bind_command_feedback();
     void bind_system_service_feedback();
+    void start_discovery_listener();
     void setup_reconnect_timer();
     void update_config_snapshot();
+    void poll_discovery();
     void request_command_authority_if_needed();
     yunlink::TargetSelector command_target() const;
     yunlink::TargetSelector system_service_target() const;
@@ -78,12 +87,15 @@ class AdvancedMonitorBackend {
     void mark_authority_pending_unlocked(uint64_t now_ms);
     void on_authority_status(const yunlink::TypedMessage<yunlink::AuthorityStatus>& message);
     void on_command_result(const yunlink::CommandResultView& message);
+    void on_command_execution_status(
+        const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message);
     void log_command_handle(const std::string& action,
                             const yunlink::CommandHandle& handle,
                             const std::string& detail);
     static std::string authority_state_label(yunlink::AuthorityState state);
     static std::string command_phase_label(yunlink::CommandPhase phase);
     static std::string command_kind_label(yunlink::CommandKind kind);
+    static std::string command_execution_state_label(uint8_t state);
     static std::string error_code_label(yunlink::ErrorCode code);
 
     static uint16_t clamp_port(int value);
@@ -101,6 +113,8 @@ class AdvancedMonitorBackend {
                              const std::string& detail,
                              const yunlink::CommandHandle& handle);
     void update_command_result_history(const yunlink::CommandResultView& message);
+    void update_command_execution_history(
+        const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message);
     void refresh_command_timeouts(uint64_t now_ms);
     void on_feature_list_response(const yunlink::TypedMessage<yunlink::FeatureListResponse>& message);
     void on_feature_get_response(const yunlink::TypedMessage<yunlink::FeatureGetResponse>& message);
@@ -113,14 +127,20 @@ class AdvancedMonitorBackend {
     void refresh_system_service_timeouts(uint64_t now_ms);
     void log(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     void log_throttle(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
+    void update_discovery_snapshot_unlocked(const DiscoveryDevice& device);
+    static std::string make_discovery_key(const std::string& source_ip,
+                                          const std::string& endpoint_id,
+                                          uint16_t tcp_listen_port);
 
     mutable std::mutex mu_;
     std::unordered_map<std::string, MonitorTopicState> topics_;
+    std::unordered_map<std::string, DiscoveryDevice> discovery_devices_;
     std::vector<MonitorLogEntry> logs_;
     std::vector<MonitorCommandHistoryEntry> command_history_;
     std::unordered_map<std::string, uint64_t> throttled_logs_;
 
     yunlink::Runtime runtime_;
+    yunlink::EndpointListener discovery_listener_;
     size_t link_token_{0};
     size_t error_token_{0};
     size_t command_result_token_{0};
@@ -136,12 +156,13 @@ class AdvancedMonitorBackend {
     std::string node_name_;
     std::string agent_name_{"uav"};
     std::string peer_id_;
-    int remote_tcp_port_{9696};
+    int remote_tcp_port_{0};
     int udp_bind_port_{9797};
     int udp_target_port_{9898};
     int tcp_listen_port_{9797};
     int agent_id_{1};
     int log_limit_raw_{500};
+    int discovery_port_{9966};
     size_t log_limit_{500};
     uint32_t authority_ttl_ms_{3000};
     uint64_t authority_expires_at_ms_{0};
@@ -152,8 +173,12 @@ class AdvancedMonitorBackend {
     uint64_t session_id_{0};
     uint64_t next_log_sequence_{1};
     bool runtime_started_{false};
+    bool discovery_listener_started_{false};
     bool peer_ready_{false};
+    std::string selected_discovery_key_;
     MonitorConnectionSnapshot connection_;
+    yunlink::CommandExecutionStatusSnapshot latest_command_execution_status_{};
+    bool has_latest_command_execution_status_{false};
     size_t command_history_limit_{32};
     uint64_t command_timeout_ms_{3000};
     MonitorSystemServiceState system_services_;
@@ -161,6 +186,7 @@ class AdvancedMonitorBackend {
     size_t system_service_history_limit_{32};
     uint64_t system_service_timeout_ms_{5000};
     std::chrono::steady_clock::time_point started_at_steady_;
+    std::string discovery_target_ip_{"255.255.255.255"};
 };
 
 #endif  // YUNLINK_ADVANCED_MONITOR_BACKEND_ADVANCED_MONITOR_BACKEND_HPP

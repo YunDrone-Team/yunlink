@@ -7,6 +7,8 @@
 
 #include <yunlink/yunlink.hpp>
 
+#include "model/discovery/discovery_device.hpp"
+
 enum class MonitorLogLevel {
     kInfo,
     kWarn,
@@ -72,6 +74,11 @@ struct MonitorCommandHistoryEntry {
     std::string detail;
     std::string result_phase;
     std::string result_detail;
+    std::string execution_state;
+    std::string execution_detail;
+    bool ready_for_takeoff{false};
+    bool ready_for_land{false};
+    bool has_execution_status{false};
 };
 
 std::string level_label(MonitorLogLevel level);

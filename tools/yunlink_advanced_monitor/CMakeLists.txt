@@ -32,6 +32,7 @@ add_executable(yunlink_advanced_monitor
   src/backend/advanced_monitor_backend.cpp
   src/backend/advanced_monitor_backend_bindings.cpp
   src/backend/advanced_monitor_backend_commands.cpp
+  src/backend/discovery/advanced_monitor_backend_discovery.cpp
   src/backend/advanced_monitor_backend_setup.cpp
   src/backend/advanced_monitor_backend_state.cpp
   src/backend/advanced_monitor_backend_utils.cpp
@@ -39,15 +40,23 @@ add_executable(yunlink_advanced_monitor
   src/backend/system_service/advanced_monitor_backend_system_service_feedback.cpp
   src/backend/system_service/advanced_monitor_backend_system_service_requests.cpp
   src/common/monitor_format.cpp
+  src/common/monitor_topics_command_execution.cpp
+  src/common/sunray_status_format.cpp
+  src/dashboard/developer_status_command_cards.cpp
+  src/dashboard/developer_status_model.cpp
+  src/dashboard/developer_status_platform_cards.cpp
+  src/dashboard/monitor_topics_sunray_runtime.cpp
   src/main.cpp
   src/mapping/value_map.cpp
   src/mapping/value_setters.cpp
   src/model/command_model.cpp
+  src/model/discovery/discovery_device.hpp
   src/model/monitor_state.cpp
   src/model/monitor_topics.cpp
   src/model/system_service_model.cpp
   src/ui/main_window_commands.cpp
   src/ui/main_window.cpp
+  src/ui/discovery/main_window_devices.cpp
   src/ui/main_window_layout.cpp
   src/ui/main_window_logs.cpp
   src/ui/main_window_navigation.cpp

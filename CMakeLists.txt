@@ -86,6 +86,9 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/state/semantic_messages_state_bulk_extended.cpp
   src/core/state/semantic_messages_state_snapshots_core.cpp
   src/core/state/semantic_messages_state_snapshots_extended.cpp
+  src/discovery/endpoint_codec.cpp
+  src/discovery/endpoint_advertiser.cpp
+  src/discovery/endpoint_listener.cpp
   src/transport/udp_transport.cpp
   src/transport/tcp_client_pool.cpp
   src/transport/tcp_server.cpp

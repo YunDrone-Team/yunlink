@@ -160,9 +160,11 @@ cmake --build . -j4
 
 1. 初始化 YunLink runtime
 2. 绑定 YunLink link / error / authority / command / state / system service 事件
-3. 由 Qt 定时轮询周期性尝试连接远端 peer
-4. 通过 YunLink 接收 snapshot 和 system service 响应并刷新 UI model
-5. 以 `500 ms` 刷新界面
+3. 由 Qt 定时轮询 discovery，刷新发现设备列表
+4. 用户在 `Devices` 页面点击 `连接` 后，才主动连接选中的远端 peer
+5. 如果显式传入 `--remote-ip / --remote-tcp-port`，保留直接连接远端 peer 的调试入口
+6. 通过 YunLink 接收 snapshot 和 system service 响应并刷新 UI model
+7. 以 `500 ms` 刷新界面
 
 ## 后续方向
 

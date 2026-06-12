@@ -10,6 +10,7 @@
 
 #include "yunlink/core/protocol_codec.hpp"
 #include "yunlink/core/semantic/message_traits.hpp"
+#include "yunlink/core/semantic/state_types_sunray.hpp"
 
 namespace yunlink {
 
@@ -48,6 +49,8 @@ ByteBuffer encode_payload(const LocalOdomSnapshot& payload);
 ByteBuffer encode_payload(const UavControlCmdSnapshot& payload);
 ByteBuffer encode_payload(const UavControlStateSnapshot& payload);
 ByteBuffer encode_payload(const OdomStateSnapshot& payload);
+ByteBuffer encode_payload(const SunrayRuntimeDiagnosticSnapshot& payload);
+ByteBuffer encode_payload(const CommandExecutionStatusSnapshot& payload);
 
 bool decode_payload(const ByteBuffer& bytes, SessionHello* payload);
 bool decode_payload(const ByteBuffer& bytes, SessionAuthenticate* payload);
@@ -83,6 +86,8 @@ bool decode_payload(const ByteBuffer& bytes, LocalOdomSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, UavControlCmdSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, UavControlStateSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, OdomStateSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, SunrayRuntimeDiagnosticSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, CommandExecutionStatusSnapshot* payload);
 
 template <typename T> ByteBuffer encode_typed_payload(const T& payload) {
     return encode_payload(payload);

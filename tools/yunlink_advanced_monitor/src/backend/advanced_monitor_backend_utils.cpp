@@ -74,6 +74,29 @@ std::string AdvancedMonitorBackend::command_kind_label(yunlink::CommandKind kind
     return "UNKNOWN";
 }
 
+std::string AdvancedMonitorBackend::command_execution_state_label(uint8_t state) {
+    switch (state) {
+    case 0:
+        return "IDLE";
+    case 1:
+        return "ACCEPTED";
+    case 2:
+        return "RUNNING";
+    case 3:
+        return "WAITING_PHYSICAL_STATE";
+    case 4:
+        return "SUCCEEDED";
+    case 5:
+        return "FAILED";
+    case 6:
+        return "CANCELLED";
+    case 7:
+        return "TIMEOUT";
+    default:
+        return "UNKNOWN";
+    }
+}
+
 std::string AdvancedMonitorBackend::error_code_label(yunlink::ErrorCode code) {
     switch (code) {
     case yunlink::ErrorCode::kOk:

@@ -2,7 +2,10 @@
 
 #include <cctype>
 
+#include <QDateTime>
 #include <QScrollBar>
+
+#include "common/sunray_status_format.hpp"
 
 namespace {
 
@@ -30,16 +33,140 @@ std::string topic_value_or_default(const MonitorTopicState& topic, const std::st
     return monitor_has_snapshot(topic.latest) ? std::string("--") : std::string("WAIT");
 }
 
+std::string topic_label_for_display(const std::string& label, const std::string& key) {
+    std::string out = label;
+    const bool is_yaw_rate =
+        key.find("yaw_rate_radps") != std::string::npos ||
+        key.find("body_rate_radps") != std::string::npos ||
+        key.find("angular_radps") != std::string::npos;
+    const bool is_yaw_angle =
+        !is_yaw_rate &&
+        (key.find("yaw_rad") != std::string::npos || key.find("desired_yaw_rad") != std::string::npos);
+    if (is_yaw_rate) {
+        for (std::string::size_type pos = 0;
+             (pos = out.find("radps", pos)) != std::string::npos;
+             pos += 5) {
+            out.replace(pos, 5, "degps");
+        }
+        return out;
+    }
+    if (is_yaw_angle) {
+        for (std::string::size_type pos = 0;
+             (pos = out.find("rad", pos)) != std::string::npos;
+             pos += 3) {
+            out.replace(pos, 3, "deg");
+        }
+    }
+    return out;
+}
+
+std::string topic_value_for_display(const MonitorTopicState& topic, const std::string& key) {
+    const std::string value = topic_value_or_default(topic, key);
+    if (value == "WAIT" || value == "--" || value == "<empty>") {
+        return value;
+    }
+
+    double parsed = 0.0;
+    const bool is_yaw_rate =
+        key.find("yaw_rate_radps") != std::string::npos ||
+        key.find("body_rate_radps") != std::string::npos ||
+        key.find("angular_radps") != std::string::npos;
+    const bool is_yaw_angle =
+        !is_yaw_rate &&
+        (key.find("yaw_rad") != std::string::npos || key.find("desired_yaw_rad") != std::string::npos);
+
+    if ((is_yaw_angle || is_yaw_rate) && monitor_parse_double(value, &parsed)) {
+        return is_yaw_rate ? monitor_fmt_degrees_per_sec(parsed) : monitor_fmt_degrees(parsed);
+    }
+    return value;
+}
+
+QString rich_status_text(const DeveloperStatusLine& line) {
+    return QString("<span style=\"font-weight:600;color:%1;\">[%2]</span> %3<br><span style=\"color:#475467;\">%4</span>")
+        .arg(QString::fromStdString(developer_status_level_color(line.level)))
+        .arg(QString::fromStdString(developer_status_level_label(line.level)))
+        .arg(QString::fromStdString(line.title).toHtmlEscaped())
+        .arg(QString::fromStdString(line.detail).toHtmlEscaped());
+}
+
+QString card_rows_text(const DeveloperStatusCard& card) {
+    QStringList lines;
+    for (const auto& row : card.rows) {
+        lines.append(QString("<b>%1</b>: %2")
+                         .arg(QString::fromStdString(row.first).toHtmlEscaped())
+                         .arg(QString::fromStdString(row.second).toHtmlEscaped()));
+    }
+    return lines.join("<br>");
+}
+
 }  // namespace
 
 void MainWindow::refresh_view() {
+    refresh_dashboard();
     refresh_status();
+    refresh_discovery_devices(false);
     refresh_recent_issues();
     refresh_command_controls();
     refresh_command_history();
     refresh_system_services();
     refresh_topics();
     refresh_logs();
+}
+
+void MainWindow::refresh_dashboard() {
+    if (backend_ == nullptr) {
+        return;
+    }
+
+    const auto connection = backend_->snapshot_connection();
+    const auto topics = backend_->snapshot_topics();
+    const auto history = backend_->snapshot_command_history();
+    const auto snapshot =
+        build_developer_status_snapshot(connection,
+                                        topics,
+                                        history,
+                                        static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch()));
+
+    auto set_card = [](QLabel* summary, QLabel* body, const DeveloperStatusCard& card) {
+        if (summary != nullptr) {
+            summary->setTextFormat(Qt::RichText);
+            summary->setText(rich_status_text(card.summary));
+        }
+        if (body != nullptr) {
+            body->setTextFormat(Qt::RichText);
+            body->setText(card_rows_text(card));
+        }
+    };
+
+    set_card(dashboard_yunlink_summary_, dashboard_yunlink_body_, snapshot.yunlink);
+    set_card(dashboard_px4_summary_, dashboard_px4_body_, snapshot.px4);
+    set_card(dashboard_localization_summary_, dashboard_localization_body_, snapshot.localization);
+    set_card(dashboard_control_summary_, dashboard_control_body_, snapshot.control);
+    set_card(dashboard_command_summary_, dashboard_command_body_, snapshot.command);
+
+    if (dashboard_localization_panel_ != nullptr) {
+        dashboard_localization_panel_->setTextFormat(Qt::RichText);
+        dashboard_localization_panel_->setText(card_rows_text(snapshot.localization));
+    }
+    if (dashboard_control_panel_ != nullptr) {
+        dashboard_control_panel_->setTextFormat(Qt::RichText);
+        dashboard_control_panel_->setText(card_rows_text(snapshot.control));
+    }
+    if (dashboard_issues_value_ != nullptr) {
+        QStringList lines;
+        if (snapshot.issues.empty()) {
+            lines.append("[OK] 无关键问题");
+        } else {
+            for (const auto& issue : snapshot.issues) {
+                lines.append(QString("[%1] %2: %3")
+                                 .arg(QString::fromStdString(developer_status_level_label(issue.level)))
+                                 .arg(QString::fromStdString(issue.title).toHtmlEscaped())
+                                 .arg(QString::fromStdString(issue.detail).toHtmlEscaped()));
+            }
+        }
+        dashboard_issues_value_->setTextFormat(Qt::RichText);
+        dashboard_issues_value_->setText(lines.join("<br>"));
+    }
 }
 
 void MainWindow::refresh_status() {
@@ -90,69 +217,6 @@ void MainWindow::refresh_recent_issues() {
     recent_issues_value_->setText("最近异常:\n" + lines.join('\n'));
 }
 
-void MainWindow::refresh_command_controls() {
-    if (backend_ == nullptr) {
-        return;
-    }
-
-    const auto snapshot = backend_->snapshot_connection();
-    const bool session_ready =
-        snapshot.runtime_started && snapshot.peer_ready && snapshot.session_id != 0;
-    const bool authority_ready = backend_->can_send_commands();
-    if (takeoff_button_ != nullptr) {
-        takeoff_button_->setEnabled(session_ready);
-        land_button_->setEnabled(session_ready);
-        return_button_->setEnabled(session_ready);
-        point_button_->setEnabled(session_ready);
-        velocity_button_->setEnabled(session_ready);
-    }
-
-    if (!session_ready) {
-        command_hint_label_->setText("当前尚未拿到 active session，按钮已禁用。");
-        return;
-    }
-
-    if (authority_ready) {
-        command_hint_label_->setText("当前 session 与 authority 已就绪，按钮会直接下发 YunLink command。");
-        return;
-    }
-
-    command_hint_label_->setText(
-        "当前 session 已就绪，按钮会直接下发 YunLink command；authority 是否接纳请看状态栏和命令回执。");
-}
-
-void MainWindow::refresh_command_history() {
-    if (backend_ == nullptr || command_history_table_ == nullptr) {
-        return;
-    }
-
-    const auto entries = backend_->snapshot_command_history();
-    command_history_table_->setRowCount(static_cast<int>(entries.size()));
-    for (int row = 0; row < static_cast<int>(entries.size()); ++row) {
-        const auto& entry = entries[entries.size() - 1 - static_cast<size_t>(row)];
-        set_item(command_history_table_, row, 0, format_timestamp(entry.sent_at_ms).toStdString());
-        set_item(command_history_table_,
-                 row,
-                 1,
-                 entry.action + (entry.detail.empty() ? std::string() : "\n" + entry.detail));
-        set_item(command_history_table_, row, 2, command_lifecycle_label(entry.lifecycle));
-        set_item(command_history_table_,
-                 row,
-                 3,
-                 entry.session_id == 0 ? std::string("--") : monitor_fmt_num(entry.session_id));
-        set_item(command_history_table_,
-                 row,
-                 4,
-                 entry.message_id == 0 ? std::string("--") : monitor_fmt_num(entry.message_id));
-
-        std::string result = entry.result_phase.empty() ? std::string("--") : entry.result_phase;
-        if (!entry.result_detail.empty()) {
-            result += "\n" + entry.result_detail;
-        }
-        set_item(command_history_table_, row, 5, result);
-    }
-}
-
 void MainWindow::refresh_topics() {
     if (backend_ == nullptr) {
         return;
@@ -178,8 +242,8 @@ void MainWindow::refresh_topic(const std::string& key, const MonitorTopicState& 
     table->setRowCount(static_cast<int>(topic.rows.size()));
     for (int row = 0; row < static_cast<int>(topic.rows.size()); ++row) {
         const auto& field = topic.rows[static_cast<size_t>(row)];
-        set_item(table, row, 0, field.label);
-        set_item(table, row, 1, topic_value_or_default(topic, field.key));
+        set_item(table, row, 0, topic_label_for_display(field.label, field.key));
+        set_item(table, row, 1, topic_value_for_display(topic, field.key));
     }
 }
 

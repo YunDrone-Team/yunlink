@@ -30,6 +30,10 @@ class StateSubscriber {
     using UavControlStateHandler =
         std::function<void(const TypedMessage<UavControlStateSnapshot>&)>;
     using OdomStateHandler = std::function<void(const TypedMessage<OdomStateSnapshot>&)>;
+    using SunrayRuntimeDiagnosticHandler =
+        std::function<void(const TypedMessage<SunrayRuntimeDiagnosticSnapshot>&)>;
+    using CommandExecutionStatusHandler =
+        std::function<void(const TypedMessage<CommandExecutionStatusSnapshot>&)>;
 
     explicit StateSubscriber(Runtime* runtime = nullptr);
 
@@ -43,6 +47,8 @@ class StateSubscriber {
     size_t subscribe_uav_control_cmd(UavControlCmdHandler cb);
     size_t subscribe_uav_control_state(UavControlStateHandler cb);
     size_t subscribe_odom_state(OdomStateHandler cb);
+    size_t subscribe_sunray_runtime_diagnostic(SunrayRuntimeDiagnosticHandler cb);
+    size_t subscribe_command_execution_status(CommandExecutionStatusHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

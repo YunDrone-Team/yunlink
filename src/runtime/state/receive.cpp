@@ -83,11 +83,30 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case StateSnapshotType::kCommandExecutionStatus:
+        if (!runtime_fanout_snapshot<CommandExecutionStatusSnapshot>(
+                impl_->mu,
+                ev.envelope,
+                ev.envelope.payload,
+                impl_->command_execution_status_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     case StateSnapshotType::kOdomState:
         if (!runtime_fanout_snapshot<OdomStateSnapshot>(
                 impl_->mu, ev.envelope, ev.envelope.payload, impl_->odom_state_handlers)) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
+        return;
+    case StateSnapshotType::kSunrayRuntimeDiagnostic:
+        if (!runtime_fanout_snapshot<SunrayRuntimeDiagnosticSnapshot>(
+                impl_->mu,
+                ev.envelope,
+                ev.envelope.payload,
+                impl_->sunray_runtime_diagnostic_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     }
 }
 

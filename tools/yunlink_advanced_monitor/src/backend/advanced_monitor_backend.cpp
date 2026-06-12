@@ -14,12 +14,15 @@ AdvancedMonitorBackend::AdvancedMonitorBackend(Config config)
       tcp_listen_port_(config.tcp_listen_port),
       agent_id_(config.agent_id),
       log_limit_raw_(config.log_limit),
+      discovery_port_(config.discovery_port),
       authority_ttl_ms_(static_cast<uint32_t>(config.authority_ttl_ms)),
       command_history_limit_(static_cast<size_t>(config.command_history_limit)),
       command_timeout_ms_(static_cast<uint64_t>(config.command_timeout_ms)),
+      discovery_target_ip_(std::move(config.discovery_target_ip)),
       started_at_steady_(std::chrono::steady_clock::now()) {
     update_config_snapshot();
     start_runtime();
+    start_discovery_listener();
     bind_runtime_diagnostics();
     bind_yunlink_subscribers();
     bind_command_feedback();
@@ -54,6 +57,7 @@ AdvancedMonitorBackend::~AdvancedMonitorBackend() {
     if (error_token_ != 0) {
         runtime_.event_bus().unsubscribe(error_token_);
     }
+    discovery_listener_.stop();
     runtime_.stop();
 }
 

@@ -26,9 +26,14 @@ std::string session_state_text(yunlink::SessionState state) {
     return "UNKNOWN";
 }
 
+bool has_remote_target(const std::string& ip, int port) {
+    return !ip.empty() && port > 0;
+}
+
 }  // namespace
 
 void AdvancedMonitorBackend::poll_runtime() {
+    poll_discovery();
     if (!runtime_started_) {
         return;
     }
@@ -72,26 +77,40 @@ void AdvancedMonitorBackend::poll_runtime() {
         return;
     }
 
-    yunlink::SessionDescriptor active_session{};
-    if (runtime_.session_server().find_active_session(&active_session)) {
-        {
-            std::lock_guard<std::mutex> lock(mu_);
-            peer_ready_ = true;
-            peer_id_ = active_session.peer.id;
-            session_id_ = active_session.session_id;
-            connection_.peer_ready = true;
-            connection_.peer_id = active_session.peer.id;
-            connection_.session_id = active_session.session_id;
-            connection_.session_state = session_state_text(active_session.state);
-            connection_.last_note = "复用现有会话";
-            connection_.updated_at_ms = wall_time_ms();
-        }
-        log(MonitorLogLevel::kInfo,
-            MonitorLogSource::kConnection,
-            "复用现有会话，对端 peer_id=" + active_session.peer.id +
-                "，session_id=" + std::to_string(active_session.session_id));
-        request_command_authority_if_needed();
+    const bool has_selected_discovery = !selected_discovery_device_key().empty();
+    const bool has_direct_target = has_remote_target(remote_ip_, remote_tcp_port_);
+    if (!has_selected_discovery && !has_direct_target) {
+        std::lock_guard<std::mutex> lock(mu_);
+        connection_.peer_ready = false;
+        connection_.session_state = "WAITING_SELECTION";
+        connection_.last_note = "等待发现设备并手动连接";
+        connection_.last_error.clear();
+        connection_.updated_at_ms = wall_time_ms();
         return;
+    }
+
+    if (has_direct_target && !has_selected_discovery) {
+        yunlink::SessionDescriptor active_session{};
+        if (runtime_.session_server().find_active_session(&active_session)) {
+            {
+                std::lock_guard<std::mutex> lock(mu_);
+                peer_ready_ = true;
+                peer_id_ = active_session.peer.id;
+                session_id_ = active_session.session_id;
+                connection_.peer_ready = true;
+                connection_.peer_id = active_session.peer.id;
+                connection_.session_id = active_session.session_id;
+                connection_.session_state = session_state_text(active_session.state);
+                connection_.last_note = "复用现有会话";
+                connection_.updated_at_ms = wall_time_ms();
+            }
+            log(MonitorLogLevel::kInfo,
+                MonitorLogSource::kConnection,
+                "复用现有会话，对端 peer_id=" + active_session.peer.id +
+                    "，session_id=" + std::to_string(active_session.session_id));
+            request_command_authority_if_needed();
+            return;
+        }
     }
 
     std::string peer_id;

@@ -51,7 +51,11 @@ struct Runtime::Impl {
     std::unordered_map<size_t, StateSubscriber::LocalOdomHandler> local_odom_handlers;
     std::unordered_map<size_t, StateSubscriber::UavControlCmdHandler> uav_control_cmd_handlers;
     std::unordered_map<size_t, StateSubscriber::UavControlStateHandler> uav_control_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::CommandExecutionStatusHandler>
+        command_execution_status_handlers;
     std::unordered_map<size_t, StateSubscriber::OdomStateHandler> odom_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::SunrayRuntimeDiagnosticHandler>
+        sunray_runtime_diagnostic_handlers;
     std::unordered_map<size_t, EventSubscriber::VehicleEventHandler> vehicle_event_handlers;
     std::unordered_map<size_t, EventSubscriber::CommandResultHandler> command_result_handlers;
     std::unordered_map<size_t, EventSubscriber::AuthorityStatusHandler> authority_status_handlers;

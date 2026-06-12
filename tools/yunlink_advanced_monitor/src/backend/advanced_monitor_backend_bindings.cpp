@@ -61,11 +61,40 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            message.envelope.session_id);
         }));
 
+    state_sub_tokens_.push_back(runtime_.state_subscriber().subscribe_command_execution_status(
+        [this](const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message) {
+            std::unordered_map<std::string, std::string> values;
+            fill_command_execution_status_from_yunlink(message.payload, values);
+            update_yunlink("command_execution_status",
+                           std::move(values),
+                           "session=" + std::to_string(message.envelope.session_id) +
+                               " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
+                           message.envelope.message_id,
+                           message.envelope.created_at_ms,
+                           message.envelope.session_id);
+            on_command_execution_status(message);
+        }));
+
     state_sub_tokens_.push_back(runtime_.state_subscriber().subscribe_px4_state(
         [this](const yunlink::TypedMessage<yunlink::Px4StateSnapshot>& message) {
             std::unordered_map<std::string, std::string> values;
             fill_px4_state_from_yunlink(message.payload, values);
             update_yunlink("px4_state",
+                           std::move(values),
+                           "session=" + std::to_string(message.envelope.session_id) +
+                               " msg_id=" + std::to_string(message.envelope.message_id),
+                           message.payload.header.stamp_ns,
+                           message.envelope.message_id,
+                           message.envelope.created_at_ms,
+                           message.envelope.session_id);
+        }));
+
+    state_sub_tokens_.push_back(runtime_.state_subscriber().subscribe_sunray_runtime_diagnostic(
+        [this](const yunlink::TypedMessage<yunlink::SunrayRuntimeDiagnosticSnapshot>& message) {
+            std::unordered_map<std::string, std::string> values;
+            fill_sunray_runtime_diagnostic_from_yunlink(message.payload, values);
+            update_yunlink("sunray_runtime_diagnostic",
                            std::move(values),
                            "session=" + std::to_string(message.envelope.session_id) +
                                " msg_id=" + std::to_string(message.envelope.message_id),

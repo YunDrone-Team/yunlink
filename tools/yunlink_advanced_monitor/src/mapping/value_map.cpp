@@ -1,5 +1,6 @@
 #include "mapping/value_map.hpp"
 
+#include "common/sunray_status_format.hpp"
 #include "mapping/value_setters.hpp"
 
 void fill_local_odom_from_yunlink(const yunlink::LocalOdomSnapshot& msg,
@@ -11,6 +12,7 @@ void fill_odom_state_from_yunlink(const yunlink::OdomStateSnapshot& msg,
                                   std::unordered_map<std::string, std::string>& values) {
     set_header(values, "", msg.header);
     set_numeric(values, "external_source", msg.external_source);
+    set_value(values, "external_source_name", localization_source_name(msg.external_source));
     set_value(values, "subtopic_name_external_odom", msg.subtopic_name_external_odom);
     set_value(values, "odometry_valid", monitor_fmt_bool(msg.odometry_valid));
     set_float(values, "odometry_update_hz", msg.odometry_update_hz);
@@ -33,6 +35,9 @@ void fill_odom_state_from_yunlink(const yunlink::OdomStateSnapshot& msg,
 void fill_control_cmd_from_yunlink(const yunlink::UavControlCmdSnapshot& msg,
                                    std::unordered_map<std::string, std::string>& values) {
     set_control_cmd(values, "", msg);
+    set_value(values, "cmd_source_name", uav_control_cmd_source_name(msg.cmd_source));
+    set_value(values, "control_cmd_name", uav_control_cmd_name(msg.control_cmd));
+    set_value(values, "yaw_mode_name", uav_yaw_mode_name(msg.yaw_mode));
 }
 
 void fill_control_state_from_yunlink(const yunlink::UavControlStateSnapshot& msg,
@@ -41,20 +46,34 @@ void fill_control_state_from_yunlink(const yunlink::UavControlStateSnapshot& msg
     set_value(values, "agent_name", msg.agent_name);
     set_numeric(values, "agent_id", msg.agent_id);
     set_numeric(values, "controller_types", msg.controller_types);
+    set_value(values, "controller_types_name", uav_controller_type_name(msg.controller_types));
     set_float(values, "takeoff_relative_height_m", msg.takeoff_relative_height_m);
     set_float(values, "takeoff_max_velocity_mps", msg.takeoff_max_velocity_mps);
     set_numeric(values, "land_type", msg.land_type);
+    set_value(values, "land_type_name", land_type_name(msg.land_type));
     set_float(values, "land_max_velocity_mps", msg.land_max_velocity_mps);
     set_float(values, "home_point_m.x", msg.home_point_m.x);
     set_float(values, "home_point_m.y", msg.home_point_m.y);
     set_float(values, "home_point_m.z", msg.home_point_m.z);
     set_numeric(values, "control_state", msg.control_state);
+    set_value(values, "control_state_name", uav_control_fsm_name(msg.control_state));
     set_control_cmd(values, "last_cmd.", msg.last_cmd);
+    set_value(values,
+              "last_cmd.cmd_source_name",
+              uav_control_cmd_source_name(msg.last_cmd.cmd_source));
+    set_value(values, "last_cmd.control_cmd_name", uav_control_cmd_name(msg.last_cmd.control_cmd));
+    set_value(values, "last_cmd.yaw_mode_name", uav_yaw_mode_name(msg.last_cmd.yaw_mode));
     set_odometry(values, "self_odom.", msg.self_odom);
     set_value(values, "odometry_lost", monitor_fmt_bool(msg.odometry_lost));
     set_value(values, "odometry_valid", monitor_fmt_bool(msg.odometry_valid));
     set_numeric(values, "controller_output_type", msg.controller_output_type);
+    set_value(values,
+              "controller_output_type_name",
+              uav_controller_output_type_name(msg.controller_output_type));
     set_position_target(values, "position_target.", msg.position_target);
+    set_value(values,
+              "position_target.coordinate_frame_name",
+              position_target_frame_name(msg.position_target.coordinate_frame));
     set_attitude_target(values, "attitude_target.", msg.attitude_target);
 }
 
@@ -67,6 +86,7 @@ void fill_px4_state_from_yunlink(const yunlink::Px4StateSnapshot& msg,
     set_numeric(values, "flight_mode", msg.flight_mode);
     set_numeric(values, "system_status", msg.system_status);
     set_numeric(values, "landed_state", msg.landed_state);
+    set_value(values, "landed_state_name", px4_landed_state_name(msg.landed_state));
     set_float(values, "battery_voltage_v", msg.battery_voltage_v);
     set_float(values, "battery_current_a", msg.battery_current_a);
     set_float(values, "battery_percentage", msg.battery_percentage);
@@ -95,4 +115,27 @@ void fill_px4_state_from_yunlink(const yunlink::Px4StateSnapshot& msg,
     set_float(values, "latitude_raw_deg", msg.latitude_raw_deg);
     set_float(values, "longitude_raw_deg", msg.longitude_raw_deg);
     set_float(values, "altitude_amsl_m", msg.altitude_amsl_m);
+}
+
+void fill_command_execution_status_from_yunlink(
+    const yunlink::CommandExecutionStatusSnapshot& msg,
+    std::unordered_map<std::string, std::string>& values) {
+    set_command_execution_status(values, "", msg);
+}
+
+void fill_sunray_runtime_diagnostic_from_yunlink(
+    const yunlink::SunrayRuntimeDiagnosticSnapshot& msg,
+    std::unordered_map<std::string, std::string>& values) {
+    set_header(values, "", msg.header);
+    set_value(values, "agent_key", msg.agent_key);
+    set_numeric(values, "stale_timeout_ms", msg.stale_timeout_ms);
+    set_topic_diagnostic(values, "external_odom.", msg.external_odom);
+    set_topic_diagnostic(values, "odom_state.", msg.odom_state);
+    set_topic_diagnostic(values, "local_odom.", msg.local_odom);
+    set_topic_diagnostic(values, "global_odom.", msg.global_odom);
+    set_topic_diagnostic(values, "uav_control_cmd.", msg.uav_control_cmd);
+    set_topic_diagnostic(values, "uav_control_state.", msg.uav_control_state);
+    set_topic_diagnostic(values, "px4_state.", msg.px4_state);
+    set_value(values, "worst_level", msg.worst_level);
+    set_value(values, "summary", msg.summary);
 }

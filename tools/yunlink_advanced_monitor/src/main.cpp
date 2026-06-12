@@ -50,6 +50,10 @@ int main(int argc, char** argv) {
             config.command_history_limit = std::stoi(cli_arg_value(arg));
         } else if (arg.rfind("--command-timeout-ms=", 0) == 0) {
             config.command_timeout_ms = std::stoi(cli_arg_value(arg));
+        } else if (arg.rfind("--discovery-port=", 0) == 0) {
+            config.discovery_port = std::stoi(cli_arg_value(arg));
+        } else if (arg.rfind("--discovery-target-ip=", 0) == 0) {
+            config.discovery_target_ip = cli_arg_value(arg);
         }
     }
 

@@ -116,18 +116,18 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     layout->setHorizontalSpacing(8);
     layout->setVerticalSpacing(8);
 
-    takeoff_height_spin_ = make_spin(1.5, 0.1, 20.0, 0.1);
+    takeoff_height_spin_ = make_spin(0.6, 0.1, 20.0, 0.1);
     takeoff_velocity_spin_ = make_spin(0.8, 0.1, 5.0, 0.1);
     land_velocity_spin_ = make_spin(0.5, 0.1, 5.0, 0.1);
     return_loiter_spin_ = make_spin(0.0, 0.0, 30.0, 0.5);
     point_x_spin_ = make_spin(0.0, -100.0, 100.0, 0.1);
     point_y_spin_ = make_spin(0.0, -100.0, 100.0, 0.1);
-    point_z_spin_ = make_spin(1.5, -10.0, 100.0, 0.1);
-    point_yaw_spin_ = make_spin(0.0, -3.14159, 3.14159, 0.1, 3);
+    point_z_spin_ = make_spin(0.8, -10.0, 100.0, 0.1);
+    point_yaw_spin_ = make_spin(0.0, -180.0, 180.0, 1.0, 1);
     vel_x_spin_ = make_spin(0.0, -5.0, 5.0, 0.1);
     vel_y_spin_ = make_spin(0.0, -5.0, 5.0, 0.1);
     vel_z_spin_ = make_spin(0.0, -5.0, 5.0, 0.1);
-    vel_yaw_rate_spin_ = make_spin(0.0, -3.14159, 3.14159, 0.1, 3);
+    vel_yaw_rate_spin_ = make_spin(0.0, -180.0, 180.0, 1.0, 1);
 
     takeoff_button_ = new QPushButton("TAKEOFF", group);
     land_button_ = new QPushButton("LAND", group);
@@ -137,6 +137,13 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     command_hint_label_ = new QLabel(group);
     command_hint_label_->setWordWrap(true);
     command_hint_label_->setStyleSheet("color:#56656d;");
+    current_command_value_ = new QLabel("-", group);
+    current_execution_state_value_ = new QLabel("-", group);
+    current_execution_progress_value_ = new QLabel("-", group);
+    current_execution_reason_value_ = new QLabel("-", group);
+    current_execution_reason_value_->setWordWrap(true);
+    current_ready_takeoff_value_ = new QLabel("-", group);
+    current_ready_land_value_ = new QLabel("-", group);
 
     connect(takeoff_button_, &QPushButton::clicked, this, &MainWindow::stage_takeoff);
     connect(land_button_, &QPushButton::clicked, this, &MainWindow::stage_land);
@@ -157,21 +164,35 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     layout->addWidget(land_button_, 1, 4);
     layout->addWidget(return_button_, 1, 5);
 
-    layout->addWidget(new QLabel("目标点 x/y/z/yaw(rad)"), 2, 0);
+    layout->addWidget(new QLabel("目标点 x/y/z/yaw(deg)"), 2, 0);
     layout->addWidget(point_x_spin_, 2, 1);
     layout->addWidget(point_y_spin_, 2, 2);
     layout->addWidget(point_z_spin_, 2, 3);
     layout->addWidget(point_yaw_spin_, 2, 4);
     layout->addWidget(point_button_, 2, 5);
 
-    layout->addWidget(new QLabel("惯性系速度 vx/vy/vz/yaw_rate"), 3, 0);
+    layout->addWidget(new QLabel("惯性系速度 vx/vy/vz/yaw_rate(deg/s)"), 3, 0);
     layout->addWidget(vel_x_spin_, 3, 1);
     layout->addWidget(vel_y_spin_, 3, 2);
     layout->addWidget(vel_z_spin_, 3, 3);
     layout->addWidget(vel_yaw_rate_spin_, 3, 4);
     layout->addWidget(velocity_button_, 3, 5);
 
-    layout->addWidget(command_hint_label_, 4, 0, 1, 6);
+    layout->addWidget(new QLabel("当前命令"), 4, 0);
+    layout->addWidget(current_command_value_, 4, 1);
+    layout->addWidget(new QLabel("阶段"), 4, 2);
+    layout->addWidget(current_execution_state_value_, 4, 3);
+    layout->addWidget(new QLabel("进度"), 4, 4);
+    layout->addWidget(current_execution_progress_value_, 4, 5);
+
+    layout->addWidget(new QLabel("原因"), 5, 0);
+    layout->addWidget(current_execution_reason_value_, 5, 1, 1, 3);
+    layout->addWidget(new QLabel("可起飞"), 5, 4);
+    layout->addWidget(current_ready_takeoff_value_, 5, 5);
+
+    layout->addWidget(new QLabel("可降落"), 6, 0);
+    layout->addWidget(current_ready_land_value_, 6, 1);
+    layout->addWidget(command_hint_label_, 6, 2, 1, 4);
     return group;
 }
 
@@ -181,9 +202,9 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
     layout->setSpacing(8);
 
     command_history_table_ = new QTableWidget(group);
-    command_history_table_->setColumnCount(6);
+    command_history_table_->setColumnCount(7);
     command_history_table_->setHorizontalHeaderLabels(
-        {"时间", "命令", "状态", "Session", "Message ID", "回执"});
+        {"时间", "命令", "状态", "Session", "Message ID", "执行状态", "回执"});
     command_history_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     command_history_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     command_history_table_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -199,7 +220,9 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
                                                                      QHeaderView::ResizeToContents);
     command_history_table_->horizontalHeader()->setSectionResizeMode(4,
                                                                      QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(5,
+                                                                     QHeaderView::ResizeToContents);
+    command_history_table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
     command_history_table_->setWordWrap(false);
     layout->addWidget(command_history_table_);
     return group;

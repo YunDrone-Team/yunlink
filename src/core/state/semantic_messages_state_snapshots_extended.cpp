@@ -91,4 +91,88 @@ bool decode_payload(const ByteBuffer& bytes, OdomStateSnapshot* payload) {
     });
 }
 
+ByteBuffer encode_payload(const SunrayRuntimeDiagnosticSnapshot& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        write_header(writer, payload.header);
+        writer.write_string(payload.agent_key);
+        writer.write_u32(payload.stale_timeout_ms);
+        write_topic_diagnostic(writer, payload.external_odom);
+        write_topic_diagnostic(writer, payload.odom_state);
+        write_topic_diagnostic(writer, payload.local_odom);
+        write_topic_diagnostic(writer, payload.global_odom);
+        write_topic_diagnostic(writer, payload.uav_control_cmd);
+        write_topic_diagnostic(writer, payload.uav_control_state);
+        write_topic_diagnostic(writer, payload.px4_state);
+        writer.write_string(payload.worst_level);
+        writer.write_string(payload.summary);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, SunrayRuntimeDiagnosticSnapshot* payload) {
+    return parse_payload(
+        bytes, payload, [](BufferReader& reader, SunrayRuntimeDiagnosticSnapshot* out) {
+            return read_header(reader, &out->header) && reader.read_string(&out->agent_key) &&
+                   reader.read_u32(&out->stale_timeout_ms) &&
+                   read_topic_diagnostic(reader, &out->external_odom) &&
+                   read_topic_diagnostic(reader, &out->odom_state) &&
+                   read_topic_diagnostic(reader, &out->local_odom) &&
+                   read_topic_diagnostic(reader, &out->global_odom) &&
+                   read_topic_diagnostic(reader, &out->uav_control_cmd) &&
+                   read_topic_diagnostic(reader, &out->uav_control_state) &&
+                   read_topic_diagnostic(reader, &out->px4_state) &&
+                   reader.read_string(&out->worst_level) && reader.read_string(&out->summary);
+        });
+}
+
+ByteBuffer encode_payload(const CommandExecutionStatusSnapshot& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        write_header(writer, payload.header);
+        writer.write_string(payload.agent_name);
+        writer.write_u8(payload.agent_id);
+        writer.write_u64(payload.session_id);
+        writer.write_u64(payload.command_message_id);
+        writer.write_u64(payload.command_correlation_id);
+        writer.write_u16(static_cast<uint16_t>(payload.command_kind));
+        writer.write_u8(payload.execution_state);
+        writer.write_u8(payload.progress_percent);
+        writer.write_bool(payload.active);
+        writer.write_bool(payload.terminal);
+        writer.write_bool(payload.success);
+        writer.write_u16(payload.result_code);
+        writer.write_string(payload.detail);
+        writer.write_u8(payload.control_state);
+        writer.write_u8(payload.px4_landed_state);
+        writer.write_bool(payload.ready_for_takeoff);
+        writer.write_bool(payload.ready_for_land);
+        writer.write_string(payload.busy_reason);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, CommandExecutionStatusSnapshot* payload) {
+    return parse_payload(
+        bytes, payload, [](BufferReader& reader, CommandExecutionStatusSnapshot* out) {
+            uint16_t command_kind = 0;
+            if (!read_header(reader, &out->header) || !reader.read_string(&out->agent_name) ||
+                !reader.read_u8(&out->agent_id) || !reader.read_u64(&out->session_id) ||
+                !reader.read_u64(&out->command_message_id) ||
+                !reader.read_u64(&out->command_correlation_id) || !reader.read_u16(&command_kind) ||
+                !reader.read_u8(&out->execution_state) || !reader.read_u8(&out->progress_percent) ||
+                !reader.read_bool(&out->active) || !reader.read_bool(&out->terminal) ||
+                !reader.read_bool(&out->success) || !reader.read_u16(&out->result_code) ||
+                !reader.read_string(&out->detail) || !reader.read_u8(&out->control_state) ||
+                !reader.read_u8(&out->px4_landed_state) ||
+                !reader.read_bool(&out->ready_for_takeoff) ||
+                !reader.read_bool(&out->ready_for_land) || !reader.read_string(&out->busy_reason)) {
+                return false;
+            }
+
+            if (!valid_command_kind(command_kind) ||
+                !valid_command_execution_state(out->execution_state)) {
+                return false;
+            }
+            out->command_kind = static_cast<CommandKind>(command_kind);
+            return true;
+        });
+}
+
 }  // namespace yunlink

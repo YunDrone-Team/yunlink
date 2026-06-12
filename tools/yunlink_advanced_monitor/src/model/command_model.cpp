@@ -10,6 +10,14 @@ std::string format_float(double value) {
     return monitor_fmt_float(value);
 }
 
+std::string format_deg(double value_rad) {
+    return monitor_fmt_degrees(value_rad);
+}
+
+std::string format_degps(double value_radps) {
+    return monitor_fmt_degrees_per_sec(value_radps);
+}
+
 }  // namespace
 
 std::string monitor_cmd_name_takeoff() {
@@ -65,7 +73,7 @@ MonitorCommandDraft make_goto_draft(const yunlink::GotoCommand& cmd) {
     draft.summary = monitor_cmd_name_goto();
     std::ostringstream oss;
     oss << "x_m=" << format_float(cmd.x_m) << " y_m=" << format_float(cmd.y_m)
-        << " z_m=" << format_float(cmd.z_m) << " yaw_rad=" << format_float(cmd.yaw_rad);
+        << " z_m=" << format_float(cmd.z_m) << " yaw_deg=" << format_deg(cmd.yaw_rad);
     draft.detail = oss.str();
     return draft;
 }
@@ -79,12 +87,12 @@ MonitorCommandDraft make_velocity_draft(const yunlink::VelocitySetpointCommand& 
     if (cmd.body_frame) {
         oss << "body_vx_mps=" << format_float(cmd.vx_mps)
             << " body_vy_mps=" << format_float(cmd.vy_mps)
-            << " yaw_rate_radps=" << format_float(cmd.yaw_rate_radps)
+            << " yaw_rate_degps=" << format_degps(cmd.yaw_rate_radps)
             << " fixed_height_m=bridge-current-px4-state";
     } else {
         oss << "vx_mps=" << format_float(cmd.vx_mps) << " vy_mps=" << format_float(cmd.vy_mps)
             << " vz_mps=" << format_float(cmd.vz_mps)
-            << " yaw_rate_radps=" << format_float(cmd.yaw_rate_radps)
+            << " yaw_rate_degps=" << format_degps(cmd.yaw_rate_radps)
             << " body_frame=false";
     }
     draft.detail = oss.str();
