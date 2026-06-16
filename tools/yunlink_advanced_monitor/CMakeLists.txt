@@ -6,7 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt5 QUIET COMPONENTS Widgets)
+if(Qt5_FOUND)
+  set(YUNLINK_QT_WIDGETS_TARGET Qt5::Widgets)
+else()
+  find_package(Qt6 REQUIRED COMPONENTS Widgets)
+  set(YUNLINK_QT_WIDGETS_TARGET Qt6::Widgets)
+endif()
 find_package(Threads REQUIRED)
 
 get_filename_component(YUNLINK_ROOT_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -41,6 +47,8 @@ add_executable(yunlink_advanced_monitor
   src/backend/system_service/advanced_monitor_backend_system_service_requests.cpp
   src/common/monitor_format.cpp
   src/common/monitor_topics_command_execution.cpp
+  src/common/monitor_ui_style.cpp
+  src/common/ui/monitor_ui_dialogs.cpp
   src/common/sunray_status_format.cpp
   src/dashboard/developer_status_command_cards.cpp
   src/dashboard/developer_status_model.cpp
@@ -65,7 +73,7 @@ add_executable(yunlink_advanced_monitor
 )
 
 target_link_libraries(yunlink_advanced_monitor
-  Qt5::Widgets
+  ${YUNLINK_QT_WIDGETS_TARGET}
   ${YUNLINK_LIBRARY}
   Threads::Threads
 )

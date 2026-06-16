@@ -10,6 +10,8 @@
 #include <QVBoxLayout>
 #include <QCheckBox>
 
+#include "common/monitor_ui_style.hpp"
+
 namespace {
 
 std::string bool_label(bool value) {
@@ -89,21 +91,32 @@ void MainWindow::stage_stop_feature() {
     if (backend_ == nullptr || feature_name_edit_ == nullptr) {
         return;
     }
-    backend_->request_feature_stop(feature_name_edit_->text().trimmed().toStdString(),
-                                   feature_force_stop_checkbox_ != nullptr &&
-                                       feature_force_stop_checkbox_->isChecked());
+    const bool force =
+        feature_force_stop_checkbox_ != nullptr && feature_force_stop_checkbox_->isChecked();
+    const QString feature_name = feature_name_edit_->text().trimmed();
+    if (force &&
+        !monitor_ui::confirm_warning(
+            this,
+            "FeatureStop force confirmation",
+            "force_stop 会要求对端尽快停止目标 feature，可能中断正在运行的任务或日志输出。\n\nfeature=" +
+                feature_name)) {
+        return;
+    }
+    backend_->request_feature_stop(feature_name.toStdString(), force);
 }
 
 QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
-    auto* group = new QGroupBox("System Service", parent);
+    auto* group = new QGroupBox("Feature service debug console", parent);
     auto* root = new QVBoxLayout(group);
     root->setSpacing(8);
 
     auto* action_row = new QHBoxLayout();
-    refresh_feature_list_button_ = new QPushButton("刷新 FeatureList", group);
+    refresh_feature_list_button_ = new QPushButton("Refresh FeatureList", group);
     feature_name_edit_ = new QLineEdit(group);
     feature_name_edit_->setPlaceholderText("feature_name");
-    refresh_feature_detail_button_ = new QPushButton("查询 FeatureGet", group);
+    refresh_feature_detail_button_ = new QPushButton("Query FeatureGet", group);
+    monitor_ui::style_button(refresh_feature_list_button_, monitor_ui::ButtonRole::kSecondary);
+    monitor_ui::style_button(refresh_feature_detail_button_, monitor_ui::ButtonRole::kSecondary);
     action_row->addWidget(refresh_feature_list_button_);
     action_row->addWidget(feature_name_edit_, 1);
     action_row->addWidget(refresh_feature_detail_button_);
@@ -115,8 +128,10 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     feature_restart_checkbox_ = new QCheckBox("restart_if_running", group);
     feature_terminal_checkbox_ = new QCheckBox("start_with_terminal", group);
     feature_force_stop_checkbox_ = new QCheckBox("force_stop", group);
-    start_feature_button_ = new QPushButton("发送 FeatureStart", group);
-    stop_feature_button_ = new QPushButton("发送 FeatureStop", group);
+    start_feature_button_ = new QPushButton("Send FeatureStart", group);
+    stop_feature_button_ = new QPushButton("Send FeatureStop", group);
+    monitor_ui::style_button(start_feature_button_, monitor_ui::ButtonRole::kPrimary);
+    monitor_ui::style_button(stop_feature_button_, monitor_ui::ButtonRole::kWarning);
     control_row->addWidget(feature_override_args_edit_, 1);
     control_row->addWidget(feature_restart_checkbox_);
     control_row->addWidget(feature_terminal_checkbox_);
@@ -131,6 +146,12 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     feature_detail_text_ = new QPlainTextEdit(group);
     feature_detail_text_->setReadOnly(true);
     feature_detail_text_->setMaximumBlockCount(400);
+    monitor_ui::style_log_view(feature_list_text_);
+    monitor_ui::style_log_view(feature_detail_text_);
+
+    feature_request_preview_ = new QLabel(group);
+    feature_request_preview_->setTextFormat(Qt::RichText);
+    feature_request_preview_->setWordWrap(true);
 
     system_service_history_table_ = new QTableWidget(group);
     system_service_history_table_->setColumnCount(6);
@@ -146,6 +167,7 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     system_service_history_table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     system_service_history_table_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
     system_service_history_table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+    monitor_ui::style_table(system_service_history_table_);
 
     auto* content = new QSplitter(Qt::Horizontal, group);
     auto* left = new QWidget(content);
@@ -159,6 +181,8 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     auto* right = new QWidget(content);
     auto* right_layout = new QVBoxLayout(right);
     right_layout->setContentsMargins(0, 0, 0, 0);
+    right_layout->addWidget(new QLabel("Request preview", right));
+    right_layout->addWidget(feature_request_preview_);
     right_layout->addWidget(new QLabel("FeatureGet 详情", right));
     right_layout->addWidget(feature_detail_text_, 1);
 
@@ -199,6 +223,18 @@ void MainWindow::refresh_system_services() {
         feature_lines.append(QString::fromStdString(name));
     }
     feature_list_text_->setPlainText(feature_lines.join('\n'));
+
+    if (feature_request_preview_ != nullptr) {
+        const QString feature = feature_name_edit_ == nullptr ? "" : feature_name_edit_->text().trimmed();
+        const QString args =
+            feature_override_args_edit_ == nullptr ? "" : feature_override_args_edit_->text().trimmed();
+        feature_request_preview_->setText(monitor_ui::feature_request_preview(
+            feature,
+            args,
+            feature_restart_checkbox_ != nullptr && feature_restart_checkbox_->isChecked(),
+            feature_terminal_checkbox_ != nullptr && feature_terminal_checkbox_->isChecked(),
+            feature_force_stop_checkbox_ != nullptr && feature_force_stop_checkbox_->isChecked()));
+    }
 
     const std::string selected_name =
         feature_name_edit_ == nullptr ? std::string() : feature_name_edit_->text().trimmed().toStdString();
@@ -243,10 +279,12 @@ void MainWindow::refresh_system_services() {
         set_item(system_service_history_table_, row, 0, format_timestamp(entry.sent_at_ms).toStdString());
         set_item(system_service_history_table_, row, 1, entry.action);
         set_item(system_service_history_table_, row, 2, entry.feature_name.empty() ? "--" : entry.feature_name);
-        set_item(system_service_history_table_,
-                 row,
-                 3,
-                 system_service_lifecycle_label(entry.lifecycle));
+        auto* status_item = set_item(system_service_history_table_,
+                                     row,
+                                     3,
+                                     system_service_lifecycle_label(entry.lifecycle));
+        monitor_ui::set_status_item(
+            status_item, monitor_ui::level_from_status(system_service_lifecycle_label(entry.lifecycle)));
         set_item(system_service_history_table_,
                  row,
                  4,

@@ -10,12 +10,15 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QtGlobal>
+
+#include "common/monitor_ui_style.hpp"
 
 namespace {
 
-constexpr int kNavContainerWidth = 144;
-constexpr int kNavInactiveWidth = 118;
-constexpr int kNavActiveWidth = 136;
+constexpr int kNavContainerWidth = 132;
+constexpr int kNavInactiveWidth = 116;
+constexpr int kNavActiveWidth = 124;
 
 QPushButton* make_nav_button(const QString& text, QWidget* parent) {
     auto* button = new QPushButton(text, parent);
@@ -27,19 +30,17 @@ QPushButton* make_nav_button(const QString& text, QWidget* parent) {
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     button->setStyleSheet("QPushButton {"
                           " text-align:left;"
-                          " padding:0 16px;"
-                          " border:1px solid #c2cad3;"
-                          " border-right:none;"
-                          " border-top-left-radius:8px;"
-                          " border-bottom-left-radius:8px;"
-                          " background:#e9edf2;"
-                          " color:#26323b;"
+                          " padding:0 12px;"
+                          " border:1px solid #c6c6c6;"
+                          " border-radius:2px;"
+                          " background:#ffffff;"
+                          " color:#161616;"
                           "}"
-                          "QPushButton:hover { background:#f1f4f8; }"
+                          "QPushButton:hover { background:#edf5ff; }"
                           "QPushButton:checked {"
-                          " background:#fff7d6;"
-                          " border-color:#d6b95d;"
-                          " color:#1d2329;"
+                          " background:#0f62fe;"
+                          " border-color:#0f62fe;"
+                          " color:#ffffff;"
                           " font-weight:600;"
                           "}");
     return button;
@@ -66,19 +67,24 @@ QWidget* build_description_card(QWidget* parent, const QString& title, const QSt
 
 void MainWindow::build_ui() {
     auto* central = new QWidget(this);
+    monitor_ui::apply_window_style(this);
     auto* root = new QHBoxLayout(central);
-    root->setContentsMargins(16, 16, 16, 16);
+    root->setContentsMargins(12, 12, 12, 12);
     root->setSpacing(0);
 
     auto* nav_host = new QWidget(central);
     nav_host->setFixedWidth(kNavContainerWidth);
     auto* nav_layout = new QVBoxLayout(nav_host);
-    nav_layout->setContentsMargins(0, 8, 0, 8);
-    nav_layout->setSpacing(10);
+    nav_layout->setContentsMargins(0, 0, 8, 0);
+    nav_layout->setSpacing(8);
+
+    auto* product = new QLabel("YunLink\nMonitor", nav_host);
+    product->setStyleSheet("font-weight:700;font-size:13px;color:#161616;padding:4px 0 8px 2px;");
+    nav_layout->addWidget(product);
 
     auto* nav_group = new QButtonGroup(nav_host);
     nav_group->setExclusive(true);
-    const QStringList page_labels = {"Dashboard", "Description", "Devices", "Commands", "System", "State", "Logs"};
+    const QStringList page_labels = {"Overview", "Devices", "Commands", "Services", "State", "Logs"};
     for (int index = 0; index < page_labels.size(); ++index) {
         auto* button = make_nav_button(page_labels[index], nav_host);
         page_nav_buttons_.push_back(button);
@@ -94,7 +100,6 @@ void MainWindow::build_ui() {
 
     page_stack_ = new QStackedWidget(right_shell);
     page_stack_->addWidget(build_dashboard_page(page_stack_));
-    page_stack_->addWidget(build_description_page(page_stack_));
     page_stack_->addWidget(build_devices_page(page_stack_));
     page_stack_->addWidget(build_commands_page(page_stack_));
     page_stack_->addWidget(build_system_service_panel(page_stack_));
@@ -106,10 +111,12 @@ void MainWindow::build_ui() {
     root->addSpacing(8);
     root->addWidget(right_shell, 1);
 
-    connect(nav_group,
-            QOverload<int>::of(&QButtonGroup::buttonClicked),
-            this,
-            &MainWindow::set_current_page);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    connect(nav_group, &QButtonGroup::idClicked, this, &MainWindow::set_current_page);
+#else
+    connect(
+        nav_group, QOverload<int>::of(&QButtonGroup::buttonClicked), this, &MainWindow::set_current_page);
+#endif
 
     setCentralWidget(central);
     set_current_page(0);

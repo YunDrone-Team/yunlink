@@ -3,6 +3,7 @@
 #include <cctype>
 #include <chrono>
 
+#include "common/monitor_ui_style.hpp"
 #include "common/sunray_status_format.hpp"
 
 namespace {
@@ -42,6 +43,15 @@ uint64_t wall_time_ms() {
 
 }  // namespace
 
+bool MainWindow::confirm_command_send(const QString& command, const QString& payload) const {
+    if (backend_ == nullptr) {
+        return false;
+    }
+    const auto snapshot = backend_->snapshot_connection();
+    return monitor_ui::confirm_risky_command(
+        const_cast<MainWindow*>(this), command, monitor_ui::command_context_text(snapshot), payload);
+}
+
 void MainWindow::stage_takeoff() {
     if (backend_ == nullptr) {
         return;
@@ -49,6 +59,12 @@ void MainWindow::stage_takeoff() {
     yunlink::TakeoffCommand cmd;
     cmd.relative_height_m = static_cast<float>(takeoff_height_spin_->value());
     cmd.max_velocity_mps = static_cast<float>(takeoff_velocity_spin_->value());
+    const QString payload = QString("relative_height_m=%1\nmax_velocity_mps=%2")
+                                .arg(takeoff_height_spin_->value(), 0, 'f', 2)
+                                .arg(takeoff_velocity_spin_->value(), 0, 'f', 2);
+    if (!confirm_command_send("TAKEOFF", payload)) {
+        return;
+    }
     backend_->send_takeoff(cmd);
 }
 
@@ -58,6 +74,11 @@ void MainWindow::stage_land() {
     }
     yunlink::LandCommand cmd;
     cmd.max_velocity_mps = static_cast<float>(land_velocity_spin_->value());
+    const QString payload =
+        QString("max_velocity_mps=%1").arg(land_velocity_spin_->value(), 0, 'f', 2);
+    if (!confirm_command_send("LAND", payload)) {
+        return;
+    }
     backend_->send_land(cmd);
 }
 
@@ -67,6 +88,11 @@ void MainWindow::stage_return() {
     }
     yunlink::ReturnCommand cmd;
     cmd.loiter_before_return_s = static_cast<float>(return_loiter_spin_->value());
+    const QString payload =
+        QString("loiter_before_return_s=%1").arg(return_loiter_spin_->value(), 0, 'f', 2);
+    if (!confirm_command_send("RETURN", payload)) {
+        return;
+    }
     backend_->send_return(cmd);
 }
 
@@ -191,42 +217,21 @@ void MainWindow::refresh_command_controls() {
     }
 
     if (takeoff_button_ != nullptr) {
-        takeoff_button_->setEnabled(session_ready && (!has_exec || ready_for_takeoff));
-        land_button_->setEnabled(session_ready && (!has_exec || ready_for_land));
-        return_button_->setEnabled(session_ready);
+        takeoff_button_->setEnabled(session_ready && authority_ready && (!has_exec || ready_for_takeoff));
+        land_button_->setEnabled(session_ready && authority_ready && (!has_exec || ready_for_land));
+        return_button_->setEnabled(session_ready && authority_ready);
         point_button_->setEnabled(session_ready);
         velocity_button_->setEnabled(session_ready);
     }
-    if (!session_ready) {
-        command_hint_label_->setText("当前尚未拿到 active session，按钮已禁用。");
-        return;
-    }
-    if (exec_stale) {
-        command_hint_label_->setText(
-            "command_execution_status 已过期，旧 ready/busy 门禁已忽略；请结合最新控制侧状态继续判断。");
-        return;
-    }
-    if (has_exec && !ready_for_takeoff && !ready_for_land && reason_text != "-") {
-        command_hint_label_->setText(QString::fromStdString(
-            "控制侧状态未就绪: " + reason_text + "。LAND/TAKEOFF 按钮按 ready/busy 字段门禁。"));
-        return;
-    }
-    if (has_exec) {
-        std::string hint = "控制侧执行状态: 当前命令=" + command_name + " exec=" + execution_name +
-                           " 可起飞=" + std::string(ready_for_takeoff ? "yes" : "no") +
-                           " 可降落=" + std::string(ready_for_land ? "yes" : "no");
-        if (reason_text != "-") {
-            hint += " 原因=" + reason_text;
-        }
-        command_hint_label_->setText(QString::fromStdString(hint));
-        return;
-    }
-    if (authority_ready) {
-        command_hint_label_->setText("当前 session 与 authority 已就绪，按钮会直接下发 YunLink command。");
-        return;
-    }
-    command_hint_label_->setText(
-        "当前 session 已就绪，按钮会直接下发 YunLink command；authority 是否接纳请看状态栏和命令回执。");
+    command_hint_label_->setText(monitor_ui::command_gate_notice(session_ready,
+                                                                 authority_ready,
+                                                                 exec_stale,
+                                                                 has_exec,
+                                                                 ready_for_takeoff,
+                                                                 ready_for_land,
+                                                                 command_name,
+                                                                 execution_name,
+                                                                 reason_text));
 }
 
 void MainWindow::refresh_command_history() {
@@ -243,7 +248,10 @@ void MainWindow::refresh_command_history() {
                  row,
                  1,
                  entry.action + (entry.detail.empty() ? std::string() : "\n" + entry.detail));
-        set_item(command_history_table_, row, 2, command_lifecycle_label(entry.lifecycle));
+        auto* lifecycle_item =
+            set_item(command_history_table_, row, 2, command_lifecycle_label(entry.lifecycle));
+        monitor_ui::set_status_item(
+            lifecycle_item, monitor_ui::level_from_status(command_lifecycle_label(entry.lifecycle)));
         set_item(command_history_table_,
                  row,
                  3,

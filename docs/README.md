@@ -20,6 +20,7 @@
 10. [bindings/ros1-docker-ubuntu26-guide.md](bindings/ros1-docker-ubuntu26-guide.md)
 11. [bindings/test-matrix.md](bindings/test-matrix.md)
 12. [bindings/testing-todo-checklist.md](bindings/testing-todo-checklist.md)
+13. [../tools/README.md](../tools/README.md)
 
 ## 目录说明
 
@@ -33,6 +34,8 @@
   当前导出的 SVG 图。
 - `Doxyfile`
   本地生成 API Reference 的配置文件。
+- `../tools/README.md`
+  开发工具入口，包括构建、代码质量、协议图渲染、bindings、测试脚手架和 advanced monitor。
 
 ## 生成约定
 

@@ -4,7 +4,10 @@
 #include <QHBoxLayout>
 #include <QPlainTextEdit>
 #include <QScrollBar>
+#include <QStringList>
 #include <QVBoxLayout>
+
+#include "common/monitor_ui_style.hpp"
 
 QWidget* MainWindow::build_recent_issues_panel(QWidget* parent) {
     auto* group = new QGroupBox("最近异常", parent);
@@ -12,14 +15,13 @@ QWidget* MainWindow::build_recent_issues_panel(QWidget* parent) {
     root->setSpacing(0);
     recent_issues_value_ = new QLabel(group);
     recent_issues_value_->setWordWrap(true);
-    recent_issues_value_->setStyleSheet(
-        "QLabel { background:#fff5dd;color:#5d4200;border:1px solid #e7c36a;border-radius:8px;padding:8px; }");
+    recent_issues_value_->setTextFormat(Qt::RichText);
     root->addWidget(recent_issues_value_);
     return group;
 }
 
 QWidget* MainWindow::build_log_page_body(QWidget* parent) {
-    auto* group = new QGroupBox("运行日志", parent);
+    auto* group = new QGroupBox("Audit log", parent);
     auto* root = new QVBoxLayout(group);
     root->setSpacing(8);
 
@@ -28,7 +30,8 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
     log_filter_combo_->addItems({"全部日志", "仅 Warn / Error", "Connection", "Authority", "Command", "System"});
     log_autofollow_checkbox_ = new QCheckBox("自动跟随", group);
     log_autofollow_checkbox_->setChecked(log_autofollow_);
-    clear_logs_button_ = new QPushButton("清空日志", group);
+    clear_logs_button_ = new QPushButton("Clear log", group);
+    monitor_ui::style_button(clear_logs_button_, monitor_ui::ButtonRole::kSecondary);
     actions->addWidget(log_filter_combo_);
     actions->addWidget(log_autofollow_checkbox_);
     actions->addWidget(clear_logs_button_);
@@ -38,9 +41,7 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
     logs_ = new QPlainTextEdit(group);
     logs_->setReadOnly(true);
     logs_->setLineWrapMode(QPlainTextEdit::NoWrap);
-    logs_->setStyleSheet(
-        "QPlainTextEdit { background:#13211b;color:#cde9d1;border-radius:8px;padding:8px;"
-        "font-family:'DejaVu Sans Mono'; }");
+    monitor_ui::style_log_view(logs_);
     root->addWidget(logs_, 1);
 
     connect(log_filter_combo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
@@ -101,4 +102,39 @@ void MainWindow::stage_toggle_log_autofollow(bool checked) {
     if (checked && logs_ != nullptr && logs_->verticalScrollBar() != nullptr) {
         logs_->verticalScrollBar()->setValue(logs_->verticalScrollBar()->maximum());
     }
+}
+
+void MainWindow::refresh_logs() {
+    if (backend_ == nullptr || logs_ == nullptr) {
+        return;
+    }
+
+    const auto entries = backend_->snapshot_logs();
+    const uint64_t last_sequence = entries.empty() ? 0 : entries.back().sequence;
+    QStringList lines;
+    lines.reserve(static_cast<int>(entries.size()));
+    for (const auto& entry : entries) {
+        if (!log_entry_visible(entry)) {
+            continue;
+        }
+        lines.append(QString("%1  %2  %3  %4")
+                         .arg(format_timestamp(entry.timestamp_ms), -13)
+                         .arg(QString::fromStdString(level_label(entry.level)), -5)
+                         .arg(QString::fromStdString(source_label(entry.source)), -10)
+                         .arg(QString::fromStdString(entry.message)));
+    }
+    const int visible_count = lines.size();
+    if (last_sequence == rendered_last_sequence_ && entries.size() == rendered_log_count_ &&
+        visible_count == rendered_visible_log_count_) {
+        return;
+    }
+
+    const bool follow = log_should_autofollow();
+    logs_->setPlainText(lines.join('\n'));
+    if (follow && logs_->verticalScrollBar() != nullptr) {
+        logs_->verticalScrollBar()->setValue(logs_->verticalScrollBar()->maximum());
+    }
+    rendered_last_sequence_ = last_sequence;
+    rendered_log_count_ = entries.size();
+    rendered_visible_log_count_ = visible_count;
 }

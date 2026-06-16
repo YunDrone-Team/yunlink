@@ -6,6 +6,7 @@
 #include <QScrollBar>
 
 #include "common/sunray_status_format.hpp"
+#include "common/monitor_ui_style.hpp"
 
 namespace {
 
@@ -153,19 +154,22 @@ void MainWindow::refresh_dashboard() {
         dashboard_control_panel_->setText(card_rows_text(snapshot.control));
     }
     if (dashboard_issues_value_ != nullptr) {
-        QStringList lines;
         if (snapshot.issues.empty()) {
-            lines.append("[OK] 无关键问题");
+            dashboard_issues_value_->setTextFormat(Qt::RichText);
+            dashboard_issues_value_->setText(monitor_ui::inline_notice_html(
+                monitor_ui::Level::kOk, "No blocking issues", "当前没有关键 WARN / ERROR。"));
         } else {
+            QStringList lines;
             for (const auto& issue : snapshot.issues) {
                 lines.append(QString("[%1] %2: %3")
                                  .arg(QString::fromStdString(developer_status_level_label(issue.level)))
                                  .arg(QString::fromStdString(issue.title).toHtmlEscaped())
                                  .arg(QString::fromStdString(issue.detail).toHtmlEscaped()));
             }
+            dashboard_issues_value_->setTextFormat(Qt::RichText);
+            dashboard_issues_value_->setText(monitor_ui::inline_notice_html(
+                monitor_ui::Level::kWarn, "Blocking issues", lines.join("<br>")));
         }
-        dashboard_issues_value_->setTextFormat(Qt::RichText);
-        dashboard_issues_value_->setText(lines.join("<br>"));
     }
 }
 
@@ -178,17 +182,46 @@ void MainWindow::refresh_status() {
     const std::string compact_status = "runtime=" + snapshot.runtime_status +
                                        " session=" + snapshot.session_state +
                                        " link=" + snapshot.link_state;
-    status_value_->setText(QString::fromStdString(compact_status));
-    peer_value_->setText(snapshot.peer_id.empty() ? "-" : QString::fromStdString(snapshot.peer_id));
-    session_id_value_->setText(
-        snapshot.session_id == 0 ? "-" : QString::number(static_cast<qulonglong>(snapshot.session_id)));
-    remote_value_->setText(QString::fromStdString(snapshot.remote_endpoint));
-    tcp_listen_value_->setText(QString::fromStdString(snapshot.listen_endpoint));
-    authority_value_->setText(snapshot.authority_state.empty()
-                                  ? "-"
-                                  : QString::fromStdString(snapshot.authority_state));
-    note_value_->setText(snapshot.last_note.empty() ? "-" : QString::fromStdString(snapshot.last_note));
-    error_value_->setText(snapshot.last_error.empty() ? "-" : QString::fromStdString(snapshot.last_error));
+    const auto status_level = monitor_ui::level_from_status(compact_status);
+    const auto authority_level = monitor_ui::level_from_status(snapshot.authority_state);
+    const QString peer = snapshot.peer_id.empty() ? "-" : QString::fromStdString(snapshot.peer_id);
+    const QString session =
+        snapshot.session_id == 0 ? "-" : QString::number(static_cast<qulonglong>(snapshot.session_id));
+    const QString remote = QString::fromStdString(snapshot.remote_endpoint);
+    const QString listen = QString::fromStdString(snapshot.listen_endpoint);
+    const QString authority =
+        snapshot.authority_state.empty() ? "-" : QString::fromStdString(snapshot.authority_state);
+    const QString note = snapshot.last_note.empty() ? "-" : QString::fromStdString(snapshot.last_note);
+    const QString error = snapshot.last_error.empty() ? "-" : QString::fromStdString(snapshot.last_error);
+
+    auto set_text = [](QLabel* label, const QString& text) {
+        if (label != nullptr) {
+            label->setText(text);
+        }
+    };
+    auto set_tag = [](QLabel* label, monitor_ui::Level level, const QString& text) {
+        if (label != nullptr) {
+            monitor_ui::set_tag(label, level, text);
+        }
+    };
+
+    set_tag(status_value_, status_level, QString::fromStdString(compact_status));
+    set_text(peer_value_, peer);
+    set_text(session_id_value_, session);
+    set_text(remote_value_, remote);
+    set_text(tcp_listen_value_, listen);
+    set_tag(authority_value_, authority_level, authority);
+    set_text(note_value_, note);
+    set_text(error_value_, error);
+
+    set_tag(command_status_value_, status_level, QString::fromStdString(compact_status));
+    set_text(command_peer_value_, peer);
+    set_text(command_session_id_value_, session);
+    set_text(command_remote_value_, remote);
+    set_text(command_tcp_listen_value_, listen);
+    set_tag(command_authority_value_, authority_level, authority);
+    set_text(command_note_value_, note);
+    set_text(command_error_value_, error);
 }
 
 void MainWindow::refresh_recent_issues() {
@@ -211,10 +244,12 @@ void MainWindow::refresh_recent_issues() {
         }
     }
     if (lines.isEmpty()) {
-        recent_issues_value_->setText("最近异常: 无");
+        recent_issues_value_->setText(monitor_ui::inline_notice_html(
+            monitor_ui::Level::kOk, "最近异常", "无。当前日志没有 WARN / ERROR。"));
         return;
     }
-    recent_issues_value_->setText("最近异常:\n" + lines.join('\n'));
+    recent_issues_value_->setText(monitor_ui::inline_notice_html(
+        monitor_ui::Level::kWarn, "最近异常", lines.join("\n")));
 }
 
 void MainWindow::refresh_topics() {
@@ -237,47 +272,24 @@ void MainWindow::refresh_topic(const std::string& key, const MonitorTopicState& 
     if (table_it == topic_tables_.end()) {
         return;
     }
+    const uint64_t now_ms = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
+    const auto summary_it = topic_summary_labels_.find(key);
+    if (summary_it != topic_summary_labels_.end() && summary_it->second != nullptr) {
+        summary_it->second->setText(monitor_ui::topic_summary_text(topic, now_ms));
+    }
 
     auto* table = table_it->second;
     table->setRowCount(static_cast<int>(topic.rows.size()));
     for (int row = 0; row < static_cast<int>(topic.rows.size()); ++row) {
         const auto& field = topic.rows[static_cast<size_t>(row)];
         set_item(table, row, 0, topic_label_for_display(field.label, field.key));
-        set_item(table, row, 1, topic_value_for_display(topic, field.key));
-    }
-}
-
-void MainWindow::refresh_logs() {
-    if (backend_ == nullptr || logs_ == nullptr) {
-        return;
-    }
-
-    const auto entries = backend_->snapshot_logs();
-    const uint64_t last_sequence = entries.empty() ? 0 : entries.back().sequence;
-    QStringList lines;
-    lines.reserve(static_cast<int>(entries.size()));
-    for (const auto& entry : entries) {
-        if (!log_entry_visible(entry)) {
-            continue;
+        set_item(table, row, 1, field.key);
+        auto* value_item = set_item(table, row, 2, topic_value_for_display(topic, field.key));
+        const std::string value = value_item->text().toStdString();
+        if (value == "WAIT" || value == "STALE" || value == "TIMEOUT") {
+            monitor_ui::set_status_item(value_item, monitor_ui::Level::kWarn);
+        } else if (value == "--" || value == "<empty>") {
+            monitor_ui::set_status_item(value_item, monitor_ui::Level::kNeutral);
         }
-        lines.append(QString("[%1][%2][%3] %4")
-                         .arg(format_timestamp(entry.timestamp_ms))
-                         .arg(QString::fromStdString(level_label(entry.level)))
-                         .arg(QString::fromStdString(source_label(entry.source)))
-                         .arg(QString::fromStdString(entry.message)));
     }
-    const int visible_count = lines.size();
-    if (last_sequence == rendered_last_sequence_ && entries.size() == rendered_log_count_ &&
-        visible_count == rendered_visible_log_count_) {
-        return;
-    }
-
-    const bool follow = log_should_autofollow();
-    logs_->setPlainText(lines.join('\n'));
-    if (follow && logs_->verticalScrollBar() != nullptr) {
-        logs_->verticalScrollBar()->setValue(logs_->verticalScrollBar()->maximum());
-    }
-    rendered_last_sequence_ = last_sequence;
-    rendered_log_count_ = entries.size();
-    rendered_visible_log_count_ = visible_count;
 }

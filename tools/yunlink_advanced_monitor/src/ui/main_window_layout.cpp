@@ -14,6 +14,8 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "common/monitor_ui_style.hpp"
+
 QWidget* MainWindow::build_commands_page(QWidget* parent) {
     auto* page = new QWidget(parent);
     auto* layout = new QVBoxLayout(page);
@@ -31,7 +33,8 @@ QWidget* MainWindow::build_commands_page(QWidget* parent) {
     auto* actions_frame = new QFrame(left_panel);
     auto* actions_layout = new QHBoxLayout(actions_frame);
     actions_layout->setContentsMargins(0, 0, 0, 0);
-    reconnect_button_ = new QPushButton("立即重连", actions_frame);
+    reconnect_button_ = new QPushButton("Reconnect now", actions_frame);
+    monitor_ui::style_button(reconnect_button_, monitor_ui::ButtonRole::kSecondary);
     actions_layout->addWidget(reconnect_button_);
     actions_layout->addStretch(1);
     left_layout->addWidget(actions_frame);
@@ -57,28 +60,32 @@ QWidget* MainWindow::build_commands_page(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_status_panel(QWidget* parent) {
-    auto* group = new QGroupBox("会话状态", parent);
+    auto* group = new QGroupBox("Command gate", parent);
     auto* grid = new QGridLayout(group);
     grid->setContentsMargins(12, 12, 12, 12);
     grid->setHorizontalSpacing(10);
     grid->setVerticalSpacing(8);
 
-    status_value_ = new QLabel(group);
-    peer_value_ = new QLabel(group);
-    session_id_value_ = new QLabel(group);
-    remote_value_ = new QLabel(group);
-    tcp_listen_value_ = new QLabel(group);
-    authority_value_ = new QLabel(group);
-    note_value_ = new QLabel(group);
-    error_value_ = new QLabel(group);
-    note_value_->setWordWrap(true);
-    error_value_->setWordWrap(true);
-    remote_value_->setWordWrap(true);
-    tcp_listen_value_->setWordWrap(true);
+    command_status_value_ = new QLabel(group);
+    command_peer_value_ = new QLabel(group);
+    command_session_id_value_ = new QLabel(group);
+    command_remote_value_ = new QLabel(group);
+    command_tcp_listen_value_ = new QLabel(group);
+    command_authority_value_ = new QLabel(group);
+    command_note_value_ = new QLabel(group);
+    command_error_value_ = new QLabel(group);
+    command_note_value_->setWordWrap(true);
+    command_error_value_->setWordWrap(true);
+    command_remote_value_->setWordWrap(true);
+    command_tcp_listen_value_->setWordWrap(true);
+    monitor_ui::set_mono(command_peer_value_);
+    monitor_ui::set_mono(command_session_id_value_);
+    monitor_ui::set_mono(command_remote_value_);
+    monitor_ui::set_mono(command_tcp_listen_value_);
 
-    auto* status_label = new QLabel("状态", group);
-    auto* peer_label = new QLabel("Peer ID", group);
-    auto* session_label = new QLabel("Session ID", group);
+    auto* status_label = new QLabel("链路 / session", group);
+    auto* peer_label = new QLabel("peer id", group);
+    auto* session_label = new QLabel("session id", group);
     auto* remote_label = new QLabel("对端", group);
     auto* listen_label = new QLabel("本地监听", group);
     auto* authority_label = new QLabel("Authority", group);
@@ -86,23 +93,23 @@ QWidget* MainWindow::build_status_panel(QWidget* parent) {
     auto* error_label = new QLabel("最近错误", group);
 
     grid->addWidget(status_label, 0, 0);
-    grid->addWidget(status_value_, 0, 1);
+    grid->addWidget(command_status_value_, 0, 1);
     grid->addWidget(peer_label, 0, 2);
-    grid->addWidget(peer_value_, 0, 3);
+    grid->addWidget(command_peer_value_, 0, 3);
     grid->addWidget(session_label, 0, 4);
-    grid->addWidget(session_id_value_, 0, 5);
+    grid->addWidget(command_session_id_value_, 0, 5);
 
     grid->addWidget(remote_label, 1, 0);
-    grid->addWidget(remote_value_, 1, 1, 1, 3);
+    grid->addWidget(command_remote_value_, 1, 1, 1, 3);
     grid->addWidget(listen_label, 1, 4);
-    grid->addWidget(tcp_listen_value_, 1, 5);
+    grid->addWidget(command_tcp_listen_value_, 1, 5);
 
     grid->addWidget(authority_label, 2, 0);
-    grid->addWidget(authority_value_, 2, 1);
+    grid->addWidget(command_authority_value_, 2, 1);
     grid->addWidget(note_label, 2, 2);
-    grid->addWidget(note_value_, 2, 3, 1, 3);
+    grid->addWidget(command_note_value_, 2, 3, 1, 3);
     grid->addWidget(error_label, 3, 0);
-    grid->addWidget(error_value_, 3, 1, 1, 5);
+    grid->addWidget(command_error_value_, 3, 1, 1, 5);
 
     grid->setColumnStretch(1, 3);
     grid->setColumnStretch(3, 2);
@@ -111,7 +118,7 @@ QWidget* MainWindow::build_status_panel(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_command_panel(QWidget* parent) {
-    auto* group = new QGroupBox("控制面板", parent);
+    auto* group = new QGroupBox("Command workspace", parent);
     auto* layout = new QGridLayout(group);
     layout->setHorizontalSpacing(8);
     layout->setVerticalSpacing(8);
@@ -129,11 +136,16 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     vel_z_spin_ = make_spin(0.0, -5.0, 5.0, 0.1);
     vel_yaw_rate_spin_ = make_spin(0.0, -180.0, 180.0, 1.0, 1);
 
-    takeoff_button_ = new QPushButton("TAKEOFF", group);
-    land_button_ = new QPushButton("LAND", group);
-    return_button_ = new QPushButton("RETURN", group);
-    point_button_ = new QPushButton("发送 MOVE_POINT", group);
-    velocity_button_ = new QPushButton("发送 MOVE_VELOCITY", group);
+    takeoff_button_ = new QPushButton("Stage TAKEOFF", group);
+    land_button_ = new QPushButton("Stage LAND", group);
+    return_button_ = new QPushButton("Stage RETURN", group);
+    point_button_ = new QPushButton("Send MOVE_POINT", group);
+    velocity_button_ = new QPushButton("Send MOVE_VELOCITY", group);
+    monitor_ui::style_button(takeoff_button_, monitor_ui::ButtonRole::kWarning);
+    monitor_ui::style_button(land_button_, monitor_ui::ButtonRole::kWarning);
+    monitor_ui::style_button(return_button_, monitor_ui::ButtonRole::kWarning);
+    monitor_ui::style_button(point_button_, monitor_ui::ButtonRole::kPrimary);
+    monitor_ui::style_button(velocity_button_, monitor_ui::ButtonRole::kPrimary);
     command_hint_label_ = new QLabel(group);
     command_hint_label_->setWordWrap(true);
     command_hint_label_->setStyleSheet("color:#56656d;");
@@ -197,7 +209,7 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
-    auto* group = new QGroupBox("命令历史", parent);
+    auto* group = new QGroupBox("Command history / ACK audit", parent);
     auto* layout = new QVBoxLayout(group);
     layout->setSpacing(8);
 
@@ -224,12 +236,13 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
                                                                      QHeaderView::ResizeToContents);
     command_history_table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
     command_history_table_->setWordWrap(false);
+    monitor_ui::style_table(command_history_table_);
     layout->addWidget(command_history_table_);
     return group;
 }
 
 QWidget* MainWindow::build_topics_panel(QWidget* parent) {
-    auto* group = new QGroupBox("YunLink 状态", parent);
+    auto* group = new QGroupBox("State telemetry", parent);
     auto* root = new QVBoxLayout(group);
     root->setSpacing(8);
 
@@ -247,7 +260,13 @@ QWidget* MainWindow::build_topics_panel(QWidget* parent) {
         auto* page = new QWidget(tabs);
         auto* layout = new QVBoxLayout(page);
         layout->setContentsMargins(8, 8, 8, 8);
-        layout->setSpacing(0);
+        layout->setSpacing(8);
+
+        auto* summary = new QLabel(page);
+        summary->setText("状态: WAIT | last update: -- | session: -- | message: --");
+        monitor_ui::set_mono(summary);
+        topic_summary_labels_[key] = summary;
+        layout->addWidget(summary);
 
         auto* table = create_topic_table(page);
         topic_tables_[key] = table;

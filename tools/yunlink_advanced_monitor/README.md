@@ -95,6 +95,33 @@ System Service 请求历史语义：
 
 ## 构建
 
+推荐使用仓库根目录的一键脚本：
+
+```bash
+cd <YUNLINK_ROOT>
+tools/build_advanced_monitor.sh
+```
+
+构建后直接启动：
+
+```bash
+cd <YUNLINK_ROOT>
+tools/build_advanced_monitor.sh --run
+```
+
+如需传 monitor 参数，把参数放在 `--` 后面：
+
+```bash
+cd <YUNLINK_ROOT>
+tools/build_advanced_monitor.sh --run -- \
+  --agent-name=uav \
+  --agent-id=1 \
+  --remote-ip=127.0.0.1 \
+  --remote-tcp-port=9696
+```
+
+手动构建流程如下。
+
 先构建 YunLink 主库：
 
 ```bash

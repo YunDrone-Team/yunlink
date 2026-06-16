@@ -12,6 +12,8 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include "common/monitor_ui_style.hpp"
+
 QWidget* MainWindow::build_dashboard_card(QWidget* parent,
                                           const QString& title,
                                           QLabel** summary,
@@ -45,7 +47,7 @@ QWidget* MainWindow::build_dashboard_card(QWidget* parent,
 
 MainWindow::MainWindow(AdvancedMonitorBackend* backend, QWidget* parent)
     : QMainWindow(parent), backend_(backend) {
-    setWindowTitle("yunlink_advanced_monitor");
+    setWindowTitle("YunLink Advanced Monitor");
     resize(1320, 820);
     build_ui();
 
@@ -57,8 +59,8 @@ MainWindow::MainWindow(AdvancedMonitorBackend* backend, QWidget* parent)
 
 QTableWidget* MainWindow::create_topic_table(QWidget* parent) {
     auto* table = new QTableWidget(parent);
-    table->setColumnCount(2);
-    table->setHorizontalHeaderLabels({"字段说明", "YunLink 最新值"});
+    table->setColumnCount(3);
+    table->setHorizontalHeaderLabels({"字段说明", "Field key", "YunLink 最新值"});
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -66,7 +68,9 @@ QTableWidget* MainWindow::create_topic_table(QWidget* parent) {
     table->horizontalHeader()->setStretchLastSection(false);
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
     table->setWordWrap(false);
+    monitor_ui::style_table(table);
     return table;
 }
 
@@ -80,6 +84,9 @@ QTableWidgetItem* MainWindow::set_item(QTableWidget* table,
         table->setItem(row, col, item);
     }
     item->setText(QString::fromStdString(text));
+    monitor_ui::style_item(item, col > 0);
+    item->setBackground(QBrush());
+    item->setForeground(QBrush());
     return item;
 }
 
@@ -111,11 +118,51 @@ QWidget* MainWindow::build_dashboard_page(QWidget* parent) {
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(12);
 
+    auto* status_group = new QGroupBox("Operations status strip", content);
+    auto* status_grid = new QGridLayout(status_group);
+    status_grid->setContentsMargins(12, 12, 12, 12);
+    status_grid->setHorizontalSpacing(12);
+    status_grid->setVerticalSpacing(8);
+
+    status_value_ = new QLabel(status_group);
+    peer_value_ = new QLabel(status_group);
+    session_id_value_ = new QLabel(status_group);
+    remote_value_ = new QLabel(status_group);
+    tcp_listen_value_ = new QLabel(status_group);
+    authority_value_ = new QLabel(status_group);
+    note_value_ = new QLabel(status_group);
+    error_value_ = new QLabel(status_group);
+    monitor_ui::set_mono(peer_value_);
+    monitor_ui::set_mono(session_id_value_);
+    monitor_ui::set_mono(remote_value_);
+    monitor_ui::set_mono(tcp_listen_value_);
+    note_value_->setWordWrap(true);
+    error_value_->setWordWrap(true);
+
+    status_grid->addWidget(new QLabel("链路 / session", status_group), 0, 0);
+    status_grid->addWidget(status_value_, 0, 1);
+    status_grid->addWidget(new QLabel("authority", status_group), 0, 2);
+    status_grid->addWidget(authority_value_, 0, 3);
+    status_grid->addWidget(new QLabel("peer id", status_group), 1, 0);
+    status_grid->addWidget(peer_value_, 1, 1);
+    status_grid->addWidget(new QLabel("session id", status_group), 1, 2);
+    status_grid->addWidget(session_id_value_, 1, 3);
+    status_grid->addWidget(new QLabel("remote", status_group), 2, 0);
+    status_grid->addWidget(remote_value_, 2, 1);
+    status_grid->addWidget(new QLabel("listen", status_group), 2, 2);
+    status_grid->addWidget(tcp_listen_value_, 2, 3);
+    status_grid->addWidget(new QLabel("最近说明", status_group), 3, 0);
+    status_grid->addWidget(note_value_, 3, 1);
+    status_grid->addWidget(new QLabel("最近错误", status_group), 3, 2);
+    status_grid->addWidget(error_value_, 3, 3);
+    status_grid->setColumnStretch(1, 2);
+    status_grid->setColumnStretch(3, 2);
+
     auto* top_grid = new QGridLayout();
     top_grid->setHorizontalSpacing(12);
     top_grid->setVerticalSpacing(12);
     top_grid->addWidget(
-        build_dashboard_card(content, "YunLink", &dashboard_yunlink_summary_, &dashboard_yunlink_body_),
+        build_dashboard_card(content, "YunLink link", &dashboard_yunlink_summary_, &dashboard_yunlink_body_),
         0,
         0);
     top_grid->addWidget(
@@ -133,7 +180,7 @@ QWidget* MainWindow::build_dashboard_page(QWidget* parent) {
                         0,
                         3);
     top_grid->addWidget(build_dashboard_card(content,
-                                             "Command",
+                                             "Command gate",
                                              &dashboard_command_summary_,
                                              &dashboard_command_body_),
                         0,
@@ -169,7 +216,7 @@ QWidget* MainWindow::build_dashboard_page(QWidget* parent) {
     lower_grid->setColumnStretch(0, 1);
     lower_grid->setColumnStretch(1, 1);
 
-    auto* issues_group = new QGroupBox("Developer Issues", content);
+    auto* issues_group = new QGroupBox("Blocking issues", content);
     auto* issues_layout = new QVBoxLayout(issues_group);
     issues_layout->setContentsMargins(12, 12, 12, 12);
     dashboard_issues_value_ = new QLabel(issues_group);
@@ -177,6 +224,7 @@ QWidget* MainWindow::build_dashboard_page(QWidget* parent) {
     dashboard_issues_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     issues_layout->addWidget(dashboard_issues_value_);
 
+    root->addWidget(status_group);
     root->addLayout(top_grid);
     root->addLayout(lower_grid);
     root->addWidget(issues_group);
