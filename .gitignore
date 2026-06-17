@@ -38,6 +38,7 @@ __pycache__/
 *.log
 
 # Bindings artifacts
+target/
 bindings/rust/target/
 output/python-wheel/
 output/testing/

@@ -52,9 +52,7 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=yunlink_ffi");
     println!("cargo:build_dir={}", build_dir.display());
 
-    if cfg!(target_os = "macos") {
-        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", build_dir.display());
-    } else if cfg!(target_os = "linux") {
+    if cfg!(any(target_os = "macos", target_os = "linux")) {
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}", build_dir.display());
     }
 }

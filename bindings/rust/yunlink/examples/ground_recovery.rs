@@ -5,8 +5,8 @@ use tokio::sync::broadcast;
 use tokio::time::{sleep, timeout};
 
 use yunlink::{
-    AgentType, ControlSource, Event, GotoCommand, PeerConnection, Runtime, RuntimeConfig,
-    Session, TargetSelector,
+    AgentType, ControlSource, Event, GotoCommand, PeerConnection, Runtime, RuntimeConfig, Session,
+    TargetSelector,
 };
 
 fn parse_u16(value: &str) -> u16 {
@@ -14,7 +14,9 @@ fn parse_u16(value: &str) -> u16 {
 }
 
 fn parse_usize(value: Option<&String>, default: usize) -> usize {
-    value.and_then(|raw| raw.parse::<usize>().ok()).unwrap_or(default)
+    value
+        .and_then(|raw| raw.parse::<usize>().ok())
+        .unwrap_or(default)
 }
 
 async fn connect_retry(runtime: &Runtime, ip: &str, port: u16) -> PeerConnection {
@@ -61,13 +63,7 @@ async fn complete_round(
         .expect("request authority");
     eprintln!("ground_recovery: round {round} renew_authority");
     runtime
-        .renew_authority(
-            &peer,
-            &session,
-            &target,
-            ControlSource::GroundStation,
-            4500,
-        )
+        .renew_authority(&peer, &session, &target, ControlSource::GroundStation, 4500)
         .await
         .expect("renew authority");
     eprintln!("ground_recovery: round {round} publish_goto");

@@ -58,13 +58,7 @@ async fn main() {
         .await
         .expect("request authority");
     runtime
-        .renew_authority(
-            &peer,
-            &session,
-            &target,
-            ControlSource::GroundStation,
-            4500,
-        )
+        .renew_authority(&peer, &session, &target, ControlSource::GroundStation, 4500)
         .await
         .expect("renew authority");
     runtime

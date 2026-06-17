@@ -27,6 +27,15 @@ otherwise.
   tools/build_advanced_monitor.sh --run -- --remote-ip=127.0.0.1 --remote-tcp-port=9696
   ```
 
+- `build_rust_advanced_monitor.sh`
+  Builds the Rust/egui advanced monitor prototype through Cargo. Add `--run` to
+  launch it after a successful build.
+
+  ```bash
+  tools/build_rust_advanced_monitor.sh
+  tools/build_rust_advanced_monitor.sh --run -- --remote-ip=127.0.0.1 --remote-tcp-port=9696
+  ```
+
 ## Code Quality
 
 - `run_clang_format.sh`
@@ -119,6 +128,10 @@ system-service behavior through a UI. See
 `tools/yunlink_advanced_monitor/README.md` for build instructions, command-line
 arguments, and current UI semantics.
 
+The `tools/yunlink_rust_advanced_monitor/` directory contains a Rust/egui
+teaching prototype for the same C ABI path. It is intentionally separate from
+the Qt tool and should grow only through the safe Rust SDK plus `yunlink-sys`.
+
 ## Typical Workflows
 
 Build and run the default test suite:
@@ -151,4 +164,10 @@ Build and run the advanced monitor:
 
 ```bash
 tools/build_advanced_monitor.sh --run
+```
+
+Build and run the Rust advanced monitor prototype:
+
+```bash
+tools/build_rust_advanced_monitor.sh --run
 ```

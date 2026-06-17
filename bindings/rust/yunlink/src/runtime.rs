@@ -11,13 +11,22 @@ use crate::error::{ensure, Result};
 use crate::events::{parse_event, Event, EVENT_CHANNEL_CAPACITY};
 use crate::ffi_util::write_c_buffer;
 use crate::types::{
-    AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, GotoCommand,
-    PeerConnection, RuntimeConfig, Session, TargetSelector, VehicleCoreState,
+    AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, PeerConnection,
+    RuntimeConfig, Session, SessionInfo, SessionState, TargetSelector,
 };
 
+mod commands;
+
+/// Raw C ABI runtime pointer.
+///
+/// The pointer is opaque to Rust. The safe wrapper is responsible for creating,
+/// stopping, and destroying it through C ABI functions.
 #[derive(Debug, Clone, Copy)]
 struct RawRuntime(*mut sys::yunlink_runtime_t);
 
+// The C++ runtime is internally synchronized for the operations exposed by this
+// wrapper. We still keep the pointer behind a Mutex in `Runtime` so all safe
+// method calls retrieve it through one consistent path.
 unsafe impl Send for RawRuntime {}
 unsafe impl Sync for RawRuntime {}
 
@@ -27,33 +36,52 @@ impl RawRuntime {
     }
 }
 
+/// Safe Rust runtime facade over the bindings-oriented C ABI.
+///
+/// The object owns exactly one opaque `yunlink_runtime_t*`. Public methods use
+/// Rust domain types, convert them into `yunlink_*_t` C structs, call the raw
+/// `yunlink-sys` symbols, and map result codes back into `YunlinkError`.
 pub struct Runtime {
+    /// Opaque C ABI runtime handle.
     raw: Mutex<RawRuntime>,
+    /// Signals the event polling thread to stop.
     shutdown: std::sync::Arc<AtomicBool>,
+    /// Broadcast channel used by Rust subscribers.
     sender: broadcast::Sender<Event>,
+    /// Background thread that polls `yunlink_runtime_poll_event`.
     poll_thread: Option<JoinHandle<()>>,
 }
 
 impl Runtime {
+    /// Create, configure, and start a YunLink runtime through C ABI.
     pub fn start(config: RuntimeConfig) -> Result<Self> {
         let mut raw_ptr = std::ptr::null_mut();
         ensure(unsafe { sys::yunlink_runtime_create(&mut raw_ptr) })?;
 
-        let mut native_cfg = sys::yunlink_runtime_config_t::default();
-        native_cfg.udp_bind_port = config.udp_bind_port;
-        native_cfg.udp_target_port = config.udp_target_port;
-        native_cfg.tcp_listen_port = config.tcp_listen_port;
-        native_cfg.connect_timeout_ms = 5000;
-        native_cfg.io_poll_interval_ms = 5;
-        native_cfg.max_buffer_bytes_per_peer = 1 << 20;
-        native_cfg.self_identity.agent_type = config.agent_type.to_native();
-        native_cfg.self_identity.agent_id = config.agent_id;
-        native_cfg.self_identity.role = match config.agent_type {
-            AgentType::GroundStation => sys::YUNLINK_ROLE_CONTROLLER,
-            AgentType::Uav => sys::YUNLINK_ROLE_VEHICLE,
+        // Build the C ABI config struct explicitly. The `Default`
+        // implementation supplies `struct_size` and zeroed fixed string
+        // buffers; the helper below then fills those buffers safely.
+        let mut native_cfg = sys::yunlink_runtime_config_t {
+            udp_bind_port: config.udp_bind_port,
+            udp_target_port: config.udp_target_port,
+            tcp_listen_port: config.tcp_listen_port,
+            connect_timeout_ms: 5000,
+            io_poll_interval_ms: 5,
+            max_buffer_bytes_per_peer: 1 << 20,
+            self_identity: sys::yunlink_identity_t {
+                agent_type: config.agent_type.to_native(),
+                agent_id: config.agent_id,
+                role: match config.agent_type {
+                    AgentType::GroundStation => sys::YUNLINK_ROLE_CONTROLLER,
+                    AgentType::Uav | AgentType::Ugv => sys::YUNLINK_ROLE_VEHICLE,
+                    AgentType::SwarmController => sys::YUNLINK_ROLE_CONTROLLER,
+                    AgentType::Unknown(_) => sys::YUNLINK_ROLE_OBSERVER,
+                },
+            },
+            ..Default::default()
         };
-        write_c_buffer(&mut native_cfg.shared_secret, "yunlink-secret");
-        write_c_buffer(&mut native_cfg.multicast_group, "224.1.1.1");
+        write_c_buffer(&mut native_cfg.shared_secret, &config.shared_secret);
+        write_c_buffer(&mut native_cfg.multicast_group, &config.multicast_group);
 
         ensure(unsafe { sys::yunlink_runtime_start(raw_ptr, &native_cfg) })?;
 
@@ -88,10 +116,12 @@ impl Runtime {
         })
     }
 
+    /// Subscribe to parsed runtime events.
     pub fn subscribe(&self) -> broadcast::Receiver<Event> {
         self.sender.subscribe()
     }
 
+    /// Connect to a remote peer through the C ABI TCP client helper.
     pub async fn connect(&self, ip: &str, port: u16) -> Result<PeerConnection> {
         let ip = CString::new(ip)?;
         let mut peer = sys::yunlink_peer_t::default();
@@ -99,6 +129,7 @@ impl Runtime {
         Ok(PeerConnection::from_raw(peer))
     }
 
+    /// Open an active session with a connected peer.
     pub async fn open_session(&self, peer: &PeerConnection, node_name: &str) -> Result<Session> {
         let node_name = CString::new(node_name)?;
         let mut session = sys::yunlink_session_t::default();
@@ -110,6 +141,28 @@ impl Runtime {
         })
     }
 
+    /// Describe an existing session, if the runtime still knows it.
+    pub fn describe_session(&self, session: &Session) -> Result<Option<SessionInfo>> {
+        let native_session = session.to_native();
+        let mut info = sys::yunlink_session_info_t::default();
+        let result =
+            unsafe { sys::yunlink_session_describe(self.raw_ptr(), &native_session, &mut info) };
+        if result == sys::YUNLINK_RESULT_NOT_FOUND {
+            return Ok(None);
+        }
+        ensure(result)?;
+        Ok(Some(SessionInfo {
+            session_id: info.session_id,
+            state: SessionState::from_native(info.state),
+            remote_agent_type: AgentType::from_native(info.remote_identity.agent_type),
+            remote_agent_id: info.remote_identity.agent_id,
+            peer: PeerConnection::from_raw(info.peer),
+            capability_flags: info.capability_flags,
+            node_name: crate::ffi_util::string_from_c_buf(&info.node_name),
+        }))
+    }
+
+    /// Request authority for a target.
     pub async fn request_authority(
         &self,
         peer: &PeerConnection,
@@ -133,6 +186,7 @@ impl Runtime {
         })
     }
 
+    /// Release authority for a target.
     pub async fn release_authority(
         &self,
         peer: &PeerConnection,
@@ -145,6 +199,7 @@ impl Runtime {
         })
     }
 
+    /// Renew authority for a target.
     pub async fn renew_authority(
         &self,
         peer: &PeerConnection,
@@ -166,6 +221,7 @@ impl Runtime {
         })
     }
 
+    /// Return the current authority lease observed by this runtime.
     pub fn current_authority(&self) -> Result<Option<AuthorityLease>> {
         let mut lease = sys::yunlink_authority_lease_t::default();
         let result = unsafe { sys::yunlink_authority_current(self.raw_ptr(), &mut lease) };
@@ -174,88 +230,36 @@ impl Runtime {
         }
         ensure(result)?;
         Ok(Some(AuthorityLease {
-            state: if lease.state == sys::YUNLINK_AUTHORITY_STATE_CONTROLLER {
-                AuthorityState::Controller
-            } else {
-                AuthorityState::Other(lease.state)
-            },
+            state: AuthorityState::from_native(lease.state),
             session_id: lease.session_id,
             peer: PeerConnection::from_raw(lease.peer),
         }))
     }
 
-    pub async fn publish_goto(
-        &self,
-        peer: &PeerConnection,
-        session: &Session,
-        target: &TargetSelector,
-        command: &GotoCommand,
-    ) -> Result<CommandHandle> {
-        let session = session.to_native();
-        let payload = sys::yunlink_goto_command_t {
-            x_m: command.x_m,
-            y_m: command.y_m,
-            z_m: command.z_m,
-            yaw_rad: command.yaw_rad,
-        };
-        let mut handle = sys::yunlink_command_handle_t::default();
-        ensure(unsafe {
-            sys::yunlink_command_publish_goto(
-                self.raw_ptr(),
-                &peer.raw,
-                &session,
-                &target.raw,
-                &payload,
-                &mut handle,
-            )
-        })?;
-        Ok(CommandHandle {
-            session_id: handle.session_id,
-            message_id: handle.message_id,
-            correlation_id: handle.correlation_id,
-        })
-    }
-
-    pub async fn publish_vehicle_core_state(
-        &self,
-        peer: &PeerConnection,
-        target: &TargetSelector,
-        state: VehicleCoreState,
-        session_id: u64,
-    ) -> Result<()> {
-        let payload = sys::yunlink_vehicle_core_state_t {
-            armed: if state.armed { 1 } else { 0 },
-            nav_mode: state.nav_mode,
-            x_m: state.x_m,
-            y_m: state.y_m,
-            z_m: state.z_m,
-            vx_mps: state.vx_mps,
-            vy_mps: state.vy_mps,
-            vz_mps: state.vz_mps,
-            battery_percent: state.battery_percent,
-        };
-        ensure(unsafe {
-            sys::yunlink_publish_vehicle_core_state(
-                self.raw_ptr(),
-                &peer.raw,
-                &target.raw,
-                &payload,
-                session_id,
-            )
-        })
-    }
-
+    /// Return the current opaque runtime pointer.
     fn raw_ptr(&self) -> *mut sys::yunlink_runtime_t {
         self.raw_lock().0
     }
 
+    /// Lock the raw runtime handle.
     fn raw_lock(&self) -> MutexGuard<'_, RawRuntime> {
         self.raw.lock().expect("raw runtime mutex poisoned")
+    }
+
+    /// Convert a raw C ABI command handle into the public safe handle.
+    fn command_handle_from_native(handle: sys::yunlink_command_handle_t) -> CommandHandle {
+        CommandHandle {
+            session_id: handle.session_id,
+            message_id: handle.message_id,
+            correlation_id: handle.correlation_id,
+        }
     }
 }
 
 impl Drop for Runtime {
     fn drop(&mut self) {
+        // Stop the polling thread before destroying the opaque runtime. This
+        // avoids polling a pointer after `yunlink_runtime_destroy`.
         self.shutdown.store(true, Ordering::Relaxed);
         if let Some(handle) = self.poll_thread.take() {
             let _ = handle.join();
