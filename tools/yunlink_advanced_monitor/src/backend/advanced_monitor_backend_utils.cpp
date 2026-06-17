@@ -183,12 +183,28 @@ void AdvancedMonitorBackend::log(MonitorLogLevel level,
                                  MonitorLogSource source,
                                  const std::string& line) {
     std::lock_guard<std::mutex> lock(mu_);
+    const uint64_t now_ms = wall_time_ms();
+    const std::string key = make_semantic_log_key(level, source, line);
+    if (should_merge_repeated_log(source, line) && !logs_.empty() && key == last_log_key_) {
+        auto& entry = logs_.back();
+        entry.repeat_count += 1;
+        if (entry.repeat_first_ms == 0) {
+            entry.repeat_first_ms = entry.timestamp_ms;
+        }
+        entry.repeat_last_ms = now_ms;
+        entry.timestamp_ms = now_ms;
+        return;
+    }
+    last_log_key_ = key;
     logs_.push_back(MonitorLogEntry{
         next_log_sequence_++,
-        wall_time_ms(),
+        now_ms,
         level,
         source,
         line,
+        0,
+        0,
+        0,
     });
     if (logs_.size() > log_limit_) {
         logs_.erase(logs_.begin());

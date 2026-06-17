@@ -7,8 +7,14 @@
 void AdvancedMonitorBackend::on_authority_status(
     const yunlink::TypedMessage<yunlink::AuthorityStatus>& message) {
     const uint64_t now_ms = wall_time_ms();
+    bool normal_renewal = false;
     {
         std::lock_guard<std::mutex> lock(mu_);
+        normal_renewal =
+            connection_.authority_state == "CONTROLLER" &&
+            message.payload.state == yunlink::AuthorityState::kController &&
+            message.payload.reason_code == 0 &&
+            (message.payload.detail.empty() || message.payload.detail == "authority-renewed");
         authority_pending_ = false;
         authority_request_at_ms_ = now_ms;
         connection_.authority_state = authority_state_label(message.payload.state);
@@ -30,9 +36,12 @@ void AdvancedMonitorBackend::on_authority_status(
     if (!message.payload.detail.empty()) {
         line += " detail=" + message.payload.detail;
     }
-    log(message.payload.state == yunlink::AuthorityState::kRejected
-                ? MonitorLogLevel::kWarn
-                : MonitorLogLevel::kInfo,
+    if (normal_renewal) {
+        log_debug(MonitorLogSource::kAuthority, line);
+        return;
+    }
+    log(message.payload.state == yunlink::AuthorityState::kRejected ? MonitorLogLevel::kWarn
+                                                                    : MonitorLogLevel::kInfo,
         MonitorLogSource::kAuthority,
         line);
 }
@@ -59,45 +68,49 @@ void AdvancedMonitorBackend::on_command_result(const yunlink::CommandResultView&
 
 void AdvancedMonitorBackend::on_command_execution_status(
     const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message) {
+    bool should_log_audit = true;
     {
         std::lock_guard<std::mutex> lock(mu_);
+        should_log_audit =
+            !has_latest_command_execution_status_ ||
+            is_command_execution_semantic_change(latest_command_execution_status_, message.payload);
         latest_command_execution_status_ = message.payload;
         has_latest_command_execution_status_ = true;
     }
 
     update_command_execution_history(message);
 
-    std::string line = "command_execution_status kind=" +
-                       command_kind_label(message.payload.command_kind) + " exec=" +
-                       command_execution_state_label(message.payload.execution_state) +
-                       " progress=" + std::to_string(message.payload.progress_percent) +
-                       " active=" + std::string(message.payload.active ? "true" : "false") +
-                       " terminal=" + std::string(message.payload.terminal ? "true" : "false") +
-                       " msg_id=" + std::to_string(message.payload.command_message_id) +
-                       " correlation_id=" +
-                       std::to_string(message.payload.command_correlation_id);
+    if (message.payload.terminal) {
+        return;
+    }
+    if (!should_log_audit) {
+        return;
+    }
+    std::string line =
+        "command_execution_status kind=" + command_kind_label(message.payload.command_kind) +
+        " exec=" + command_execution_state_label(message.payload.execution_state) +
+        " progress=" + std::to_string(message.payload.progress_percent) +
+        " active=" + std::string(message.payload.active ? "true" : "false") +
+        " terminal=false msg_id=" + std::to_string(message.payload.command_message_id) +
+        " correlation_id=" + std::to_string(message.payload.command_correlation_id);
     if (!message.payload.busy_reason.empty()) {
         line += " busy_reason=" + message.payload.busy_reason;
     }
     if (!message.payload.detail.empty()) {
         line += " detail=" + message.payload.detail;
     }
-    log(message.payload.terminal && !message.payload.success ? MonitorLogLevel::kWarn
-                                                             : MonitorLogLevel::kInfo,
-        MonitorLogSource::kCommand,
-        line);
+    log(MonitorLogLevel::kInfo, MonitorLogSource::kCommand, line);
 }
 
 void AdvancedMonitorBackend::log_command_handle(const std::string& action,
                                                 const yunlink::CommandHandle& handle,
                                                 const std::string& detail) {
-    std::string line = "命令已发送: " + action + " | session_id=" +
-                       std::to_string(handle.session_id) + " message_id=" +
-                       std::to_string(handle.message_id) + " correlation_id=" +
-                       std::to_string(handle.correlation_id) + " target=uav/" +
-                       (handle.target.target_ids.empty()
-                            ? std::string("?")
-                            : std::to_string(handle.target.target_ids.front()));
+    std::string line =
+        "命令已发送: " + action + " | session_id=" + std::to_string(handle.session_id) +
+        " message_id=" + std::to_string(handle.message_id) +
+        " correlation_id=" + std::to_string(handle.correlation_id) + " target=uav/" +
+        (handle.target.target_ids.empty() ? std::string("?")
+                                          : std::to_string(handle.target.target_ids.front()));
     if (!detail.empty()) {
         line += " | " + detail;
     }
@@ -120,10 +133,10 @@ void AdvancedMonitorBackend::record_command_sent(const std::string& action,
     entry.detail = detail;
     command_history_.push_back(std::move(entry));
     if (command_history_.size() > command_history_limit_) {
-        command_history_.erase(command_history_.begin(),
-                               command_history_.begin() +
-                                   static_cast<std::ptrdiff_t>(command_history_.size() -
-                                                               command_history_limit_));
+        command_history_.erase(
+            command_history_.begin(),
+            command_history_.begin() +
+                static_cast<std::ptrdiff_t>(command_history_.size() - command_history_limit_));
     }
 }
 

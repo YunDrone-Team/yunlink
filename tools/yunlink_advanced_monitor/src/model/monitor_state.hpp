@@ -20,7 +20,9 @@ enum class MonitorLogSource {
     kConnection,
     kAuthority,
     kCommand,
+    kBridge,
     kSystemService,
+    kDebug,
 };
 
 struct MonitorLogEntry {
@@ -29,6 +31,9 @@ struct MonitorLogEntry {
     MonitorLogLevel level{MonitorLogLevel::kInfo};
     MonitorLogSource source{MonitorLogSource::kRuntime};
     std::string message;
+    uint32_t repeat_count{0};
+    uint64_t repeat_first_ms{0};
+    uint64_t repeat_last_ms{0};
 };
 
 struct MonitorConnectionSnapshot {

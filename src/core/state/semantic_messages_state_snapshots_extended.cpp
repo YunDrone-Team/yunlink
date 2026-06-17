@@ -96,6 +96,24 @@ ByteBuffer encode_payload(const SunrayRuntimeDiagnosticSnapshot& payload) {
         write_header(writer, payload.header);
         writer.write_string(payload.agent_key);
         writer.write_u32(payload.stale_timeout_ms);
+        writer.write_bool(payload.runtime_started);
+        writer.write_bool(payload.peer_ready);
+        writer.write_string(payload.session_state);
+        writer.write_string(payload.last_connect_error);
+        writer.write_string(payload.last_session_error);
+        writer.write_string(payload.last_publish_error);
+        writer.write_u32(payload.last_error_age_ms);
+        writer.write_u64(payload.connect_attempt_count);
+        writer.write_u64(payload.session_lost_count);
+        writer.write_u64(payload.ros_to_yunlink_publish_count);
+        writer.write_u64(payload.ros_to_yunlink_fail_count);
+        writer.write_u64(payload.yunlink_to_ros_command_count);
+        writer.write_u64(payload.yunlink_to_ros_publish_count);
+        writer.write_u64(payload.yunlink_to_ros_fail_count);
+        writer.write_string(payload.last_fail_direction);
+        writer.write_string(payload.last_fail_key);
+        writer.write_u32(payload.last_fail_error_code);
+        writer.write_string(payload.last_fail_detail);
         write_topic_diagnostic(writer, payload.external_odom);
         write_topic_diagnostic(writer, payload.odom_state);
         write_topic_diagnostic(writer, payload.local_odom);
@@ -113,6 +131,23 @@ bool decode_payload(const ByteBuffer& bytes, SunrayRuntimeDiagnosticSnapshot* pa
         bytes, payload, [](BufferReader& reader, SunrayRuntimeDiagnosticSnapshot* out) {
             return read_header(reader, &out->header) && reader.read_string(&out->agent_key) &&
                    reader.read_u32(&out->stale_timeout_ms) &&
+                   reader.read_bool(&out->runtime_started) && reader.read_bool(&out->peer_ready) &&
+                   reader.read_string(&out->session_state) &&
+                   reader.read_string(&out->last_connect_error) &&
+                   reader.read_string(&out->last_session_error) &&
+                   reader.read_string(&out->last_publish_error) &&
+                   reader.read_u32(&out->last_error_age_ms) &&
+                   reader.read_u64(&out->connect_attempt_count) &&
+                   reader.read_u64(&out->session_lost_count) &&
+                   reader.read_u64(&out->ros_to_yunlink_publish_count) &&
+                   reader.read_u64(&out->ros_to_yunlink_fail_count) &&
+                   reader.read_u64(&out->yunlink_to_ros_command_count) &&
+                   reader.read_u64(&out->yunlink_to_ros_publish_count) &&
+                   reader.read_u64(&out->yunlink_to_ros_fail_count) &&
+                   reader.read_string(&out->last_fail_direction) &&
+                   reader.read_string(&out->last_fail_key) &&
+                   reader.read_u32(&out->last_fail_error_code) &&
+                   reader.read_string(&out->last_fail_detail) &&
                    read_topic_diagnostic(reader, &out->external_odom) &&
                    read_topic_diagnostic(reader, &out->odom_state) &&
                    read_topic_diagnostic(reader, &out->local_odom) &&

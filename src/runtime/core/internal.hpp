@@ -79,6 +79,7 @@ struct Runtime::Impl {
         bulk_channel_descriptor_handlers;
     std::unordered_map<uint32_t, BulkChannelDescriptor> active_bulk_channels;
     std::unordered_map<std::string, uint64_t> reliable_latest_watermarks;
+    std::unordered_map<std::string, uint64_t> command_result_from_status_seen;
     std::unordered_map<std::string, RuntimeTrajectoryAccumulator> trajectory_accumulators;
     std::unordered_set<std::string> security_replay_keys;
 };

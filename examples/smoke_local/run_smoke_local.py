@@ -235,6 +235,7 @@ def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
     try:
         for attempt in range(1, 4):
             discovery_udp_bind = reserve_port()
+            discovery_tcp_listen = reserve_port()
             discovery = run_checked(
                 [
                     exe(bin_dir, "example_discovery_udp"),
@@ -244,6 +245,8 @@ def scenario_udp_bridge(bin_dir: Path, cwd: Path) -> None:
                     str(bridge_udp_bind),
                     "--udp-target-ip",
                     "127.0.0.1",
+                    "--tcp-listen",
+                    str(discovery_tcp_listen),
                     "--hold-ms",
                     "500",
                 ],

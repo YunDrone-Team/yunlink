@@ -63,6 +63,7 @@ void Runtime::stop() {
         impl_->authorities.clear();
         impl_->active_bulk_channels.clear();
         impl_->reliable_latest_watermarks.clear();
+        impl_->command_result_from_status_seen.clear();
         impl_->trajectory_accumulators.clear();
         impl_->security_replay_keys.clear();
     }

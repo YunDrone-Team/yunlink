@@ -104,6 +104,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/system_service/publish.cpp
   src/runtime/system_service/receive.cpp
   src/runtime/session/session.cpp
+  src/runtime/state/command_status.cpp
   src/runtime/state/fanout.cpp
   src/runtime/state/publish.cpp
   src/runtime/state/receive.cpp
@@ -271,6 +272,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_command_result_edges tests/runtime/test_command_result_edges.cpp)
   target_link_libraries(test_command_result_edges PRIVATE yunlink)
   add_test(NAME test_command_result_edges COMMAND test_command_result_edges)
+
+  add_executable(test_command_result_from_status tests/runtime/test_command_result_from_status.cpp)
+  target_link_libraries(test_command_result_from_status PRIVATE yunlink)
+  add_test(NAME test_command_result_from_status COMMAND test_command_result_from_status)
 
   add_executable(test_runtime_ttl_freshness tests/runtime/test_runtime_ttl_freshness.cpp)
   target_link_libraries(test_runtime_ttl_freshness PRIVATE yunlink)

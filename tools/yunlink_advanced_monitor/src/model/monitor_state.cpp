@@ -22,8 +22,12 @@ std::string source_label(MonitorLogSource source) {
         return "Authority";
     case MonitorLogSource::kCommand:
         return "Command";
+    case MonitorLogSource::kBridge:
+        return "Bridge";
     case MonitorLogSource::kSystemService:
         return "System";
+    case MonitorLogSource::kDebug:
+        return "Debug";
     }
     return "Runtime";
 }

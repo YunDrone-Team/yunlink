@@ -84,13 +84,7 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
         }
         return;
     case StateSnapshotType::kCommandExecutionStatus:
-        if (!runtime_fanout_snapshot<CommandExecutionStatusSnapshot>(
-                impl_->mu,
-                ev.envelope,
-                ev.envelope.payload,
-                impl_->command_execution_status_handlers)) {
-            runtime_publish_semantic_decode_error(bus_, ev);
-        }
+        handle_command_execution_status_snapshot(ev);
         return;
     case StateSnapshotType::kOdomState:
         if (!runtime_fanout_snapshot<OdomStateSnapshot>(

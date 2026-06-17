@@ -8,6 +8,8 @@
   先读 [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
 - 想按当前 repo 真实能力接入：
   先读 [implementation-status.md](implementation-status.md)，再读 [integration-guide.md](integration-guide.md)
+- 想查具体 payload 字段：
+  读 [payload-reference.md](payload-reference.md)
 - 想看端到端场景：
   读 [scenario-walkthroughs.md](scenario-walkthroughs.md)
 - 想从历史认知迁移：
@@ -18,11 +20,12 @@
 1. [yunlink-protocol-spec.md](yunlink-protocol-spec.md)
 2. [implementation-status.md](implementation-status.md)
 3. [integration-guide.md](integration-guide.md)
-4. [scenario-walkthroughs.md](scenario-walkthroughs.md)
+4. [payload-reference.md](payload-reference.md)
+5. [scenario-walkthroughs.md](scenario-walkthroughs.md)
 
 如果你正在做存量系统迁移，再补读：
 
-5. [migration-notes.md](migration-notes.md)
+6. [migration-notes.md](migration-notes.md)
 
 ## 文档分工
 
@@ -32,6 +35,8 @@
   当前仓库实现的覆盖矩阵、已验证路径、限制与接入含义。
 - [integration-guide.md](integration-guide.md)
   面向接入者。给出构建前提、公开 API、最小联调路径与排障观察点。
+- [payload-reference.md](payload-reference.md)
+  面向开发、联调和协议查阅，列出当前 repo 已实现的 payload、字段、类型、单位、约束和编码边界。
 - [scenario-walkthroughs.md](scenario-walkthroughs.md)
   面向开发与联调。给出单 UAV、单 UGV、Swarm 三类场景的协议路径，以及当前 repo 对这些场景的可落地点和限制。
 - [migration-notes.md](migration-notes.md)
@@ -40,6 +45,7 @@
 ## 边界
 
 - 主规范定义协议约束，不承担长篇教程、联调步骤或实现覆盖报告。
+- `payload-reference.md` 只描述 payload 语义与字段，不替代 `SecureEnvelope` 主规范。
 - 接入指南和场景文档不重复定义协议字段与编号域，而是引用主规范。
 - 当前实现边界以 [implementation-status.md](implementation-status.md) 为准，而不是由规范正文隐含推出。
 - API Reference 通过 `doxygen docs/Doxyfile` 本地生成到 `build/doxygen/`，不属于手写协议文档主入口。

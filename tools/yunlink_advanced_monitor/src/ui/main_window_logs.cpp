@@ -1,5 +1,7 @@
 #include "ui/main_window.hpp"
 
+#include <algorithm>
+
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QPlainTextEdit>
@@ -27,7 +29,8 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
 
     auto* actions = new QHBoxLayout();
     log_filter_combo_ = new QComboBox(group);
-    log_filter_combo_->addItems({"全部日志", "仅 Warn / Error", "Connection", "Authority", "Command", "System"});
+    log_filter_combo_->addItems(
+        {"全部日志", "仅 Warn / Error", "Connection", "Authority", "Command", "Bridge", "System", "Debug"});
     log_autofollow_checkbox_ = new QCheckBox("自动跟随", group);
     log_autofollow_checkbox_->setChecked(log_autofollow_);
     clear_logs_button_ = new QPushButton("Clear log", group);
@@ -39,12 +42,14 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
     root->addLayout(actions);
 
     logs_ = new QPlainTextEdit(group);
-    logs_->setReadOnly(true);
-    logs_->setLineWrapMode(QPlainTextEdit::NoWrap);
-    monitor_ui::style_log_view(logs_);
+    monitor_ui::configure_copyable_log_view(logs_);
     root->addWidget(logs_, 1);
 
     connect(log_filter_combo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
+        if (backend_ != nullptr) {
+            backend_->set_debug_stream_enabled(log_filter_combo_ != nullptr &&
+                                               log_filter_combo_->currentIndex() == 7);
+        }
         rendered_last_sequence_ = 0;
         rendered_visible_log_count_ = -1;
         refresh_logs();
@@ -71,6 +76,8 @@ bool MainWindow::log_entry_visible(const MonitorLogEntry& entry) const {
         return true;
     }
     switch (log_filter_combo_->currentIndex()) {
+    case 0:
+        return entry.source != MonitorLogSource::kDebug;
     case 1:
         return entry.level != MonitorLogLevel::kInfo;
     case 2:
@@ -80,21 +87,18 @@ bool MainWindow::log_entry_visible(const MonitorLogEntry& entry) const {
     case 4:
         return entry.source == MonitorLogSource::kCommand;
     case 5:
+        return entry.source == MonitorLogSource::kBridge;
+    case 6:
         return entry.source == MonitorLogSource::kSystemService;
+    case 7:
+        return entry.source == MonitorLogSource::kDebug;
     default:
         return true;
     }
 }
 
 bool MainWindow::log_should_autofollow() const {
-    if (logs_ == nullptr) {
-        return false;
-    }
-    if (log_autofollow_) {
-        return true;
-    }
-    auto* bar = logs_->verticalScrollBar();
-    return bar != nullptr && bar->value() >= bar->maximum() - 4;
+    return logs_ != nullptr && log_autofollow_;
 }
 
 void MainWindow::stage_toggle_log_autofollow(bool checked) {
@@ -117,22 +121,39 @@ void MainWindow::refresh_logs() {
         if (!log_entry_visible(entry)) {
             continue;
         }
+        QString message = QString::fromStdString(entry.message);
+        if (entry.repeat_count > 0) {
+            const uint64_t first = entry.repeat_first_ms == 0 ? entry.timestamp_ms : entry.repeat_first_ms;
+            const uint64_t last = entry.repeat_last_ms == 0 ? entry.timestamp_ms : entry.repeat_last_ms;
+            message += QString("  [repeated %1 times over %2s]")
+                           .arg(entry.repeat_count)
+                           .arg((last > first ? last - first : 0) / 1000);
+        }
         lines.append(QString("%1  %2  %3  %4")
                          .arg(format_timestamp(entry.timestamp_ms), -13)
                          .arg(QString::fromStdString(level_label(entry.level)), -5)
                          .arg(QString::fromStdString(source_label(entry.source)), -10)
-                         .arg(QString::fromStdString(entry.message)));
+                         .arg(message));
     }
     const int visible_count = lines.size();
     if (last_sequence == rendered_last_sequence_ && entries.size() == rendered_log_count_ &&
         visible_count == rendered_visible_log_count_) {
         return;
     }
+    if (logs_->textCursor().hasSelection()) {
+        return;
+    }
 
     const bool follow = log_should_autofollow();
+    auto* bar = logs_->verticalScrollBar();
+    const int previous_scroll_value = bar != nullptr ? bar->value() : 0;
     logs_->setPlainText(lines.join('\n'));
-    if (follow && logs_->verticalScrollBar() != nullptr) {
-        logs_->verticalScrollBar()->setValue(logs_->verticalScrollBar()->maximum());
+    if (bar != nullptr) {
+        if (follow) {
+            bar->setValue(bar->maximum());
+        } else {
+            bar->setValue(std::min(previous_scroll_value, bar->maximum()));
+        }
     }
     rendered_last_sequence_ = last_sequence;
     rendered_log_count_ = entries.size();

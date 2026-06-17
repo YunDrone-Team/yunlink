@@ -5,58 +5,21 @@
 #include <QGroupBox>
 #include <QLineEdit>
 #include <QLabel>
+#include <QListWidget>
+#include <QListWidgetItem>
 #include <QSplitter>
 #include <QStringList>
 #include <QVBoxLayout>
 #include <QCheckBox>
 
 #include "common/monitor_ui_style.hpp"
+#include "ui/system_service/system_service_ui_helpers.hpp"
 
-namespace {
-
-std::string bool_label(bool value) {
-    return value ? "true" : "false";
-}
-
-std::string join_values(const std::vector<std::string>& values, const std::string& sep) {
-    std::string out;
-    for (size_t i = 0; i < values.size(); ++i) {
-        if (i != 0) {
-            out += sep;
-        }
-        out += values[i];
-    }
-    return out;
-}
-
-std::vector<std::string> split_override_args(const std::string& text) {
-    std::vector<std::string> values;
-    std::string current;
-    for (char ch : text) {
-        if (ch == ',') {
-            if (!current.empty()) {
-                size_t begin = current.find_first_not_of(" \t\r\n");
-                size_t end = current.find_last_not_of(" \t\r\n");
-                if (begin != std::string::npos) {
-                    values.push_back(current.substr(begin, end - begin + 1));
-                }
-            }
-            current.clear();
-            continue;
-        }
-        current.push_back(ch);
-    }
-    if (!current.empty()) {
-        size_t begin = current.find_first_not_of(" \t\r\n");
-        size_t end = current.find_last_not_of(" \t\r\n");
-        if (begin != std::string::npos) {
-            values.push_back(current.substr(begin, end - begin + 1));
-        }
-    }
-    return values;
-}
-
-}  // namespace
+using monitor_system_service_ui::bool_label;
+using monitor_system_service_ui::join_values;
+using monitor_system_service_ui::split_override_args;
+using monitor_system_service_ui::update_feature_list_if_changed;
+using monitor_system_service_ui::update_plain_text_if_changed;
 
 void MainWindow::stage_refresh_feature_list() {
     if (backend_ != nullptr) {
@@ -140,14 +103,13 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     control_row->addWidget(stop_feature_button_);
     root->addLayout(control_row);
 
-    feature_list_text_ = new QPlainTextEdit(group);
-    feature_list_text_->setReadOnly(true);
-    feature_list_text_->setMaximumBlockCount(200);
+    feature_list_widget_ = new QListWidget(group);
+    feature_list_widget_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    feature_list_widget_->setSelectionMode(QAbstractItemView::SingleSelection);
+    feature_list_widget_->setStyleSheet("QListWidget { background:#ffffff; border:1px solid #c6c6c6;"
+                                        " selection-background-color:#d0e2ff; selection-color:#161616; }");
     feature_detail_text_ = new QPlainTextEdit(group);
-    feature_detail_text_->setReadOnly(true);
-    feature_detail_text_->setMaximumBlockCount(400);
-    monitor_ui::style_log_view(feature_list_text_);
-    monitor_ui::style_log_view(feature_detail_text_);
+    monitor_ui::configure_copyable_log_view(feature_detail_text_);
 
     feature_request_preview_ = new QLabel(group);
     feature_request_preview_->setTextFormat(Qt::RichText);
@@ -174,7 +136,7 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     auto* left_layout = new QVBoxLayout(left);
     left_layout->setContentsMargins(0, 0, 0, 0);
     left_layout->addWidget(new QLabel("FeatureList", left));
-    left_layout->addWidget(feature_list_text_, 1);
+    left_layout->addWidget(feature_list_widget_, 1);
     left_layout->addWidget(new QLabel("请求历史", left));
     left_layout->addWidget(system_service_history_table_, 1);
 
@@ -201,13 +163,22 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
             this,
             &MainWindow::stage_refresh_feature_detail);
     connect(feature_name_edit_, &QLineEdit::returnPressed, this, &MainWindow::stage_refresh_feature_detail);
+    connect(feature_list_widget_, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        if (feature_name_edit_ == nullptr || item == nullptr) {
+            return;
+        }
+        const QString feature_name = item->data(Qt::UserRole).toString();
+        if (!feature_name.isEmpty()) {
+            feature_name_edit_->setText(feature_name);
+        }
+    });
     connect(start_feature_button_, &QPushButton::clicked, this, &MainWindow::stage_start_feature);
     connect(stop_feature_button_, &QPushButton::clicked, this, &MainWindow::stage_stop_feature);
     return group;
 }
 
 void MainWindow::refresh_system_services() {
-    if (backend_ == nullptr || feature_list_text_ == nullptr || feature_detail_text_ == nullptr ||
+    if (backend_ == nullptr || feature_list_widget_ == nullptr || feature_detail_text_ == nullptr ||
         system_service_history_table_ == nullptr) {
         return;
     }
@@ -215,14 +186,10 @@ void MainWindow::refresh_system_services() {
     const auto state = backend_->snapshot_system_services();
     const auto history = backend_->snapshot_system_service_history();
 
-    QStringList feature_lines;
-    if (!state.last_status.empty()) {
-        feature_lines.append(QString::fromStdString("status: " + state.last_status));
-    }
-    for (const auto& name : state.feature_names) {
-        feature_lines.append(QString::fromStdString(name));
-    }
-    feature_list_text_->setPlainText(feature_lines.join('\n'));
+    const QString selected_feature =
+        feature_name_edit_ == nullptr ? "" : feature_name_edit_->text().trimmed();
+    update_feature_list_if_changed(
+        feature_list_widget_, state.last_status, state.feature_names, selected_feature);
 
     if (feature_request_preview_ != nullptr) {
         const QString feature = feature_name_edit_ == nullptr ? "" : feature_name_edit_->text().trimmed();
@@ -271,7 +238,7 @@ void MainWindow::refresh_system_services() {
                      : join_values(detail.start_preview_commands, "\n"))));
         }
     }
-    feature_detail_text_->setPlainText(detail_lines.join('\n'));
+    update_plain_text_if_changed(feature_detail_text_, detail_lines.join('\n'));
 
     system_service_history_table_->setRowCount(static_cast<int>(history.size()));
     for (int row = 0; row < static_cast<int>(history.size()); ++row) {

@@ -119,6 +119,11 @@ inline void write_topic_diagnostic(BufferWriter& writer,
     writer.write_bool(value.stale);
     writer.write_string(value.status);
     writer.write_string(value.detail);
+    writer.write_string(value.last_transition);
+    writer.write_u32(value.last_transition_age_ms);
+    writer.write_u64(value.publish_fail_count);
+    writer.write_float(value.expected_min_hz);
+    writer.write_bool(value.sparse);
 }
 
 inline bool read_topic_diagnostic(BufferReader& reader, SunrayTopicDiagnosticSnapshot* out) {
@@ -127,7 +132,10 @@ inline bool read_topic_diagnostic(BufferReader& reader, SunrayTopicDiagnosticSna
            reader.read_u32(&out->publisher_count) && reader.read_u64(&out->message_count) &&
            reader.read_float(&out->hz) && reader.read_u32(&out->age_ms) &&
            reader.read_bool(&out->stale) && reader.read_string(&out->status) &&
-           reader.read_string(&out->detail);
+           reader.read_string(&out->detail) && reader.read_string(&out->last_transition) &&
+           reader.read_u32(&out->last_transition_age_ms) &&
+           reader.read_u64(&out->publish_fail_count) && reader.read_float(&out->expected_min_hz) &&
+           reader.read_bool(&out->sparse);
 }
 
 inline void write_covariance(BufferWriter& writer, const std::array<double, 36>& value) {

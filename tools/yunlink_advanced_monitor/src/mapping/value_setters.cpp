@@ -150,6 +150,11 @@ void set_topic_diagnostic(std::unordered_map<std::string, std::string>& values,
     set_value(values, prefix + "stale", monitor_fmt_bool(msg.stale));
     set_value(values, prefix + "status", msg.status);
     set_value(values, prefix + "detail", msg.detail);
+    set_value(values, prefix + "last_transition", msg.last_transition);
+    set_numeric(values, prefix + "last_transition_age_ms", msg.last_transition_age_ms);
+    set_numeric(values, prefix + "publish_fail_count", msg.publish_fail_count);
+    set_float(values, prefix + "expected_min_hz", msg.expected_min_hz);
+    set_value(values, prefix + "sparse", monitor_fmt_bool(msg.sparse));
 }
 
 void set_command_execution_status(std::unordered_map<std::string, std::string>& values,

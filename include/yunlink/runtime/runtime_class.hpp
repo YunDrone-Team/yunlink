@@ -250,6 +250,7 @@ class Runtime {
     void handle_authority_envelope(const EnvelopeEvent& ev);
     void handle_command_envelope(const EnvelopeEvent& ev);
     void handle_state_snapshot_envelope(const EnvelopeEvent& ev);
+    void handle_command_execution_status_snapshot(const EnvelopeEvent& ev);
     void handle_state_event_envelope(const EnvelopeEvent& ev);
     void handle_command_result_envelope(const EnvelopeEvent& ev);
     void handle_bulk_channel_descriptor_envelope(const EnvelopeEvent& ev);

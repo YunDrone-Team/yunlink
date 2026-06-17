@@ -102,6 +102,7 @@ void AdvancedMonitorBackend::bind_yunlink_subscribers() {
                            message.envelope.message_id,
                            message.envelope.created_at_ms,
                            message.envelope.session_id);
+            on_sunray_runtime_diagnostic(message);
         }));
 
     log(MonitorLogLevel::kInfo, MonitorLogSource::kRuntime, "状态快照订阅器已就绪");

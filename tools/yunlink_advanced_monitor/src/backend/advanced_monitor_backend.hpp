@@ -50,6 +50,7 @@ class AdvancedMonitorBackend {
     MonitorSystemServiceState snapshot_system_services() const;
     std::vector<MonitorSystemServiceHistoryEntry> snapshot_system_service_history() const;
     bool can_send_commands() const;
+    void set_debug_stream_enabled(bool enabled);
     void clear_logs();
     void request_reconnect_now();
     bool connect_to_discovered_device(const std::string& dedupe_key);
@@ -116,17 +117,30 @@ class AdvancedMonitorBackend {
     void update_command_execution_history(
         const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message);
     void refresh_command_timeouts(uint64_t now_ms);
-    void on_feature_list_response(const yunlink::TypedMessage<yunlink::FeatureListResponse>& message);
+    void
+    on_feature_list_response(const yunlink::TypedMessage<yunlink::FeatureListResponse>& message);
     void on_feature_get_response(const yunlink::TypedMessage<yunlink::FeatureGetResponse>& message);
-    void on_feature_start_response(
-        const yunlink::TypedMessage<yunlink::FeatureStartResponse>& message);
-    void on_feature_stop_response(const yunlink::TypedMessage<yunlink::FeatureStopResponse>& message);
+    void
+    on_feature_start_response(const yunlink::TypedMessage<yunlink::FeatureStartResponse>& message);
+    void
+    on_feature_stop_response(const yunlink::TypedMessage<yunlink::FeatureStopResponse>& message);
     void record_system_service_request(const std::string& action,
                                        const std::string& feature_name,
                                        const yunlink::SystemServiceHandle& handle);
     void refresh_system_service_timeouts(uint64_t now_ms);
     void log(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     void log_throttle(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
+    void log_debug(MonitorLogSource source, const std::string& line);
+    static std::string
+    make_semantic_log_key(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
+    static bool should_merge_repeated_log(MonitorLogSource source, const std::string& line);
+    static bool
+    is_command_execution_semantic_change(const yunlink::CommandExecutionStatusSnapshot& previous,
+                                         const yunlink::CommandExecutionStatusSnapshot& current);
+    static std::string
+    bridge_runtime_diagnostic_log_key(const yunlink::SunrayRuntimeDiagnosticSnapshot& payload);
+    void on_sunray_runtime_diagnostic(
+        const yunlink::TypedMessage<yunlink::SunrayRuntimeDiagnosticSnapshot>& message);
     void update_discovery_snapshot_unlocked(const DiscoveryDevice& device);
     static std::string make_discovery_key(const std::string& source_ip,
                                           const std::string& endpoint_id,
@@ -138,6 +152,8 @@ class AdvancedMonitorBackend {
     std::vector<MonitorLogEntry> logs_;
     std::vector<MonitorCommandHistoryEntry> command_history_;
     std::unordered_map<std::string, uint64_t> throttled_logs_;
+    std::string last_log_key_;
+    std::string last_bridge_runtime_diagnostic_key_;
 
     yunlink::Runtime runtime_;
     yunlink::EndpointListener discovery_listener_;
@@ -170,6 +186,7 @@ class AdvancedMonitorBackend {
     uint64_t next_command_sequence_{1};
     uint64_t next_system_service_sequence_{1};
     bool authority_pending_{false};
+    bool debug_stream_enabled_{false};
     uint64_t session_id_{0};
     uint64_t next_log_sequence_{1};
     bool runtime_started_{false};

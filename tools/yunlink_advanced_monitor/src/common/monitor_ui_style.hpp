@@ -37,6 +37,7 @@ void apply_window_style(QWidget* widget);
 void style_button(QPushButton* button, ButtonRole role);
 void style_table(QTableWidget* table);
 void style_log_view(QPlainTextEdit* log_view);
+void configure_copyable_log_view(QPlainTextEdit* log_view, int max_blocks = 0);
 void set_tag(QLabel* label, Level level, const QString& text);
 void set_mono(QLabel* label);
 void style_item(QTableWidgetItem* item, bool mono = false);

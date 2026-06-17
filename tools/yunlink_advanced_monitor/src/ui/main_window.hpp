@@ -8,6 +8,7 @@
 
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMainWindow>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -122,7 +123,7 @@ class MainWindow : public QMainWindow {
     QTableWidget* system_service_history_table_{nullptr};
     QStackedWidget* page_stack_{nullptr};
     std::vector<QPushButton*> page_nav_buttons_;
-    QPlainTextEdit* feature_list_text_{nullptr};
+    QListWidget* feature_list_widget_{nullptr};
     QPlainTextEdit* feature_detail_text_{nullptr};
     QLabel* feature_request_preview_{nullptr};
     QLineEdit* feature_override_args_edit_{nullptr};

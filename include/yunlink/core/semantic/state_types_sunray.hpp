@@ -20,12 +20,35 @@ struct SunrayTopicDiagnosticSnapshot {
     bool stale = false;
     std::string status;
     std::string detail;
+    std::string last_transition;
+    uint32_t last_transition_age_ms = 0;
+    uint64_t publish_fail_count = 0;
+    float expected_min_hz = 0.0F;
+    bool sparse = false;
 };
 
 struct SunrayRuntimeDiagnosticSnapshot {
     HeaderSnapshot header;
     std::string agent_key;
     uint32_t stale_timeout_ms = 1000;
+    bool runtime_started = false;
+    bool peer_ready = false;
+    std::string session_state;
+    std::string last_connect_error;
+    std::string last_session_error;
+    std::string last_publish_error;
+    uint32_t last_error_age_ms = 0;
+    uint64_t connect_attempt_count = 0;
+    uint64_t session_lost_count = 0;
+    uint64_t ros_to_yunlink_publish_count = 0;
+    uint64_t ros_to_yunlink_fail_count = 0;
+    uint64_t yunlink_to_ros_command_count = 0;
+    uint64_t yunlink_to_ros_publish_count = 0;
+    uint64_t yunlink_to_ros_fail_count = 0;
+    std::string last_fail_direction;
+    std::string last_fail_key;
+    uint32_t last_fail_error_code = 0;
+    std::string last_fail_detail;
     SunrayTopicDiagnosticSnapshot external_odom;
     SunrayTopicDiagnosticSnapshot odom_state;
     SunrayTopicDiagnosticSnapshot local_odom;

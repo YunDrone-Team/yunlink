@@ -41,6 +41,7 @@ add_executable(yunlink_advanced_monitor
   src/backend/discovery/advanced_monitor_backend_discovery.cpp
   src/backend/advanced_monitor_backend_setup.cpp
   src/backend/advanced_monitor_backend_state.cpp
+  src/backend/logging/advanced_monitor_backend_log_policy.cpp
   src/backend/advanced_monitor_backend_utils.cpp
   src/backend/advanced_monitor_runtime.cpp
   src/backend/system_service/advanced_monitor_backend_system_service_feedback.cpp
@@ -49,6 +50,7 @@ add_executable(yunlink_advanced_monitor
   src/common/monitor_topics_command_execution.cpp
   src/common/monitor_ui_style.cpp
   src/common/ui/monitor_ui_dialogs.cpp
+  src/common/ui/monitor_ui_log_view.cpp
   src/common/sunray_status_format.cpp
   src/dashboard/developer_status_command_cards.cpp
   src/dashboard/developer_status_model.cpp
@@ -69,6 +71,7 @@ add_executable(yunlink_advanced_monitor
   src/ui/main_window_logs.cpp
   src/ui/main_window_navigation.cpp
   src/ui/main_window_refresh.cpp
+  src/ui/system_service/system_service_ui_helpers.cpp
   src/ui/main_window_system_services.cpp
 )
 

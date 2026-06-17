@@ -36,9 +36,9 @@ bool parse_i32_arg(const std::string& s, int* out) {
 }
 
 void print_usage(const char* prog) {
-    std::cerr
-        << "usage: " << prog
-        << " [--udp-bind <port>] [--udp-target <port>] [--udp-target-ip <ip>] [--hold-ms <n>]\n";
+    std::cerr << "usage: " << prog
+              << " [--udp-bind <port>] [--udp-target <port>] [--udp-target-ip <ip>]"
+                 " [--tcp-listen <port>] [--hold-ms <n>]\n";
 }
 
 }  // namespace
@@ -46,6 +46,7 @@ void print_usage(const char* prog) {
 int main(int argc, char** argv) {
     uint16_t udp_bind = 9696;
     uint16_t udp_target = 9898;
+    uint16_t tcp_listen = 9696;
     std::string udp_target_ip = "255.255.255.255";
     int hold_ms = 3000;
 
@@ -63,6 +64,11 @@ int main(int argc, char** argv) {
             }
         } else if (arg == "--udp-target-ip" && i + 1 < argc) {
             udp_target_ip = argv[++i];
+        } else if (arg == "--tcp-listen" && i + 1 < argc) {
+            if (!parse_u16_arg(argv[++i], &tcp_listen)) {
+                print_usage(argv[0]);
+                return 2;
+            }
         } else if (arg == "--hold-ms" && i + 1 < argc) {
             if (!parse_i32_arg(argv[++i], &hold_ms) || hold_ms <= 0) {
                 print_usage(argv[0]);
@@ -78,6 +84,7 @@ int main(int argc, char** argv) {
     yunlink::RuntimeConfig cfg;
     cfg.udp_bind_port = udp_bind;
     cfg.udp_target_port = udp_target;
+    cfg.tcp_listen_port = tcp_listen;
 
     if (runtime.start(cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "failed to start runtime\n";

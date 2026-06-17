@@ -3,18 +3,12 @@
 AdvancedMonitorBackend::AdvancedMonitorBackend() : AdvancedMonitorBackend(Config()) {}
 
 AdvancedMonitorBackend::AdvancedMonitorBackend(Config config)
-    : topics_(make_default_monitor_topics()),
-      remote_ip_(std::move(config.remote_ip)),
-      shared_secret_(std::move(config.shared_secret)),
-      node_name_(std::move(config.node_name)),
-      agent_name_(std::move(config.agent_name)),
-      remote_tcp_port_(config.remote_tcp_port),
-      udp_bind_port_(config.udp_bind_port),
-      udp_target_port_(config.udp_target_port),
-      tcp_listen_port_(config.tcp_listen_port),
-      agent_id_(config.agent_id),
-      log_limit_raw_(config.log_limit),
-      discovery_port_(config.discovery_port),
+    : topics_(make_default_monitor_topics()), remote_ip_(std::move(config.remote_ip)),
+      shared_secret_(std::move(config.shared_secret)), node_name_(std::move(config.node_name)),
+      agent_name_(std::move(config.agent_name)), remote_tcp_port_(config.remote_tcp_port),
+      udp_bind_port_(config.udp_bind_port), udp_target_port_(config.udp_target_port),
+      tcp_listen_port_(config.tcp_listen_port), agent_id_(config.agent_id),
+      log_limit_raw_(config.log_limit), discovery_port_(config.discovery_port),
       authority_ttl_ms_(static_cast<uint32_t>(config.authority_ttl_ms)),
       command_history_limit_(static_cast<size_t>(config.command_history_limit)),
       command_timeout_ms_(static_cast<uint64_t>(config.command_timeout_ms)),
@@ -97,10 +91,17 @@ bool AdvancedMonitorBackend::can_send_commands() const {
     return runtime_started_ && peer_ready_ && session_id_ != 0 && authority_active_unlocked();
 }
 
+void AdvancedMonitorBackend::set_debug_stream_enabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mu_);
+    debug_stream_enabled_ = enabled;
+}
+
 void AdvancedMonitorBackend::clear_logs() {
     std::lock_guard<std::mutex> lock(mu_);
     logs_.clear();
     throttled_logs_.clear();
+    last_log_key_.clear();
+    last_bridge_runtime_diagnostic_key_.clear();
 }
 
 void AdvancedMonitorBackend::request_reconnect_now() {
