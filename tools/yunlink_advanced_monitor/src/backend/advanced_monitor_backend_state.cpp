@@ -68,22 +68,9 @@ void AdvancedMonitorBackend::on_command_result(const yunlink::CommandResultView&
 
 void AdvancedMonitorBackend::on_command_execution_status(
     const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message) {
-    bool should_log_audit = true;
-    {
-        std::lock_guard<std::mutex> lock(mu_);
-        should_log_audit =
-            !has_latest_command_execution_status_ ||
-            is_command_execution_semantic_change(latest_command_execution_status_, message.payload);
-        latest_command_execution_status_ = message.payload;
-        has_latest_command_execution_status_ = true;
-    }
-
     update_command_execution_history(message);
 
     if (message.payload.terminal) {
-        return;
-    }
-    if (!should_log_audit) {
         return;
     }
     std::string line =

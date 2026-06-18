@@ -171,11 +171,10 @@ void AdvancedMonitorBackend::request_command_authority_if_needed() {
                 std::lock_guard<std::mutex> lock(mu_);
                 authority_pending_ = false;
             }
-            log_throttle(MonitorLogLevel::kWarn,
-                         MonitorLogSource::kAuthority,
-                         "控制权续租发送失败，target=uav/" +
-                             std::to_string(std::max(agent_id_, 0)) + " ec=" +
-                             error_code_label(ec));
+            log(MonitorLogLevel::kWarn,
+                MonitorLogSource::kAuthority,
+                "控制权续租发送失败，target=uav/" +
+                    std::to_string(std::max(agent_id_, 0)) + " ec=" + error_code_label(ec));
         }
         return;
     }

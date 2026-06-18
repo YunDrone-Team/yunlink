@@ -124,11 +124,11 @@ void AdvancedMonitorBackend::poll_runtime() {
             connection_.last_error = "connect_peer failed, ec=" + std::to_string(static_cast<int>(ec));
             connection_.updated_at_ms = wall_time_ms();
         }
-        log_throttle(MonitorLogLevel::kWarn,
-                     MonitorLogSource::kConnection,
-                     "连接 YunLink 对端失败，ip=" + remote_ip_ +
-                         " port=" + std::to_string(clamp_port(remote_tcp_port_)) +
-                         " ec=" + std::to_string(static_cast<int>(ec)));
+        log(MonitorLogLevel::kWarn,
+            MonitorLogSource::kConnection,
+            "连接 YunLink 对端失败，ip=" + remote_ip_ +
+                " port=" + std::to_string(clamp_port(remote_tcp_port_)) +
+                " ec=" + std::to_string(static_cast<int>(ec)));
         return;
     }
 
@@ -141,9 +141,9 @@ void AdvancedMonitorBackend::poll_runtime() {
             connection_.last_error = "open_active_session failed";
             connection_.updated_at_ms = wall_time_ms();
         }
-        log_throttle(MonitorLogLevel::kWarn,
-                     MonitorLogSource::kConnection,
-                     "打开会话失败，peer_id=" + peer_id + " node=" + node_name_);
+        log(MonitorLogLevel::kWarn,
+            MonitorLogSource::kConnection,
+            "打开会话失败，peer_id=" + peer_id + " node=" + node_name_);
         return;
     }
 

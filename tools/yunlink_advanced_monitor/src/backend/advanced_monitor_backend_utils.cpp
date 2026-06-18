@@ -4,10 +4,9 @@
 
 namespace {
 
-std::string make_log_key(MonitorLogLevel level,
-                         MonitorLogSource source,
-                         const std::string& line) {
-    return level_label(level) + "|" + source_label(source) + "|" + line;
+bool is_command_status_log(MonitorLogSource source, const std::string& line) {
+    return source == MonitorLogSource::kCommand &&
+           line.find("command_execution_status ") == 0;
 }
 
 }  // namespace
@@ -185,6 +184,34 @@ void AdvancedMonitorBackend::log(MonitorLogLevel level,
     std::lock_guard<std::mutex> lock(mu_);
     const uint64_t now_ms = wall_time_ms();
     const std::string key = make_semantic_log_key(level, source, line);
+    const auto rebuild_command_status_indices = [this]() {
+        command_status_log_indices_.clear();
+        for (size_t i = 0; i < logs_.size(); ++i) {
+            const auto& entry = logs_[i];
+            if (!is_command_status_log(entry.source, entry.message)) {
+                continue;
+            }
+            command_status_log_indices_[make_semantic_log_key(
+                entry.level, entry.source, entry.message)] = i;
+        }
+    };
+    if (is_command_status_log(source, line)) {
+        auto existing = command_status_log_indices_.find(key);
+        if (existing != command_status_log_indices_.end() && existing->second < logs_.size()) {
+            MonitorLogEntry entry = logs_[existing->second];
+            entry.repeat_count += 1;
+            if (entry.repeat_first_ms == 0) {
+                entry.repeat_first_ms = entry.timestamp_ms;
+            }
+            entry.repeat_last_ms = now_ms;
+            entry.timestamp_ms = now_ms;
+            logs_.erase(logs_.begin() + static_cast<std::ptrdiff_t>(existing->second));
+            logs_.push_back(std::move(entry));
+            rebuild_command_status_indices();
+            last_log_key_ = key;
+            return;
+        }
+    }
     if (should_merge_repeated_log(source, line) && !logs_.empty() && key == last_log_key_) {
         auto& entry = logs_.back();
         entry.repeat_count += 1;
@@ -193,6 +220,9 @@ void AdvancedMonitorBackend::log(MonitorLogLevel level,
         }
         entry.repeat_last_ms = now_ms;
         entry.timestamp_ms = now_ms;
+        if (is_command_status_log(source, line)) {
+            command_status_log_indices_[key] = logs_.size() - 1;
+        }
         return;
     }
     last_log_key_ = key;
@@ -206,23 +236,11 @@ void AdvancedMonitorBackend::log(MonitorLogLevel level,
         0,
         0,
     });
+    if (is_command_status_log(source, line)) {
+        command_status_log_indices_[key] = logs_.size() - 1;
+    }
     if (logs_.size() > log_limit_) {
         logs_.erase(logs_.begin());
+        rebuild_command_status_indices();
     }
-}
-
-void AdvancedMonitorBackend::log_throttle(MonitorLogLevel level,
-                                          MonitorLogSource source,
-                                          const std::string& line) {
-    const uint64_t now = wall_time_ms();
-    const std::string key = make_log_key(level, source, line);
-    {
-        std::lock_guard<std::mutex> lock(mu_);
-        const auto it = throttled_logs_.find(key);
-        if (it != throttled_logs_.end() && now < it->second + 2000) {
-            return;
-        }
-        throttled_logs_[key] = now;
-    }
-    log(level, source, line);
 }

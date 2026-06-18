@@ -75,7 +75,7 @@ void AdvancedMonitorBackend::poll_discovery() {
 
     const std::string error = discovery_listener_.last_error();
     if (!error.empty()) {
-        log_throttle(MonitorLogLevel::kWarn, MonitorLogSource::kConnection, error);
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kConnection, error);
     }
 }
 

@@ -11,6 +11,19 @@
 
 #include "common/monitor_ui_style.hpp"
 
+namespace {
+
+bool is_command_status_log(const MonitorLogEntry& entry) {
+    return entry.source == MonitorLogSource::kCommand &&
+           entry.message.find("command_execution_status ") == 0;
+}
+
+bool is_command_event_log(const MonitorLogEntry& entry) {
+    return entry.source == MonitorLogSource::kCommand && !is_command_status_log(entry);
+}
+
+}  // namespace
+
 QWidget* MainWindow::build_recent_issues_panel(QWidget* parent) {
     auto* group = new QGroupBox("最近异常", parent);
     auto* root = new QVBoxLayout(group);
@@ -29,8 +42,16 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
 
     auto* actions = new QHBoxLayout();
     log_filter_combo_ = new QComboBox(group);
-    log_filter_combo_->addItems(
-        {"全部日志", "仅 Warn / Error", "Connection", "Authority", "Command", "Bridge", "System", "Debug"});
+    log_filter_combo_->addItems({"全部日志(不含状态)",
+                                 "全部日志",
+                                 "仅 Warn / Error",
+                                 "Connection",
+                                 "Authority",
+                                 "Command Events",
+                                 "Command Status",
+                                 "Bridge",
+                                 "System",
+                                 "Debug"});
     log_autofollow_checkbox_ = new QCheckBox("自动跟随", group);
     log_autofollow_checkbox_->setChecked(log_autofollow_);
     clear_logs_button_ = new QPushButton("Clear log", group);
@@ -48,7 +69,7 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
     connect(log_filter_combo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
         if (backend_ != nullptr) {
             backend_->set_debug_stream_enabled(log_filter_combo_ != nullptr &&
-                                               log_filter_combo_->currentIndex() == 7);
+                                               log_filter_combo_->currentIndex() == 9);
         }
         rendered_last_sequence_ = 0;
         rendered_visible_log_count_ = -1;
@@ -77,20 +98,24 @@ bool MainWindow::log_entry_visible(const MonitorLogEntry& entry) const {
     }
     switch (log_filter_combo_->currentIndex()) {
     case 0:
-        return entry.source != MonitorLogSource::kDebug;
+        return entry.source != MonitorLogSource::kDebug && !is_command_status_log(entry);
     case 1:
-        return entry.level != MonitorLogLevel::kInfo;
+        return entry.source != MonitorLogSource::kDebug;
     case 2:
-        return entry.source == MonitorLogSource::kConnection;
+        return entry.level != MonitorLogLevel::kInfo;
     case 3:
-        return entry.source == MonitorLogSource::kAuthority;
+        return entry.source == MonitorLogSource::kConnection;
     case 4:
-        return entry.source == MonitorLogSource::kCommand;
+        return entry.source == MonitorLogSource::kAuthority;
     case 5:
-        return entry.source == MonitorLogSource::kBridge;
+        return is_command_event_log(entry);
     case 6:
-        return entry.source == MonitorLogSource::kSystemService;
+        return is_command_status_log(entry);
     case 7:
+        return entry.source == MonitorLogSource::kBridge;
+    case 8:
+        return entry.source == MonitorLogSource::kSystemService;
+    case 9:
         return entry.source == MonitorLogSource::kDebug;
     default:
         return true;
@@ -145,15 +170,25 @@ void MainWindow::refresh_logs() {
     }
 
     const bool follow = log_should_autofollow();
-    auto* bar = logs_->verticalScrollBar();
-    const int previous_scroll_value = bar != nullptr ? bar->value() : 0;
+    auto* vertical_bar = logs_->verticalScrollBar();
+    auto* horizontal_bar = logs_->horizontalScrollBar();
+    const int previous_vertical_value = vertical_bar != nullptr ? vertical_bar->value() : 0;
+    const int previous_horizontal_value = horizontal_bar != nullptr ? horizontal_bar->value() : 0;
+    const bool horizontal_at_right =
+        horizontal_bar != nullptr && previous_horizontal_value == horizontal_bar->maximum();
     logs_->setPlainText(lines.join('\n'));
-    if (bar != nullptr) {
+    if (vertical_bar != nullptr) {
         if (follow) {
-            bar->setValue(bar->maximum());
+            vertical_bar->setValue(vertical_bar->maximum());
         } else {
-            bar->setValue(std::min(previous_scroll_value, bar->maximum()));
+            vertical_bar->setValue(std::min(previous_vertical_value, vertical_bar->maximum()));
         }
+    }
+    if (horizontal_bar != nullptr) {
+        const int next_horizontal_value =
+            horizontal_at_right ? horizontal_bar->maximum()
+                                : std::min(previous_horizontal_value, horizontal_bar->maximum());
+        horizontal_bar->setValue(next_horizontal_value);
     }
     rendered_last_sequence_ = last_sequence;
     rendered_log_count_ = entries.size();

@@ -129,16 +129,10 @@ class AdvancedMonitorBackend {
                                        const yunlink::SystemServiceHandle& handle);
     void refresh_system_service_timeouts(uint64_t now_ms);
     void log(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
-    void log_throttle(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     void log_debug(MonitorLogSource source, const std::string& line);
     static std::string
     make_semantic_log_key(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     static bool should_merge_repeated_log(MonitorLogSource source, const std::string& line);
-    static bool
-    is_command_execution_semantic_change(const yunlink::CommandExecutionStatusSnapshot& previous,
-                                         const yunlink::CommandExecutionStatusSnapshot& current);
-    static std::string
-    bridge_runtime_diagnostic_log_key(const yunlink::SunrayRuntimeDiagnosticSnapshot& payload);
     void on_sunray_runtime_diagnostic(
         const yunlink::TypedMessage<yunlink::SunrayRuntimeDiagnosticSnapshot>& message);
     void update_discovery_snapshot_unlocked(const DiscoveryDevice& device);
@@ -151,9 +145,10 @@ class AdvancedMonitorBackend {
     std::unordered_map<std::string, DiscoveryDevice> discovery_devices_;
     std::vector<MonitorLogEntry> logs_;
     std::vector<MonitorCommandHistoryEntry> command_history_;
-    std::unordered_map<std::string, uint64_t> throttled_logs_;
+    std::unordered_map<std::string, size_t> command_status_log_indices_;
     std::string last_log_key_;
-    std::string last_bridge_runtime_diagnostic_key_;
+    bool has_bridge_runtime_diagnostic_level_{false};
+    bool last_bridge_runtime_diagnostic_ok_{false};
 
     yunlink::Runtime runtime_;
     yunlink::EndpointListener discovery_listener_;
@@ -194,8 +189,6 @@ class AdvancedMonitorBackend {
     bool peer_ready_{false};
     std::string selected_discovery_key_;
     MonitorConnectionSnapshot connection_;
-    yunlink::CommandExecutionStatusSnapshot latest_command_execution_status_{};
-    bool has_latest_command_execution_status_{false};
     size_t command_history_limit_{32};
     uint64_t command_timeout_ms_{3000};
     MonitorSystemServiceState system_services_;

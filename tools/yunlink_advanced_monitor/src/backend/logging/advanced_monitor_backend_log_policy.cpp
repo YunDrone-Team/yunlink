@@ -55,36 +55,6 @@ void AdvancedMonitorBackend::log_debug(MonitorLogSource, const std::string& line
     log(MonitorLogLevel::kInfo, MonitorLogSource::kDebug, line);
 }
 
-bool AdvancedMonitorBackend::is_command_execution_semantic_change(
-    const yunlink::CommandExecutionStatusSnapshot& previous,
-    const yunlink::CommandExecutionStatusSnapshot& current) {
-    return previous.command_message_id != current.command_message_id ||
-           previous.command_correlation_id != current.command_correlation_id ||
-           previous.command_kind != current.command_kind ||
-           previous.execution_state != current.execution_state ||
-           previous.active != current.active || previous.terminal != current.terminal ||
-           previous.success != current.success || previous.result_code != current.result_code ||
-           previous.busy_reason != current.busy_reason || previous.detail != current.detail;
-}
-
-std::string AdvancedMonitorBackend::bridge_runtime_diagnostic_log_key(
-    const yunlink::SunrayRuntimeDiagnosticSnapshot& payload) {
-    auto topic_key = [](const yunlink::SunrayTopicDiagnosticSnapshot& item) {
-        return item.key + "=" + item.status + ":" + item.detail;
-    };
-    return "level=" + payload.worst_level + "|summary=" + payload.summary +
-           "|session=" + payload.session_state +
-           "|ros_to_yunlink_fail=" + std::to_string(payload.ros_to_yunlink_fail_count) +
-           "|yunlink_to_ros_fail=" + std::to_string(payload.yunlink_to_ros_fail_count) +
-           "|external_odom=" + topic_key(payload.external_odom) +
-           "|odom_state=" + topic_key(payload.odom_state) +
-           "|local_odom=" + topic_key(payload.local_odom) +
-           "|global_odom=" + topic_key(payload.global_odom) +
-           "|uav_control_cmd=" + topic_key(payload.uav_control_cmd) +
-           "|uav_control_state=" + topic_key(payload.uav_control_state) +
-	           "|px4_state=" + topic_key(payload.px4_state);
-}
-
 std::string bridge_runtime_diagnostic_summary(
     const yunlink::SunrayRuntimeDiagnosticSnapshot& payload) {
     if (payload.summary == "bridge forwarding publish failure") {
@@ -104,20 +74,25 @@ std::string bridge_runtime_diagnostic_summary(
 
 void AdvancedMonitorBackend::on_sunray_runtime_diagnostic(
     const yunlink::TypedMessage<yunlink::SunrayRuntimeDiagnosticSnapshot>& message) {
-    const std::string key = bridge_runtime_diagnostic_log_key(message.payload);
-    {
-        std::lock_guard<std::mutex> lock(mu_);
-        if (key == last_bridge_runtime_diagnostic_key_) {
-            return;
-        }
-        last_bridge_runtime_diagnostic_key_ = key;
-    }
     if (message.payload.worst_level.empty() || message.payload.worst_level == "OK") {
+        {
+            std::lock_guard<std::mutex> lock(mu_);
+            if (has_bridge_runtime_diagnostic_level_ && last_bridge_runtime_diagnostic_ok_) {
+                return;
+            }
+            has_bridge_runtime_diagnostic_level_ = true;
+            last_bridge_runtime_diagnostic_ok_ = true;
+        }
         log(MonitorLogLevel::kInfo,
             MonitorLogSource::kBridge,
             "bridge_diagnostic status=OK detail=" +
                 bridge_runtime_diagnostic_summary(message.payload));
         return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        has_bridge_runtime_diagnostic_level_ = true;
+        last_bridge_runtime_diagnostic_ok_ = false;
     }
     log(message.payload.worst_level == "ERROR" ? MonitorLogLevel::kError : MonitorLogLevel::kWarn,
         MonitorLogSource::kBridge,

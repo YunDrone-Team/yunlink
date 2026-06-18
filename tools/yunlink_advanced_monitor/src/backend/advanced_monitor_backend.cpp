@@ -99,9 +99,10 @@ void AdvancedMonitorBackend::set_debug_stream_enabled(bool enabled) {
 void AdvancedMonitorBackend::clear_logs() {
     std::lock_guard<std::mutex> lock(mu_);
     logs_.clear();
-    throttled_logs_.clear();
+    command_status_log_indices_.clear();
     last_log_key_.clear();
-    last_bridge_runtime_diagnostic_key_.clear();
+    has_bridge_runtime_diagnostic_level_ = false;
+    last_bridge_runtime_diagnostic_ok_ = false;
 }
 
 void AdvancedMonitorBackend::request_reconnect_now() {
