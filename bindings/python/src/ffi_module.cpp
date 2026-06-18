@@ -84,6 +84,12 @@ class RuntimeCore {
         native.self_identity.role = nb::cast<uint8_t>(config["role"]);
         copy_string(native.shared_secret, sizeof(native.shared_secret), "yunlink-secret");
         copy_string(native.multicast_group, sizeof(native.multicast_group), "224.1.1.1");
+        native.qos_profile = 2;
+        native.qos_reliable_ordered_transport = 1;
+        native.qos_reliable_latest_transport = 1;
+        native.qos_best_effort_transport = 2;
+        native.qos_bulk_transport = 2;
+        native.qos_udp_fallback_to_tcp = 1;
         throw_if_error(yunlink_runtime_start(runtime_, &native));
     }
 

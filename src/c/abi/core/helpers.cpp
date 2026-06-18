@@ -104,6 +104,27 @@ yunlink::RuntimeConfig to_runtime_config(const yunlink_runtime_config_t& cfg) {
     if (cfg.shared_secret[0] != '\0') {
         out.shared_secret = cfg.shared_secret;
     }
+    if (cfg.qos_profile >= static_cast<uint8_t>(yunlink::QosProfile::kReliable) &&
+        cfg.qos_profile <= static_cast<uint8_t>(yunlink::QosProfile::kLowLatency)) {
+        out.qos_policy.profile = static_cast<yunlink::QosProfile>(cfg.qos_profile);
+    }
+    const auto to_transport = [](uint8_t value, yunlink::TransportPreference fallback) {
+        if (value == static_cast<uint8_t>(yunlink::TransportPreference::kTcp) ||
+            value == static_cast<uint8_t>(yunlink::TransportPreference::kUdp)) {
+            return static_cast<yunlink::TransportPreference>(value);
+        }
+        return fallback;
+    };
+    out.qos_policy.reliable_ordered =
+        to_transport(cfg.qos_reliable_ordered_transport, out.qos_policy.reliable_ordered);
+    out.qos_policy.reliable_latest =
+        to_transport(cfg.qos_reliable_latest_transport, out.qos_policy.reliable_latest);
+    out.qos_policy.best_effort =
+        to_transport(cfg.qos_best_effort_transport, out.qos_policy.best_effort);
+    out.qos_policy.bulk = to_transport(cfg.qos_bulk_transport, out.qos_policy.bulk);
+    out.qos_policy.udp_fallback_to_tcp = cfg.qos_udp_fallback_to_tcp == 0
+                                             ? out.qos_policy.udp_fallback_to_tcp
+                                             : true;
     return out;
 }
 

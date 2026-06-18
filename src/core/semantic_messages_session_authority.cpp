@@ -11,13 +11,23 @@ ByteBuffer encode_payload(const SessionHello& payload) {
     return build_payload([&](BufferWriter& writer) {
         writer.write_string(payload.node_name);
         writer.write_u32(payload.capability_flags);
+        writer.write_u16(payload.udp_bind_port);
     });
 }
 
 bool decode_payload(const ByteBuffer& bytes, SessionHello* payload) {
-    return parse_payload(bytes, payload, [](BufferReader& reader, SessionHello* out) {
-        return reader.read_string(&out->node_name) && reader.read_u32(&out->capability_flags);
-    });
+    if (payload == nullptr) {
+        return false;
+    }
+    BufferReader reader{bytes};
+    if (!reader.read_string(&payload->node_name) || !reader.read_u32(&payload->capability_flags)) {
+        return false;
+    }
+    if (reader.done()) {
+        payload->udp_bind_port = 0;
+        return true;
+    }
+    return reader.read_u16(&payload->udp_bind_port) && reader.done();
 }
 
 ByteBuffer encode_payload(const SessionAuthenticate& payload) {
@@ -31,13 +41,25 @@ bool decode_payload(const ByteBuffer& bytes, SessionAuthenticate* payload) {
 }
 
 ByteBuffer encode_payload(const SessionCapabilities& payload) {
-    return build_payload([&](BufferWriter& writer) { writer.write_u32(payload.capability_flags); });
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_u32(payload.capability_flags);
+        writer.write_u16(payload.udp_bind_port);
+    });
 }
 
 bool decode_payload(const ByteBuffer& bytes, SessionCapabilities* payload) {
-    return parse_payload(bytes, payload, [](BufferReader& reader, SessionCapabilities* out) {
-        return reader.read_u32(&out->capability_flags);
-    });
+    if (payload == nullptr) {
+        return false;
+    }
+    BufferReader reader{bytes};
+    if (!reader.read_u32(&payload->capability_flags)) {
+        return false;
+    }
+    if (reader.done()) {
+        payload->udp_bind_port = 0;
+        return true;
+    }
+    return reader.read_u16(&payload->udp_bind_port) && reader.done();
 }
 
 ByteBuffer encode_payload(const SessionReady& payload) {

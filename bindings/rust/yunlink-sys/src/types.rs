@@ -48,6 +48,18 @@ pub struct yunlink_runtime_config_t {
     pub shared_secret: [c_char; 64],
     /// Null-terminated fixed buffer containing the multicast group.
     pub multicast_group: [c_char; 64],
+    /// Runtime QoS profile numeric alias: 1=reliable, 2=balanced, 3=low_latency.
+    pub qos_profile: u8,
+    /// Transport for reliable_ordered messages: 1=tcp, 2=udp.
+    pub qos_reliable_ordered_transport: u8,
+    /// Transport for reliable_latest messages: 1=tcp, 2=udp.
+    pub qos_reliable_latest_transport: u8,
+    /// Transport for best_effort messages: 1=tcp, 2=udp.
+    pub qos_best_effort_transport: u8,
+    /// Transport for bulk messages: 1=tcp, 2=udp.
+    pub qos_bulk_transport: u8,
+    /// Non-zero allows UDP sends to fall back to TCP.
+    pub qos_udp_fallback_to_tcp: u8,
 }
 
 impl Default for yunlink_runtime_config_t {
@@ -64,6 +76,12 @@ impl Default for yunlink_runtime_config_t {
             capability_flags: 0,
             shared_secret: [0; 64],
             multicast_group: [0; 64],
+            qos_profile: 2,
+            qos_reliable_ordered_transport: 1,
+            qos_reliable_latest_transport: 1,
+            qos_best_effort_transport: 2,
+            qos_bulk_transport: 2,
+            qos_udp_fallback_to_tcp: 1,
         }
     }
 }

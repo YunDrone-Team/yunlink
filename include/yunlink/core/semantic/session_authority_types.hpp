@@ -17,6 +17,7 @@ namespace yunlink {
 struct SessionHello {
     std::string node_name;
     uint32_t capability_flags = 0;
+    uint16_t udp_bind_port = 0;
 };
 
 struct SessionAuthenticate {
@@ -25,6 +26,7 @@ struct SessionAuthenticate {
 
 struct SessionCapabilities {
     uint32_t capability_flags = 0;
+    uint16_t udp_bind_port = 0;
 };
 
 struct SessionReady {
@@ -51,6 +53,7 @@ struct SessionDescriptor {
     SessionState state = SessionState::kDiscovered;
     EndpointIdentity remote_identity;
     PeerInfo peer;
+    PeerInfo udp_peer;
     uint32_t capability_flags = 0;
     std::string node_name;
 };

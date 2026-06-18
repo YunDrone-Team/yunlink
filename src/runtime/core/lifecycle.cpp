@@ -6,6 +6,34 @@
 #include "security.hpp"
 
 namespace yunlink {
+namespace {
+
+TransportPreference transport_for_qos(const RuntimeQosPolicy& policy, QosClass qos_class) {
+    switch (qos_class) {
+    case QosClass::kReliableOrdered:
+        return TransportPreference::kTcp;
+    case QosClass::kReliableLatest:
+        return policy.reliable_latest;
+    case QosClass::kBestEffort:
+        return policy.best_effort;
+    case QosClass::kBulk:
+        return policy.bulk;
+    }
+    return TransportPreference::kTcp;
+}
+
+TransportPreference transport_for_envelope(const RuntimeConfig& config, SecureEnvelope* envelope) {
+    for (const RuntimeQosChannelPolicy& channel : config.qos_channel_policies) {
+        if (channel.message_family == envelope->message_family &&
+            channel.message_type == envelope->message_type) {
+            envelope->qos_class = channel.qos_class;
+            return channel.transport;
+        }
+    }
+    return transport_for_qos(config.qos_policy, envelope->qos_class);
+}
+
+}  // namespace
 
 Runtime::Runtime()
     : impl_(std::make_unique<Impl>()), session_client_(this), session_server_(this),
@@ -89,12 +117,30 @@ ErrorCode Runtime::send_envelope_to_peer(const std::string& peer_id,
     }
     SecureEnvelope outbound = envelope;
     apply_runtime_security_tag(config_, &outbound);
-    const int sent_client = tcp_clients_.send_envelope(peer_id, outbound);
-    if (sent_client >= 0) {
+
+    const auto send_tcp = [&]() {
+        const int sent_client = tcp_clients_.send_envelope(peer_id, outbound);
+        if (sent_client >= 0) {
+            return ErrorCode::kOk;
+        }
+        const int sent_server = tcp_server_.send_envelope(peer_id, outbound);
+        return sent_server >= 0 ? ErrorCode::kOk : ErrorCode::kConnectError;
+    };
+
+    if (transport_for_envelope(config_, &outbound) == TransportPreference::kTcp) {
+        return send_tcp();
+    }
+
+    SessionDescriptor session{};
+    const bool has_session = describe_session_internal(peer_id, outbound.session_id, &session) &&
+                             session.state == SessionState::kActive &&
+                             !session.udp_peer.ip.empty() && session.udp_peer.port > 0;
+    if (has_session &&
+        udp_.send_envelope_unicast(outbound, session.udp_peer.ip, session.udp_peer.port) >= 0) {
         return ErrorCode::kOk;
     }
-    const int sent_server = tcp_server_.send_envelope(peer_id, outbound);
-    return sent_server >= 0 ? ErrorCode::kOk : ErrorCode::kConnectError;
+
+    return config_.qos_policy.udp_fallback_to_tcp ? send_tcp() : ErrorCode::kConnectError;
 }
 
 ErrorCode Runtime::reply_on_route(const EnvelopeEvent& inbound, const SecureEnvelope& envelope) {

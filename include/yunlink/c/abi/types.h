@@ -26,6 +26,12 @@ typedef struct yunlink_runtime_config {
     uint32_t capability_flags;
     char shared_secret[64];
     char multicast_group[64];
+    uint8_t qos_profile;
+    uint8_t qos_reliable_ordered_transport;
+    uint8_t qos_reliable_latest_transport;
+    uint8_t qos_best_effort_transport;
+    uint8_t qos_bulk_transport;
+    uint8_t qos_udp_fallback_to_tcp;
 } yunlink_runtime_config_t;
 
 typedef struct yunlink_peer {

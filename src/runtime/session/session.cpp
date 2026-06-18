@@ -33,6 +33,7 @@ uint64_t SessionClient::open_active_session(const std::string& peer_id,
     SessionHello hello{};
     hello.node_name = node_name;
     hello.capability_flags = runtime_->config_.capability_flags;
+    hello.udp_bind_port = runtime_->config_.udp_bind_port;
     if (runtime_->send_session_payload(peer_id,
                                        session_id,
                                        root_correlation_id,
@@ -64,6 +65,7 @@ uint64_t SessionClient::open_active_session(const std::string& peer_id,
 
     SessionCapabilities caps{};
     caps.capability_flags = runtime_->config_.capability_flags;
+    caps.udp_bind_port = runtime_->config_.udp_bind_port;
     runtime_->send_session_payload(peer_id,
                                    session_id,
                                    root_correlation_id,
@@ -142,6 +144,8 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.node_name = payload.node_name;
                 session.capability_flags = payload.capability_flags;
+                session.udp_peer = ev.peer;
+                session.udp_peer.port = payload.udp_bind_port;
                 session.state = satisfies_required_capabilities(payload.capability_flags,
                                                                 config_.capability_flags)
                                     ? SessionState::kHandshaking
@@ -179,11 +183,15 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                                                  config_.capability_flags)) {
                 session.state = SessionState::kInvalid;
                 session.capability_flags = payload.capability_flags;
+                session.udp_peer = ev.peer;
+                session.udp_peer.port = payload.udp_bind_port;
                 return;
             }
             if (session.state == SessionState::kAuthenticated) {
                 session.state = SessionState::kNegotiated;
                 session.capability_flags = payload.capability_flags;
+                session.udp_peer = ev.peer;
+                session.udp_peer.port = payload.udp_bind_port;
             }
             return;
         }
@@ -197,11 +205,23 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
             }
             if (session.state == SessionState::kNegotiated) {
                 session.state = SessionState::kActive;
+                if (session.udp_peer.ip.empty()) {
+                    session.udp_peer = ev.peer;
+                    if (ev.transport != TransportType::kUdpUnicast) {
+                        session.udp_peer.port = 0;
+                    }
+                }
                 send_ready_ack = true;
                 ack_correlation_id = ev.envelope.correlation_id != 0 ? ev.envelope.correlation_id
                                                                      : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
                 session.state = SessionState::kActive;
+                if (session.udp_peer.ip.empty()) {
+                    session.udp_peer = ev.peer;
+                    if (ev.transport != TransportType::kUdpUnicast) {
+                        session.udp_peer.port = 0;
+                    }
+                }
             }
         }
     }
