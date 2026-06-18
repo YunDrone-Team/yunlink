@@ -122,9 +122,8 @@ yunlink::RuntimeConfig to_runtime_config(const yunlink_runtime_config_t& cfg) {
     out.qos_policy.best_effort =
         to_transport(cfg.qos_best_effort_transport, out.qos_policy.best_effort);
     out.qos_policy.bulk = to_transport(cfg.qos_bulk_transport, out.qos_policy.bulk);
-    out.qos_policy.udp_fallback_to_tcp = cfg.qos_udp_fallback_to_tcp == 0
-                                             ? out.qos_policy.udp_fallback_to_tcp
-                                             : true;
+    out.qos_policy.udp_fallback_to_tcp =
+        cfg.qos_udp_fallback_to_tcp == 0 ? out.qos_policy.udp_fallback_to_tcp : true;
     return out;
 }
 
