@@ -35,7 +35,7 @@ enum class PacketTraceStage : uint8_t {
 struct PacketTraceStoreConfig {
     bool enabled = false;
     size_t max_records = 500;
-    size_t max_total_bytes = 8 * 1024 * 1024;
+    size_t max_total_bytes = static_cast<size_t>(8) * 1024 * 1024;
     size_t raw_preview_bytes = 4096;
     size_t payload_preview_bytes = 4096;
 };
