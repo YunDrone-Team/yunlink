@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstddef>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -59,6 +60,7 @@ struct Runtime::Impl {
     std::unordered_map<size_t, EventSubscriber::VehicleEventHandler> vehicle_event_handlers;
     std::unordered_map<size_t, EventSubscriber::CommandResultHandler> command_result_handlers;
     std::unordered_map<size_t, EventSubscriber::AuthorityStatusHandler> authority_status_handlers;
+    std::unordered_map<size_t, size_t> packet_trace_bus_tokens;
     std::unordered_map<size_t, SystemServiceSubscriber::FeatureListRequestHandler>
         feature_list_request_handlers;
     std::unordered_map<size_t, SystemServiceSubscriber::FeatureListResponseHandler>
@@ -83,6 +85,16 @@ struct Runtime::Impl {
     std::unordered_map<std::string, RuntimeTrajectoryAccumulator> trajectory_accumulators;
     std::unordered_set<std::string> security_replay_keys;
 };
+
+inline PacketTraceStoreConfig runtime_packet_trace_config(const RuntimeConfig& config) {
+    PacketTraceStoreConfig out;
+    out.enabled = config.packet_trace_enabled;
+    out.max_records = config.packet_trace_max_records;
+    out.max_total_bytes = config.packet_trace_max_total_bytes;
+    out.raw_preview_bytes = config.packet_trace_raw_preview_bytes;
+    out.payload_preview_bytes = config.packet_trace_payload_preview_bytes;
+    return out;
+}
 
 inline uint64_t runtime_now_millis() {
     const auto now = std::chrono::system_clock::now();
@@ -122,6 +134,39 @@ inline std::string runtime_qos_latest_key(const SecureEnvelope& envelope) {
            std::to_string(envelope.message_type) + ":" + std::to_string(envelope.session_id) + ":" +
            std::to_string(static_cast<uint8_t>(envelope.source.agent_type)) + ":" +
            std::to_string(envelope.source.agent_id) + ":" + runtime_target_key(envelope.target);
+}
+
+inline void runtime_publish_packet_trace(EventBus& bus,
+                                         const RuntimeConfig& config,
+                                         PacketTraceDirection direction,
+                                         PacketTraceStage stage,
+                                         TransportType transport,
+                                         const PeerInfo& peer,
+                                         const SecureEnvelope& envelope,
+                                         const uint8_t* raw_data = nullptr,
+                                         size_t raw_len = 0,
+                                         ErrorCode code = ErrorCode::kOk,
+                                         const std::string& detail = std::string()) {
+    if (!config.packet_trace_enabled) {
+        return;
+    }
+    ByteBuffer encoded;
+    if (raw_data == nullptr && direction == PacketTraceDirection::kTx) {
+        encoded = ProtocolCodec().encode(envelope);
+        raw_data = encoded.data();
+        raw_len = encoded.size();
+    }
+    bus.publish_packet_trace(make_packet_trace_record(direction,
+                                                      stage,
+                                                      transport,
+                                                      peer,
+                                                      &envelope,
+                                                      raw_data,
+                                                      raw_len,
+                                                      code,
+                                                      detail,
+                                                      config.packet_trace_raw_preview_bytes,
+                                                      config.packet_trace_payload_preview_bytes));
 }
 
 inline SecureEnvelope make_runtime_envelope(const EndpointIdentity& source,

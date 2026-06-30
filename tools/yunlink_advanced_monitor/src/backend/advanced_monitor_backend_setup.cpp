@@ -38,6 +38,11 @@ void AdvancedMonitorBackend::start_runtime() {
     cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     cfg.self_identity.agent_id = static_cast<uint32_t>(1000 + std::max(agent_id_, 0));
     cfg.self_identity.role = yunlink::EndpointRole::kController;
+    cfg.packet_trace_enabled = true;
+    cfg.packet_trace_max_records = packet_trace_limit_;
+    cfg.packet_trace_max_total_bytes = packet_trace_max_bytes_;
+    cfg.packet_trace_raw_preview_bytes = 4096;
+    cfg.packet_trace_payload_preview_bytes = 4096;
 
     const auto ec = runtime_.start(cfg);
     if (ec != yunlink::ErrorCode::kOk) {
@@ -71,6 +76,11 @@ void AdvancedMonitorBackend::start_runtime() {
         connection_.updated_at_ms = wall_time_ms();
     }
     log(MonitorLogLevel::kInfo, MonitorLogSource::kRuntime, "Runtime 已启动");
+}
+
+void AdvancedMonitorBackend::bind_packet_trace() {
+    packet_trace_token_ = runtime_.event_subscriber().subscribe_packet_trace(
+        [this](const yunlink::PacketTraceRecord& record) { on_packet_trace(record); });
 }
 
 void AdvancedMonitorBackend::bind_runtime_diagnostics() {

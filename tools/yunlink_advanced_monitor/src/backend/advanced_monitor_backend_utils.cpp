@@ -1,6 +1,7 @@
 #include "backend/advanced_monitor_backend.hpp"
 
 #include <chrono>
+#include <utility>
 
 namespace {
 
@@ -154,6 +155,23 @@ uint64_t AdvancedMonitorBackend::steady_time_ms() {
     const auto now = std::chrono::steady_clock::now();
     return static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
+}
+
+void AdvancedMonitorBackend::on_packet_trace(const yunlink::PacketTraceRecord& record) {
+    std::lock_guard<std::mutex> lock(mu_);
+    packet_trace_bytes_ += yunlink::estimated_packet_trace_bytes(record);
+    packet_traces_.push_back(record);
+    trim_packet_traces_unlocked();
+}
+
+void AdvancedMonitorBackend::trim_packet_traces_unlocked() {
+    while (!packet_traces_.empty() &&
+           (packet_traces_.size() > packet_trace_limit_ ||
+            packet_trace_bytes_ > packet_trace_max_bytes_)) {
+        const auto& front = packet_traces_.front();
+        packet_trace_bytes_ -= yunlink::estimated_packet_trace_bytes(front);
+        packet_traces_.pop_front();
+    }
 }
 
 void AdvancedMonitorBackend::update_yunlink(const std::string& key,

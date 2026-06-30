@@ -64,12 +64,30 @@ add_executable(yunlink_advanced_monitor
   src/model/monitor_state.cpp
   src/model/monitor_topics.cpp
   src/model/system_service_model.cpp
+  src/packets/flow/packet_flow_canvas.cpp
+  src/packets/flow/packet_flow_format.cpp
+  src/packets/flow/packet_flow_model.cpp
+  src/packets/flow/packet_flow_samples.cpp
+  src/packets/format/packet_trace_format.cpp
+  src/packets/format/packet_trace_format_detail.cpp
+  src/packets/packet_trace_detail.cpp
+  src/packets/filters/packet_trace_filters.cpp
+  src/packets/selection/packet_trace_selection.cpp
+  src/packets/search/packet_trace_search.cpp
+  src/packets/status/main_window_packet_status.cpp
+  src/packets/packet_trace_semantic.cpp
+  src/ui/commands/main_window_command_history.cpp
   src/ui/main_window_commands.cpp
   src/ui/main_window.cpp
   src/ui/discovery/main_window_devices.cpp
   src/ui/main_window_layout.cpp
   src/ui/main_window_logs.cpp
   src/ui/main_window_navigation.cpp
+  src/packets/main_window_packet_flow.cpp
+  src/packets/main_window_packet_detail.cpp
+  src/packets/main_window_packets.cpp
+  src/packets/model/packet_trace_table_header.cpp
+  src/packets/model/packet_trace_table_model.cpp
   src/ui/main_window_refresh.cpp
   src/ui/system_service/system_service_ui_helpers.cpp
   src/ui/main_window_system_services.cpp

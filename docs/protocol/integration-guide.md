@@ -71,10 +71,17 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 - `EventSubscriber`
 - `Runtime::request_authority()` / `Runtime::release_authority()` / `Runtime::current_authority()`
 
+可选诊断入口：
+
+- `RuntimeConfig.packet_trace_enabled`
+- `EventSubscriber::subscribe_packet_trace()`
+- `EventBus::packet_trace_snapshot()` / `EventBus::clear_packet_trace()`
+
 需要注意：
 
 - C++ 接口是当前仓库的主接入面。
 - C ABI 目前是 bindings-oriented 的 typed runtime bridge，不是完整高层业务 SDK。
+- packet trace 是 runtime 本地诊断记录，不是新的 `message_family/message_type` payload。
 
 ## 4. 最小接入路径
 
@@ -161,6 +168,8 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 - `SessionState`
 - 当前租约对应的 `session_id`
 - transport 方向（`TcpClient` / `TcpServer` / `Udp*`）
+
+如果需要更细的收发诊断，可以把 `RuntimeConfig.packet_trace_enabled` 设为 `true`。当前 packet trace 会记录 RX/TX 方向、阶段、transport、peer、错误码、错误详情、线包长度、checksum、raw preview 和 payload preview。preview 受 `packet_trace_raw_preview_bytes` / `packet_trace_payload_preview_bytes` 限制，整体记录受 `packet_trace_max_records` / `packet_trace_max_total_bytes` 限制。
 
 ## 8. 常见问题
 

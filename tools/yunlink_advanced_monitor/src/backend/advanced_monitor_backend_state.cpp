@@ -4,6 +4,25 @@
 
 #include "common/monitor_format.hpp"
 
+namespace {
+
+bool command_identity_matches(const MonitorCommandHistoryEntry& entry,
+                              uint64_t message_id,
+                              uint64_t correlation_id) {
+    if (correlation_id != 0 && entry.correlation_id == correlation_id) {
+        return true;
+    }
+    if (correlation_id != 0 && entry.message_id == correlation_id) {
+        return true;
+    }
+    if (message_id != 0 && entry.message_id == message_id) {
+        return true;
+    }
+    return message_id != 0 && entry.correlation_id == message_id;
+}
+
+}  // namespace
+
 void AdvancedMonitorBackend::on_authority_status(
     const yunlink::TypedMessage<yunlink::AuthorityStatus>& message) {
     const uint64_t now_ms = wall_time_ms();
@@ -52,7 +71,6 @@ void AdvancedMonitorBackend::on_command_result(const yunlink::CommandResultView&
     std::string line = "command_result kind=" + command_kind_label(message.payload.command_kind) +
                        " phase=" + command_phase_label(message.payload.phase) +
                        " result_code=" + std::to_string(message.payload.result_code) +
-                       " progress=" + std::to_string(message.payload.progress_percent) +
                        " correlation_id=" + std::to_string(message.envelope.correlation_id) +
                        " msg_id=" + std::to_string(message.envelope.message_id);
     if (!message.payload.detail.empty()) {
@@ -76,7 +94,6 @@ void AdvancedMonitorBackend::on_command_execution_status(
     std::string line =
         "command_execution_status kind=" + command_kind_label(message.payload.command_kind) +
         " exec=" + command_execution_state_label(message.payload.execution_state) +
-        " progress=" + std::to_string(message.payload.progress_percent) +
         " active=" + std::string(message.payload.active ? "true" : "false") +
         " terminal=false msg_id=" + std::to_string(message.payload.command_message_id) +
         " correlation_id=" + std::to_string(message.payload.command_correlation_id);
@@ -131,7 +148,9 @@ void AdvancedMonitorBackend::update_command_result_history(
     const yunlink::CommandResultView& message) {
     std::lock_guard<std::mutex> lock(mu_);
     for (auto it = command_history_.rbegin(); it != command_history_.rend(); ++it) {
-        if (it->message_id != message.envelope.correlation_id) {
+        if (!command_identity_matches(*it,
+                                      message.envelope.message_id,
+                                      message.envelope.correlation_id)) {
             continue;
         }
         it->updated_at_ms = wall_time_ms();
@@ -146,8 +165,13 @@ void AdvancedMonitorBackend::update_command_execution_history(
     const yunlink::TypedMessage<yunlink::CommandExecutionStatusSnapshot>& message) {
     std::lock_guard<std::mutex> lock(mu_);
     for (auto it = command_history_.rbegin(); it != command_history_.rend(); ++it) {
-        if (it->message_id != message.payload.command_message_id) {
+        if (!command_identity_matches(*it,
+                                      message.payload.command_message_id,
+                                      message.payload.command_correlation_id)) {
             continue;
+        }
+        if (command_lifecycle_is_terminal(it->lifecycle) && !message.payload.terminal) {
+            return;
         }
         it->updated_at_ms = wall_time_ms();
         it->execution_state = command_execution_state_label(message.payload.execution_state);

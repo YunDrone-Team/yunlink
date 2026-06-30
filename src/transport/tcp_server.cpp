@@ -241,6 +241,7 @@ void TcpServer::client_loop(const std::shared_ptr<ClientConn>& conn) {
                       *conn->socket,
                       conn->parser,
                       impl_->bus,
+                      impl_->config,
                       conn->peer,
                       TransportType::kTcpServer,
                       impl_->config.io_poll_interval_ms);

@@ -220,6 +220,7 @@ class Runtime {
     size_t subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb);
     size_t subscribe_command_result_internal(EventSubscriber::CommandResultHandler cb);
     size_t subscribe_authority_status_internal(EventSubscriber::AuthorityStatusHandler cb);
+    size_t subscribe_packet_trace_internal(EventSubscriber::PacketTraceHandler cb);
     size_t subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler cb);
     size_t subscribe_uav_control_cmd_internal(StateSubscriber::UavControlCmdHandler cb);
     size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);

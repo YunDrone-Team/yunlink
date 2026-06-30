@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <chrono>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -43,6 +44,11 @@ class AdvancedMonitorBackend {
 
     void poll_runtime();
     MonitorConnectionSnapshot snapshot_connection() const;
+    std::vector<yunlink::PacketTraceRecord> snapshot_packet_traces() const;
+    std::vector<yunlink::PacketTraceRecord>
+    snapshot_packet_traces_since(uint64_t trace_id,
+                                 uint64_t retained_first_trace_id,
+                                 bool* reset_required) const;
     std::unordered_map<std::string, MonitorTopicState> snapshot_topics() const;
     std::vector<MonitorLogEntry> snapshot_logs() const;
     std::vector<DiscoveryDevice> snapshot_discovery_devices() const;
@@ -52,6 +58,7 @@ class AdvancedMonitorBackend {
     bool can_send_commands() const;
     void set_debug_stream_enabled(bool enabled);
     void clear_logs();
+    void clear_packet_traces();
     void request_reconnect_now();
     bool connect_to_discovered_device(const std::string& dedupe_key);
     bool disconnect_current_device();
@@ -73,6 +80,7 @@ class AdvancedMonitorBackend {
     void load_params();
     void start_runtime();
     void bind_runtime_diagnostics();
+    void bind_packet_trace();
     void bind_yunlink_subscribers();
     void bind_command_feedback();
     void bind_system_service_feedback();
@@ -99,6 +107,8 @@ class AdvancedMonitorBackend {
     static std::string command_execution_state_label(uint8_t state);
     static std::string error_code_label(yunlink::ErrorCode code);
 
+    void on_packet_trace(const yunlink::PacketTraceRecord& record);
+    void trim_packet_traces_unlocked();
     static uint16_t clamp_port(int value);
     static uint64_t wall_time_ms();
     static uint64_t steady_time_ms();
@@ -144,6 +154,7 @@ class AdvancedMonitorBackend {
     std::unordered_map<std::string, MonitorTopicState> topics_;
     std::unordered_map<std::string, DiscoveryDevice> discovery_devices_;
     std::vector<MonitorLogEntry> logs_;
+    std::deque<yunlink::PacketTraceRecord> packet_traces_;
     std::vector<MonitorCommandHistoryEntry> command_history_;
     std::unordered_map<std::string, size_t> command_status_log_indices_;
     std::string last_log_key_;
@@ -154,6 +165,7 @@ class AdvancedMonitorBackend {
     yunlink::EndpointListener discovery_listener_;
     size_t link_token_{0};
     size_t error_token_{0};
+    size_t packet_trace_token_{0};
     size_t command_result_token_{0};
     size_t authority_status_token_{0};
     size_t feature_list_response_token_{0};
@@ -175,6 +187,9 @@ class AdvancedMonitorBackend {
     int log_limit_raw_{500};
     int discovery_port_{9966};
     size_t log_limit_{500};
+    size_t packet_trace_limit_{500};
+    size_t packet_trace_max_bytes_{8 * 1024 * 1024};
+    size_t packet_trace_bytes_{0};
     uint32_t authority_ttl_ms_{3000};
     uint64_t authority_expires_at_ms_{0};
     uint64_t authority_request_at_ms_{0};

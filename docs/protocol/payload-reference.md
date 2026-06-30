@@ -1,5 +1,12 @@
 # Yunlink Payload Reference
 
+## 0. Encoding Rules
+
+- 整数按 little-endian 编码。
+- `bool` 编码为 `uint8_t`，`0=false`，非 0 为 true。
+- `string` 编码为 `uint16_t length + bytes`，当前实现最多写入 1024 bytes。
+- `vector<T>` 编码为 `uint16_t count + repeated T`。
+
 ## 1. Payload Index
 
 下表是当前仓库已注册的全部 payload，数据以 [`message_traits.hpp`](../../include/yunlink/core/semantic/message_traits.hpp) 为准。
@@ -158,6 +165,25 @@
 | `stale` | `bool` | - | 是否陈旧 |
 | `status` | `string` | - | 状态文本 |
 | `detail` | `string` | - | 细节文本 |
+| `last_transition` | `string` | - | 最近状态切换说明 |
+| `last_transition_age_ms` | `uint32_t` | `ms` | 最近状态切换年龄 |
+| `publish_fail_count` | `uint64_t` | - | 发布失败次数 |
+| `expected_min_hz` | `float` | `Hz` | 期望最低频率 |
+| `sparse` | `bool` | - | 是否稀疏 topic |
+
+### 2.13 Enum Value Index
+
+| Enum | Values |
+| --- | --- |
+| `CommandKind` | `0=Unknown`, `1=Takeoff`, `2=Land`, `3=Return`, `4=Goto`, `5=VelocitySetpoint`, `6=TrajectoryChunk`, `7=FormationTask` |
+| `AuthorityAction` | `1=Claim`, `2=Renew`, `3=Release`, `4=Preempt` |
+| `ControlSource` | `0=Unknown`, `1=GroundStation`, `2=RemoteController`, `3=Terminal`, `4=Autonomy` |
+| `AuthorityState` | `0=Observer`, `1=PendingGrant`, `2=Controller`, `3=Preempting`, `4=Revoked`, `5=Released`, `6=Rejected` |
+| `CommandPhase` | `1=Received`, `2=Accepted`, `3=InProgress`, `4=Succeeded`, `5=Failed`, `6=Cancelled`, `7=Expired` |
+| `CommandExecutionState` | `0=Idle`, `1=Accepted`, `2=Running`, `3=WaitingPhysicalState`, `4=Succeeded`, `5=Failed`, `6=Cancelled`, `7=Timeout` |
+| `VehicleEventKind` | `1=Info`, `2=Takeoff`, `3=Landing`, `4=ReturnHome`, `5=FormationUpdate`, `6=Fault` |
+| `BulkStreamType` | `1=PointCloud`, `2=MapTile`, `3=Video` |
+| `BulkChannelState` | `1=Ready`, `2=Failed`, `3=Closed` |
 
 ## 3. Session Payloads
 
@@ -180,6 +206,7 @@ Identifiers:
 | --- | --- | --- | --- |
 | `node_name` | `string` | - | 节点名称 |
 | `capability_flags` | `uint32_t` | bitmask | 能力位集合 |
+| `udp_bind_port` | `uint16_t` | port | UDP 监听端口，旧 payload 缺省为 0 |
 
 ### 3.2 `SessionAuthenticate`
 
@@ -208,6 +235,7 @@ Identifiers:
 | Field Name | Type | Units | Description |
 | --- | --- | --- | --- |
 | `capability_flags` | `uint32_t` | bitmask | 能力位集合 |
+| `udp_bind_port` | `uint16_t` | port | UDP 监听端口，旧 payload 缺省为 0 |
 
 ### 3.4 `SessionReady`
 
@@ -872,6 +900,24 @@ Identifiers:
 | `header` | `HeaderSnapshot` | - | 坐标系与时间戳 |
 | `agent_key` | `string` | - | 诊断 agent key |
 | `stale_timeout_ms` | `uint32_t` | `ms` | 过期阈值 |
+| `runtime_started` | `bool` | - | Yunlink runtime 是否已启动 |
+| `peer_ready` | `bool` | - | 对端会话是否 ready |
+| `session_state` | `string` | - | 会话状态文本 |
+| `last_connect_error` | `string` | - | 最近连接错误 |
+| `last_session_error` | `string` | - | 最近会话错误 |
+| `last_publish_error` | `string` | - | 最近发布错误 |
+| `last_error_age_ms` | `uint32_t` | `ms` | 最近错误年龄 |
+| `connect_attempt_count` | `uint64_t` | - | 连接尝试次数 |
+| `session_lost_count` | `uint64_t` | - | 会话丢失次数 |
+| `ros_to_yunlink_publish_count` | `uint64_t` | - | ROS 到 Yunlink 发布次数 |
+| `ros_to_yunlink_fail_count` | `uint64_t` | - | ROS 到 Yunlink 失败次数 |
+| `yunlink_to_ros_command_count` | `uint64_t` | - | Yunlink 到 ROS 命令次数 |
+| `yunlink_to_ros_publish_count` | `uint64_t` | - | Yunlink 到 ROS 发布次数 |
+| `yunlink_to_ros_fail_count` | `uint64_t` | - | Yunlink 到 ROS 失败次数 |
+| `last_fail_direction` | `string` | - | 最近失败方向 |
+| `last_fail_key` | `string` | - | 最近失败 key |
+| `last_fail_error_code` | `uint32_t` | - | 最近失败错误码 |
+| `last_fail_detail` | `string` | - | 最近失败详情 |
 | `external_odom` | `SunrayTopicDiagnosticSnapshot` | - | external odom 诊断 |
 | `odom_state` | `SunrayTopicDiagnosticSnapshot` | - | odom_state 诊断 |
 | `local_odom` | `SunrayTopicDiagnosticSnapshot` | - | local_odom 诊断 |

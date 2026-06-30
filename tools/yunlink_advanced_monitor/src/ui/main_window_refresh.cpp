@@ -111,6 +111,8 @@ void MainWindow::refresh_view() {
     refresh_command_history();
     refresh_system_services();
     refresh_topics();
+    refresh_packets();
+    refresh_packet_flow();
     refresh_logs();
 }
 

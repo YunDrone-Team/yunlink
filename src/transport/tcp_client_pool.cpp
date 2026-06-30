@@ -259,6 +259,7 @@ void TcpClientPool::peer_loop(const std::shared_ptr<PeerConn>& conn) {
                       conn->socket,
                       conn->parser,
                       impl_->bus,
+                      impl_->config,
                       conn->peer,
                       TransportType::kTcpClient,
                       impl_->config.io_poll_interval_ms);

@@ -4,6 +4,7 @@
  */
 
 #include "security.hpp"
+#include "send_trace.hpp"
 
 namespace yunlink {
 namespace {
@@ -49,6 +50,7 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
         return ErrorCode::kOk;
     }
     config_ = config;
+    bus_.configure_packet_trace(runtime_packet_trace_config(config_));
 
     const ErrorCode ec_udp = udp_.start(config_, &bus_);
     if (ec_udp != ErrorCode::kOk) {
@@ -117,14 +119,39 @@ ErrorCode Runtime::send_envelope_to_peer(const std::string& peer_id,
     }
     SecureEnvelope outbound = envelope;
     apply_runtime_security_tag(config_, &outbound);
+    PeerInfo trace_peer;
+    trace_peer.id = peer_id;
 
     const auto send_tcp = [&]() {
+        trace_encoded_send(bus_, config_, TransportType::kTcpClient, trace_peer, outbound);
         const int sent_client = tcp_clients_.send_envelope(peer_id, outbound);
         if (sent_client >= 0) {
+            trace_send_result(
+                bus_, config_, TransportType::kTcpClient, trace_peer, outbound, ErrorCode::kOk, "");
             return ErrorCode::kOk;
         }
+        trace_send_result(bus_,
+                          config_,
+                          TransportType::kTcpClient,
+                          trace_peer,
+                          outbound,
+                          ErrorCode::kConnectError,
+                          "tcp-client-send-failed");
+        trace_encoded_send(bus_, config_, TransportType::kTcpServer, trace_peer, outbound);
         const int sent_server = tcp_server_.send_envelope(peer_id, outbound);
-        return sent_server >= 0 ? ErrorCode::kOk : ErrorCode::kConnectError;
+        if (sent_server >= 0) {
+            trace_send_result(
+                bus_, config_, TransportType::kTcpServer, trace_peer, outbound, ErrorCode::kOk, "");
+            return ErrorCode::kOk;
+        }
+        trace_send_result(bus_,
+                          config_,
+                          TransportType::kTcpServer,
+                          trace_peer,
+                          outbound,
+                          ErrorCode::kConnectError,
+                          "tcp-send-failed");
+        return ErrorCode::kConnectError;
     };
 
     if (transport_for_envelope(config_, &outbound) == TransportPreference::kTcp) {
@@ -135,9 +162,25 @@ ErrorCode Runtime::send_envelope_to_peer(const std::string& peer_id,
     const bool has_session = describe_session_internal(peer_id, outbound.session_id, &session) &&
                              session.state == SessionState::kActive &&
                              !session.udp_peer.ip.empty() && session.udp_peer.port > 0;
-    if (has_session &&
-        udp_.send_envelope_unicast(outbound, session.udp_peer.ip, session.udp_peer.port) >= 0) {
-        return ErrorCode::kOk;
+    if (has_session) {
+        trace_encoded_send(bus_, config_, TransportType::kUdpUnicast, session.udp_peer, outbound);
+        if (udp_.send_envelope_unicast(outbound, session.udp_peer.ip, session.udp_peer.port) >= 0) {
+            trace_send_result(bus_,
+                              config_,
+                              TransportType::kUdpUnicast,
+                              session.udp_peer,
+                              outbound,
+                              ErrorCode::kOk,
+                              "");
+            return ErrorCode::kOk;
+        }
+        trace_send_result(bus_,
+                          config_,
+                          TransportType::kUdpUnicast,
+                          session.udp_peer,
+                          outbound,
+                          ErrorCode::kConnectError,
+                          "udp-send-failed");
     }
 
     return config_.qos_policy.udp_fallback_to_tcp ? send_tcp() : ErrorCode::kConnectError;
@@ -150,17 +193,46 @@ ErrorCode Runtime::reply_on_route(const EnvelopeEvent& inbound, const SecureEnve
     SecureEnvelope outbound = envelope;
     apply_runtime_security_tag(config_, &outbound);
     if (inbound.transport == TransportType::kTcpServer) {
-        return tcp_server_.send_envelope(inbound.peer.id, outbound) >= 0 ? ErrorCode::kOk
-                                                                         : ErrorCode::kConnectError;
+        trace_encoded_send(bus_, config_, inbound.transport, inbound.peer, outbound);
+        const ErrorCode result = tcp_server_.send_envelope(inbound.peer.id, outbound) >= 0
+                                     ? ErrorCode::kOk
+                                     : ErrorCode::kConnectError;
+        trace_send_result(bus_,
+                          config_,
+                          inbound.transport,
+                          inbound.peer,
+                          outbound,
+                          result,
+                          "reply-tcp-server-send-failed");
+        return result;
     }
     if (inbound.transport == TransportType::kTcpClient) {
-        return tcp_clients_.send_envelope(inbound.peer.id, outbound) >= 0
-                   ? ErrorCode::kOk
-                   : ErrorCode::kConnectError;
+        trace_encoded_send(bus_, config_, inbound.transport, inbound.peer, outbound);
+        const ErrorCode result = tcp_clients_.send_envelope(inbound.peer.id, outbound) >= 0
+                                     ? ErrorCode::kOk
+                                     : ErrorCode::kConnectError;
+        trace_send_result(bus_,
+                          config_,
+                          inbound.transport,
+                          inbound.peer,
+                          outbound,
+                          result,
+                          "reply-tcp-client-send-failed");
+        return result;
     }
-    return udp_.send_envelope_unicast(outbound, inbound.peer.ip, inbound.peer.port) >= 0
-               ? ErrorCode::kOk
-               : ErrorCode::kConnectError;
+    trace_encoded_send(bus_, config_, TransportType::kUdpUnicast, inbound.peer, outbound);
+    const ErrorCode result =
+        udp_.send_envelope_unicast(outbound, inbound.peer.ip, inbound.peer.port) >= 0
+            ? ErrorCode::kOk
+            : ErrorCode::kConnectError;
+    trace_send_result(bus_,
+                      config_,
+                      TransportType::kUdpUnicast,
+                      inbound.peer,
+                      outbound,
+                      result,
+                      "reply-udp-send-failed");
+    return result;
 }
 
 bool Runtime::describe_session_internal(uint64_t session_id, SessionDescriptor* out) const {

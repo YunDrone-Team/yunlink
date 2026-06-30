@@ -74,6 +74,11 @@ struct RuntimeConfig {
     std::vector<RuntimeQosChannelPolicy> qos_channel_policies;
     uint32_t trajectory_chunk_timeout_ms = 1000;
     uint32_t security_key_epoch = 1;
+    bool packet_trace_enabled = false;
+    size_t packet_trace_max_records = 500;
+    size_t packet_trace_max_total_bytes = 8 * 1024 * 1024;
+    size_t packet_trace_raw_preview_bytes = 4096;
+    size_t packet_trace_payload_preview_bytes = 4096;
 };
 
 }  // namespace yunlink

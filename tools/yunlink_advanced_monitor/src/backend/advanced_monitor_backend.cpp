@@ -18,6 +18,7 @@ AdvancedMonitorBackend::AdvancedMonitorBackend(Config config)
     start_runtime();
     start_discovery_listener();
     bind_runtime_diagnostics();
+    bind_packet_trace();
     bind_yunlink_subscribers();
     bind_command_feedback();
     bind_system_service_feedback();
@@ -51,6 +52,9 @@ AdvancedMonitorBackend::~AdvancedMonitorBackend() {
     if (error_token_ != 0) {
         runtime_.event_bus().unsubscribe(error_token_);
     }
+    if (packet_trace_token_ != 0) {
+        runtime_.event_subscriber().unsubscribe(packet_trace_token_);
+    }
     discovery_listener_.stop();
     runtime_.stop();
 }
@@ -68,6 +72,32 @@ std::unordered_map<std::string, MonitorTopicState> AdvancedMonitorBackend::snaps
 std::vector<MonitorLogEntry> AdvancedMonitorBackend::snapshot_logs() const {
     std::lock_guard<std::mutex> lock(mu_);
     return logs_;
+}
+
+std::vector<yunlink::PacketTraceRecord> AdvancedMonitorBackend::snapshot_packet_traces() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return std::vector<yunlink::PacketTraceRecord>(packet_traces_.begin(), packet_traces_.end());
+}
+
+std::vector<yunlink::PacketTraceRecord>
+AdvancedMonitorBackend::snapshot_packet_traces_since(uint64_t trace_id,
+                                                     uint64_t retained_first_trace_id,
+                                                     bool* reset_required) const {
+    std::lock_guard<std::mutex> lock(mu_);
+    if (reset_required != nullptr) {
+        *reset_required = !packet_traces_.empty() && retained_first_trace_id != 0 &&
+                          packet_traces_.front().trace_id > retained_first_trace_id;
+    }
+    if (reset_required != nullptr && *reset_required) {
+        return std::vector<yunlink::PacketTraceRecord>(packet_traces_.begin(), packet_traces_.end());
+    }
+    std::vector<yunlink::PacketTraceRecord> out;
+    for (const auto& record : packet_traces_) {
+        if (record.trace_id > trace_id) {
+            out.push_back(record);
+        }
+    }
+    return out;
 }
 
 std::vector<MonitorCommandHistoryEntry> AdvancedMonitorBackend::snapshot_command_history() const {
@@ -103,6 +133,12 @@ void AdvancedMonitorBackend::clear_logs() {
     last_log_key_.clear();
     has_bridge_runtime_diagnostic_level_ = false;
     last_bridge_runtime_diagnostic_ok_ = false;
+}
+
+void AdvancedMonitorBackend::clear_packet_traces() {
+    std::lock_guard<std::mutex> lock(mu_);
+    packet_traces_.clear();
+    packet_trace_bytes_ = 0;
 }
 
 void AdvancedMonitorBackend::request_reconnect_now() {

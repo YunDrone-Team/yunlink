@@ -14,8 +14,11 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QDoubleSpinBox>
+#include <QSplitter>
 #include <QStackedWidget>
 #include <QTableWidget>
+#include <QTableView>
+#include <QTabWidget>
 #include <QCheckBox>
 #include <QComboBox>
 
@@ -26,6 +29,9 @@
 #include "model/monitor_state.hpp"
 #include "model/monitor_topics.hpp"
 #include "model/system_service_model.hpp"
+
+class PacketTraceTableModel;
+class PacketFlowCanvas;
 
 class MainWindow : public QMainWindow {
   public:
@@ -46,6 +52,8 @@ class MainWindow : public QMainWindow {
     QWidget* build_recent_issues_panel(QWidget* parent);
     QWidget* build_log_page_body(QWidget* parent);
     QWidget* build_log_panel(QWidget* parent);
+    QWidget* build_packets_page(QWidget* parent);
+    QWidget* build_packet_flow_tab(QWidget* parent);
     void set_current_page(int index);
     void refresh_view();
     void stage_refresh_discovery_devices();
@@ -59,9 +67,18 @@ class MainWindow : public QMainWindow {
     void refresh_topics();
     void refresh_topic(const std::string& key, const MonitorTopicState& topic);
     void refresh_logs();
+    void refresh_packets();
+    void refresh_packet_detail();
+    void refresh_packet_flow();
+    void clear_packet_texts(const QString& text);
+    void remember_packet_splitter_sizes();
+    void restore_packet_splitter_sizes();
     bool log_entry_visible(const MonitorLogEntry& entry) const;
     bool log_should_autofollow() const;
+    bool packet_trace_visible(const yunlink::PacketTraceRecord& record) const;
+    void update_packet_status_label();
     void stage_toggle_log_autofollow(bool checked);
+    void stage_clear_packet_traces();
     static QTableWidget* create_topic_table(QWidget* parent);
     static QTableWidgetItem*
     set_item(QTableWidget* table, int row, int col, const std::string& text);
@@ -114,7 +131,7 @@ class MainWindow : public QMainWindow {
     QLabel* command_hint_label_{nullptr};
     QLabel* current_command_value_{nullptr};
     QLabel* current_execution_state_value_{nullptr};
-    QLabel* current_execution_progress_value_{nullptr};
+    QLabel* current_battery_value_{nullptr};
     QLabel* current_execution_reason_value_{nullptr};
     QLabel* current_ready_takeoff_value_{nullptr};
     QLabel* current_ready_land_value_{nullptr};
@@ -134,10 +151,35 @@ class MainWindow : public QMainWindow {
     std::unordered_map<std::string, QTableWidget*> topic_tables_;
     std::unordered_map<std::string, QLabel*> topic_summary_labels_;
     QPlainTextEdit* logs_{nullptr};
+    QSplitter* packet_splitter_{nullptr};
+    PacketFlowCanvas* packet_flow_canvas_{nullptr};
+    QPlainTextEdit* packet_flow_detail_text_{nullptr};
+    QTableView* packet_trace_table_{nullptr};
+    PacketTraceTableModel* packet_trace_model_{nullptr};
+    QPlainTextEdit* packet_summary_text_{nullptr};
+    QPlainTextEdit* packet_header_text_{nullptr};
+    QPlainTextEdit* packet_target_text_{nullptr};
+    QPlainTextEdit* packet_security_text_{nullptr};
+    QPlainTextEdit* packet_payload_text_{nullptr};
+    QPlainTextEdit* packet_raw_text_{nullptr};
+    QPlainTextEdit* packet_semantic_text_{nullptr};
+    QPlainTextEdit* packet_errors_text_{nullptr};
+    QLabel* packet_status_label_{nullptr};
+    QLineEdit* packet_search_edit_{nullptr};
     QComboBox* log_filter_combo_{nullptr};
+    QComboBox* packet_direction_combo_{nullptr};
+    QComboBox* packet_transport_combo_{nullptr};
+    QComboBox* packet_family_combo_{nullptr};
+    QComboBox* packet_flow_mode_combo_{nullptr};
+    QComboBox* packet_flow_window_combo_{nullptr};
     QCheckBox* log_autofollow_checkbox_{nullptr};
+    QCheckBox* packet_pause_checkbox_{nullptr};
+    QCheckBox* packet_follow_checkbox_{nullptr};
+    QCheckBox* packet_errors_only_checkbox_{nullptr};
+    QCheckBox* packet_flow_pause_checkbox_{nullptr};
     QPushButton* reconnect_button_{nullptr};
     QPushButton* clear_logs_button_{nullptr};
+    QPushButton* clear_packets_button_{nullptr};
     QPushButton* takeoff_button_{nullptr};
     QPushButton* land_button_{nullptr};
     QPushButton* return_button_{nullptr};
@@ -164,6 +206,13 @@ class MainWindow : public QMainWindow {
     size_t rendered_log_count_{0};
     int rendered_visible_log_count_{-1};
     bool log_autofollow_{true};
+    uint64_t packet_last_seen_trace_id_{0};
+    uint64_t packet_selected_trace_id_{0};
+    uint64_t packet_detail_rendered_trace_id_{0};
+    uint64_t packet_flow_rendered_trace_id_{0};
+    size_t packet_flow_demo_step_{0};
+    QString packet_filter_signature_;
+    QList<int> packet_splitter_sizes_;
     uint64_t last_discovery_refresh_ms_{0};
     static constexpr uint64_t kDiscoveryRefreshIntervalMs = 2000;
 };

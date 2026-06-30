@@ -9,6 +9,7 @@
 namespace {
 
 constexpr uint64_t kCommandExecutionStatusStaleMs = 10000;
+constexpr uint64_t kPx4StateStaleMs = 10000;
 constexpr double kPi = 3.14159265358979323846;
 
 bool is_blank_topic_value(const std::string& value) {
@@ -39,6 +40,19 @@ uint64_t wall_time_ms() {
     const auto now = std::chrono::system_clock::now();
     return static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count());
+}
+
+QString battery_label_style(double battery, bool has_value, bool stale) {
+    if (stale || !has_value) {
+        return "color:#6f6f6f;font-weight:600;";
+    }
+    if (battery < 0.20) {
+        return "color:#da1e28;font-weight:700;";
+    }
+    if (battery < 0.35) {
+        return "color:#b28600;font-weight:700;";
+    }
+    return "color:#198038;font-weight:700;";
 }
 
 }  // namespace
@@ -129,6 +143,7 @@ void MainWindow::refresh_command_controls() {
 
     const auto snapshot = backend_->snapshot_connection();
     const auto topics = backend_->snapshot_topics();
+    const auto history = backend_->snapshot_command_history();
     const uint64_t now_ms = wall_time_ms();
     const bool session_ready =
         snapshot.runtime_started && snapshot.peer_ready && snapshot.session_id != 0;
@@ -139,10 +154,35 @@ void MainWindow::refresh_command_controls() {
     bool ready_for_land = false;
     std::string command_name = "-";
     std::string execution_name = "-";
-    std::string progress_text = "-";
+    std::string battery_text = "WAIT";
+    double battery_value = 0.0;
+    bool battery_has_value = false;
+    bool battery_stale = false;
     std::string reason_text = "-";
     std::string ready_takeoff_text = "no";
     std::string ready_land_text = "no";
+
+    const auto px4_it = topics.find("px4_state");
+    if (px4_it != topics.end() && monitor_has_snapshot(px4_it->second.latest)) {
+        const auto& topic = px4_it->second;
+        const uint64_t age_ms =
+            topic.latest.received_at_ms == 0 || now_ms < topic.latest.received_at_ms
+                ? 0
+                : now_ms - topic.latest.received_at_ms;
+        if (topic.latest.received_at_ms == 0 || age_ms > kPx4StateStaleMs) {
+            battery_text = "STALE";
+            battery_stale = true;
+        } else {
+            const auto battery_it = topic.latest.values.find("battery_percentage");
+            if (battery_it != topic.latest.values.end() &&
+                monitor_parse_double(battery_it->second, &battery_value)) {
+                battery_text = monitor_fmt_percent(battery_value);
+                battery_has_value = true;
+            } else {
+                battery_text = "--";
+            }
+        }
+    }
 
     const auto exec_it = topics.find("command_execution_status");
     if (exec_it != topics.end() && monitor_has_snapshot(exec_it->second.latest)) {
@@ -163,10 +203,6 @@ void MainWindow::refresh_command_controls() {
             const auto state_it = values.find("execution_state_name");
             if (state_it != values.end() && !state_it->second.empty()) {
                 execution_name = state_it->second;
-            }
-            const auto progress_it = values.find("progress_percent_text");
-            if (progress_it != values.end() && !progress_it->second.empty()) {
-                progress_text = progress_it->second;
             }
             const auto reason_it = values.find("busy_reason");
             if (reason_it != values.end() && !is_blank_topic_value(reason_it->second)) {
@@ -189,11 +225,26 @@ void MainWindow::refresh_command_controls() {
                 command_name = kind_it->second;
             }
             execution_name = "STALE";
-            progress_text = "age=" + monitor_fmt_age_ms(age_ms);
-            reason_text =
-                "command_execution_status snapshot stale; ignore old ready/busy gate";
+            reason_text = "command_execution_status snapshot stale; age=" +
+                          monitor_fmt_age_ms(age_ms) + "; ignore old ready/busy gate";
             ready_takeoff_text = "stale";
             ready_land_text = "stale";
+        }
+    }
+
+    if (!history.empty()) {
+        const auto& last = history.back();
+        if (command_lifecycle_is_terminal(last.lifecycle)) {
+            command_name = last.action;
+            execution_name = command_lifecycle_label(last.lifecycle);
+            if (!last.result_detail.empty()) {
+                reason_text = last.result_detail;
+            } else if (!last.execution_detail.empty()) {
+                reason_text = last.execution_detail;
+            } else {
+                reason_text = command_lifecycle_label(last.lifecycle);
+            }
+            has_exec = false;
         }
     }
 
@@ -203,8 +254,10 @@ void MainWindow::refresh_command_controls() {
     if (current_execution_state_value_ != nullptr) {
         current_execution_state_value_->setText(QString::fromStdString(execution_name));
     }
-    if (current_execution_progress_value_ != nullptr) {
-        current_execution_progress_value_->setText(QString::fromStdString(progress_text));
+    if (current_battery_value_ != nullptr) {
+        current_battery_value_->setText(QString::fromStdString(battery_text));
+        current_battery_value_->setStyleSheet(
+            battery_label_style(battery_value, battery_has_value, battery_stale));
     }
     if (current_execution_reason_value_ != nullptr) {
         current_execution_reason_value_->setText(QString::fromStdString(reason_text));
@@ -232,50 +285,4 @@ void MainWindow::refresh_command_controls() {
                                                                  command_name,
                                                                  execution_name,
                                                                  reason_text));
-}
-
-void MainWindow::refresh_command_history() {
-    if (backend_ == nullptr || command_history_table_ == nullptr) {
-        return;
-    }
-
-    const auto entries = backend_->snapshot_command_history();
-    command_history_table_->setRowCount(static_cast<int>(entries.size()));
-    for (int row = 0; row < static_cast<int>(entries.size()); ++row) {
-        const auto& entry = entries[entries.size() - 1 - static_cast<size_t>(row)];
-        set_item(command_history_table_, row, 0, format_timestamp(entry.sent_at_ms).toStdString());
-        set_item(command_history_table_,
-                 row,
-                 1,
-                 entry.action + (entry.detail.empty() ? std::string() : "\n" + entry.detail));
-        auto* lifecycle_item =
-            set_item(command_history_table_, row, 2, command_lifecycle_label(entry.lifecycle));
-        monitor_ui::set_status_item(
-            lifecycle_item, monitor_ui::level_from_status(command_lifecycle_label(entry.lifecycle)));
-        set_item(command_history_table_,
-                 row,
-                 3,
-                 entry.session_id == 0 ? std::string("--") : monitor_fmt_num(entry.session_id));
-        set_item(command_history_table_,
-                 row,
-                 4,
-                 entry.message_id == 0 ? std::string("--") : monitor_fmt_num(entry.message_id));
-
-        std::string execution =
-            entry.execution_state.empty() ? std::string("--") : entry.execution_state;
-        if (entry.has_execution_status) {
-            execution += "\nready_takeoff=" + std::string(entry.ready_for_takeoff ? "yes" : "no") +
-                         " ready_land=" + std::string(entry.ready_for_land ? "yes" : "no");
-        }
-        if (!entry.execution_detail.empty()) {
-            execution += "\n" + entry.execution_detail;
-        }
-        set_item(command_history_table_, row, 5, execution);
-
-        std::string result = entry.result_phase.empty() ? std::string("--") : entry.result_phase;
-        if (!entry.result_detail.empty()) {
-            result += "\n" + entry.result_detail;
-        }
-        set_item(command_history_table_, row, 6, result);
-    }
 }

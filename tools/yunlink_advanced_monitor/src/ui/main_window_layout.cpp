@@ -151,7 +151,7 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     command_hint_label_->setStyleSheet("color:#56656d;");
     current_command_value_ = new QLabel("-", group);
     current_execution_state_value_ = new QLabel("-", group);
-    current_execution_progress_value_ = new QLabel("-", group);
+    current_battery_value_ = new QLabel("-", group);
     current_execution_reason_value_ = new QLabel("-", group);
     current_execution_reason_value_->setWordWrap(true);
     current_ready_takeoff_value_ = new QLabel("-", group);
@@ -194,8 +194,8 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     layout->addWidget(current_command_value_, 4, 1);
     layout->addWidget(new QLabel("阶段"), 4, 2);
     layout->addWidget(current_execution_state_value_, 4, 3);
-    layout->addWidget(new QLabel("进度"), 4, 4);
-    layout->addWidget(current_execution_progress_value_, 4, 5);
+    layout->addWidget(new QLabel("电量"), 4, 4);
+    layout->addWidget(current_battery_value_, 4, 5);
 
     layout->addWidget(new QLabel("原因"), 5, 0);
     layout->addWidget(current_execution_reason_value_, 5, 1, 1, 3);

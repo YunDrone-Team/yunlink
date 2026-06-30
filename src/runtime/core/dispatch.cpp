@@ -24,6 +24,21 @@ CommandResult make_rejected_result(const EnvelopeEvent& ev,
 }  // namespace
 
 void Runtime::handle_envelope(const EnvelopeEvent& ev) {
+    const auto trace_dispatch =
+        [&](PacketTraceStage stage, ErrorCode code, const std::string& detail) {
+            runtime_publish_packet_trace(bus_,
+                                         config_,
+                                         PacketTraceDirection::kRx,
+                                         stage,
+                                         ev.transport,
+                                         ev.peer,
+                                         ev.envelope,
+                                         nullptr,
+                                         0,
+                                         code,
+                                         detail);
+        };
+
     const auto reject_command_before_dispatch = [&](ErrorCode code, const std::string& detail) {
         if (ev.envelope.message_family != MessageFamily::kCommand ||
             !ev.envelope.target.matches(config_.self_identity)) {
@@ -52,6 +67,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         bus_.publish_error(error);
         reject_command_before_dispatch(ErrorCode::kProtocolMismatch,
                                        "runtime-protocol-version-mismatch");
+        trace_dispatch(PacketTraceStage::kDispatchRejected,
+                       ErrorCode::kProtocolMismatch,
+                       "runtime-protocol-version-mismatch");
         return;
     }
 
@@ -64,6 +82,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         bus_.publish_error(error);
         reject_command_before_dispatch(ErrorCode::kProtocolMismatch,
                                        "runtime-schema-version-mismatch");
+        trace_dispatch(PacketTraceStage::kDispatchRejected,
+                       ErrorCode::kProtocolMismatch,
+                       "runtime-schema-version-mismatch");
         return;
     }
 
@@ -79,10 +100,16 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
 
         if (ev.envelope.security.key_epoch != config_.security_key_epoch) {
             publish_security_error("security-key-epoch-mismatch");
+            trace_dispatch(PacketTraceStage::kDispatchRejected,
+                           ErrorCode::kUnauthorized,
+                           "security-key-epoch-mismatch");
             return;
         }
         if (ev.envelope.security.auth_tag != make_runtime_auth_tag(config_, ev.envelope)) {
             publish_security_error("security-auth-tag-mismatch");
+            trace_dispatch(PacketTraceStage::kDispatchRejected,
+                           ErrorCode::kUnauthorized,
+                           "security-auth-tag-mismatch");
             return;
         }
 
@@ -91,6 +118,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
             std::lock_guard<std::mutex> lock(impl_->mu);
             if (impl_->security_replay_keys.find(replay_key) != impl_->security_replay_keys.end()) {
                 publish_security_error("security-replay-detected");
+                trace_dispatch(PacketTraceStage::kDispatchRejected,
+                               ErrorCode::kUnauthorized,
+                               "security-replay-detected");
                 return;
             }
             impl_->security_replay_keys.insert(replay_key);
@@ -121,7 +151,17 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
             reply.correlation_id = ev.envelope.message_id;
             (void)reply_on_route(ev, reply);
         }
+        trace_dispatch(
+            PacketTraceStage::kDispatchRejected, ErrorCode::kTimeout, "runtime-ttl-expired");
         return;
+    }
+
+    if (!ev.envelope.target.matches(config_.self_identity) &&
+        ev.envelope.message_family != MessageFamily::kSession) {
+        trace_dispatch(
+            PacketTraceStage::kDispatchRejected, ErrorCode::kRejected, "target-mismatch");
+    } else {
+        trace_dispatch(PacketTraceStage::kDispatchAccepted, ErrorCode::kOk, "dispatch-accepted");
     }
 
     switch (ev.envelope.message_family) {

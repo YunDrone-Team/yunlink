@@ -15,6 +15,7 @@
 #include <asio.hpp>
 
 #include "yunlink/core/envelope_stream_parser.hpp"
+#include "udp_packet_trace.hpp"
 
 namespace yunlink {
 
@@ -33,6 +34,14 @@ int to_int_bytes(size_t n) {
 
 bool is_socket_closed(const std::error_code& ec) {
     return ec == asio::error::operation_aborted || ec == asio::error::bad_descriptor;
+}
+
+PeerInfo make_udp_peer(const std::string& ip, uint16_t port) {
+    PeerInfo peer;
+    peer.id = make_peer_id(ip, port);
+    peer.ip = ip;
+    peer.port = port;
+    return peer;
 }
 
 }  // namespace
@@ -205,40 +214,42 @@ void UdpTransport::recv_loop() {
             continue;
         }
         const uint16_t port = from.port();
-        const std::string peer_id = make_peer_id(ip, port);
+        const PeerInfo peer = make_udp_peer(ip, port);
+
+        publish_udp_packet_trace(impl_->bus,
+                                 impl_->config,
+                                 PacketTraceStage::kRawReceived,
+                                 peer,
+                                 nullptr,
+                                 buf.data(),
+                                 n);
 
         std::vector<SecureEnvelope> envelopes;
+        std::vector<EnvelopeStreamParseEvent> parse_events;
         {
             std::lock_guard<std::mutex> lock(impl_->parser_mu);
-            auto it = impl_->parsers.find(peer_id);
+            auto it = impl_->parsers.find(peer.id);
             if (it == impl_->parsers.end()) {
                 it = impl_->parsers
-                         .emplace(peer_id,
-                                  EnvelopeStreamParser(impl_->config.max_buffer_bytes_per_peer))
+                         .emplace(peer.id,
+                                  EnvelopeStreamParser(impl_->config.max_buffer_bytes_per_peer,
+                                                       impl_->config.max_buffer_bytes_per_peer))
                          .first;
             }
 
             it->second.feed(buf.data(), n);
-            SecureEnvelope envelope;
-            DecodeResult dr;
-            while (it->second.pop_next(&envelope, &dr)) {
-                envelopes.push_back(envelope);
+            EnvelopeStreamParseEvent parse_event;
+            while (it->second.pop_next_event(&parse_event,
+                                             impl_->config.packet_trace_raw_preview_bytes)) {
+                parse_events.push_back(parse_event);
+                if (parse_event.has_envelope && parse_event.result.ok()) {
+                    envelopes.push_back(parse_event.result.envelope);
+                }
             }
         }
 
-        for (const auto& envelope : envelopes) {
-            EnvelopeEvent ev;
-            ev.transport = (envelope.target.scope == TargetScope::kBroadcast)
-                               ? TransportType::kUdpBroadcast
-                               : TransportType::kUdpUnicast;
-            ev.peer.id = peer_id;
-            ev.peer.ip = ip;
-            ev.peer.port = port;
-            ev.envelope = envelope;
-            if (impl_->bus) {
-                impl_->bus->publish_envelope(ev);
-            }
-        }
+        publish_udp_parse_events(impl_->bus, impl_->config, peer, parse_events);
+        publish_udp_envelopes(impl_->bus, peer, envelopes);
     }
 }
 

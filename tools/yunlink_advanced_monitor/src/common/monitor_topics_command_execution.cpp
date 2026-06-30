@@ -28,8 +28,6 @@ MonitorTopicState make_command_execution_status_topic() {
         field("command_kind_name", "命令类型名称 | command_kind_name"),
         field("execution_state", "执行状态 | execution_state"),
         field("execution_state_name", "执行状态名称 | execution_state_name"),
-        field("progress_percent", "进度百分比 | progress_percent"),
-        field("progress_percent_text", "进度文本 | progress_percent_text"),
         field("active", "当前占用控制器 | active"),
         field("terminal", "是否终态 | terminal"),
         field("success", "是否成功 | success"),

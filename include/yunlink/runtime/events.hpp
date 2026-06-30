@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <functional>
 
+#include "yunlink/diagnostics/packet_trace.hpp"
 #include "yunlink/core/semantic_messages.hpp"
 
 namespace yunlink {
@@ -22,6 +23,7 @@ class EventSubscriber {
     using AuthorityStatusHandler = std::function<void(const TypedMessage<AuthorityStatus>&)>;
     using BulkChannelDescriptorHandler =
         std::function<void(const TypedMessage<BulkChannelDescriptor>&)>;
+    using PacketTraceHandler = std::function<void(const PacketTraceRecord&)>;
 
     explicit EventSubscriber(Runtime* runtime = nullptr);
 
@@ -29,6 +31,7 @@ class EventSubscriber {
     size_t subscribe_command_results(CommandResultHandler cb);
     size_t subscribe_authority_status(AuthorityStatusHandler cb);
     size_t subscribe_bulk_channel_descriptors(BulkChannelDescriptorHandler cb);
+    size_t subscribe_packet_trace(PacketTraceHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

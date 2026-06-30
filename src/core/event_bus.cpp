@@ -28,11 +28,39 @@ size_t EventBus::subscribe_link(LinkHandler cb) {
     return token;
 }
 
+size_t EventBus::subscribe_packet_trace(PacketTraceHandler cb) {
+    std::lock_guard<std::mutex> lock(mu_);
+    const size_t token = next_token_++;
+    packet_trace_handlers_[token] = std::move(cb);
+    return token;
+}
+
 void EventBus::unsubscribe(size_t token) {
     std::lock_guard<std::mutex> lock(mu_);
     envelope_handlers_.erase(token);
     error_handlers_.erase(token);
     link_handlers_.erase(token);
+    packet_trace_handlers_.erase(token);
+}
+
+void EventBus::configure_packet_trace(PacketTraceStoreConfig config) {
+    std::lock_guard<std::mutex> lock(mu_);
+    packet_trace_store_.configure(config);
+}
+
+PacketTraceStoreConfig EventBus::packet_trace_config() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return packet_trace_store_.config();
+}
+
+std::vector<PacketTraceRecord> EventBus::packet_trace_snapshot() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return packet_trace_store_.snapshot();
+}
+
+void EventBus::clear_packet_trace() {
+    std::lock_guard<std::mutex> lock(mu_);
+    packet_trace_store_.clear();
 }
 
 void EventBus::publish_envelope(const EnvelopeEvent& ev) const {
@@ -70,6 +98,23 @@ void EventBus::publish_link(const LinkEvent& ev) const {
     for (const auto& item : copy) {
         if (item.second) {
             item.second(ev);
+        }
+    }
+}
+
+void EventBus::publish_packet_trace(const PacketTraceRecord& record) {
+    std::unordered_map<size_t, PacketTraceHandler> copy;
+    PacketTraceRecord stored;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        if (!packet_trace_store_.push(record, &stored)) {
+            return;
+        }
+        copy = packet_trace_handlers_;
+    }
+    for (const auto& item : copy) {
+        if (item.second) {
+            item.second(stored);
         }
     }
 }

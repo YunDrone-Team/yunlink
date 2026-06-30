@@ -64,24 +64,53 @@ int main() {
         return 4;
     }
 
+    yunlink::EnvelopeStreamParser oversized_parser(1024, 256);
+    std::vector<uint8_t> oversized(14, 0);
+    oversized[0] = yunlink::ProtocolCodec::kMagic0;
+    oversized[1] = yunlink::ProtocolCodec::kMagic1;
+    oversized[2] = yunlink::ProtocolCodec::kMagic2;
+    oversized[3] = yunlink::ProtocolCodec::kMagic3;
+    oversized[8] = static_cast<uint8_t>(yunlink::ProtocolCodec::kFixedHeaderSize & 0xFFU);
+    oversized[9] = static_cast<uint8_t>(yunlink::ProtocolCodec::kFixedHeaderSize >> 8U);
+    oversized[10] = 0xFF;
+    oversized[11] = 0xFF;
+    oversized[12] = 0xFF;
+    oversized[13] = 0x7F;
+    oversized_parser.feed(oversized);
+    yunlink::EnvelopeStreamParseEvent event;
+    if (!oversized_parser.pop_next_event(&event) || event.has_envelope ||
+        event.result.code != yunlink::ErrorCode::kDecodeError) {
+        std::cerr << "oversized frame was not rejected immediately\n";
+        return 5;
+    }
+    if (event.error_message != "oversized-frame") {
+        std::cerr << "oversized frame error reason missing\n";
+        return 6;
+    }
+    oversized_parser.feed(first);
+    if (!oversized_parser.pop_next(&out) || out.message_id != 1001) {
+        std::cerr << "oversized frame blocked parser recovery\n";
+        return 7;
+    }
+
     yunlink::EnvelopeStreamParser garbage_parser;
     garbage_parser.feed(garbage_prefix);
     garbage_parser.feed(first);
     if (!garbage_parser.pop_next(&out) || out.message_id != 1001) {
         std::cerr << "garbage prefix was not skipped\n";
-        return 5;
+        return 8;
     }
 
     garbage_parser.feed(garbage_suffix);
     if (garbage_parser.pop_next(&out)) {
         std::cerr << "garbage suffix parsed as envelope\n";
-        return 6;
+        return 9;
     }
 
     garbage_parser.feed(second);
     if (!garbage_parser.pop_next(&out) || out.message_id != 1002) {
         std::cerr << "garbage suffix blocked next valid frame\n";
-        return 7;
+        return 10;
     }
 
     return 0;

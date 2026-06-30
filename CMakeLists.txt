@@ -77,6 +77,7 @@ endif()
 
 set(YUNLINK_LIBRARY_SOURCES
   src/core/event_bus.cpp
+  src/core/packet_trace.cpp
   src/core/protocol_codec.cpp
   src/core/envelope_stream_parser.cpp
   src/core/semantic_messages_session_authority.cpp
@@ -90,6 +91,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/discovery/endpoint_advertiser.cpp
   src/discovery/endpoint_listener.cpp
   src/transport/udp_transport.cpp
+  src/transport/udp_packet_trace.cpp
   src/transport/tcp_client_pool.cpp
   src/transport/tcp_server.cpp
   src/runtime/authority/authority.cpp
@@ -100,6 +102,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/command/results.cpp
   src/runtime/core/dispatch.cpp
   src/runtime/core/lifecycle.cpp
+  src/runtime/core/send_trace.cpp
   src/runtime/core/security.cpp
   src/runtime/system_service/publish.cpp
   src/runtime/system_service/receive.cpp
@@ -296,6 +299,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_qos_runtime tests/runtime/test_qos_runtime.cpp)
   target_link_libraries(test_qos_runtime PRIVATE yunlink)
   add_test(NAME test_qos_runtime COMMAND test_qos_runtime)
+
+  add_executable(test_packet_trace_store tests/runtime/test_packet_trace_store.cpp)
+  target_link_libraries(test_packet_trace_store PRIVATE yunlink)
+  add_test(NAME test_packet_trace_store COMMAND test_packet_trace_store)
 
   add_executable(test_runtime_version_rejection tests/runtime/test_runtime_version_rejection.cpp)
   target_link_libraries(test_runtime_version_rejection PRIVATE yunlink)

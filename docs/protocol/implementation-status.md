@@ -10,6 +10,7 @@
 | runtime protocol/schema mismatch 拒绝 | `Implemented` | runtime 收包入口已拒绝 `protocol_major/header_version/schema_version` 不匹配；command 返回稳定 `CommandResult.Failed`，非 command 发布 error event |
 | `EnvelopeStreamParser` | `Implemented` | 已支持流式拆包与 magic 重同步 |
 | `EventBus` | `Implemented` | 已支持 `Envelope` / `Error` / `Link` 三类事件订阅与发布 |
+| packet trace runtime 诊断 | `Implemented` | `RuntimeConfig.packet_trace_enabled` 可打开本地 RX/TX trace；`EventSubscriber::subscribe_packet_trace()` 可订阅 `PacketTraceRecord`；该记录是 SDK/诊断 API，不是新的线协议 payload |
 | UDP / TCP transport | `Implemented` | 已支持 `UdpTransport`、`TcpClientPool`、`TcpServer` |
 | 语义 payload 编码 | `Implemented` | 当前为手写二进制编码，不是 codegen schema |
 | 语义 payload 稳定错误策略 | `Implemented` | 字符串编码固定截断到 1024 字节；未知 enum decode 失败；malformed command 返回稳定 `CommandResult.Failed`，malformed state/event/bulk 发布 decode error |
@@ -57,6 +58,8 @@
   `AuthorityStatus` 的 grant / reject / preempt / release 语义与双客户端竞争收敛。
 - `test_runtime_ttl_freshness`
   runtime 收包入口的 TTL freshness 判定与 `runtime-ttl-expired` 拒绝路径。
+- `test_packet_trace_store`
+  packet trace 记录的固定内存上限、raw/payload preview 截断、规范线包 `header_len/checksum/total_len` 提取。
 - `test_transport_loop`
   TCP 传输下的 `VehicleCoreState` 发布与订阅。
 - `test_udp_source_isolation`
@@ -90,12 +93,14 @@
 - security tag v1 可测试 auth tag、replay 和 key epoch，但不是正式密码学强度的 AEAD/HMAC 方案
 - C ABI 已有核心 typed helper，但 PX4/Odom/FSM/Bulk 等完整 typed SDK 仍待 bindings 层继续扩展
 - 当前 payload 编解码是手写小端二进制实现，尚未切到代码生成 schema 工作流
+- packet trace 是进程内诊断记录，当前不提供远端抓包同步、pcap 导出或独立线协议消息
 
 ## 4. 对开发者的含义
 
 - 可以把主规范当作统一协议蓝图，但接入前必须对照本页覆盖矩阵
 - 如果你需要真实 Sunray/PX4/SITL/HIL、UGV adapter 或 swarm executor，请把它们视为业务环境集成项，而不是 core runtime 已经能单独证明的能力
 - 如果你依赖发布级安全强度或完整 QoS 调度，需要在当前 v1 runtime policy 之上继续做安全/传输工程化
+- 如果你需要排查收发、解码、dispatch 或 send 失败，优先打开 `RuntimeConfig.packet_trace_enabled` 并订阅 packet trace；不要把 `PacketTraceRecord` 当成业务 payload 或跨节点协议合同
 - 当规范与实现不一致时，应优先明确你是在做“规范对齐”还是“按当前实现接入”
 
 ## 5. 推荐联读

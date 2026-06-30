@@ -17,6 +17,7 @@
 
 #include "yunlink/core/envelope_stream_parser.hpp"
 #include "yunlink/core/event_bus.hpp"
+#include "yunlink/core/runtime_config.hpp"
 
 namespace yunlink {
 
@@ -54,6 +55,33 @@ inline void publish_tcp_envelope_event(EventBus* bus,
     bus->publish_envelope(ee);
 }
 
+inline void publish_tcp_packet_trace(EventBus* bus,
+                                     const RuntimeConfig& config,
+                                     PacketTraceDirection direction,
+                                     PacketTraceStage stage,
+                                     TransportType transport,
+                                     const PeerInfo& peer,
+                                     const SecureEnvelope* envelope,
+                                     const uint8_t* raw_data,
+                                     size_t raw_len,
+                                     ErrorCode code = ErrorCode::kOk,
+                                     const std::string& error_message = std::string()) {
+    if (bus == nullptr || !config.packet_trace_enabled) {
+        return;
+    }
+    bus->publish_packet_trace(make_packet_trace_record(direction,
+                                                       stage,
+                                                       transport,
+                                                       peer,
+                                                       envelope,
+                                                       raw_data,
+                                                       raw_len,
+                                                       code,
+                                                       error_message,
+                                                       config.packet_trace_raw_preview_bytes,
+                                                       config.packet_trace_payload_preview_bytes));
+}
+
 template <typename SocketLike>
 int write_tcp_bytes(SocketLike& socket, std::mutex& send_mu, const ByteBuffer& bytes) {
     if (bytes.empty()) {
@@ -74,6 +102,7 @@ void run_tcp_read_loop(std::atomic<bool>& owner_running,
                        SocketLike& socket,
                        EnvelopeStreamParser& parser,
                        EventBus* bus,
+                       const RuntimeConfig& config,
                        const PeerInfo& peer,
                        TransportType transport,
                        int io_poll_interval_ms) {
@@ -91,11 +120,44 @@ void run_tcp_read_loop(std::atomic<bool>& owner_running,
             break;
         }
 
+        publish_tcp_packet_trace(bus,
+                                 config,
+                                 PacketTraceDirection::kRx,
+                                 PacketTraceStage::kRawReceived,
+                                 transport,
+                                 peer,
+                                 nullptr,
+                                 buf.data(),
+                                 n);
         parser.feed(buf.data(), n);
-        SecureEnvelope envelope;
-        DecodeResult dr;
-        while (parser.pop_next(&envelope, &dr)) {
-            publish_tcp_envelope_event(bus, transport, peer, envelope);
+        EnvelopeStreamParseEvent parse_event;
+        while (parser.pop_next_event(&parse_event, config.packet_trace_raw_preview_bytes)) {
+            if (parse_event.has_envelope && parse_event.result.ok()) {
+                publish_tcp_packet_trace(bus,
+                                         config,
+                                         PacketTraceDirection::kRx,
+                                         PacketTraceStage::kDecodeSucceeded,
+                                         transport,
+                                         peer,
+                                         &parse_event.result.envelope,
+                                         parse_event.raw.data(),
+                                         parse_event.raw_len);
+                publish_tcp_envelope_event(bus, transport, peer, parse_event.result.envelope);
+            } else {
+                publish_tcp_packet_trace(bus,
+                                         config,
+                                         PacketTraceDirection::kRx,
+                                         PacketTraceStage::kDecodeFailed,
+                                         transport,
+                                         peer,
+                                         nullptr,
+                                         parse_event.raw.data(),
+                                         parse_event.raw_len,
+                                         parse_event.result.code,
+                                         parse_event.error_message.empty()
+                                             ? "tcp-decode-failed"
+                                             : parse_event.error_message);
+            }
         }
     }
 

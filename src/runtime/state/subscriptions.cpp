@@ -86,6 +86,10 @@ size_t EventSubscriber::subscribe_bulk_channel_descriptors(BulkChannelDescriptor
     return runtime_ ? runtime_->subscribe_bulk_channel_descriptor_internal(std::move(cb)) : 0;
 }
 
+size_t EventSubscriber::subscribe_packet_trace(PacketTraceHandler cb) {
+    return runtime_ ? runtime_->subscribe_packet_trace_internal(std::move(cb)) : 0;
+}
+
 void EventSubscriber::unsubscribe(size_t token) {
     if (runtime_)
         runtime_->unsubscribe_semantic(token);

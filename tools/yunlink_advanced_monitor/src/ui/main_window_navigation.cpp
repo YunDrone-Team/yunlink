@@ -84,7 +84,8 @@ void MainWindow::build_ui() {
 
     auto* nav_group = new QButtonGroup(nav_host);
     nav_group->setExclusive(true);
-    const QStringList page_labels = {"Overview", "Devices", "Commands", "Services", "State", "Logs"};
+    const QStringList page_labels = {
+        "Overview", "Devices", "Commands", "Services", "State", "Packets", "Logs"};
     for (int index = 0; index < page_labels.size(); ++index) {
         auto* button = make_nav_button(page_labels[index], nav_host);
         page_nav_buttons_.push_back(button);
@@ -104,6 +105,7 @@ void MainWindow::build_ui() {
     page_stack_->addWidget(build_commands_page(page_stack_));
     page_stack_->addWidget(build_system_service_panel(page_stack_));
     page_stack_->addWidget(build_topics_panel(page_stack_));
+    page_stack_->addWidget(build_packets_page(page_stack_));
     page_stack_->addWidget(build_log_panel(page_stack_));
     right_layout->addWidget(page_stack_, 1);
 

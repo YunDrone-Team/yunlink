@@ -8,6 +8,7 @@
 
 #include "yunlink/core/envelope_stream_parser.hpp"
 #include "yunlink/core/event_bus.hpp"
+#include "yunlink/diagnostics/packet_trace.hpp"
 #include "yunlink/core/protocol_codec.hpp"
 #include "yunlink/core/runtime_config.hpp"
 #include "yunlink/core/semantic_messages.hpp"
