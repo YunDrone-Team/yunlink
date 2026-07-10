@@ -137,6 +137,31 @@ pub struct yunlink_vehicle_core_state_event_t {
 
 /// Raw higher-level vehicle event payload.
 #[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct yunlink_px4_state_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: u8,
+    pub source_id: u32,
+    pub source_role: u8,
+    pub connected: u8,
+    pub armed: u8,
+    pub flight_mode: [c_char; 32],
+    pub system_status: u8,
+    pub landed_state: u8,
+    pub battery_voltage_v: f32,
+    pub battery_current_a: f32,
+    pub battery_percentage: f32,
+    pub local_x_m: f32,
+    pub local_y_m: f32,
+    pub local_z_m: f32,
+    pub local_vx_mps: f32,
+    pub local_vy_mps: f32,
+    pub local_vz_mps: f32,
+}
+
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct yunlink_vehicle_event_data_t {
     /// Session carrying the event.
@@ -172,6 +197,68 @@ impl Default for yunlink_vehicle_event_data_t {
 /// from this union. The safe `yunlink` crate centralizes that unsafe read in its
 /// event parser and copies the active payload into an owned Rust enum.
 #[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_feature_list_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: u8,
+    pub message: [c_char; 256],
+    pub feature_names: [c_char; 2048],
+}
+
+impl Default for yunlink_feature_list_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            success: 0,
+            message: [0; 256],
+            feature_names: [0; 2048],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_feature_get_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: u8,
+    pub running: u8,
+    pub auto_start: u8,
+    pub message: [c_char; 256],
+    pub name: [c_char; 128],
+    pub group: [c_char; 128],
+    pub description: [c_char; 512],
+    pub depends_on: [c_char; 1024],
+    pub start_preview_units: [c_char; 1024],
+    pub start_preview_commands: [c_char; 2048],
+}
+
+impl Default for yunlink_feature_get_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            success: 0,
+            running: 0,
+            auto_start: 0,
+            message: [0; 256],
+            name: [0; 128],
+            group: [0; 128],
+            description: [0; 512],
+            depends_on: [0; 1024],
+            start_preview_units: [0; 1024],
+            start_preview_commands: [0; 2048],
+        }
+    }
+}
+
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub union yunlink_runtime_event_union_t {
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_LINK`.
@@ -182,8 +269,12 @@ pub union yunlink_runtime_event_union_t {
     pub command_result: yunlink_command_result_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_VEHICLE_CORE_STATE`.
     pub vehicle_core_state: yunlink_vehicle_core_state_event_t,
+    /// Active when the event type is `YUNLINK_RUNTIME_EVENT_PX4_STATE`.
+    pub px4_state: yunlink_px4_state_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_VEHICLE_EVENT`.
     pub vehicle_event: yunlink_vehicle_event_data_t,
+    pub feature_list: yunlink_feature_list_event_t,
+    pub feature_get: yunlink_feature_get_event_t,
 }
 
 impl Default for yunlink_runtime_event_union_t {

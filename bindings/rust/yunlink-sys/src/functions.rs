@@ -149,6 +149,22 @@ unsafe extern "C" {
         session_id: u64,
     ) -> yunlink_result_t;
 
+    pub fn yunlink_system_service_request_feature_list(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_feature_get(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        feature_name: *const c_char,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+
     /// Poll one tagged runtime event.
     ///
     /// The ABI uses polling instead of callbacks so Rust does not need to expose

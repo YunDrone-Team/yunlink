@@ -165,6 +165,29 @@ typedef struct yunlink_vehicle_core_state_event {
     float battery_percent;
 } yunlink_vehicle_core_state_event_t;
 
+typedef struct yunlink_px4_state_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t source_type;
+    uint32_t source_id;
+    uint8_t source_role;
+    uint8_t connected;
+    uint8_t armed;
+    char flight_mode[32];
+    uint8_t system_status;
+    uint8_t landed_state;
+    float battery_voltage_v;
+    float battery_current_a;
+    float battery_percentage;
+    float local_x_m;
+    float local_y_m;
+    float local_z_m;
+    float local_vx_mps;
+    float local_vy_mps;
+    float local_vz_mps;
+} yunlink_px4_state_event_t;
+
 typedef struct yunlink_vehicle_event_data {
     uint64_t session_id;
     uint64_t message_id;
@@ -174,6 +197,31 @@ typedef struct yunlink_vehicle_event_data {
     char detail[256];
 } yunlink_vehicle_event_data_t;
 
+typedef struct yunlink_feature_list_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    char message[256];
+    char feature_names[2048];
+} yunlink_feature_list_event_t;
+
+typedef struct yunlink_feature_get_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    uint8_t running;
+    uint8_t auto_start;
+    char message[256];
+    char name[128];
+    char group[128];
+    char description[512];
+    char depends_on[1024];
+    char start_preview_units[1024];
+    char start_preview_commands[2048];
+} yunlink_feature_get_event_t;
+
 typedef struct yunlink_runtime_event {
     uint8_t type;
     union {
@@ -181,7 +229,10 @@ typedef struct yunlink_runtime_event {
         yunlink_error_event_t error;
         yunlink_command_result_event_t command_result;
         yunlink_vehicle_core_state_event_t vehicle_core_state;
+        yunlink_px4_state_event_t px4_state;
         yunlink_vehicle_event_data_t vehicle_event;
+        yunlink_feature_list_event_t feature_list;
+        yunlink_feature_get_event_t feature_get;
     } data;
 } yunlink_runtime_event_t;
 

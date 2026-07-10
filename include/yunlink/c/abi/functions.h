@@ -95,6 +95,20 @@ yunlink_publish_vehicle_core_state(yunlink_runtime_t* runtime,
                                    const yunlink_vehicle_core_state_t* payload,
                                    uint64_t session_id);
 
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_feature_list(yunlink_runtime_t* runtime,
+                                            const yunlink_peer_t* peer,
+                                            const yunlink_session_t* session,
+                                            const yunlink_target_selector_t* target,
+                                            yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_feature_get(yunlink_runtime_t* runtime,
+                                           const yunlink_peer_t* peer,
+                                           const yunlink_session_t* session,
+                                           const yunlink_target_selector_t* target,
+                                           const char* feature_name,
+                                           yunlink_command_handle_t* out_handle);
+
 YUNLINK_C_API yunlink_result_t yunlink_runtime_poll_event(yunlink_runtime_t* runtime,
                                                           yunlink_runtime_event_t* out_event);
 YUNLINK_C_API yunlink_result_t

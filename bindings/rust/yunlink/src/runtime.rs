@@ -261,7 +261,7 @@ impl Runtime {
     }
 
     /// Return the current opaque runtime pointer.
-    fn raw_ptr(&self) -> *mut sys::yunlink_runtime_t {
+    pub(crate) fn raw_ptr(&self) -> *mut sys::yunlink_runtime_t {
         self.raw_lock().0
     }
 

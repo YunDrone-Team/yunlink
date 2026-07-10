@@ -22,9 +22,12 @@ struct yunlink_runtime {
     size_t tok_error = 0;
     size_t tok_link = 0;
     size_t tok_vehicle_core = 0;
+    size_t tok_px4_state = 0;
     size_t tok_vehicle_event = 0;
     size_t tok_command_result = 0;
     std::vector<size_t> configuration_tokens;
+    size_t tok_feature_list = 0;
+    size_t tok_feature_get = 0;
     bool started = false;
 };
 

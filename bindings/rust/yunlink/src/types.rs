@@ -184,6 +184,19 @@ impl RuntimeConfig {
         }
     }
 
+    /// Create the stable ground-station configuration used by the advanced monitor.
+    pub fn advanced_monitor_ground(target_agent_id: u32) -> Self {
+        Self {
+            udp_bind_port: 9797,
+            udp_target_port: 9898,
+            tcp_listen_port: 9797,
+            agent_type: AgentType::GroundStation,
+            agent_id: 1000 + target_agent_id,
+            shared_secret: "yunlink-default-secret".to_string(),
+            multicast_group: "224.1.1.1".to_string(),
+        }
+    }
+
     /// Override the shared secret used by session authentication.
     pub fn with_shared_secret(mut self, shared_secret: impl Into<String>) -> Self {
         self.shared_secret = shared_secret.into();
@@ -259,6 +272,16 @@ pub struct SessionInfo {
 }
 
 /// Safe authority lease snapshot.
+impl CommandHandle {
+    pub(crate) fn from_raw(raw: sys::yunlink_command_handle_t) -> Self {
+        Self {
+            session_id: raw.session_id,
+            message_id: raw.message_id,
+            correlation_id: raw.correlation_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthorityLease {
     /// Current authority state.
