@@ -75,12 +75,12 @@ ByteBuffer encode_payload(const FeatureGetResponse& payload) {
         writer.write_bool(payload.success);
         writer.write_string(payload.message);
         writer.write_string(payload.name);
+        writer.write_string(payload.title);
         writer.write_string(payload.group);
         writer.write_bool(payload.running);
         writer.write_string(payload.description);
         writer.write_bool(payload.auto_start);
         write_string_vector(writer, payload.depends_on);
-        writer.write_float(payload.stop_timeout_sec);
         write_string_vector(writer, payload.start_preview_units);
         write_string_vector(writer, payload.start_preview_commands);
     });
@@ -89,10 +89,10 @@ ByteBuffer encode_payload(const FeatureGetResponse& payload) {
 bool decode_payload(const ByteBuffer& bytes, FeatureGetResponse* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, FeatureGetResponse* out) {
         return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
-               reader.read_string(&out->name) && reader.read_string(&out->group) &&
-               reader.read_bool(&out->running) && reader.read_string(&out->description) &&
-               reader.read_bool(&out->auto_start) && read_string_vector(reader, &out->depends_on) &&
-               reader.read_float(&out->stop_timeout_sec) &&
+               reader.read_string(&out->name) && reader.read_string(&out->title) &&
+               reader.read_string(&out->group) && reader.read_bool(&out->running) &&
+               reader.read_string(&out->description) && reader.read_bool(&out->auto_start) &&
+               read_string_vector(reader, &out->depends_on) &&
                read_string_vector(reader, &out->start_preview_units) &&
                read_string_vector(reader, &out->start_preview_commands);
     });

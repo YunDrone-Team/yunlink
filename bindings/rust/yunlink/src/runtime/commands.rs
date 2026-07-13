@@ -14,12 +14,11 @@ impl Runtime {
         peer: &PeerConnection,
         session: &Session,
         target: &TargetSelector,
-        command: &TakeoffCommand,
+        _command: &TakeoffCommand,
     ) -> Result<CommandHandle> {
         let session = session.to_native();
         let payload = sys::yunlink_takeoff_command_t {
-            relative_height_m: command.relative_height_m,
-            max_velocity_mps: command.max_velocity_mps,
+            reserved: 0,
         };
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
@@ -41,11 +40,11 @@ impl Runtime {
         peer: &PeerConnection,
         session: &Session,
         target: &TargetSelector,
-        command: &LandCommand,
+        _command: &LandCommand,
     ) -> Result<CommandHandle> {
         let session = session.to_native();
         let payload = sys::yunlink_land_command_t {
-            max_velocity_mps: command.max_velocity_mps,
+            reserved: 0,
         };
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
@@ -67,11 +66,11 @@ impl Runtime {
         peer: &PeerConnection,
         session: &Session,
         target: &TargetSelector,
-        command: &ReturnCommand,
+        _command: &ReturnCommand,
     ) -> Result<CommandHandle> {
         let session = session.to_native();
         let payload = sys::yunlink_return_command_t {
-            loiter_before_return_s: command.loiter_before_return_s,
+            reserved: 0,
         };
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {

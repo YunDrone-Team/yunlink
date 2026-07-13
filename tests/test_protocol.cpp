@@ -175,12 +175,12 @@ int main() {
     feature_get.success = true;
     feature_get.message = "ok";
     feature_get.name = "single_uav_basic";
+    feature_get.title = "Single UAV Basic";
     feature_get.group = "单机无人机";
     feature_get.running = true;
     feature_get.description = "desc";
     feature_get.auto_start = false;
     feature_get.depends_on = {"localization"};
-    feature_get.stop_timeout_sec = 8.0F;
     feature_get.start_preview_units = {"localization", "uav_control"};
     feature_get.start_preview_commands = {"roslaunch a", "roslaunch b"};
     const auto feature_get_bytes = yunlink::encode_payload(feature_get);
@@ -188,6 +188,7 @@ int main() {
     if (!yunlink::decode_typed_payload(feature_get_bytes, &feature_get_decoded) ||
         !feature_get_decoded.success || !feature_get_decoded.running ||
         feature_get_decoded.name != feature_get.name ||
+        feature_get_decoded.title != feature_get.title ||
         feature_get_decoded.depends_on.size() != 1 ||
         feature_get_decoded.start_preview_commands.size() != 2) {
         std::cerr << "feature get roundtrip failed\n";

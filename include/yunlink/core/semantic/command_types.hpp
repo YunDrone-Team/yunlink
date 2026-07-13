@@ -16,16 +16,15 @@
 namespace yunlink {
 
 struct TakeoffCommand {
-    float relative_height_m = 0.0F;
-    float max_velocity_mps = 0.0F;
+    uint8_t reserved = 0;
 };
 
 struct LandCommand {
-    float max_velocity_mps = 0.0F;
+    uint8_t reserved = 0;
 };
 
 struct ReturnCommand {
-    float loiter_before_return_s = 0.0F;
+    uint8_t reserved = 0;
 };
 
 struct GotoCommand {

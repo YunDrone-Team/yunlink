@@ -21,38 +21,32 @@ bool valid_command_phase(uint8_t value) {
 }  // namespace
 
 ByteBuffer encode_payload(const TakeoffCommand& payload) {
-    return build_payload([&](BufferWriter& writer) {
-        writer.write_float(payload.relative_height_m);
-        writer.write_float(payload.max_velocity_mps);
-    });
+    return build_payload([&](BufferWriter& writer) { writer.write_u8(payload.reserved); });
 }
 
 bool decode_payload(const ByteBuffer& bytes, TakeoffCommand* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, TakeoffCommand* out) {
-        return reader.read_float(&out->relative_height_m) &&
-               reader.read_float(&out->max_velocity_mps);
+        return reader.read_u8(&out->reserved);
     });
 }
 
 ByteBuffer encode_payload(const LandCommand& payload) {
-    return build_payload(
-        [&](BufferWriter& writer) { writer.write_float(payload.max_velocity_mps); });
+    return build_payload([&](BufferWriter& writer) { writer.write_u8(payload.reserved); });
 }
 
 bool decode_payload(const ByteBuffer& bytes, LandCommand* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, LandCommand* out) {
-        return reader.read_float(&out->max_velocity_mps);
+        return reader.read_u8(&out->reserved);
     });
 }
 
 ByteBuffer encode_payload(const ReturnCommand& payload) {
-    return build_payload(
-        [&](BufferWriter& writer) { writer.write_float(payload.loiter_before_return_s); });
+    return build_payload([&](BufferWriter& writer) { writer.write_u8(payload.reserved); });
 }
 
 bool decode_payload(const ByteBuffer& bytes, ReturnCommand* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, ReturnCommand* out) {
-        return reader.read_float(&out->loiter_before_return_s);
+        return reader.read_u8(&out->reserved);
     });
 }
 

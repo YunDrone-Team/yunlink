@@ -68,16 +68,15 @@ typedef struct yunlink_command_handle {
 } yunlink_command_handle_t;
 
 typedef struct yunlink_takeoff_command {
-    float relative_height_m;
-    float max_velocity_mps;
+    uint8_t reserved;
 } yunlink_takeoff_command_t;
 
 typedef struct yunlink_land_command {
-    float max_velocity_mps;
+    uint8_t reserved;
 } yunlink_land_command_t;
 
 typedef struct yunlink_return_command {
-    float loiter_before_return_s;
+    uint8_t reserved;
 } yunlink_return_command_t;
 
 typedef struct yunlink_goto_command {

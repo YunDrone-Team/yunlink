@@ -128,7 +128,7 @@ int main() {
     yunlink::Px4StateSnapshot px4{};
     px4.connected = true;
     px4.armed = true;
-    px4.flight_mode = 7;
+    px4.flight_mode = "OFFBOARD";
     px4.landed_state = 2;
     px4.battery_voltage_v = 15.2F;
     px4.battery_current_a = 6.4F;
@@ -255,7 +255,7 @@ int main() {
     ground.stop();
     uav.stop();
 
-    if (!px4_seen.connected || !px4_seen.armed || px4_seen.flight_mode != 7 ||
+    if (!px4_seen.connected || !px4_seen.armed || px4_seen.flight_mode != "OFFBOARD" ||
         px4_seen.local_pose.position_m.z != 3.0F || px4_seen.satellites != 14 ||
         px4_seen.battery_voltage_v != 15.2F || px4_seen.battery_current_a != 6.4F) {
         std::cerr << "px4 snapshot mismatch\n";

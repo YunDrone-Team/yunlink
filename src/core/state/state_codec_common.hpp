@@ -179,7 +179,6 @@ inline void write_uav_control_cmd(BufferWriter& writer, const UavControlCmdSnaps
     write_vec2(writer, value.desired_body_xy_pos_m);
     write_vec2(writer, value.desired_body_xy_vel_mps);
     writer.write_float(value.fixed_height_m);
-    write_geo(writer, value.desired_wgs84_pos);
     writer.write_u8(value.yaw_mode);
     writer.write_float(value.desired_yaw_rad);
     writer.write_float(value.desired_yaw_rate_radps);
@@ -192,8 +191,8 @@ inline bool read_uav_control_cmd(BufferReader& reader, UavControlCmdSnapshot* ou
            read_vec3(reader, &out->desired_jerk) &&
            read_vec2(reader, &out->desired_body_xy_pos_m) &&
            read_vec2(reader, &out->desired_body_xy_vel_mps) &&
-           reader.read_float(&out->fixed_height_m) && read_geo(reader, &out->desired_wgs84_pos) &&
-           reader.read_u8(&out->yaw_mode) && reader.read_float(&out->desired_yaw_rad) &&
+           reader.read_float(&out->fixed_height_m) && reader.read_u8(&out->yaw_mode) &&
+           reader.read_float(&out->desired_yaw_rad) &&
            reader.read_float(&out->desired_yaw_rate_radps);
 }
 

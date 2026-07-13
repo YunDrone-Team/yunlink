@@ -40,27 +40,16 @@ impl TargetSelector {
 }
 
 /// Safe takeoff command payload.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct TakeoffCommand {
-    /// Relative takeoff height in meters.
-    pub relative_height_m: f32,
-    /// Maximum velocity in meters per second.
-    pub max_velocity_mps: f32,
-}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TakeoffCommand;
 
 /// Safe land command payload.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct LandCommand {
-    /// Maximum velocity in meters per second.
-    pub max_velocity_mps: f32,
-}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LandCommand;
 
 /// Safe return command payload.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ReturnCommand {
-    /// Loiter time before returning, in seconds.
-    pub loiter_before_return_s: f32,
-}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ReturnCommand;
 
 /// Safe goto command payload.
 #[derive(Debug, Clone, Copy, PartialEq)]

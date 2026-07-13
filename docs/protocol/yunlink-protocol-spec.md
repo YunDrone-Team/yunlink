@@ -507,16 +507,17 @@ header_len = 76 + target_count * 4 + auth_tag_len
 
 #### `TakeoffCommand`
 
-- `relative_height_m`
-- `max_velocity_mps`
+- `reserved = 0`
 
 #### `LandCommand`
 
-- `max_velocity_mps`
+- `reserved = 0`
 
 #### `ReturnCommand`
 
-- `loiter_before_return_s`
+- `reserved = 0`
+
+这三个命令只表达动作意图。载具侧按照当前控制配置执行，协议不再传递起飞高度、最大速度或返航前盘旋时间。`reserved` 是固定占位字节，发送方必须写 `0`，接收方不得赋予业务语义。
 
 #### `GotoCommand`
 

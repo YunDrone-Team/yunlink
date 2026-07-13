@@ -14,6 +14,9 @@ Rust SDK 位于 `bindings/rust/`，采用 workspace split：
 - `PeerConnection`
 - `Session`
 - `TargetSelector`
+- `TakeoffCommand`
+- `LandCommand`
+- `ReturnCommand`
 - `GotoCommand`
 - `VehicleCoreState`
 - `AuthorityLease`
@@ -28,6 +31,18 @@ Rust SDK 位于 `bindings/rust/`，采用 workspace split：
 5. `publish_goto(...)`
 6. `subscribe()` 接收 `CommandResult` / `VehicleCoreState`
 7. `release_authority(...)`
+
+## 动作命令
+
+`TakeoffCommand`、`LandCommand` 和 `ReturnCommand` 是无字段类型，只表达动作意图：
+
+```rust
+runtime.publish_takeoff(&peer, &session, &target, &TakeoffCommand).await?;
+runtime.publish_land(&peer, &session, &target, &LandCommand).await?;
+runtime.publish_return(&peer, &session, &target, &ReturnCommand).await?;
+```
+
+高度、速度和返航前盘旋时间不属于这三个 payload。底层 C ABI 会写入一个值为 `0` 的保留字节，调用方不应自行赋予该字节业务语义。
 
 ## 异步策略
 

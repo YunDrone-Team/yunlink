@@ -157,12 +157,12 @@ int main() {
             response.success = true;
             response.message = "ok";
             response.name = view.payload.feature_name;
+            response.title = "Single UAV Basic";
             response.group = "单机无人机";
             response.running = true;
             response.description = "单机无人机基础链路";
             response.auto_start = false;
             response.depends_on = {"localization"};
-            response.stop_timeout_sec = 8.0F;
             response.start_preview_units = {"localization", "uav_control"};
             response.start_preview_commands = {"roslaunch localization_fusion ..."};
             if (server.system_service_publisher().publish_feature_get_response(

@@ -20,8 +20,7 @@ yunlink_result_t yunlink_command_publish_takeoff(yunlink_runtime_t* runtime,
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     yunlink::TakeoffCommand native{};
-    native.relative_height_m = payload->relative_height_m;
-    native.max_velocity_mps = payload->max_velocity_mps;
+    native.reserved = payload->reserved;
     yunlink::CommandHandle handle{};
     const auto result = to_result(runtime->runtime.command_publisher().publish_takeoff(
         peer->id, session->session_id, to_target_selector(*target), native, &handle));
@@ -42,7 +41,7 @@ yunlink_result_t yunlink_command_publish_land(yunlink_runtime_t* runtime,
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     yunlink::LandCommand native{};
-    native.max_velocity_mps = payload->max_velocity_mps;
+    native.reserved = payload->reserved;
     yunlink::CommandHandle handle{};
     const auto result = to_result(runtime->runtime.command_publisher().publish_land(
         peer->id, session->session_id, to_target_selector(*target), native, &handle));
@@ -63,7 +62,7 @@ yunlink_result_t yunlink_command_publish_return(yunlink_runtime_t* runtime,
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     yunlink::ReturnCommand native{};
-    native.loiter_before_return_s = payload->loiter_before_return_s;
+    native.reserved = payload->reserved;
     yunlink::CommandHandle handle{};
     const auto result = to_result(runtime->runtime.command_publisher().publish_return(
         peer->id, session->session_id, to_target_selector(*target), native, &handle));

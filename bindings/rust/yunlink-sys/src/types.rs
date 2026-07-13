@@ -200,26 +200,24 @@ pub struct yunlink_command_handle_t {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct yunlink_takeoff_command_t {
-    /// Relative takeoff height in meters.
-    pub relative_height_m: f32,
-    /// Maximum allowed velocity in meters per second.
-    pub max_velocity_mps: f32,
+    /// Reserved for future protocol revisions. Must be zero.
+    pub reserved: u8,
 }
 
 /// Raw land command payload.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct yunlink_land_command_t {
-    /// Maximum allowed velocity in meters per second.
-    pub max_velocity_mps: f32,
+    /// Reserved for future protocol revisions. Must be zero.
+    pub reserved: u8,
 }
 
 /// Raw return-to-home command payload.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct yunlink_return_command_t {
-    /// Loiter time before returning, in seconds.
-    pub loiter_before_return_s: f32,
+    /// Reserved for future protocol revisions. Must be zero.
+    pub reserved: u8,
 }
 
 /// Raw goto command payload.

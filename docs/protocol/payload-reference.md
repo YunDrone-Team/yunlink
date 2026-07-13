@@ -320,8 +320,7 @@ Identifiers:
 
 | Field Name | Type | Units | Description |
 | --- | --- | --- | --- |
-| `relative_height_m` | `float` | `m` | 相对起飞高度 |
-| `max_velocity_mps` | `float` | `m/s` | 最大起飞速度 |
+| `reserved` | `uint8_t` | - | 协议保留字节，发送方必须写 `0` |
 
 ### 5.2 `LandCommand`
 
@@ -335,7 +334,7 @@ Identifiers:
 
 | Field Name | Type | Units | Description |
 | --- | --- | --- | --- |
-| `max_velocity_mps` | `float` | `m/s` | 最大降落速度 |
+| `reserved` | `uint8_t` | - | 协议保留字节，发送方必须写 `0` |
 
 ### 5.3 `ReturnCommand`
 
@@ -349,7 +348,9 @@ Identifiers:
 
 | Field Name | Type | Units | Description |
 | --- | --- | --- | --- |
-| `loiter_before_return_s` | `float` | `s` | 返航前盘旋时间 |
+| `reserved` | `uint8_t` | - | 协议保留字节，发送方必须写 `0` |
+
+`TakeoffCommand`、`LandCommand` 和 `ReturnCommand` 只表达动作意图，不携带高度、速度或盘旋时间。具体动作参数由载具侧当前配置和控制器负责。
 
 ### 5.4 `GotoCommand`
 
@@ -530,12 +531,12 @@ Identifiers:
 | `success` | `bool` | - | 请求是否成功 |
 | `message` | `string` | - | 响应文本 |
 | `name` | `string` | - | 功能名 |
+| `title` | `string` | - | 面向用户显示的功能标题 |
 | `group` | `string` | - | 功能分组 |
 | `running` | `bool` | - | 是否正在运行 |
 | `description` | `string` | - | 功能描述 |
 | `auto_start` | `bool` | - | 是否自动启动 |
 | `depends_on` | `vector<string>` | - | 依赖功能列表 |
-| `stop_timeout_sec` | `float` | `s` | 停止超时 |
 | `start_preview_units` | `vector<string>` | - | 启动预览 unit 列表 |
 | `start_preview_commands` | `vector<string>` | - | 启动预览命令列表 |
 
@@ -652,7 +653,7 @@ Identifiers:
 | `connected` | `bool` | - | 是否已连接 FCU |
 | `rc_available` | `bool` | - | 是否有 RC |
 | `armed` | `bool` | - | 是否解锁 |
-| `flight_mode` | `uint8_t` | - | 飞行模式编码 |
+| `flight_mode` | `string` | - | MAVROS/PX4 飞行模式名称，例如 `OFFBOARD` |
 | `system_status` | `uint8_t` | - | 系统状态编码 |
 | `landed_state` | `uint8_t` | - | 起降状态编码 |
 | `battery_voltage_v` | `float` | `V` | 电压 |
@@ -676,7 +677,6 @@ Identifiers:
 | `thrust_setpoint` | `float` | context-dependent | 推力设定值 |
 | `satellites` | `uint8_t` | - | 卫星数量 |
 | `gps_status` | `int8_t` | - | GPS 状态编码 |
-| `gps_service` | `uint8_t` | - | GPS service 编码 |
 | `latitude_deg` | `double` | `deg` | 纬度 |
 | `longitude_deg` | `double` | `deg` | 经度 |
 | `altitude_m` | `double` | `m` | 高度 |
@@ -815,7 +815,6 @@ Identifiers:
 | `desired_body_xy_pos_m` | `Vector2f` | `m` | 机体系 XY 位置 |
 | `desired_body_xy_vel_mps` | `Vector2f` | `m/s` | 机体系 XY 速度 |
 | `fixed_height_m` | `float` | `m` | 固定高度 |
-| `desired_wgs84_pos` | `GeoPointSnapshot` | - | WGS84 目标点 |
 | `yaw_mode` | `uint8_t` | - | 偏航模式编码 |
 | `desired_yaw_rad` | `float` | `rad` | 期望偏航角 |
 | `desired_yaw_rate_radps` | `float` | `rad/s` | 期望偏航角速度 |

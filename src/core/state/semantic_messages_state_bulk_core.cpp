@@ -39,7 +39,7 @@ ByteBuffer encode_payload(const Px4StateSnapshot& payload) {
         writer.write_bool(payload.connected);
         writer.write_bool(payload.rc_available);
         writer.write_bool(payload.armed);
-        writer.write_u8(payload.flight_mode);
+        writer.write_string(payload.flight_mode);
         writer.write_u8(payload.system_status);
         writer.write_u8(payload.landed_state);
         writer.write_float(payload.battery_voltage_v);
@@ -63,7 +63,6 @@ ByteBuffer encode_payload(const Px4StateSnapshot& payload) {
         writer.write_float(payload.thrust_setpoint);
         writer.write_u8(payload.satellites);
         writer.write_i8(payload.gps_status);
-        writer.write_u8(payload.gps_service);
         writer.write_double(payload.latitude_deg);
         writer.write_double(payload.longitude_deg);
         writer.write_double(payload.altitude_m);
@@ -77,7 +76,7 @@ bool decode_payload(const ByteBuffer& bytes, Px4StateSnapshot* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, Px4StateSnapshot* out) {
         return read_header(reader, &out->header) && reader.read_bool(&out->connected) &&
                reader.read_bool(&out->rc_available) && reader.read_bool(&out->armed) &&
-               reader.read_u8(&out->flight_mode) && reader.read_u8(&out->system_status) &&
+               reader.read_string(&out->flight_mode) && reader.read_u8(&out->system_status) &&
                reader.read_u8(&out->landed_state) && reader.read_float(&out->battery_voltage_v) &&
                reader.read_float(&out->battery_current_a) &&
                reader.read_float(&out->battery_percentage) && reader.read_u16(&out->fcu_load) &&
@@ -95,8 +94,8 @@ bool decode_payload(const ByteBuffer& bytes, Px4StateSnapshot* payload) {
                read_quat(reader, &out->orientation_setpoint) &&
                read_vec3(reader, &out->body_rate_setpoint_radps) &&
                reader.read_float(&out->thrust_setpoint) && reader.read_u8(&out->satellites) &&
-               reader.read_i8(&out->gps_status) && reader.read_u8(&out->gps_service) &&
-               reader.read_double(&out->latitude_deg) && reader.read_double(&out->longitude_deg) &&
+               reader.read_i8(&out->gps_status) && reader.read_double(&out->latitude_deg) &&
+               reader.read_double(&out->longitude_deg) &&
                reader.read_double(&out->altitude_m) && reader.read_double(&out->latitude_raw_deg) &&
                reader.read_double(&out->longitude_raw_deg) &&
                reader.read_double(&out->altitude_amsl_m);

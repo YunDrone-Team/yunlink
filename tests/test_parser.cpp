@@ -17,8 +17,7 @@ int main() {
     };
 
     yunlink::TakeoffCommand takeoff{};
-    takeoff.relative_height_m = 12.5F;
-    takeoff.max_velocity_mps = 3.2F;
+    takeoff.reserved = 0;
     const auto a = yunlink::make_typed_envelope(
         source,
         yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 1),

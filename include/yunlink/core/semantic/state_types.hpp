@@ -93,7 +93,6 @@ struct UavControlCmdSnapshot {
     Vector2f desired_body_xy_pos_m;
     Vector2f desired_body_xy_vel_mps;
     float fixed_height_m = 0.0F;
-    GeoPointSnapshot desired_wgs84_pos;
     uint8_t yaw_mode = 0;
     float desired_yaw_rad = 0.0F;
     float desired_yaw_rate_radps = 0.0F;
@@ -123,7 +122,7 @@ struct Px4StateSnapshot {
     bool connected = false;
     bool rc_available = false;
     bool armed = false;
-    uint8_t flight_mode = 0;
+    std::string flight_mode;
     uint8_t system_status = 0;
     uint8_t landed_state = 0;
     float battery_voltage_v = 0.0F;
@@ -147,7 +146,6 @@ struct Px4StateSnapshot {
     float thrust_setpoint = 0.0F;
     uint8_t satellites = 0;
     int8_t gps_status = 0;
-    uint8_t gps_service = 0;
     double latitude_deg = 0.0;
     double longitude_deg = 0.0;
     double altitude_m = 0.0;
