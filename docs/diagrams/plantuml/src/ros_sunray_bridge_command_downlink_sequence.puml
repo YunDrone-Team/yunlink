@@ -1,30 +1,29 @@
 @startuml
 !include _yunlink_protocol_theme.iuml
-title Command Downlink Sequence
+title Current Command Downlink Sequence
 
-participant "Rust Ground Client" as GROUND
-participant "yunlink::Runtime\n(ground)" as GRT
-participant "sunray_yunlink_bridge" as BRIDGE
-participant "command_tracker" as TRACK
-participant "Sunray uav_control_cmd" as CMD
-participant "Sunray FSM" as FSM
+participant "Ground Client" as GROUND
+participant "yunlink::Runtime\n(air)" as RT
+participant "yunlink_ros_bridge" as BRIDGE
+participant "Sunray control_cmd" as CMD
+participant "Sunray control" as CONTROL
+participant "command_execution_status" as STATUS
 
-GROUND -> GRT : Command.Goto / Takeoff / ...
-GRT -> BRIDGE : inbound command envelope
-
-BRIDGE -> BRIDGE : validate target=kEntity\nvalidate session / authority\nvalidate TTL / support
-alt validation failed
-  BRIDGE --> GRT : CommandResult.Failed
-else accepted by bridge
-  BRIDGE --> GRT : CommandResult.Received
+GROUND -> RT : command envelope
+RT -> RT : target / session / authority / TTL gate
+alt gate failed
+  RT --> GROUND : Failed or Expired
+else gate passed
+  RT -> BRIDGE : typed command callback
+  RT --> GROUND : Received -> Accepted ->\nInProgress -> Succeeded\n(detail=runtime-auto-result)
   BRIDGE -> CMD : publish UAVControlCMD
-  BRIDGE --> GRT : CommandResult.Accepted
-  CMD -> FSM : raw control request
-
-  FSM -> TRACK : enter TAKEOFF / LAND /\nRETURN / MOVE
-  TRACK --> GRT : CommandResult.InProgress
-
-  FSM -> TRACK : converge to HOVER / INIT
-  TRACK --> GRT : CommandResult.Succeeded
+  CMD -> CONTROL : ROS subscriber consumes command
+  CONTROL -> STATUS : publish actual execution status
+  STATUS -> BRIDGE : snapshot callback
+  BRIDGE --> GROUND : CommandExecutionStatusSnapshot
 end
+
+note bottom
+auto-result 与实际 execution status 当前没有 correlation 关联。
+end note
 @enduml

@@ -68,8 +68,8 @@
   - Category: `core-blocked`
   - Why blocked: auto-result 目前只覆盖 `Received -> Accepted -> InProgress -> Succeeded`；失败分支大多依赖 bridge 自行推导或静默 return。
   - Required implementation: 明确 runtime 层和 external executor 层的失败责任边界；runtime 拒绝类失败必须形成可观测事件或 `CommandResult.Failed/Expired`。
-  - Validation: 新增 runtime 测试覆盖 no-active-session、wrong-target、no-authority、expired；bridge 测试覆盖 executor-timeout、session-lost、authority-lost。
-  - Evidence source: `src/runtime/runtime_command.cpp`；`sunray_v2/communication/sunray_yunlink_bridge/src/command_tracker.cpp`。
+  - Validation: runtime 测试覆盖 no-active-session、wrong-target、no-authority、expired；bridge 的真实执行失败映射仍列在业务环境缺口中。
+  - Evidence source: `src/runtime/command/receive.cpp`；`tests/runtime/test_command_result_edges.cpp`；`tests/runtime/test_runtime_ttl_freshness.cpp`。
 
 - [x] runtime 外部 executor contract 固化，bridge 和未来 UGV/swarm executor 都走同一结果语义。
   - Category: `core-blocked`
@@ -159,46 +159,39 @@
 
 - [ ] 真实 Sunray ROS graph integration，不只 fake publisher/subscriber。
   - Category: `business-env-blocked`
-  - Why blocked: 现有 ROS bridge 测试证明 mapping/tracker/loopback，但没有启动 Sunray controller/FSM/localization 的真实 ROS graph。
+  - Why blocked: 当前只完成 bridge 编译与 YunLink core 测试，没有启动 Sunray controller/localization/PX4 的真实 ROS graph，也没有 bridge loopback rostest。
   - Required implementation: 准备 Sunray ROS launch 测试环境，启动真实 topic producers/consumers，并让 bridge 使用默认 topic contract。
-  - Validation: `rosnode list`/`rostopic info` 验证 bridge 订阅/发布真实 Sunray topic；发送 Yunlink command 后真实 `/sunray/uav_control_cmd` 被 Sunray 节点消费。
-  - Current execution note: 2026-04-25 在当前本机确认 `roscore/roslaunch/rostopic/catkin_make` 不存在，Docker 可用但没有 ROS1 image，Docker context 只有本机 `default/desktop-linux`，没有可用 SSH ROS1 host；因此不能启动真实 Sunray ROS graph，不能打勾。
-  - Evidence source: `docs/bindings/ros-sunray-bridge-overview.md`；`sunray_v2/communication/sunray_yunlink_bridge/test/test_bridge_loopback.cpp`。
+  - Validation: `rosnode list`/`rostopic info` 验证 bridge 订阅/发布真实 Sunray topic；发送 YunLink command 后真实 `/uav1/sunray/uav_control/control_cmd` 被 Sunray 节点消费。
+  - Current execution note: 2026-07-13 已在 `OfficeUbuntu20` 完成 `sunray_msgs`、`sunray_mavros`、`yunlink_ros_bridge` 编译，但未启动完整 Sunray/PX4 ROS graph，因此不能打勾。
+  - Evidence source: `docs/bindings/ros-sunray-bridge-overview.md`；`sunray_v2/communication/yunlink_ros_bridge/`。
 
-- [ ] bridge 默认 topic contract 与 `/uav_name`、`/uav_id` 在 Sunray 启动链路中验证。
+- [ ] bridge 默认 YAML topic contract 与 `identity.agent_id` 在 Sunray 启动链路中验证。
   - Category: `business-env-blocked`
-  - Why blocked: launch smoke 只证明参数存在时 bridge 能启动，未证明 Sunray 正式启动链路会正确设置 `/uav_name`、`/uav_id` 和默认 topic。
+  - Why blocked: 当前配置通过 `identity.agent_id` 和显式 topic 路径工作，不再读取 `/uav_name`、`/uav_id`；尚未证明 Sunray 正式启动链路与默认 `/uav1/...` topic 完全一致。
   - Required implementation: 在 Sunray launch 里加入 bridge 或 companion launch，明确参数来源和 namespace。
   - Validation: 在 ROS1 Docker/Ubuntu host 上启动 Sunray + bridge，确认 namespace 为 `/uav1` 等真实值，topic 无需 override 即可连通。
-  - Evidence source: `sunray_yunlink_bridge/src/bridge_node.cpp`；`docs/bindings/ros1-docker-ubuntu26-guide.md`。
+  - Evidence source: `sunray_v2/communication/yunlink_ros_bridge/config/yunlink_ros_bridge_base.yaml`；`docs/bindings/ros1-docker-ubuntu26-guide.md`。
 
 - [ ] PX4 SITL + MAVROS + Sunray + bridge + Rust ground 的 `Takeoff/Goto/Land/Return` 闭环。
   - Category: `business-env-blocked`
   - Why blocked: 当前没有 PX4 SITL/MAVROS/Sunray 控制闭环；不能证明 Yunlink command 真正驱动飞控状态变化。
   - Required implementation: 建立可复现 SITL compose/launch，包含 PX4、MAVROS、Sunray、bridge、Rust ground client。
-  - Validation: 自动化执行 Takeoff、Goto、Land、Return，验证 CommandResult、FSM transition、PX4 local pose/landed state。
+  - Validation: 自动化执行 Takeoff、Goto、Land、Return，分别验证 Runtime auto-result、`CommandExecutionStatusSnapshot`、PX4 local pose/landed state；不能把 auto-result 当作飞行成功。
   - Evidence source: `docs/bindings/test-world-map.md`；`ros-sunray-bridge-overview.md`。
 
-- [ ] 真实 `CommandResult` 由 Sunray FSM 收敛推导，而不是纯 loopback。
+- [ ] 将真实 Sunray 执行结果关联为正式 YunLink `CommandResult`。
   - Category: `business-env-blocked`
-  - Why blocked: loopback 测试手动喂 FSM 状态，不能证明真实 Sunray FSM 的时序、异常和收敛模式。
-  - Required implementation: 使用真实 `UAVControlFSMState` topic 驱动 `CommandTracker`，覆盖 Takeoff、Land、Return、Goto、VelocitySetpoint。
+  - Why blocked: 当前 bridge 使用 Runtime 默认 `kAutoResult`，会立即报告 `Succeeded`；`UAVCommandExecutionStatus` 只作为独立 snapshot 上行，没有与入站 YunLink message_id/correlation_id 关联。
+  - Required implementation: 将 bridge 切到 `CommandHandlingMode::kExternalHandler`，保存入站 envelope 路由信息，并用真实 `UAVCommandExecutionStatus` 或明确的 Sunray 执行状态驱动 `reply_command_result(...)`。
   - Validation: 记录 `Received -> Accepted -> InProgress -> Succeeded/Failed` 的真实时间线和 correlation_id。
-  - Evidence source: `sunray_yunlink_bridge/src/command_tracker.cpp`；`test_command_tracker.cpp`。
+  - Evidence source: `sunray_v2/communication/yunlink_ros_bridge/src/bridge_topics.cpp`；`src/runtime/command/results.cpp`；`docs/bindings/ros-sunray-bridge-overview.md`。
 
-- [ ] raw-control v1 deferred 参数语义：起飞高度、最大速度、返航等待。
+- [ ] 状态上行 freshness：按当前 YAML 节流频率验证，无 heartbeat 假设。
   - Category: `business-env-blocked`
-  - Why blocked: bridge overview 中 `relative_height_m`、`max_velocity_mps`、`loiter_before_return_s` 明确标记为 `deferred`，当前只映射 Sunray command enum，不能证明这些 Yunlink intent 参数被真实执行器尊重。
-  - Required implementation: 明确 Sunray raw control 是否能承接这些参数；若不能，设计 planning bridge 或 Sunray 配置层映射策略，并定义不支持时的稳定 result detail。
-  - Validation: 在 SITL 或真实 Sunray graph 中发送带高度、速度、返航等待参数的命令，验证参数生效或稳定返回 unsupported/deferred detail。
-  - Evidence source: `docs/bindings/ros-sunray-bridge-overview.md` 的 command mapping 表；`sunray_yunlink_bridge/src/ros_adapter.cpp`。
-
-- [ ] 状态上行 freshness：Px4State 20 Hz、controller 20 Hz、FSM/Odom heartbeat。
-  - Category: `business-env-blocked`
-  - Why blocked: mapping 测试验证字段转换，但没有真实频率、heartbeat、节流和丢包条件下的 freshness 证据。
+  - Why blocked: 当前只有编译与 codec/runtime 测试，没有真实 ROS source rate、节流和丢包条件下的 freshness 证据；bridge 不生成 heartbeat。
   - Required implementation: 在真实或 SITL ROS graph 中采集 bridge 上行 timestamp、source topic rate、Yunlink receive rate。
-  - Validation: 验证 Px4StateSnapshot 和 controller snapshot 约 20 Hz；FSM 变更即发且 2 Hz heartbeat；Odom 变更即发且 1 Hz heartbeat。
-  - Evidence source: `bridge_node.cpp` `publish_uplinks`；`ros-sunray-bridge-overview.md` 状态上行规则。
+  - Validation: 默认配置下验证 `LocalOdomSnapshot <= 10 Hz`、`OdomStateSnapshot <= 2 Hz`、`UavControlStateSnapshot <= 5 Hz`、`Px4StateSnapshot <= 2 Hz`，并验证 source 停止后不会重发旧状态。
+  - Evidence source: `sunray_v2/communication/yunlink_ros_bridge/config/yunlink_ros_bridge_base.yaml`；`src/runtime/bridge_runtime_qos_helpers.cpp`；`ros-sunray-bridge-overview.md`。
 
 - [ ] `VehicleEvent` 正式对外面与真实事件来源。
   - Category: `business-env-blocked`
@@ -212,14 +205,14 @@
   - Why blocked: 单元测试用 fake `Px4State` 验证 fixed_height 合成，未证明真实 PX4 local pose 与 Sunray body velocity command 兼容。
   - Required implementation: 在 SITL 或真实 Sunray graph 中发送 body-frame velocity，并检查 fixed_height 使用最新 PX4 高度。
   - Validation: 验证 `MOVE_VELOCITY_BODY` command 的 `desired_body_xy_vel` 和 `fixed_height` 与实时 PX4 state 一致。
-  - Evidence source: `sunray_yunlink_bridge/src/ros_adapter.cpp`；`test_command_mappings.cpp`。
+  - Evidence source: `sunray_v2/communication/yunlink_ros_bridge/src/bridge_commands.cpp`；`src/bridge_topics.cpp`。
 
 - [ ] ROS publish 失败、topic 未订阅、Sunray FSM 不收敛、执行超时的失败场景。
   - Category: `business-env-blocked`
-  - Why blocked: 当前 bridge 的 `ros-publish-failed` 很难在真实 ROS publisher 语义下触发，FSM 不收敛和执行超时还缺业务环境。
+  - Why blocked: 当前 ROS publish 是 fire-and-forget；无 subscriber 只进入 diagnostics，不会形成正式 `CommandResult.Failed`，执行超时也没有 bridge tracker。
   - Required implementation: 准备故障注入 launch：不启动 Sunray consumer、冻结 FSM、错误 namespace、关闭 localization/PX4 state。
-  - Validation: command 返回 `ros-publish-failed`、`execution-timeout`、`missing-px4-state-for-body-velocity-height-synthesis` 等稳定 detail。
-  - Evidence source: `bridge_node.cpp`；`ros_adapter.cpp`；`test_command_mappings.cpp`。
+  - Validation: external-handler 接入后，验证无 subscriber、session 丢失、执行超时等场景返回稳定失败结果；当前阶段只验证 diagnostics 可观测。
+  - Evidence source: `sunray_v2/communication/yunlink_ros_bridge/src/runtime/bridge_control_publish.cpp`；`src/diagnostics/bridge_forwarding_diagnostics.cpp`。
 
 - [ ] HIL / 真机安全门控，包括 kill switch、地理围栏、最大速度/高度、人工接管。
   - Category: `business-env-blocked`
@@ -237,10 +230,10 @@
 
 - [ ] planning bridge 二期：`planning_cmd/state`、TrajectoryChunk、FormationTask。
   - Category: `business-env-blocked`
-  - Why blocked: bridge v1 明确不接 planning，也明确对 `TrajectoryChunkCommand` 和 `FormationTaskCommand` 返回 unsupported。
+  - Why blocked: bridge 当前不订阅 planning topic，也没有注册 `TrajectoryChunkCommand` 或 `FormationTaskCommand` handler。
   - Required implementation: 设计 Sunray planning bridge，接入 `UAVPlanningCMD/UAVPlanningState`，明确 trajectory 和 formation 的 Sunray 侧 contract。
-  - Validation: planning command 能被 Sunray planner 消费；planning state 上行；TrajectoryChunk/FormationTask 不再只返回 `unsupported-by-sunray-raw-control-v1`。
-  - Evidence source: `docs/bindings/ros-sunray-bridge-overview.md` unsupported/deferred 表；`sunray_yunlink_bridge/src/ros_adapter.cpp`。
+  - Validation: planning command 能被 Sunray planner 消费；planning state 上行；TrajectoryChunk/FormationTask 有明确 handler 与真实执行结果。
+  - Evidence source: `docs/bindings/ros-sunray-bridge-overview.md`；`sunray_v2/communication/yunlink_ros_bridge/src/runtime/bridge_runtime_subscribers.cpp`。
 
 ## C. 测试基础设施与门禁缺失
 
@@ -309,7 +302,7 @@
   - Why blocked: 当前 detail 字符串已经出现，但 result_code/detail taxonomy 未统一，跨 runtime、bridge、SDK、report 很难自动聚合。
   - Required implementation: 定义 result_code 枚举、detail 命名规则、correlation_id/message_id/session_id 追踪字段。
   - Validation: command failure report 能按 result_code 聚合；bridge 和 runtime 同一失败原因使用同一 taxonomy。
-  - Evidence source: `CommandResult` 类型；`bridge_node.cpp` failure detail；`test-world-map.md`。
+  - Evidence source: `CommandResult` 类型；`sunray_v2/communication/yunlink_ros_bridge/src/diagnostics/`；`test-world-map.md`。
 
 - [ ] backward compatibility：协议版本、ABI version、bindings wheel install matrix。
   - Category: `cross-cutting`

@@ -1,191 +1,141 @@
-# Sunray ROS1 机载 Yunlink Bridge 总体方案
+# Sunray ROS1 YunLink Bridge
 
-## 背景与目标
-
-`sunray_v2` 目前在机载端已经形成了一套稳定的 ROS1 topic contract，而 `yunlink` 的长期目标是成为统一的空地协议与运行时。当前最稳妥的一期落地方式，不是把 Yunlink 直接侵入 Sunray controller/FSM 内核，而是新增一个独立 ROS1 bridge 进程，专门负责：
-
-- 把 Yunlink 下行命令翻译成 Sunray 现有 `uav_control_cmd`。
-- 把 Sunray 现有状态 topic 组织成 Yunlink 上行快照。
-- 让 `Session / Authority / CommandResult` 的 owner 明确停留在 `Yunlink + bridge`，而不是扩散进 Sunray core。
-
-一期边界固定如下：
-
-- 只做 ROS1。
-- 只做机载端。
-- 只做单 UAV、单 active session、一对一链路。
-- `TargetScope` 只接受 `kEntity`。
-- 状态上行优先，同时把远程控制闭环路径设计完整。
-- `planning_cmd / planning_state` 只预留文档扩展位，不进入一期实现与验收。
+本文档描述 `sunray_v2/communication/yunlink_ros_bridge` 的当前实现。它是独立 ROS1 catkin 包，负责 YunLink 与 Sunray ROS topic/service 之间的转换，不调用 Sunray controller 或定位模块的内部 C++ API。
 
 ![System Context](../diagrams/plantuml/svg/ros_sunray_bridge_system_context.svg)
 
-## 为什么是 Bridge
+## 当前边界
 
-bridge 方案的核心价值，不是“少写代码”，而是把系统边界锁死：
+bridge 当前负责：
 
-- Sunray 继续只暴露 ROS contract，不被 Yunlink 绑死到内部类、FSM API、controller 实现细节。
-- Yunlink runtime 继续负责网络边界、session、authority 和回包路径，不让 Sunray 理解这些协议概念。
-- bridge 成为唯一的协议适配层，后续无论是补 planning bridge，还是迁 ROS2，都有明确改动面。
+- 接收五类 YunLink 控制命令并发布 `sunray_msgs/UAVControlCMD`。
+- 订阅六类 Sunray ROS 状态并发布对应 YunLink snapshot。
+- 转发 feature list/get/start/stop 系统服务。
+- 维护 YunLink TCP session、UDP 端点发现、QoS 节流和 ROS diagnostics。
 
-这也是为什么一期 bridge 包仍位于外部 Sunray ROS 工作区里的独立 catkin package，而官方 overview 放在 `yunlink/docs/bindings/ros-sunray-bridge-overview.md`：实现归 Sunray 工作区，协议主导权与官方集成说明归 Yunlink。
+bridge 当前不负责：
 
-## 系统边界
-
-- `yunlink` 仓库新增 runtime 外部命令处理模式。
-  bridge 使用 `CommandHandlingMode::kExternalHandler`，关闭默认 `runtime-auto-result`。
-- 外部 Sunray 工作区中的 Yunlink bridge 是独立 catkin 包、独立进程。
-- bridge 只订阅和发布 Sunray 既有 topic。
-  不调用 Sunray controller/FSM 内部 C++ 接口。
-- 地面端不运行 ROS。
-  Rust ground client 直接接 Yunlink，机载 bridge 才是 ROS 适配面。
-
-## Owner Matrix
-
-| 关注点 | Owner | 备注 |
-| --- | --- | --- |
-| 控制意图 | Rust ground client | 负责发起命令、消费状态与结果 |
-| Session / Authority / 网络边界 | Yunlink + bridge | Sunray 不感知 ownership 模型 |
-| 正式 `CommandResult` | bridge | 一期唯一正式 owner |
-| 飞行执行 | Sunray FSM / Controller | 只吃 ROS `uav_control_cmd` |
-| 飞控与底层状态 | PX4 / MAVROS / Sunray topics | bridge 只做转译与裁剪 |
-
-## ROS/Yunlink 接口映射
-
-bridge 的 ROS topic 面固定为：
-
-- 订阅 `${uav_ns}/sunray/px4_state`
-- 订阅 `${uav_ns}/sunray/localization/odom_status`
-- 订阅 `${uav_ns}/sunray/fsm/state`
-- 订阅 `${uav_ns}/sunray/controller_state`
-- 发布 `${uav_ns}/sunray/uav_control_cmd`
-
-bridge 的 Yunlink 上行语义固定为：
-
-- `VehicleCoreState`
-- `Px4StateSnapshot`
-- `OdomStatusSnapshot`
-- `UavControlFsmStateSnapshot`
-- `UavControllerStateSnapshot`
-
-一期不对外正式发布 `VehicleEvent`，也不接 `planning_cmd / planning_state`。
-
-### Ownership/Component View
+- 不修改或扩展 Sunray ROS 消息定义。
+- 不推导飞行任务是否成功，也不实现 command tracker。
+- 不把 `UAVCommandExecutionStatus` 自动关联到某条 YunLink command 的 `correlation_id`。
+- 不转发 `TrajectoryChunkCommand`、`FormationTaskCommand` 或 Sunray planning topic。
+- 不发布 `VehicleEvent`。
 
 ![Component View](../diagrams/plantuml/svg/ros_sunray_bridge_component_view.svg)
 
-### 命令映射表
+## 连接与发现
 
-| Yunlink command | Sunray ROS command | V1 status | 说明 |
-| --- | --- | --- | --- |
-| `TakeoffCommand` | `UAVControlCMD::TAKEOFF` | `supported` | 起飞动作支持；`relative_height_m / max_velocity_mps` 由 Sunray 本地配置决定，属于 `deferred` |
-| `LandCommand` | `UAVControlCMD::LAND` | `supported` | 降落动作支持；`max_velocity_mps` 在 raw control v1 中 `deferred` |
-| `ReturnCommand` | `UAVControlCMD::RETURN` | `supported` | 返航动作支持；`loiter_before_return_s` 在 raw control v1 中 `deferred` |
-| `GotoCommand` | `UAVControlCMD::MOVE_POINT` | `supported` | 位置点与 yaw 直接映射 |
-| `VelocitySetpointCommand(body_frame=false)` | `UAVControlCMD::MOVE_VELOCITY` | `supported` | `vx/vy/vz` 直接映射；`yaw_rate` 被 `synthesized` 为 `SET_YAWRATE` |
-| `VelocitySetpointCommand(body_frame=true)` | `UAVControlCMD::MOVE_VELOCITY_BODY` | `synthesized` | `vx/vy` 直接映射；`fixed_height` 由最新 `Px4State` 当前高度 `synthesized`；`vz` 在 raw body velocity v1 中不可表达 |
-| `TrajectoryChunkCommand` | 无 | `unsupported` | 直接回 `CommandResult.Failed(detail=unsupported-by-sunray-raw-control-v1)` |
-| `FormationTaskCommand` | 无 | `unsupported` | 一期不进入 Sunray raw control |
+默认配置位于 `communication/yunlink_ros_bridge/config/yunlink_ros_bridge_base.yaml`：
 
-### 状态映射表
+- TCP 监听端口：`9696`
+- UDP bind/target 端口：`9696` / `9898`
+- UDP 发现广播端口：`9966`
+- 发现周期：`1000 ms`
 
-| Sunray ROS source | Yunlink uplink | V1 status | 说明 |
-| --- | --- | --- | --- |
-| `Px4State` | `VehicleCoreState` | `synthesized` | 从 `Px4State` 裁剪出统一核心飞行态 |
-| `Px4State` | `Px4StateSnapshot` | `supported` | 基本是一一映射 |
-| `OdomStatus` | `OdomStatusSnapshot` | `supported` | `last_odometry_age_ms` 由 bridge 运行时 `synthesized` |
-| `UAVControlFSMState` | `UavControlFsmStateSnapshot` | `supported` | 直接承接 Sunray FSM 公开态 |
-| `UAVControllerState` | `UavControllerStateSnapshot` | `supported` | 控制器期望态、误差与推力裁剪后上行 |
-| `planning/UAVPlanningState` | 无 | `deferred` | 只进入二期 planning bridge |
-| `VehicleEvent` 对外面 | 无 | `deferred` | 一期不作为正式协议面 |
+`remote_ip` 为空或 `remote_tcp_port` 为 `0` 时，bridge 被动等待地面端连接，并周期发布发现广播。配置远端地址后，bridge 也可以主动拨号。运行时优先复用已有 active session；session 失效后，1 秒重连定时器会清理缓存并重新等待或拨号。
 
-## 命令与状态流
+状态 snapshot 发送前必须存在 active peer session。目标选择器当前固定为 Ground Station broadcast；这表示 snapshot 面向已建立会话的地面站类型目标，不表示 bridge 在无 session 时向网络裸广播业务状态。
 
-### 状态上行
+## ROS 接口
 
-- `Px4StateSnapshot`：20 Hz
-- `VehicleCoreState`：跟随 `Px4StateSnapshot` 同节流
-- `UavControllerStateSnapshot`：20 Hz
-- `UavControlFsmStateSnapshot`：变更即发，外加 2 Hz heartbeat
-- `OdomStatusSnapshot`：变更即发，外加 1 Hz heartbeat
+默认 topic 如下，均可通过 YAML/launch 覆盖：
 
-没有 active session 时，bridge 不向外发状态。存在 authority holder 时，优先只发给 authority 对端；否则只发给唯一 active session。
+| Direction | ROS topic | ROS type |
+| --- | --- | --- |
+| Subscribe | `/uav1/sunray/localization/local_odom` | `nav_msgs/Odometry` |
+| Subscribe | `/uav1/sunray/localization/odom_state` | `sunray_msgs/OdomState` |
+| Subscribe + Publish | `/uav1/sunray/uav_control/control_cmd` | `sunray_msgs/UAVControlCMD` |
+| Subscribe | `/uav1/sunray/uav_control/control_state` | `sunray_msgs/UAVControlState` |
+| Subscribe | `/uav1/sunray/uav_control/command_execution_status` | `sunray_msgs/UAVCommandExecutionStatus` |
+| Subscribe | `/uav1/sunray/px4_state` | `sunray_msgs/Px4State` |
+| Publish | `/yunlink_ros_bridge/monitor_diagnostics` | `diagnostic_msgs/DiagnosticArray` |
 
-![State Uplink Sequence](../diagrams/plantuml/svg/ros_sunray_bridge_state_uplink_sequence.svg)
+## 命令下行
 
-### 命令下行
+| YunLink command | Sunray `control_cmd` | 当前映射 |
+| --- | --- | --- |
+| `TakeoffCommand` | `TAKEOFF` | action-only；不携带高度或速度 |
+| `LandCommand` | `LAND` | action-only；不携带降落速度 |
+| `ReturnCommand` | `RETURN` | action-only；不携带盘旋时间 |
+| `GotoCommand` | `MOVE_POINT` | 映射 XYZ 与 yaw，yaw mode 固定为 `SET_YAW` |
+| `VelocitySetpointCommand(body_frame=false)` | `MOVE_VELOCITY` | 映射 XYZ 速度与 yaw rate |
+| `VelocitySetpointCommand(body_frame=true)` | `MOVE_VELOCITY_BODY` | 映射 XY 速度；`fixed_height` 使用最近一次 PX4 local odometry 高度；非零 Z 速度被忽略并记录警告 |
 
-bridge 在收到 Yunlink 入站命令后，按下面顺序处理：
+`TakeoffCommand`、`LandCommand`、`ReturnCommand` 的 wire payload 只有一个必须为 `0` 的保留字节。飞行参数由 Sunray 载具侧配置决定。
 
-1. 校验 `TargetScope::kEntity`
-2. 校验 session 仍然 active
-3. 校验 TTL freshness
-4. 校验当前 authority 持有者就是该 `peer + session`
-5. 校验命令类型是否属于 v1 覆盖面
-6. 发送 `CommandResult.Received`
-7. 发布 ROS `uav_control_cmd`
-8. 发送 `CommandResult.Accepted`
-9. 等待 Sunray FSM 推导 `InProgress / Succeeded / Failed`
+bridge 当前没有把 Runtime 切换到 `CommandHandlingMode::kExternalHandler`，因此使用默认 `kAutoResult`。Runtime 在命令通过 session、authority、target 和 TTL gate 后，会立即产生 `Received -> Accepted -> InProgress -> Succeeded`，detail 为 `runtime-auto-result`。这组结果只证明协议命令被 Runtime 接受，不证明 ROS subscriber 已消费命令，也不证明无人机完成动作。
+
+bridge 发布 ROS topic 是 fire-and-forget。没有 ROS subscriber 时会写入 diagnostics，但当前不会把该情况改写为 YunLink `CommandResult::Failed`。
 
 ![Command Downlink Sequence](../diagrams/plantuml/svg/ros_sunray_bridge_command_downlink_sequence.svg)
 
-### 结果状态机
+## 状态上行
 
-bridge 是一期唯一正式 `CommandResult` owner，结果规则固定为：
-
-- `Received`
-  session / authority / target / TTL / 命令支持度都通过后发送
-- `Accepted`
-  成功发布 ROS `uav_control_cmd` 后发送
-- `InProgress`
-  Sunray FSM 进入对应执行态时发送
-- `Succeeded`
-  由 FSM 收敛模式推导
-- `Failed`
-  用于 TTL 过期、无 authority、无 active session、不支持命令、ROS publish 失败、执行超时、执行中 session 失效
-
-成功判定固定为：
-
-- `Takeoff`: `TAKEOFF -> HOVER`
-- `Land`: `LAND -> INIT`
-- `Return`: `RETURN -> HOVER`，或 `RETURN -> LAND -> INIT`
-- `Goto`: `MOVE -> HOVER`
-- `VelocitySetpoint`: 命令流停止后由 Sunray 自身 `MOVE -> HOVER` 收敛
-
-![Command Result State Machine](../diagrams/plantuml/svg/ros_sunray_bridge_command_result_state_machine.svg)
-
-## 失败与恢复模型
-
-| 场景 | bridge 行为 | Sunray 是否感知 |
+| ROS source | YunLink snapshot | 默认最高频率 |
 | --- | --- | --- |
-| 无 active session | 在 bridge 看到命令前就由 runtime 返回 `Failed(no-active-session)` | 否 |
-| 无 authority | 在 bridge 看到命令前就由 runtime 返回 `Failed(no-authority)` | 否 |
-| TTL 过期 | 在 bridge 看到命令前就由 runtime 返回 `Expired(runtime-ttl-expired)` | 否 |
-| `TrajectoryChunk / FormationTask` | 直接 `Failed(unsupported-by-sunray-raw-control-v1)` | 否 |
-| ROS publisher 未就绪 | `Failed(ros-publish-failed)` | 否 |
-| 执行超时 | `Failed(execution-timeout)` | Sunray 仍可能继续局部执行，但协议面结束 |
-| 执行中 session 失效 | `Failed(session-invalidated-during-execution)` | 否 |
+| `local_odom` | `LocalOdomSnapshot` | 10 Hz |
+| `odom_state` | `OdomStateSnapshot` | 2 Hz |
+| `control_cmd` | `UavControlCmdSnapshot` | 不节流 |
+| `control_state` | `UavControlStateSnapshot` | 5 Hz |
+| `command_execution_status` | `CommandExecutionStatusSnapshot` | 不节流 |
+| `px4_state` | `Px4StateSnapshot` | 2 Hz |
 
-恢复策略同样保持简单：
+节流发生在 ROS callback 中，只限制最高转发频率；bridge 不生成 heartbeat，也不会在 source topic 停止后重复发送旧 snapshot。
 
-- 地面端先恢复 Yunlink session，再重新 claim authority。
-- bridge 不替 Sunray 做 ownership 恢复。
-- Sunray 只响应新的 ROS 控制消息，不理解协议级重试。
+`Px4StateSnapshot` 直接读取当前嵌套 MAVROS 字段：
 
-## 一期 / 二期路线
+- `state`：连接、manual input、armed、flight mode、system status。
+- `extended_state`：landed state。
+- `sys_status`：电池与 FCU load。
+- `local_odometry` / `external_odometry`：位姿与速度。
+- `local_setpoint` / `attitude_setpoint`：位置、速度、加速度、姿态与推力设定值。
+- `gps_raw`：fix type、卫星数、经纬度与高度。
 
-一期交付物锁定为：
+单位转换：
 
-- `yunlink` runtime 外部命令处理模式
-- typed inbound command subscribe
-- explicit `reply_command_result(...)`
-- `sunray_yunlink_bridge` ROS1 包
-- raw control v1 映射、状态上行与结果推导
+- `voltage_battery`: mV -> V。
+- `current_battery`: 10 mA -> A。
+- `battery_remaining`: 整数百分比 -> `0..1`；负值当前写为 `0`。
+- `gps_raw.lat/lon`: `1e-7 deg` -> deg。
+- `gps_raw.alt`: mm -> m。
+- `flight_mode`: 直接保留 `mavros_msgs/State.mode` 字符串。
 
-二期再进入：
+![State Uplink Sequence](../diagrams/plantuml/svg/ros_sunray_bridge_state_uplink_sequence.svg)
 
-- `planning_cmd / planning_state`
-- `TrajectoryChunkCommand` 真正桥接
-- `VehicleEvent` 正式对外
-- ROS2 portability
+## 系统服务
 
-![Phase Roadmap](../diagrams/plantuml/svg/ros_sunray_bridge_phase_roadmap.svg)
+启用 `system_service.enable_system_services` 后，bridge 把以下 YunLink 请求转发到 `sunray_system_ns` 下的 ROS service：
+
+- `FeatureListRequest`
+- `FeatureGetRequest`
+- `FeatureStartRequest`
+- `FeatureStopRequest`
+
+请求进入后台 worker，默认超时为 3 秒。`FeatureGetResponse` 当前映射 `name`、`title`、`group`、运行状态、描述、依赖和启动预览，不包含旧的 `stop_timeout_sec`。
+
+## 诊断
+
+bridge diagnostics 记录：
+
+- Runtime、peer、session 与重连状态。
+- ROS topic publisher count、接收频率、消息年龄和 YunLink 发布失败计数。
+- YunLink -> ROS 命令接收/发布计数。
+- system service 请求、超时与响应。
+- 最近转发事件和最后一次错误。
+
+诊断用于定位转发链路，不等同于飞行任务结果。
+
+## 当前验证范围
+
+已验证：
+
+- `./build.sh yunlink_ros_bridge` 能构建 `sunray_msgs`、`sunray_mavros` 和 `yunlink_ros_bridge`。
+- YunLink C++ protocol/runtime/C ABI 测试可通过。
+- Rust SDK 测试可通过。
+
+尚未由当前自动测试证明：
+
+- PX4 SITL 或真机上的完整 Takeoff/Goto/Land/Return 闭环。
+- ROS consumer 实际执行命令后的 YunLink 结果关联。
+- 多地面站、多 active session 或多 UAV 竞争控制。
+- 无 ROS subscriber、定位丢失、执行超时等故障到正式 `CommandResult` 的映射。

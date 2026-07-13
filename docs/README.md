@@ -8,24 +8,27 @@
 
 建议按下面顺序进入：
 
-1. [protocol/README.md](protocol/README.md)
-2. [protocol/yunlink-protocol-spec.md](protocol/yunlink-protocol-spec.md)
-3. [protocol/implementation-status.md](protocol/implementation-status.md)
-4. [protocol/integration-guide.md](protocol/integration-guide.md)
-5. [protocol/scenario-walkthroughs.md](protocol/scenario-walkthroughs.md)
-6. [protocol/migration-notes.md](protocol/migration-notes.md)
-7. [bindings/overview.md](bindings/overview.md)
-8. [bindings/ros-sunray-bridge-overview.md](bindings/ros-sunray-bridge-overview.md)
-9. [bindings/test-world-map.md](bindings/test-world-map.md)
-10. [bindings/ros1-docker-ubuntu26-guide.md](bindings/ros1-docker-ubuntu26-guide.md)
-11. [bindings/test-matrix.md](bindings/test-matrix.md)
-12. [bindings/testing-todo-checklist.md](bindings/testing-todo-checklist.md)
-13. [../tools/README.md](../tools/README.md)
+1. [developer/README.md](developer/README.md)
+2. [protocol/README.md](protocol/README.md)
+3. [protocol/yunlink-protocol-spec.md](protocol/yunlink-protocol-spec.md)
+4. [protocol/implementation-status.md](protocol/implementation-status.md)
+5. [protocol/integration-guide.md](protocol/integration-guide.md)
+6. [protocol/scenario-walkthroughs.md](protocol/scenario-walkthroughs.md)
+7. [protocol/migration-notes.md](protocol/migration-notes.md)
+8. [bindings/overview.md](bindings/overview.md)
+9. [bindings/ros-sunray-bridge-overview.md](bindings/ros-sunray-bridge-overview.md)
+10. [bindings/test-world-map.md](bindings/test-world-map.md)
+11. [bindings/ros1-docker-ubuntu26-guide.md](bindings/ros1-docker-ubuntu26-guide.md)
+12. [bindings/test-matrix.md](bindings/test-matrix.md)
+13. [bindings/testing-todo-checklist.md](bindings/testing-todo-checklist.md)
+14. [../tools/README.md](../tools/README.md)
 
 ## 目录说明
 
 - `protocol/`
   协议主规范、接入指南、场景 walkthrough、实现状态和迁移说明。
+- `developer/`
+  面向 YunLink 本体、C ABI、Rust SDK、Python SDK 和未来语言包装开发者的循序渐进维护路线，也包含文档维护与排布规则。
 - `bindings/`
   Rust / Python bindings 架构、SDK 指南、测试矩阵和详细测试清单。
 - `diagrams/plantuml/src/`

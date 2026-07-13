@@ -1,53 +1,44 @@
 @startuml
 !include _yunlink_protocol_theme.iuml
-title Yunlink Test World Map - Failure Model
+title Yunlink Test World Map - Current Bridge Result Boundary
 
-[*] --> ReceiveCommand
+[*] --> RuntimeGate
 
-ReceiveCommand --> FailedSession : no active session
-ReceiveCommand --> FailedTarget : wrong target / scope
-ReceiveCommand --> FailedTtl : TTL expired
-ReceiveCommand --> CheckAuthority : session + target fresh
+RuntimeGate --> FailedSession : no active session
+RuntimeGate --> FailedTarget : wrong target / scope
+RuntimeGate --> FailedTtl : TTL expired
+RuntimeGate --> FailedAuthority : no authority / stale lease
+RuntimeGate --> AutoResult : gate passed
 
-CheckAuthority --> FailedAuthority : no authority / stale lease
-CheckAuthority --> PublishRos : authority valid
+AutoResult --> RuntimeSucceeded : immediate runtime-auto-result
+AutoResult --> PublishRos : typed bridge callback
 
-PublishRos --> FailedPublish : ROS publish failed
-PublishRos --> Accepted : publish ok
-
-Accepted --> InProgress : FSM enters execution state
-Accepted --> FailedTimeout : no progress before timeout
-
-InProgress --> Succeeded : FSM converges
-InProgress --> FailedTimeout : execution timeout
-InProgress --> FailedSessionLost : session lost during execution
-InProgress --> FailedAuthorityLost : authority lost during execution
+PublishRos --> DiagnosticWarning : no ROS subscribers
+PublishRos --> RosAccepted : ROS publish called
+RosAccepted --> ExecutionSnapshot : Sunray publishes execution status
 
 FailedSession --> [*]
 FailedTarget --> [*]
 FailedTtl --> [*]
 FailedAuthority --> [*]
-FailedPublish --> [*]
-FailedTimeout --> [*]
-FailedSessionLost --> [*]
-FailedAuthorityLost --> [*]
-Succeeded --> [*]
+RuntimeSucceeded --> [*]
+DiagnosticWarning --> [*]
+ExecutionSnapshot --> [*]
 
 state FailedSession <<Risk>>
 state FailedTarget <<Risk>>
 state FailedTtl <<Risk>>
 state FailedAuthority <<Risk>>
-state FailedPublish <<Risk>>
-state FailedTimeout <<Risk>>
-state FailedSessionLost <<Risk>>
-state FailedAuthorityLost <<Risk>>
-state Succeeded <<ActiveState>>
-state Accepted <<Transit>>
-state InProgress <<Transit>>
+state DiagnosticWarning <<Risk>>
+state RuntimeSucceeded <<Transit>>
+state RosAccepted <<Transit>>
+state ExecutionSnapshot <<StatePlane>>
 
-note right of PublishRos
-Current tests cover mapping, loopback, and tracker logic.
-Real Sunray/PX4 executor failures are still missing.
+note right of RuntimeSucceeded
+当前 auto-result 不代表飞行动作成功。
+end note
+
+note right of ExecutionSnapshot
+当前 snapshot 与原 command correlation 未关联。
 end note
 @enduml
-

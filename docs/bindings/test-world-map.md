@@ -197,8 +197,9 @@
 
 ### ROS bridge
 
-- 外部 bridge 仓库中的 command/state mapping、tracker 与 loopback 测试
-- `roslaunch sunray_yunlink_bridge sunray_yunlink_bridge.launch --nodes`
+- `sunray_v2/communication/yunlink_ros_bridge` 中的 command/state mapping、系统服务、发现和 diagnostics
+- 当前没有 command tracker 或 bridge loopback rostest；真实执行闭环仍是缺口
+- `roslaunch yunlink_ros_bridge yunlink_ros_bridge.launch --nodes`
 
 ## 关键缺口与下一阶段优先级
 
@@ -257,7 +258,7 @@ ROS bridge launch smoke:
 ```bash
 source /opt/ros/noetic/setup.bash
 source /root/ros1_ws/bridge_ws/devel/setup.bash
-roslaunch sunray_yunlink_bridge sunray_yunlink_bridge.launch --nodes
+roslaunch yunlink_ros_bridge yunlink_ros_bridge.launch --nodes
 ```
 
 Diagram rendering:

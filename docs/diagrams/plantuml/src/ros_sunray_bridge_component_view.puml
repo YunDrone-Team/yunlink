@@ -1,45 +1,48 @@
 @startuml
 !include _yunlink_protocol_theme.iuml
-title sunray_yunlink_bridge - Component View
+title yunlink_ros_bridge - Current Component View
 
-package "sunray_yunlink_bridge" <<Neutral>> {
-  component "bridge_node" as Node <<Control>>
-  component "ros_adapter" as RosAdapter <<StatePlane>>
-  component "yunlink_adapter" as YunAdapter <<Control>>
-  component "command_tracker" as Tracker <<Control>>
+package "yunlink_ros_bridge" <<Neutral>> {
+  component "Runtime / Session" as RuntimeSession <<Control>>
+  component "Endpoint Discovery" as Discovery <<Neutral>>
+  component "Command Mapping" as Commands <<Control>>
+  component "Topic Snapshot Mapping" as Topics <<StatePlane>>
+  component "System Service Worker" as SystemServices <<Neutral>>
+  component "Diagnostics / TUI" as Diagnostics <<StatePlane>>
 }
 
 package "Sunray ROS Contract" <<Neutral>> {
+  component "local_odom / odom_state" as Odom <<StatePlane>>
   component "px4_state" as Px4 <<StatePlane>>
-  component "odom_status" as Odom <<StatePlane>>
-  component "fsm/state" as Fsm <<StatePlane>>
-  component "controller_state" as Ctrl <<StatePlane>>
-  component "uav_control_cmd" as Cmd <<Control>>
+  component "control_cmd / control_state" as Control <<Control>>
+  component "command_execution_status" as Execution <<StatePlane>>
+  component "feature services" as Features <<Neutral>>
 }
 
 package "yunlink::Runtime" <<Control>> {
-  component "external command mode" as RuntimeMode <<Control>>
-  component "typed inbound command\nsubscriber" as RuntimeSub <<Control>>
-  component "explicit command\nresult reply helper" as RuntimeReply <<Control>>
+  component "default kAutoResult" as AutoResult <<Control>>
+  component "typed command subscribers" as RuntimeSub <<Control>>
+  component "snapshot publishers" as SnapshotPub <<StatePlane>>
+  component "system-service pub/sub" as ServicePubSub <<Neutral>>
 }
 
-Node --> RosAdapter : pull latest states /\npublish raw command
-Node --> YunAdapter : validate / publish /\nreply result
-Node --> Tracker : infer InProgress /\nSucceeded / Failed
+RuntimeSession --> AutoResult
+RuntimeSession --> Discovery
+RuntimeSub --> Commands
+Commands --> Control : publish UAVControlCMD
+Odom --> Topics
+Px4 --> Topics
+Control --> Topics
+Execution --> Topics
+Topics --> SnapshotPub
+ServicePubSub --> SystemServices
+SystemServices <--> Features
+Diagnostics ..> RuntimeSession
+Diagnostics ..> Topics
+Diagnostics ..> Commands
 
-RosAdapter --> Px4
-RosAdapter --> Odom
-RosAdapter --> Fsm
-RosAdapter --> Ctrl
-RosAdapter --> Cmd
-
-YunAdapter --> RuntimeMode
-YunAdapter --> RuntimeSub
-YunAdapter --> RuntimeReply
-
-note right of Tracker
-只跟踪一期 raw control 命令：
-Takeoff / Land / Return /
-Goto / VelocitySetpoint
+note right of AutoResult
+没有 command tracker，
+没有显式执行结果回包。
 end note
 @enduml

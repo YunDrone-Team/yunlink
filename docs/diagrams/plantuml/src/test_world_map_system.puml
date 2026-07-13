@@ -17,7 +17,7 @@ rectangle "Yunlink Core" <<Control>> {
 
 rectangle "Air Side" <<Neutral>> {
   component "C++ Air Runtime" as CxxAir <<Control>>
-  component "sunray_yunlink_bridge\nROS1 Catkin Package" as Bridge <<Control>>
+  component "yunlink_ros_bridge\nROS1 Catkin Package" as Bridge <<Control>>
 }
 
 rectangle "Sunray / PX4 World" <<Risk>> {
@@ -60,4 +60,3 @@ legend right
   Red: major business gap
 endlegend
 @enduml
-

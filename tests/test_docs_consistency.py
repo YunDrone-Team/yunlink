@@ -21,6 +21,7 @@ DOCS_TO_SCAN = [
     ROOT_DIR / "docs" / "bindings" / "python-sdk.md",
     ROOT_DIR / "docs" / "bindings" / "rust-sdk.md",
     ROOT_DIR / "docs" / "bindings" / "ros-sunray-bridge-overview.md",
+    ROOT_DIR / "docs" / "bindings" / "ros1-docker-ubuntu26-guide.md",
     ROOT_DIR / "docs" / "bindings" / "test-matrix.md",
     ROOT_DIR / "docs" / "bindings" / "test-report-template.md",
     ROOT_DIR / "docs" / "bindings" / "test-world-map.md",
@@ -84,10 +85,17 @@ class DocsConsistencyTests(unittest.TestCase):
         for relpath in EXPECTED_EXISTING_REFERENCES:
             self.assertTrue((ROOT_DIR / relpath).exists(), relpath)
 
-    def test_docs_no_longer_reference_missing_external_bridge_paths(self) -> None:
+    def test_docs_use_current_ros_bridge_name_and_result_boundary(self) -> None:
         for doc in DOCS_TO_SCAN:
             text = doc.read_text(encoding="utf-8")
-            self.assertNotIn("sunray_v2/communication/sunray_yunlink_bridge", text, doc)
+            self.assertNotIn("sunray_yunlink_bridge", text, doc)
+
+        overview = (
+            ROOT_DIR / "docs" / "bindings" / "ros-sunray-bridge-overview.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("sunray_v2/communication/yunlink_ros_bridge", overview)
+        self.assertIn("kAutoResult", overview)
+        self.assertIn("不证明无人机完成动作", overview)
 
     def test_matrix_and_drifted_docs_are_aligned(self) -> None:
         matrix = (ROOT_DIR / "docs" / "bindings" / "test-matrix.md").read_text(encoding="utf-8")

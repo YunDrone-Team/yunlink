@@ -111,7 +111,7 @@ cd "$HOME/ros1_ws/bridge_ws/src"
 
 ln -s ../../src/sunray_v2/common/sunray_msgs sunray_msgs
 ln -s ../../src/sunray_v2/common/sunray_common sunray_common
-ln -s ../../src/sunray_v2/communication/sunray_yunlink_bridge sunray_yunlink_bridge
+ln -s ../../src/sunray_v2/communication/yunlink_ros_bridge yunlink_ros_bridge
 ```
 
 Build and test inside the ROS1 container:
@@ -129,11 +129,7 @@ docker exec ros1-noetic bash -lc \
    catkin_make run_tests && catkin_test_results"
 ```
 
-Expected test summary:
-
-```text
-Summary: 24 tests, 0 errors, 0 failures, 0 skipped
-```
+该 package 当前没有独立 rostest 数量承诺；以 `catkin_make` 成功和 YunLink 仓库的 CTest 结果为准。
 
 ## Bridge Launch Smoke Test
 
@@ -143,26 +139,25 @@ Check that ROS can find the package and parse the launch file:
 docker exec ros1-noetic bash -lc \
   "source /opt/ros/noetic/setup.bash && \
    source /root/ros1_ws/bridge_ws/devel/setup.bash && \
-   rospack find sunray_yunlink_bridge && \
-   roslaunch sunray_yunlink_bridge sunray_yunlink_bridge.launch --nodes"
+   rospack find yunlink_ros_bridge && \
+   roslaunch yunlink_ros_bridge yunlink_ros_bridge.launch --nodes"
 ```
 
-Start the bridge briefly with fake UAV identity parameters. A `timeout` exit is expected; the important signal is that the node starts and logs the resolved UAV namespace:
+Start the bridge briefly. A `timeout` exit is expected; the important signal is that the runtime starts and the bridge enters passive-listen or configured active-dial mode:
 
 ```bash
 docker exec ros1-noetic bash -lc \
   "source /opt/ros/noetic/setup.bash && \
    source /root/ros1_ws/bridge_ws/devel/setup.bash && \
-   rosparam set /uav_name uav && \
-   rosparam set /uav_id 1 && \
-   timeout 5s roslaunch sunray_yunlink_bridge sunray_yunlink_bridge.launch; \
+   timeout 5s roslaunch yunlink_ros_bridge yunlink_ros_bridge.launch enable_tui_monitor:=false; \
    code=\$?; if [ \$code -eq 124 ]; then echo ROSLAUNCH_TIMEOUT_OK; exit 0; fi; exit \$code"
 ```
 
 Expected output includes:
 
 ```text
-sunray_yunlink_bridge started for /uav1
+yunlink runtime started
+yunlink_ros_bridge passive connection mode
 ROSLAUNCH_TIMEOUT_OK
 ```
 

@@ -55,6 +55,10 @@ Rust SDK 位于 `bindings/rust/`，采用 workspace split：
 - 本地验证命令会覆盖 macOS/Linux 的构建与测试路径。
 - GitHub Actions 里的 `bindings-linux`、`bindings-macos`、`bindings-windows` job 负责三平台持续验证。
 
+## 维护路线
+
+如果你要扩展 Rust SDK，请读 [Rust 绑定开发路线](../developer/rust-bindings-development.md)。如果这次改动需要先新增 C ABI 函数或 struct，请先读 [跨语言接口开发路线](../developer/c-abi-development.md)。
+
 ## 本地验证
 
 ```bash

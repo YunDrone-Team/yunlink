@@ -57,6 +57,10 @@ Python SDK 位于 `bindings/python/`，采用：
 - 异步桥接通过 `loop.call_soon_threadsafe(...)` 把 polling 线程中的事件投递到 `asyncio` 队列。
 - 如果 polling 线程遇到 native 层异常，会向订阅者发出 `ErrorEvent(code=-1, ...)`，并可通过 `last_poll_error()` 读取最近一次错误。
 
+## 维护路线
+
+如果你要扩展 Python SDK，请读 [Python 绑定开发路线](../developer/python-bindings-development.md)。如果这次改动需要先新增 C ABI 函数或 struct，请先读 [跨语言接口开发路线](../developer/c-abi-development.md)。
+
 ## 本地验证
 
 editable 安装：
