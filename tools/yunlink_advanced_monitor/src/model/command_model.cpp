@@ -40,30 +40,27 @@ std::string monitor_cmd_name_velocity(bool body_frame) {
     return body_frame ? "MOVE_VELOCITY_BODY" : "MOVE_VELOCITY";
 }
 
-MonitorCommandDraft make_takeoff_draft(const yunlink::TakeoffCommand& cmd) {
+MonitorCommandDraft make_takeoff_draft(const yunlink::TakeoffCommand&) {
     MonitorCommandDraft draft;
     draft.valid = true;
     draft.summary = monitor_cmd_name_takeoff();
-    std::ostringstream oss;
-    oss << "relative_height_m=" << format_float(cmd.relative_height_m)
-        << " max_velocity_mps=" << format_float(cmd.max_velocity_mps);
-    draft.detail = oss.str();
+    draft.detail = "仅动作命令；载具使用当前控制配置";
     return draft;
 }
 
-MonitorCommandDraft make_land_draft(const yunlink::LandCommand& cmd) {
+MonitorCommandDraft make_land_draft(const yunlink::LandCommand&) {
     MonitorCommandDraft draft;
     draft.valid = true;
     draft.summary = monitor_cmd_name_land();
-    draft.detail = "max_velocity_mps=" + format_float(cmd.max_velocity_mps);
+    draft.detail = "仅动作命令；载具使用当前控制配置";
     return draft;
 }
 
-MonitorCommandDraft make_return_draft(const yunlink::ReturnCommand& cmd) {
+MonitorCommandDraft make_return_draft(const yunlink::ReturnCommand&) {
     MonitorCommandDraft draft;
     draft.valid = true;
     draft.summary = monitor_cmd_name_return();
-    draft.detail = "loiter_before_return_s=" + format_float(cmd.loiter_before_return_s);
+    draft.detail = "仅动作命令；载具使用当前控制配置";
     return draft;
 }
 

@@ -311,6 +311,8 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | `StateSnapshot` | `kReliableLatest` |
 | `StateEvent` | `kBestEffort` |
 | `BulkChannelDescriptor` | `kReliableOrdered` |
+| `SystemService` | `kReliableOrdered` |
+| `ConfigurationService` | `kReliableOrdered` |
 
 ### 8.3 传输层建议
 
@@ -807,6 +809,8 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | `5` | `StateSnapshot` |
 | `6` | `StateEvent` |
 | `7` | `BulkChannelDescriptor` |
+| `8` | `SystemService` |
+| `9` | `ConfigurationService` |
 
 ### 19.2 已定义消息类型表
 
@@ -866,6 +870,24 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | 编号 | 名称 |
 | --- | --- |
 | `1` | `BulkChannelDescriptor` |
+
+#### `SystemService`
+
+| 编号 | 名称 |
+| --- | --- |
+| `1-8` | `FeatureList/Get/Start/Stop` 请求与响应 |
+
+#### `ConfigurationService`
+
+| 编号 | 名称 |
+| --- | --- |
+| `1-2` | `ConfigResourceList` 请求与响应 |
+| `3-4` | `ConfigResourceDescribe` 请求与响应 |
+| `5-6` | `ConfigResourceGet` 请求与响应 |
+| `7-8` | `ConfigResourcePatch` 请求与响应 |
+| `9-10` | `ConfigResourceApply` 请求与响应 |
+
+全部配置资源消息仍属于 `schema_version = 1`。完整合同见 [configuration-resource-service.md](configuration-resource-service.md)。
 
 ### 19.3 一键渲染指令
 

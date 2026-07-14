@@ -104,6 +104,74 @@ YUNLINK_C_API yunlink_result_t
 yunlink_runtime_poll_vehicle_core_state(yunlink_runtime_t* runtime,
                                         yunlink_vehicle_core_state_event_t* out_event);
 
+YUNLINK_C_API yunlink_result_t
+yunlink_configuration_publish_resource_list_request(yunlink_runtime_t* runtime,
+                                                    const yunlink_peer_t* peer,
+                                                    const yunlink_session_t* session,
+                                                    const yunlink_target_selector_t* target,
+                                                    yunlink_configuration_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_configuration_publish_resource_describe_request(yunlink_runtime_t* runtime,
+                                                        const yunlink_peer_t* peer,
+                                                        const yunlink_session_t* session,
+                                                        const yunlink_target_selector_t* target,
+                                                        yunlink_string_view_t resource_id,
+                                                        yunlink_configuration_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_configuration_publish_resource_get_request(yunlink_runtime_t* runtime,
+                                                   const yunlink_peer_t* peer,
+                                                   const yunlink_session_t* session,
+                                                   const yunlink_target_selector_t* target,
+                                                   yunlink_string_view_t resource_id,
+                                                   yunlink_configuration_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_configuration_publish_resource_patch_request(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    yunlink_string_view_t resource_id,
+    yunlink_string_view_t expected_revision,
+    const yunlink_config_field_value_view_t* updates,
+    size_t update_count,
+    uint8_t validate_only,
+    yunlink_configuration_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_configuration_publish_resource_apply_request(yunlink_runtime_t* runtime,
+                                                     const yunlink_peer_t* peer,
+                                                     const yunlink_session_t* session,
+                                                     const yunlink_target_selector_t* target,
+                                                     yunlink_string_view_t resource_id,
+                                                     yunlink_string_view_t expected_revision,
+                                                     yunlink_configuration_handle_t* out_handle);
+
+YUNLINK_C_API yunlink_result_t yunlink_configuration_subscribe_resource_list_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_config_resource_list_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_configuration_subscribe_resource_describe_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_config_resource_describe_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_configuration_subscribe_resource_get_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_config_resource_get_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_configuration_subscribe_resource_patch_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_config_resource_patch_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_configuration_subscribe_resource_apply_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_config_resource_apply_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_configuration_unsubscribe(yunlink_runtime_t* runtime,
+                                                                 size_t token);
+
 #ifdef __cplusplus
 }
 #endif

@@ -66,6 +66,19 @@ enum class SystemServiceType : uint16_t {
     kFeatureStopResponse = 8,
 };
 
+enum class ConfigurationServiceType : uint16_t {
+    kResourceListRequest = 1,
+    kResourceListResponse = 2,
+    kResourceDescribeRequest = 3,
+    kResourceDescribeResponse = 4,
+    kResourceGetRequest = 5,
+    kResourceGetResponse = 6,
+    kResourcePatchRequest = 7,
+    kResourcePatchResponse = 8,
+    kResourceApplyRequest = 9,
+    kResourceApplyResponse = 10,
+};
+
 enum class CommandKind : uint16_t {
     kUnknown = 0,
     kTakeoff = 1,

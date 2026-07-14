@@ -51,6 +51,9 @@ struct AuthorityStatus {
 struct SessionDescriptor {
     uint64_t session_id = 0;
     SessionState state = SessionState::kDiscovered;
+    // Active is a transport lifecycle state. Consumers that authorize privileged
+    // operations must also require a completed shared-secret authentication.
+    bool authenticated = false;
     EndpointIdentity remote_identity;
     PeerInfo peer;
     PeerInfo udp_peer;

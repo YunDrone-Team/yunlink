@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "packets/format/packet_trace_format.hpp"
+#include "packets/format/configuration_trace_format.hpp"
 #include "yunlink/core/semantic_messages.hpp"
 
 namespace {
@@ -42,22 +43,21 @@ void append_command(const yunlink::PacketTraceRecord& record, std::ostringstream
     case yunlink::CommandType::kTakeoff: {
         yunlink::TakeoffCommand payload{};
         if (decode_payload(record, &payload, ss)) {
-            *ss << "relative_height_m: " << payload.relative_height_m << "\n";
-            *ss << "max_velocity_mps: " << payload.max_velocity_mps << "\n";
+            *ss << "reserved: " << static_cast<int>(payload.reserved) << "\n";
         }
         break;
     }
     case yunlink::CommandType::kLand: {
         yunlink::LandCommand payload{};
         if (decode_payload(record, &payload, ss)) {
-            *ss << "max_velocity_mps: " << payload.max_velocity_mps << "\n";
+            *ss << "reserved: " << static_cast<int>(payload.reserved) << "\n";
         }
         break;
     }
     case yunlink::CommandType::kReturn: {
         yunlink::ReturnCommand payload{};
         if (decode_payload(record, &payload, ss)) {
-            *ss << "loiter_before_return_s: " << payload.loiter_before_return_s << "\n";
+            *ss << "reserved: " << static_cast<int>(payload.reserved) << "\n";
         }
         break;
     }
@@ -137,10 +137,10 @@ void append_feature_get_response(const yunlink::FeatureGetResponse& payload,
     *ss << "success: " << yes_no(payload.success) << "\n";
     *ss << "message: " << payload.message << "\n";
     *ss << "name: " << payload.name << "\n";
+    *ss << "title: " << payload.title << "\n";
     *ss << "group: " << payload.group << "\n";
     *ss << "running: " << yes_no(payload.running) << "\n";
     *ss << "auto_start: " << yes_no(payload.auto_start) << "\n";
-    *ss << "stop_timeout_sec: " << payload.stop_timeout_sec << "\n";
     append_string_list("depends_on", payload.depends_on, ss);
     append_string_list("start_preview_units", payload.start_preview_units, ss);
 }
@@ -247,6 +247,9 @@ std::string packet_semantic_detail(const yunlink::PacketTraceRecord& record) {
         break;
     case yunlink::MessageFamily::kSystemService:
         append_system_service(record, &ss);
+        break;
+    case yunlink::MessageFamily::kConfigurationService:
+        append_configuration_trace(record, &ss);
         break;
     default:
         ss << "semantic decode not implemented for this family.\n";

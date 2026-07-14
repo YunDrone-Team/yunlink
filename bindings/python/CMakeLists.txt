@@ -19,7 +19,14 @@ set(YUNLINK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(YUNLINK_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/../.." "${CMAKE_CURRENT_BINARY_DIR}/yunlink-core")
 
-nanobind_add_module(_yunlink_native src/ffi_module.cpp)
+nanobind_add_module(
+  _yunlink_native
+  src/ffi_module.cpp
+  src/configuration_bridge.cpp
+  src/configuration_bridge_callbacks.cpp
+  src/configuration_bridge_conversion.cpp
+  src/configuration_bridge_requests.cpp
+)
 target_link_libraries(_yunlink_native PRIVATE yunlink_ffi)
 target_include_directories(_yunlink_native PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../../include")
 set_target_properties(_yunlink_native PROPERTIES
@@ -29,3 +36,4 @@ set_target_properties(_yunlink_native PROPERTIES
 
 install(TARGETS _yunlink_native LIBRARY DESTINATION yunlink)
 install(TARGETS yunlink_ffi LIBRARY DESTINATION yunlink RUNTIME DESTINATION yunlink)
+install(DIRECTORY src/yunlink/ DESTINATION yunlink FILES_MATCHING PATTERN "*.py")

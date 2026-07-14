@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import time
 import unittest
 
@@ -131,6 +132,75 @@ class RuntimeContractTests(unittest.TestCase):
             self.assertEqual(type(sync_event), type(async_event))
             self.assertEqual(sync_event.detail, async_event.detail)
             self.assertEqual(sync_event.correlation_id, async_event.correlation_id)
+        finally:
+            runtime.close()
+
+    def test_configuration_response_owns_nested_values(self) -> None:
+        payload = {
+            "type": "configuration_get",
+            "session_id": 1,
+            "message_id": 2,
+            "correlation_id": 1,
+            "status": 0,
+            "message": "ok",
+            "snapshot": {
+                "resource_id": "sunray.device.identity",
+                "revision": "r1",
+                "applied_revision": "r0",
+                "values": [
+                    {
+                        "path": "profile_dirs",
+                        "value": {"type": 5, "value": ["/opt/sunray/profile"]},
+                    }
+                ],
+            },
+        }
+        response = yunlink._coerce_configuration_response(payload)
+        payload["snapshot"]["values"][0]["value"]["value"][0] = "changed"
+
+        self.assertIsInstance(response, yunlink.ConfigResourceGetResponse)
+        self.assertEqual(
+            response.snapshot.values[0].value,
+            yunlink.ConfigValue.string_list(["/opt/sunray/profile"]),
+        )
+
+    def test_configuration_response_without_event_keeps_poll_thread_running(self) -> None:
+        class ConfigurationOnlyCore:
+            def __init__(self) -> None:
+                self._release = threading.Event()
+                self._sent = False
+
+            def poll_configuration_response(self) -> dict | None:
+                self._release.wait(timeout=1.0)
+                if self._sent:
+                    return None
+                self._sent = True
+                return {
+                    "type": "configuration_list",
+                    "session_id": 1,
+                    "message_id": 2,
+                    "correlation_id": 3,
+                    "status": 0,
+                    "message": "ok",
+                    "resources": [],
+                }
+
+            def poll_event(self) -> None:
+                return None
+
+            def stop(self) -> None:
+                self._release.set()
+
+        core = ConfigurationOnlyCore()
+        runtime = yunlink.Runtime(core)
+        try:
+            responses = runtime.subscribe_configuration()
+            core._release.set()
+            response = responses.get(timeout=1.0)
+
+            self.assertIsInstance(response, yunlink.ConfigResourceListResponse)
+            self.assertTrue(runtime._thread.is_alive())
+            self.assertIsNone(runtime.last_poll_error())
         finally:
             runtime.close()
 

@@ -10,6 +10,7 @@
 #include <deque>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "yunlink/c/yunlink_c.h"
 #include "yunlink/runtime/runtime.hpp"
@@ -23,6 +24,7 @@ struct yunlink_runtime {
     size_t tok_vehicle_core = 0;
     size_t tok_vehicle_event = 0;
     size_t tok_command_result = 0;
+    std::vector<size_t> configuration_tokens;
     bool started = false;
 };
 
@@ -40,6 +42,7 @@ void push_event(yunlink_runtime_t* runtime, const yunlink_runtime_event_t& event
 void clear_queue(yunlink_runtime_t* runtime);
 void subscribe_runtime_events(yunlink_runtime_t* runtime);
 void unsubscribe_runtime_events(yunlink_runtime_t* runtime);
+void unsubscribe_configuration_callbacks(yunlink_runtime_t* runtime);
 
 bool validate_input_runtime(yunlink_runtime_t* runtime);
 bool validate_peer(const yunlink_peer_t* peer);

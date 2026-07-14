@@ -69,6 +69,17 @@ def main() -> int:
         "yunlink_runtime_poll_event",
         "yunlink_runtime_poll_command_result",
         "yunlink_runtime_poll_vehicle_core_state",
+        "yunlink_configuration_publish_resource_list_request",
+        "yunlink_configuration_publish_resource_describe_request",
+        "yunlink_configuration_publish_resource_get_request",
+        "yunlink_configuration_publish_resource_patch_request",
+        "yunlink_configuration_publish_resource_apply_request",
+        "yunlink_configuration_subscribe_resource_list_responses",
+        "yunlink_configuration_subscribe_resource_describe_responses",
+        "yunlink_configuration_subscribe_resource_get_responses",
+        "yunlink_configuration_subscribe_resource_patch_responses",
+        "yunlink_configuration_subscribe_resource_apply_responses",
+        "yunlink_configuration_unsubscribe",
     ]
     missing = [name for name in required_symbols if not hasattr(lib, name)]
     if missing:

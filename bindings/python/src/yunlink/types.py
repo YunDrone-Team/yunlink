@@ -21,8 +21,10 @@ class RuntimeConfig:
     tcp_listen_port: int
     agent_type: AgentType
     agent_id: int
+    shared_secret: str = "yunlink-default-secret"
+    multicast_group: str = "224.1.1.1"
 
-    def to_native(self) -> dict[str, int]:
+    def to_native(self) -> dict[str, int | str]:
         role = 2 if self.agent_type == AgentType.GROUND_STATION else 3
         return {
             "udp_bind_port": self.udp_bind_port,
@@ -31,6 +33,8 @@ class RuntimeConfig:
             "agent_type": int(self.agent_type),
             "agent_id": self.agent_id,
             "role": role,
+            "shared_secret": self.shared_secret,
+            "multicast_group": self.multicast_group,
         }
 
 

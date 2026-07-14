@@ -91,7 +91,7 @@ char detail[256];
 
 语言 SDK 负责把它转换成自己的字符串类型。
 
-### 5. 事件使用 polling，不使用 callback ABI
+### 5. 普通事件使用 polling；短生命周期复杂 view 可使用受限 callback
 
 callback ABI 会引入线程归属、异常传播、生命周期和语言运行时问题。当前项目采用：
 
@@ -102,6 +102,8 @@ C++ runtime event queue
 ```
 
 Rust 侧会在后台线程里 poll，再转换成 `broadcast` event stream。
+
+配置资源响应是一个受限例外：schema、snapshot 和字段错误包含多层变长数组，C ABI 使用 callback-lifetime readonly view，避免跨语言分配器。所有 view 只在 callback 返回前有效；Rust/Python 必须在 callback 内立即深拷贝，callback 不能抛异常或保存裸指针。
 
 ## 新增一个 C ABI 能力的流程
 

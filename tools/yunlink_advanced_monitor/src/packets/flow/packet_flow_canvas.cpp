@@ -83,18 +83,18 @@ void PacketFlowCanvas::paintEvent(QPaintEvent*) {
     title_font.setBold(true);
     painter.setFont(title_font);
     const QString title =
-        journey == nullptr ? QString("Protocol Flow") : QString::fromStdString(journey->title);
+        journey == nullptr ? QString("协议流程") : QString::fromStdString(journey->title);
     painter.drawText(bounds.left(), bounds.top(), title);
 
     painter.setFont(font());
     painter.setPen(QColor("#475467"));
     const QString subtitle =
-        journey == nullptr ? QString("No journey") : QString::fromStdString(journey->subtitle);
+        journey == nullptr ? QString("暂无流程") : QString::fromStdString(journey->subtitle);
     painter.drawText(bounds.left(), bounds.top() + 22, subtitle);
 
     if (journey == nullptr || journey->steps.empty()) {
         painter.setPen(QColor("#667085"));
-        painter.drawText(bounds.adjusted(0, 70, 0, 0), "No flow data.");
+        painter.drawText(bounds.adjusted(0, 70, 0, 0), "暂无流程数据。");
         return;
     }
 
@@ -137,7 +137,7 @@ void PacketFlowCanvas::paintEvent(QPaintEvent*) {
 
     const int list_top = node_rects_.empty() ? bounds.top() + 170 : node_rects_.front().bottom() + 28;
     painter.setPen(QColor("#344054"));
-    painter.drawText(bounds.left(), list_top, "Recent journeys");
+    painter.drawText(bounds.left(), list_top, "最近流程");
     int y = list_top + 22;
     const size_t count = std::min<size_t>(snapshot_.journeys.size(), 6);
     for (size_t i = 0; i < count; ++i) {

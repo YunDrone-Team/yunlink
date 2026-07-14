@@ -35,7 +35,7 @@ QWidget* MainWindow::build_devices_page(QWidget* parent) {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(12);
 
-    auto* summary_group = new QGroupBox("Device discovery / connection", page);
+    auto* summary_group = new QGroupBox("设备发现与连接", page);
     auto* summary_layout = new QVBoxLayout(summary_group);
     summary_layout->setContentsMargins(12, 12, 12, 12);
     devices_summary_value_ = new QLabel(summary_group);
@@ -44,7 +44,7 @@ QWidget* MainWindow::build_devices_page(QWidget* parent) {
     summary_layout->addWidget(devices_summary_value_);
     auto* action_row = new QHBoxLayout();
     action_row->setContentsMargins(0, 0, 0, 0);
-    refresh_discovery_button_ = new QPushButton("Refresh discovery", summary_group);
+    refresh_discovery_button_ = new QPushButton("刷新设备", summary_group);
     monitor_ui::style_button(refresh_discovery_button_, monitor_ui::ButtonRole::kSecondary);
     action_row->addWidget(refresh_discovery_button_);
     action_row->addStretch(1);
@@ -106,7 +106,7 @@ void MainWindow::refresh_discovery_devices(bool force) {
             }
         }
         devices_summary_value_->setText(
-            QString("active=%1 | stale=%2 | selected=%3 | current peer=%4")
+            QString("活跃=%1 | 过期=%2 | 已选设备=%3 | 当前 peer=%4")
                 .arg(active_count)
                 .arg(stale_count)
                 .arg(selected_key.empty() ? "-" : QString::fromStdString(selected_key))
@@ -138,10 +138,10 @@ void MainWindow::refresh_discovery_devices(bool force) {
             is_selected && connection.remote_endpoint == (device.source_ip + ":" + std::to_string(device.tcp_listen_port));
         auto* button = qobject_cast<QPushButton*>(discovery_table_->cellWidget(row, 7));
         if (button == nullptr) {
-            button = new QPushButton("Connect", discovery_table_);
+            button = new QPushButton("连接", discovery_table_);
             discovery_table_->setCellWidget(row, 7, button);
         }
-        button->setText(is_connected_target ? "Disconnect" : "Connect");
+        button->setText(is_connected_target ? "断开" : "连接");
         monitor_ui::style_button(button,
                                  is_connected_target ? monitor_ui::ButtonRole::kWarning
                                                      : monitor_ui::ButtonRole::kPrimary);

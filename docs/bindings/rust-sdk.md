@@ -21,6 +21,8 @@ Rust SDK 位于 `bindings/rust/`，采用 workspace split：
 - `VehicleCoreState`
 - `AuthorityLease`
 - `Event`
+- `ConfigValue` / `ConfigFieldSchema` / `ConfigSnapshot`
+- `ConfigurationResponse` / `ConfigurationHandle`
 
 ## 使用流程
 
@@ -31,6 +33,8 @@ Rust SDK 位于 `bindings/rust/`，采用 workspace split：
 5. `publish_goto(...)`
 6. `subscribe()` 接收 `CommandResult` / `VehicleCoreState`
 7. `release_authority(...)`
+
+配置资源使用 `configuration_resource_list/describe/get/patch/apply(...)` 发请求，通过 `subscribe_configuration()` 接收拥有所有权的响应。C ABI callback view 不会暴露到 safe SDK。
 
 ## 动作命令
 

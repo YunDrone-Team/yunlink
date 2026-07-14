@@ -72,7 +72,6 @@ void AdvancedMonitorBackend::on_feature_get_response(
             detail.description = message.payload.description;
             detail.auto_start = message.payload.auto_start;
             detail.depends_on = message.payload.depends_on;
-            detail.stop_timeout_sec = message.payload.stop_timeout_sec;
             detail.start_preview_units = message.payload.start_preview_units;
             detail.start_preview_commands = message.payload.start_preview_commands;
             detail.updated_at_ms = wall_time_ms();

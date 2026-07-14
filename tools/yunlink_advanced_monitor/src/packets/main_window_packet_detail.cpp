@@ -40,7 +40,7 @@ void MainWindow::refresh_packet_detail() {
                         ? packet_trace_table_->selectionModel()->currentIndex().row()
                         : -1;
     const auto* record = packet_trace_model_->record_at(row);
-    const QString empty = "No packet selected.";
+    const QString empty = "未选择数据包。";
     auto set_text = [](QPlainTextEdit* view, const QString& text) {
         if (view != nullptr) {
             view->setPlainText(text);

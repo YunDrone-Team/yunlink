@@ -22,6 +22,7 @@ AdvancedMonitorBackend::AdvancedMonitorBackend(Config config)
     bind_yunlink_subscribers();
     bind_command_feedback();
     bind_system_service_feedback();
+    bind_configuration_feedback();
 }
 
 AdvancedMonitorBackend::~AdvancedMonitorBackend() {
@@ -45,6 +46,15 @@ AdvancedMonitorBackend::~AdvancedMonitorBackend() {
     }
     if (feature_stop_response_token_ != 0) {
         runtime_.system_service_subscriber().unsubscribe(feature_stop_response_token_);
+    }
+    for (size_t token : {config_list_response_token_,
+                         config_describe_response_token_,
+                         config_get_response_token_,
+                         config_patch_response_token_,
+                         config_apply_response_token_}) {
+        if (token != 0) {
+            runtime_.configuration_service_subscriber().unsubscribe(token);
+        }
     }
     if (link_token_ != 0) {
         runtime_.event_bus().unsubscribe(link_token_);
@@ -108,6 +118,11 @@ std::vector<MonitorCommandHistoryEntry> AdvancedMonitorBackend::snapshot_command
 MonitorSystemServiceState AdvancedMonitorBackend::snapshot_system_services() const {
     std::lock_guard<std::mutex> lock(mu_);
     return system_services_;
+}
+
+MonitorConfigurationState AdvancedMonitorBackend::snapshot_configuration() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return configuration_;
 }
 
 std::vector<MonitorSystemServiceHistoryEntry>

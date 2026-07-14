@@ -17,9 +17,7 @@ impl Runtime {
         _command: &TakeoffCommand,
     ) -> Result<CommandHandle> {
         let session = session.to_native();
-        let payload = sys::yunlink_takeoff_command_t {
-            reserved: 0,
-        };
+        let payload = sys::yunlink_takeoff_command_t { reserved: 0 };
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
             sys::yunlink_command_publish_takeoff(
@@ -43,9 +41,7 @@ impl Runtime {
         _command: &LandCommand,
     ) -> Result<CommandHandle> {
         let session = session.to_native();
-        let payload = sys::yunlink_land_command_t {
-            reserved: 0,
-        };
+        let payload = sys::yunlink_land_command_t { reserved: 0 };
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
             sys::yunlink_command_publish_land(
@@ -69,9 +65,7 @@ impl Runtime {
         _command: &ReturnCommand,
     ) -> Result<CommandHandle> {
         let session = session.to_native();
-        let payload = sys::yunlink_return_command_t {
-            reserved: 0,
-        };
+        let payload = sys::yunlink_return_command_t { reserved: 0 };
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
             sys::yunlink_command_publish_return(

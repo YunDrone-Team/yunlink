@@ -108,7 +108,6 @@ void fill_px4_state_from_yunlink(const yunlink::Px4StateSnapshot& msg,
     set_float(values, "thrust_setpoint", msg.thrust_setpoint);
     set_numeric(values, "satellites", msg.satellites);
     set_numeric(values, "gps_status", msg.gps_status);
-    set_numeric(values, "gps_service", msg.gps_service);
     set_float(values, "latitude_deg", msg.latitude_deg);
     set_float(values, "longitude_deg", msg.longitude_deg);
     set_float(values, "altitude_m", msg.altitude_m);

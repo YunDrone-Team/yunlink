@@ -88,7 +88,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         return;
     }
 
-    if (runtime_security_tags_required(config_)) {
+    const bool has_security_tag = !ev.envelope.security.auth_tag.empty();
+    if (runtime_security_tags_required(config_) ||
+        (runtime_security_tags_enabled(config_) && has_security_tag)) {
         const auto publish_security_error = [&](const std::string& detail) {
             ErrorEvent error;
             error.code = ErrorCode::kUnauthorized;
@@ -98,6 +100,13 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
             bus_.publish_error(error);
         };
 
+        if (!has_security_tag) {
+            publish_security_error("security-auth-tag-missing");
+            trace_dispatch(PacketTraceStage::kDispatchRejected,
+                           ErrorCode::kUnauthorized,
+                           "security-auth-tag-missing");
+            return;
+        }
         if (ev.envelope.security.key_epoch != config_.security_key_epoch) {
             publish_security_error("security-key-epoch-mismatch");
             trace_dispatch(PacketTraceStage::kDispatchRejected,
@@ -188,6 +197,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         return;
     case MessageFamily::kSystemService:
         handle_system_service_envelope(ev);
+        return;
+    case MessageFamily::kConfigurationService:
+        handle_configuration_service_envelope(ev);
         return;
     }
 }

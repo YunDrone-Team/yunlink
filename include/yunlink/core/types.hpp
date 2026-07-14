@@ -15,6 +15,8 @@ namespace yunlink {
 
 using ByteBuffer = std::vector<uint8_t>;
 
+constexpr uint16_t kCurrentSchemaVersion = 1;
+
 enum class TransportType : uint8_t {
     kTcpServer = 1,
     kTcpClient = 2,
@@ -73,6 +75,7 @@ enum class MessageFamily : uint8_t {
     kStateEvent = 6,
     kBulkChannelDescriptor = 7,
     kSystemService = 8,
+    kConfigurationService = 9,
 };
 
 enum class QosClass : uint8_t {
@@ -226,7 +229,7 @@ struct SecureEnvelope {
     QosClass qos_class = QosClass::kReliableOrdered;
     MessageFamily message_family = MessageFamily::kCommand;
     uint16_t message_type = 0;
-    uint16_t schema_version = 1;
+    uint16_t schema_version = kCurrentSchemaVersion;
     uint64_t session_id = 0;
     uint64_t message_id = 0;
     uint64_t correlation_id = 0;

@@ -32,7 +32,7 @@ pub(super) async fn request_authority(
         }
     } else {
         let _ = update_tx.send(RuntimeUpdate::Error(
-            "connect and open a session before this action".to_string(),
+            "请先连接对端并建立 session".to_string(),
         ));
     }
     send_authority(runtime, update_tx);
@@ -51,7 +51,7 @@ pub(super) async fn release_authority(
         }
     } else {
         let _ = update_tx.send(RuntimeUpdate::Error(
-            "connect and open a session before this action".to_string(),
+            "请先连接对端并建立 session".to_string(),
         ));
     }
     send_authority(runtime, update_tx);
@@ -62,31 +62,16 @@ pub(super) async fn publish_takeoff(
     peer: Option<&PeerConnection>,
     session: Option<&Session>,
     target: &TargetSelector,
-    height_m: f32,
-    max_velocity_mps: f32,
     update_tx: &mpsc::Sender<RuntimeUpdate>,
 ) {
     let Some((peer, session)) = peer.zip(session) else {
         return;
     };
     match runtime
-        .publish_takeoff(
-            peer,
-            session,
-            target,
-            &TakeoffCommand {
-                relative_height_m: height_m,
-                max_velocity_mps,
-            },
-        )
+        .publish_takeoff(peer, session, target, &TakeoffCommand)
         .await
     {
-        Ok(handle) => send_command_sent(
-            update_tx,
-            "TAKEOFF",
-            format!("height={height_m:.1} max_v={max_velocity_mps:.1}"),
-            handle,
-        ),
+        Ok(handle) => send_command_sent(update_tx, "TAKEOFF", "仅动作命令".to_string(), handle),
         Err(err) => send_error(update_tx, err),
     }
 }
@@ -96,22 +81,16 @@ pub(super) async fn publish_land(
     peer: Option<&PeerConnection>,
     session: Option<&Session>,
     target: &TargetSelector,
-    max_velocity_mps: f32,
     update_tx: &mpsc::Sender<RuntimeUpdate>,
 ) {
     let Some((peer, session)) = peer.zip(session) else {
         return;
     };
     match runtime
-        .publish_land(peer, session, target, &LandCommand { max_velocity_mps })
+        .publish_land(peer, session, target, &LandCommand)
         .await
     {
-        Ok(handle) => send_command_sent(
-            update_tx,
-            "LAND",
-            format!("max_v={max_velocity_mps:.1}"),
-            handle,
-        ),
+        Ok(handle) => send_command_sent(update_tx, "LAND", "仅动作命令".to_string(), handle),
         Err(err) => send_error(update_tx, err),
     }
 }
@@ -121,26 +100,16 @@ pub(super) async fn publish_return(
     peer: Option<&PeerConnection>,
     session: Option<&Session>,
     target: &TargetSelector,
-    loiter_s: f32,
     update_tx: &mpsc::Sender<RuntimeUpdate>,
 ) {
     let Some((peer, session)) = peer.zip(session) else {
         return;
     };
     match runtime
-        .publish_return(
-            peer,
-            session,
-            target,
-            &ReturnCommand {
-                loiter_before_return_s: loiter_s,
-            },
-        )
+        .publish_return(peer, session, target, &ReturnCommand)
         .await
     {
-        Ok(handle) => {
-            send_command_sent(update_tx, "RETURN", format!("loiter={loiter_s:.1}"), handle)
-        }
+        Ok(handle) => send_command_sent(update_tx, "RETURN", "仅动作命令".to_string(), handle),
         Err(err) => send_error(update_tx, err),
     }
 }

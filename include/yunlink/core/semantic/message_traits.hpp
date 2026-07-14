@@ -16,7 +16,7 @@ template <typename T> struct MessageTraits;
     template <> struct MessageTraits<TYPE> {                                                       \
         static constexpr MessageFamily kFamily = FAMILY;                                           \
         static constexpr uint16_t kMessageType = TYPE_ID;                                          \
-        static constexpr uint16_t kSchemaVersion = 1;                                              \
+        static constexpr uint16_t kSchemaVersion = kCurrentSchemaVersion;                          \
     }
 
 YUNLINK_DEFINE_TRAITS(SessionHello, MessageFamily::kSession, 1);
@@ -41,6 +41,16 @@ YUNLINK_DEFINE_TRAITS(FeatureStartRequest, MessageFamily::kSystemService, 5);
 YUNLINK_DEFINE_TRAITS(FeatureStartResponse, MessageFamily::kSystemService, 6);
 YUNLINK_DEFINE_TRAITS(FeatureStopRequest, MessageFamily::kSystemService, 7);
 YUNLINK_DEFINE_TRAITS(FeatureStopResponse, MessageFamily::kSystemService, 8);
+YUNLINK_DEFINE_TRAITS(ConfigResourceListRequest, MessageFamily::kConfigurationService, 1);
+YUNLINK_DEFINE_TRAITS(ConfigResourceListResponse, MessageFamily::kConfigurationService, 2);
+YUNLINK_DEFINE_TRAITS(ConfigResourceDescribeRequest, MessageFamily::kConfigurationService, 3);
+YUNLINK_DEFINE_TRAITS(ConfigResourceDescribeResponse, MessageFamily::kConfigurationService, 4);
+YUNLINK_DEFINE_TRAITS(ConfigResourceGetRequest, MessageFamily::kConfigurationService, 5);
+YUNLINK_DEFINE_TRAITS(ConfigResourceGetResponse, MessageFamily::kConfigurationService, 6);
+YUNLINK_DEFINE_TRAITS(ConfigResourcePatchRequest, MessageFamily::kConfigurationService, 7);
+YUNLINK_DEFINE_TRAITS(ConfigResourcePatchResponse, MessageFamily::kConfigurationService, 8);
+YUNLINK_DEFINE_TRAITS(ConfigResourceApplyRequest, MessageFamily::kConfigurationService, 9);
+YUNLINK_DEFINE_TRAITS(ConfigResourceApplyResponse, MessageFamily::kConfigurationService, 10);
 YUNLINK_DEFINE_TRAITS(VehicleCoreState, MessageFamily::kStateSnapshot, 1);
 YUNLINK_DEFINE_TRAITS(Px4StateSnapshot, MessageFamily::kStateSnapshot, 2);
 YUNLINK_DEFINE_TRAITS(OdomStatusSnapshot, MessageFamily::kStateSnapshot, 3);

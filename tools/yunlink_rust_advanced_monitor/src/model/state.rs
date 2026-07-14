@@ -128,11 +128,15 @@ impl MonitorState {
             Event::Link(link) => {
                 self.peer_ready = link.is_up;
                 self.peer_id = link.peer_id;
-                self.push_log(LogLevel::Info, "Link", format!("link up={}", link.is_up));
+                self.push_log(
+                    LogLevel::Info,
+                    "链路",
+                    format!("链路状态 is_up={}", link.is_up),
+                );
             }
             Event::Error(error) => {
                 self.last_error = error.message.clone();
-                self.push_log(LogLevel::Error, "Runtime", error.message);
+                self.push_log(LogLevel::Error, "运行时", error.message);
             }
             Event::CommandResult(result) => self.apply_command_result(result),
             Event::VehicleCoreState(state) => self.apply_vehicle_state(state),
@@ -167,7 +171,7 @@ impl MonitorState {
             message_id: result.message_id,
             correlation_id: result.correlation_id,
             action: command_kind_label(result.command_kind).to_string(),
-            detail: "received without local send record".to_string(),
+            detail: "收到结果，但本地没有对应发送记录".to_string(),
             lifecycle: lifecycle_from_phase(result.phase),
             phase: format!("{:?}", result.phase),
             result_detail: result.detail.clone(),

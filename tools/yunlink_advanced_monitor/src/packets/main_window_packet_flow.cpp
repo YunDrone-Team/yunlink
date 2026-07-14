@@ -76,22 +76,22 @@ QWidget* MainWindow::build_packet_flow_tab(QWidget* parent) {
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(8);
 
-    auto* toolbar = new QGroupBox("Protocol Flow", tab);
+    auto* toolbar = new QGroupBox("协议流程", tab);
     auto* toolbar_layout = new QGridLayout(toolbar);
     toolbar_layout->setContentsMargins(10, 10, 10, 10);
     toolbar_layout->setHorizontalSpacing(8);
     toolbar_layout->setVerticalSpacing(6);
 
     packet_flow_mode_combo_ = new QComboBox(toolbar);
-    packet_flow_mode_combo_->addItems({"Live", "Selected", "Demo"});
+    packet_flow_mode_combo_->addItems({"实时", "选中数据包", "演示"});
     packet_flow_mode_combo_->setCurrentIndex(0);
     packet_flow_window_combo_ = new QComboBox(toolbar);
     packet_flow_window_combo_->addItems({"10s", "30s", "2min"});
-    packet_flow_pause_checkbox_ = new QCheckBox("Pause", toolbar);
+    packet_flow_pause_checkbox_ = new QCheckBox("暂停", toolbar);
 
-    toolbar_layout->addWidget(new QLabel("mode", toolbar), 0, 0);
+    toolbar_layout->addWidget(new QLabel("模式", toolbar), 0, 0);
     toolbar_layout->addWidget(packet_flow_mode_combo_, 0, 1);
-    toolbar_layout->addWidget(new QLabel("window", toolbar), 0, 2);
+    toolbar_layout->addWidget(new QLabel("时间窗", toolbar), 0, 2);
     toolbar_layout->addWidget(packet_flow_window_combo_, 0, 3);
     toolbar_layout->addWidget(packet_flow_pause_checkbox_, 0, 4);
     toolbar_layout->setColumnStretch(5, 1);

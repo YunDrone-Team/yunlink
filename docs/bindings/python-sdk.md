@@ -25,6 +25,8 @@ Python SDK 位于 `bindings/python/`，采用：
 - `AuthorityLease`
 - `CommandResultEvent`
 - `VehicleCoreStateEvent`
+- `ConfigValue` / `ConfigFieldSchema` / `ConfigSnapshot`
+- 五类 `ConfigResource*Response` / `ConfigurationHandle`
 
 ## 使用流程
 
@@ -42,6 +44,8 @@ Python SDK 位于 `bindings/python/`，采用：
 - `subscribe_async()` 获取 `asyncio.Queue`
 - `*_async()` 系列接口通过 `asyncio.to_thread()` 适配同步核心
 - `renew_authority()` / `renew_authority_async()` 用于显式续租，不存在自动续租线程
+
+配置资源通过 `configuration_resource_list/describe/get/patch/apply(...)` 发请求。`subscribe_configuration()` 与 `subscribe_configuration_async()` 返回拥有所有权的 dataclass；native callback 只负责深拷贝到受锁队列，不把借用 view 交给 Python。
 
 ## 异常模型
 

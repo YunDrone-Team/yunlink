@@ -118,11 +118,11 @@ QVariant PacketTraceTableModel::headerData(int section,
     }
     switch (section) {
     case kTime:
-        return "time";
+        return "时间";
     case kDirection:
-        return "dir";
+        return "方向";
     case kStage:
-        return "stage";
+        return "阶段";
     case kTransport:
         return "transport";
     case kPeer:
@@ -142,7 +142,7 @@ QVariant PacketTraceTableModel::headerData(int section,
     case kPayloadLen:
         return "payload";
     case kStatus:
-        return "status";
+        return "状态";
     default:
         return {};
     }

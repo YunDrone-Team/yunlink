@@ -283,6 +283,7 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->feature_start_response_handlers.erase(token);
     impl_->feature_stop_request_handlers.erase(token);
     impl_->feature_stop_response_handlers.erase(token);
+    unsubscribe_configuration_semantic_locked(token);
     impl_->bulk_channel_descriptor_handlers.erase(token);
 }
 

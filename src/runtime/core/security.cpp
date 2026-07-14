@@ -56,11 +56,16 @@ bool runtime_protocol_version_mismatch(const SecureEnvelope& envelope) {
 }
 
 bool runtime_schema_version_mismatch(const SecureEnvelope& envelope) {
-    return envelope.schema_version != 1;
+    return envelope.schema_version != kCurrentSchemaVersion;
 }
 
 bool runtime_security_tags_required(const RuntimeConfig& config) {
-    return (config.capability_flags & kCapabilitySecurityTags) != 0;
+    return config.security_tags_required ||
+           (config.capability_flags & kCapabilitySecurityTags) != 0;
+}
+
+bool runtime_security_tags_enabled(const RuntimeConfig& config) {
+    return config.security_tags_enabled || runtime_security_tags_required(config);
 }
 
 ByteBuffer make_runtime_auth_tag(const RuntimeConfig& config, const SecureEnvelope& envelope) {
@@ -98,7 +103,7 @@ ByteBuffer make_runtime_auth_tag(const RuntimeConfig& config, const SecureEnvelo
 }
 
 void apply_runtime_security_tag(const RuntimeConfig& config, SecureEnvelope* envelope) {
-    if (!runtime_security_tags_required(config) || envelope == nullptr) {
+    if (!runtime_security_tags_enabled(config) || envelope == nullptr) {
         return;
     }
     envelope->security.key_epoch = config.security_key_epoch;

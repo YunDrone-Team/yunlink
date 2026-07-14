@@ -23,7 +23,6 @@ struct MonitorFeatureDetail {
     std::string description;
     bool auto_start{false};
     std::vector<std::string> depends_on;
-    float stop_timeout_sec{0.0F};
     std::vector<std::string> start_preview_units;
     std::vector<std::string> start_preview_commands;
     std::string last_action;

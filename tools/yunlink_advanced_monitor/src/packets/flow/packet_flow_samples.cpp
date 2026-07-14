@@ -36,7 +36,7 @@ PacketFlowSnapshot packet_flow_takeoff_demo_snapshot(size_t active_step, uint64_
         demo_step(PacketFlowStage::kSemanticPayload,
                   now_ms,
                   "TakeoffCommand",
-                  "relative_height_m=1.20\nmax_velocity_mps=0.80\nThis payload is generated inside the monitor demo only."),
+                  "reserved=0\nAction-only command; vehicle uses its current control configuration."),
         demo_step(PacketFlowStage::kSecureEnvelope,
                   now_ms,
                   "family=Command type=TAKEOFF",

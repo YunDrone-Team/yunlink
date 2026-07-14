@@ -74,6 +74,8 @@ struct RuntimeConfig {
     std::vector<RuntimeQosChannelPolicy> qos_channel_policies;
     uint32_t trajectory_chunk_timeout_ms = 1000;
     uint32_t security_key_epoch = 1;
+    bool security_tags_enabled = false;
+    bool security_tags_required = false;
     bool packet_trace_enabled = false;
     size_t packet_trace_max_records = 500;
     size_t packet_trace_max_total_bytes = static_cast<size_t>(8) * 1024 * 1024;

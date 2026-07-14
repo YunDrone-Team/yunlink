@@ -1,69 +1,31 @@
-#include <cstring>
-#include <stdexcept>
 #include <string>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 
 #include "yunlink/c/yunlink_c.h"
+#include "configuration_bridge.hpp"
+#include "ffi_helpers.hpp"
 
 namespace nb = nanobind;
-
-namespace {
-
-void throw_if_error(yunlink_result_t result) {
-    if (result == YUNLINK_RESULT_OK) {
-        return;
-    }
-    throw std::runtime_error(yunlink_result_name(result));
-}
-
-void copy_string(char* dst, size_t cap, const std::string& value) {
-    std::memset(dst, 0, cap);
-    const size_t n = std::min(cap - 1, value.size());
-    std::memcpy(dst, value.data(), n);
-}
-
-yunlink_peer_t peer_from_python(const std::string& peer_id) {
-    yunlink_peer_t peer{};
-    copy_string(peer.id, sizeof(peer.id), peer_id);
-    return peer;
-}
-
-yunlink_target_selector_t target_from_python(const nb::dict& target) {
-    yunlink_target_selector_t out{};
-    out.struct_size = sizeof(out);
-    out.scope = nb::cast<uint8_t>(target["scope"]);
-    out.target_type = nb::cast<uint8_t>(target["target_type"]);
-    out.entity_id = nb::cast<uint32_t>(target["entity_id"]);
-    out.group_id = nb::cast<uint32_t>(target["group_id"]);
-    return out;
-}
-
-yunlink_vehicle_core_state_t state_from_python(const nb::dict& payload) {
-    yunlink_vehicle_core_state_t out{};
-    out.armed = nb::cast<bool>(payload["armed"]) ? 1 : 0;
-    out.nav_mode = nb::cast<uint8_t>(payload["nav_mode"]);
-    out.x_m = nb::cast<float>(payload["x_m"]);
-    out.y_m = nb::cast<float>(payload["y_m"]);
-    out.z_m = nb::cast<float>(payload["z_m"]);
-    out.vx_mps = nb::cast<float>(payload["vx_mps"]);
-    out.vy_mps = nb::cast<float>(payload["vy_mps"]);
-    out.vz_mps = nb::cast<float>(payload["vz_mps"]);
-    out.battery_percent = nb::cast<float>(payload["battery_percent"]);
-    return out;
-}
-
-}  // namespace
+using namespace yunlink_python_ffi;
 
 class RuntimeCore {
   public:
     RuntimeCore() {
         throw_if_error(yunlink_runtime_create(&runtime_));
+        try {
+            configuration_.attach(runtime_);
+        } catch (...) {
+            yunlink_runtime_destroy(runtime_);
+            runtime_ = nullptr;
+            throw;
+        }
     }
 
     ~RuntimeCore() {
         if (runtime_ != nullptr) {
+            configuration_.detach(runtime_);
             (void)yunlink_runtime_stop(runtime_);
             yunlink_runtime_destroy(runtime_);
             runtime_ = nullptr;
@@ -82,14 +44,20 @@ class RuntimeCore {
         native.self_identity.agent_type = nb::cast<uint8_t>(config["agent_type"]);
         native.self_identity.agent_id = nb::cast<uint32_t>(config["agent_id"]);
         native.self_identity.role = nb::cast<uint8_t>(config["role"]);
-        copy_string(native.shared_secret, sizeof(native.shared_secret), "yunlink-secret");
-        copy_string(native.multicast_group, sizeof(native.multicast_group), "224.1.1.1");
+        copy_string(native.shared_secret,
+                    sizeof(native.shared_secret),
+                    nb::cast<std::string>(config["shared_secret"]));
+        copy_string(native.multicast_group,
+                    sizeof(native.multicast_group),
+                    nb::cast<std::string>(config["multicast_group"]));
         native.qos_profile = 2;
         native.qos_reliable_ordered_transport = 1;
         native.qos_reliable_latest_transport = 1;
         native.qos_best_effort_transport = 2;
         native.qos_bulk_transport = 2;
         native.qos_udp_fallback_to_tcp = 1;
+        native.security_key_epoch = 1;
+        native.security_tags_enabled = 1;
         throw_if_error(yunlink_runtime_start(runtime_, &native));
     }
 
@@ -128,9 +96,8 @@ class RuntimeCore {
                                                  allow_preempt ? 1 : 0));
     }
 
-    void release_authority(const std::string& peer_id,
-                           uint64_t session_id,
-                           const nb::dict& target) {
+    void
+    release_authority(const std::string& peer_id, uint64_t session_id, const nb::dict& target) {
         auto peer = peer_from_python(peer_id);
         const auto native_target = target_from_python(target);
         yunlink_session_t session{session_id};
@@ -242,8 +209,58 @@ class RuntimeCore {
         return nb::none();
     }
 
+    nb::dict
+    configuration_list(const std::string& peer_id, uint64_t session_id, const nb::dict& target) {
+        return configurationList(runtime_, peer_id, session_id, target);
+    }
+
+    nb::dict configuration_describe(const std::string& peer_id,
+                                    uint64_t session_id,
+                                    const nb::dict& target,
+                                    const std::string& resource_id) {
+        return configurationDescribe(runtime_, peer_id, session_id, target, resource_id);
+    }
+
+    nb::dict configuration_get(const std::string& peer_id,
+                               uint64_t session_id,
+                               const nb::dict& target,
+                               const std::string& resource_id) {
+        return configurationGet(runtime_, peer_id, session_id, target, resource_id);
+    }
+
+    nb::dict configuration_patch(const std::string& peer_id,
+                                 uint64_t session_id,
+                                 const nb::dict& target,
+                                 const std::string& resource_id,
+                                 const std::string& expected_revision,
+                                 const nb::list& updates,
+                                 bool validate_only) {
+        return configurationPatch(runtime_,
+                                  peer_id,
+                                  session_id,
+                                  target,
+                                  resource_id,
+                                  expected_revision,
+                                  updates,
+                                  validate_only);
+    }
+
+    nb::dict configuration_apply(const std::string& peer_id,
+                                 uint64_t session_id,
+                                 const nb::dict& target,
+                                 const std::string& resource_id,
+                                 const std::string& expected_revision) {
+        return configurationApply(
+            runtime_, peer_id, session_id, target, resource_id, expected_revision);
+    }
+
+    nb::object poll_configuration_response() {
+        return configuration_.poll();
+    }
+
   private:
     yunlink_runtime_t* runtime_ = nullptr;
+    ConfigurationBridge configuration_;
 };
 
 NB_MODULE(_yunlink_native, m) {
@@ -261,5 +278,11 @@ NB_MODULE(_yunlink_native, m) {
         .def("current_authority", &RuntimeCore::current_authority)
         .def("publish_goto", &RuntimeCore::publish_goto)
         .def("publish_vehicle_core_state", &RuntimeCore::publish_vehicle_core_state)
-        .def("poll_event", &RuntimeCore::poll_event);
+        .def("poll_event", &RuntimeCore::poll_event)
+        .def("configuration_list", &RuntimeCore::configuration_list)
+        .def("configuration_describe", &RuntimeCore::configuration_describe)
+        .def("configuration_get", &RuntimeCore::configuration_get)
+        .def("configuration_patch", &RuntimeCore::configuration_patch)
+        .def("configuration_apply", &RuntimeCore::configuration_apply)
+        .def("poll_configuration_response", &RuntimeCore::poll_configuration_response);
 }

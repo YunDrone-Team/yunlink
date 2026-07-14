@@ -28,7 +28,7 @@ bool record_failed(const yunlink::PacketTraceRecord& record) {
 
 std::string record_semantic_label(const yunlink::PacketTraceRecord& record) {
     if (!record.has_envelope) {
-        return "YunLink packet";
+        return "YunLink 数据包";
     }
     return packet_family_label(record.envelope.message_family) + " / " +
            packet_message_type_label(record.envelope.message_family, record.envelope.message_type);
@@ -128,8 +128,8 @@ PacketFlowStep make_placeholder(PacketFlowStage stage) {
     PacketFlowStep step;
     step.stage = stage;
     step.title = packet_flow_stage_title(stage);
-    step.subtitle = "not observed";
-    step.detail = "This stage is part of the YunLink lifecycle but is not present in the current trace window.";
+    step.subtitle = "未观测到";
+    step.detail = "该阶段属于 YunLink 生命周期，但当前 trace 时间窗内没有对应记录。";
     return step;
 }
 
@@ -161,7 +161,7 @@ void merge_record(PacketFlowJourney* journey, const yunlink::PacketTraceRecord& 
 
 PacketFlowJourney journey_from_records(const std::vector<yunlink::PacketTraceRecord>& records) {
     if (records.empty()) {
-        return packet_flow_empty_journey("No packet journey", "Waiting for YunLink trace records");
+        return packet_flow_empty_journey("暂无数据包流程", "正在等待 YunLink trace 记录");
     }
     auto newest = std::max_element(records.begin(), records.end(), [](const auto& a, const auto& b) {
         return a.trace_id < b.trace_id;
@@ -220,7 +220,7 @@ PacketFlowSnapshot packet_flow_live_snapshot(
     }
     if (snapshot.journeys.empty()) {
         snapshot.journeys.push_back(
-            packet_flow_empty_journey("Live Flow", "Waiting for YunLink packet traces"));
+            packet_flow_empty_journey("实时流程", "正在等待 YunLink 数据包 trace"));
     }
     return snapshot;
 }
@@ -238,7 +238,7 @@ PacketFlowSnapshot packet_flow_selected_snapshot(
     });
     if (selected == records.end()) {
         snapshot.journeys.push_back(
-            packet_flow_empty_journey("Selected Flow", "Select a packet in the Table tab"));
+            packet_flow_empty_journey("选中数据包流程", "请在列表页签中选择一个数据包"));
         return snapshot;
     }
 

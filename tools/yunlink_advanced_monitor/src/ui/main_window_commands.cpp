@@ -70,12 +70,8 @@ void MainWindow::stage_takeoff() {
     if (backend_ == nullptr) {
         return;
     }
-    yunlink::TakeoffCommand cmd;
-    cmd.relative_height_m = static_cast<float>(takeoff_height_spin_->value());
-    cmd.max_velocity_mps = static_cast<float>(takeoff_velocity_spin_->value());
-    const QString payload = QString("relative_height_m=%1\nmax_velocity_mps=%2")
-                                .arg(takeoff_height_spin_->value(), 0, 'f', 2)
-                                .arg(takeoff_velocity_spin_->value(), 0, 'f', 2);
+    yunlink::TakeoffCommand cmd{};
+    const QString payload = "仅发送起飞动作，载具侧使用当前控制配置";
     if (!confirm_command_send("TAKEOFF", payload)) {
         return;
     }
@@ -86,10 +82,8 @@ void MainWindow::stage_land() {
     if (backend_ == nullptr) {
         return;
     }
-    yunlink::LandCommand cmd;
-    cmd.max_velocity_mps = static_cast<float>(land_velocity_spin_->value());
-    const QString payload =
-        QString("max_velocity_mps=%1").arg(land_velocity_spin_->value(), 0, 'f', 2);
+    yunlink::LandCommand cmd{};
+    const QString payload = "仅发送降落动作，载具侧使用当前控制配置";
     if (!confirm_command_send("LAND", payload)) {
         return;
     }
@@ -100,10 +94,8 @@ void MainWindow::stage_return() {
     if (backend_ == nullptr) {
         return;
     }
-    yunlink::ReturnCommand cmd;
-    cmd.loiter_before_return_s = static_cast<float>(return_loiter_spin_->value());
-    const QString payload =
-        QString("loiter_before_return_s=%1").arg(return_loiter_spin_->value(), 0, 'f', 2);
+    yunlink::ReturnCommand cmd{};
+    const QString payload = "仅发送返航动作，载具侧使用当前控制配置";
     if (!confirm_command_send("RETURN", payload)) {
         return;
     }
@@ -225,8 +217,8 @@ void MainWindow::refresh_command_controls() {
                 command_name = kind_it->second;
             }
             execution_name = "STALE";
-            reason_text = "command_execution_status snapshot stale; age=" +
-                          monitor_fmt_age_ms(age_ms) + "; ignore old ready/busy gate";
+            reason_text = "command_execution_status 快照已过期；age=" +
+                          monitor_fmt_age_ms(age_ms) + "；已忽略旧的 ready/busy 门禁";
             ready_takeoff_text = "stale";
             ready_land_text = "stale";
         }

@@ -60,7 +60,7 @@ void MainWindow::stage_stop_feature() {
     if (force &&
         !monitor_ui::confirm_warning(
             this,
-            "FeatureStop force confirmation",
+            "确认强制 FeatureStop",
             "force_stop 会要求对端尽快停止目标 feature，可能中断正在运行的任务或日志输出。\n\nfeature=" +
                 feature_name)) {
         return;
@@ -69,15 +69,15 @@ void MainWindow::stage_stop_feature() {
 }
 
 QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
-    auto* group = new QGroupBox("Feature service debug console", parent);
+    auto* group = new QGroupBox("功能服务调试台", parent);
     auto* root = new QVBoxLayout(group);
     root->setSpacing(8);
 
     auto* action_row = new QHBoxLayout();
-    refresh_feature_list_button_ = new QPushButton("Refresh FeatureList", group);
+    refresh_feature_list_button_ = new QPushButton("刷新功能列表 (FeatureList)", group);
     feature_name_edit_ = new QLineEdit(group);
-    feature_name_edit_->setPlaceholderText("feature_name");
-    refresh_feature_detail_button_ = new QPushButton("Query FeatureGet", group);
+    feature_name_edit_->setPlaceholderText("功能名称 (feature_name)");
+    refresh_feature_detail_button_ = new QPushButton("查询功能详情 (FeatureGet)", group);
     monitor_ui::style_button(refresh_feature_list_button_, monitor_ui::ButtonRole::kSecondary);
     monitor_ui::style_button(refresh_feature_detail_button_, monitor_ui::ButtonRole::kSecondary);
     action_row->addWidget(refresh_feature_list_button_);
@@ -87,12 +87,15 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
 
     auto* control_row = new QHBoxLayout();
     feature_override_args_edit_ = new QLineEdit(group);
-    feature_override_args_edit_->setPlaceholderText("override_args, comma separated");
-    feature_restart_checkbox_ = new QCheckBox("restart_if_running", group);
-    feature_terminal_checkbox_ = new QCheckBox("start_with_terminal", group);
-    feature_force_stop_checkbox_ = new QCheckBox("force_stop", group);
-    start_feature_button_ = new QPushButton("Send FeatureStart", group);
-    stop_feature_button_ = new QPushButton("Send FeatureStop", group);
+    feature_override_args_edit_->setPlaceholderText("覆盖参数，逗号分隔 (override_args)");
+    feature_restart_checkbox_ = new QCheckBox("运行中则重启", group);
+    feature_restart_checkbox_->setToolTip("restart_if_running");
+    feature_terminal_checkbox_ = new QCheckBox("使用终端启动", group);
+    feature_terminal_checkbox_->setToolTip("start_with_terminal");
+    feature_force_stop_checkbox_ = new QCheckBox("强制停止", group);
+    feature_force_stop_checkbox_->setToolTip("force_stop");
+    start_feature_button_ = new QPushButton("发送启动请求 (FeatureStart)", group);
+    stop_feature_button_ = new QPushButton("发送停止请求 (FeatureStop)", group);
     monitor_ui::style_button(start_feature_button_, monitor_ui::ButtonRole::kPrimary);
     monitor_ui::style_button(stop_feature_button_, monitor_ui::ButtonRole::kWarning);
     control_row->addWidget(feature_override_args_edit_, 1);
@@ -118,7 +121,7 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     system_service_history_table_ = new QTableWidget(group);
     system_service_history_table_->setColumnCount(6);
     system_service_history_table_->setHorizontalHeaderLabels(
-        {"时间", "请求", "Feature", "状态", "Session", "结果"});
+        {"时间", "请求", "功能", "状态", "会话", "结果"});
     system_service_history_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     system_service_history_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     system_service_history_table_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -135,7 +138,7 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     auto* left = new QWidget(content);
     auto* left_layout = new QVBoxLayout(left);
     left_layout->setContentsMargins(0, 0, 0, 0);
-    left_layout->addWidget(new QLabel("FeatureList", left));
+    left_layout->addWidget(new QLabel("功能列表 (FeatureList)", left));
     left_layout->addWidget(feature_list_widget_, 1);
     left_layout->addWidget(new QLabel("请求历史", left));
     left_layout->addWidget(system_service_history_table_, 1);
@@ -143,9 +146,9 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     auto* right = new QWidget(content);
     auto* right_layout = new QVBoxLayout(right);
     right_layout->setContentsMargins(0, 0, 0, 0);
-    right_layout->addWidget(new QLabel("Request preview", right));
+    right_layout->addWidget(new QLabel("请求预览", right));
     right_layout->addWidget(feature_request_preview_);
-    right_layout->addWidget(new QLabel("FeatureGet 详情", right));
+    right_layout->addWidget(new QLabel("功能详情 (FeatureGet)", right));
     right_layout->addWidget(feature_detail_text_, 1);
 
     content->addWidget(left);

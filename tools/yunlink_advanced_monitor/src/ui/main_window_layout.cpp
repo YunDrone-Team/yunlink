@@ -1,5 +1,7 @@
 #include "ui/main_window.hpp"
 
+#include "ui/commands/command_history_table.hpp"
+
 #include <QFrame>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -22,33 +24,30 @@ QWidget* MainWindow::build_commands_page(QWidget* parent) {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(12);
 
-    auto* top_splitter = new QSplitter(Qt::Horizontal, page);
-    auto* left_panel = new QWidget(top_splitter);
-    auto* left_layout = new QVBoxLayout(left_panel);
-    left_layout->setContentsMargins(0, 0, 0, 0);
-    left_layout->setSpacing(12);
-    left_layout->addWidget(build_status_panel(left_panel));
-    left_layout->addWidget(build_recent_issues_panel(left_panel));
-
-    auto* actions_frame = new QFrame(left_panel);
+    auto* gate_row = new QHBoxLayout();
+    auto* gate_panel = build_status_panel(page);
+    auto* actions_frame = new QFrame(page);
     auto* actions_layout = new QHBoxLayout(actions_frame);
-    actions_layout->setContentsMargins(0, 0, 0, 0);
-    reconnect_button_ = new QPushButton("Reconnect now", actions_frame);
+    actions_layout->setContentsMargins(8, 20, 0, 0);
+    reconnect_button_ = new QPushButton("立即重连", actions_frame);
     monitor_ui::style_button(reconnect_button_, monitor_ui::ButtonRole::kSecondary);
     actions_layout->addWidget(reconnect_button_);
-    actions_layout->addStretch(1);
-    left_layout->addWidget(actions_frame);
-    left_layout->addStretch(1);
+    actions_layout->addStretch();
+    gate_row->addWidget(gate_panel, 1);
+    gate_row->addWidget(actions_frame, 0, Qt::AlignTop);
 
-    auto* right_panel = build_command_panel(top_splitter);
-    top_splitter->addWidget(left_panel);
-    top_splitter->addWidget(right_panel);
-    top_splitter->setStretchFactor(0, 2);
-    top_splitter->setStretchFactor(1, 3);
-    top_splitter->setSizes({520, 760});
+    auto* operations_splitter = new QSplitter(Qt::Horizontal, page);
+    auto* command_panel = build_command_panel(operations_splitter);
+    auto* issues_panel = build_recent_issues_panel(operations_splitter);
+    operations_splitter->addWidget(command_panel);
+    operations_splitter->addWidget(issues_panel);
+    operations_splitter->setStretchFactor(0, 3);
+    operations_splitter->setStretchFactor(1, 2);
+    operations_splitter->setSizes({760, 520});
 
     auto* history_panel = build_command_history_panel(page);
-    layout->addWidget(top_splitter, 0);
+    layout->addLayout(gate_row);
+    layout->addWidget(operations_splitter, 0);
     layout->addWidget(history_panel, 1);
 
     connect(reconnect_button_, &QPushButton::clicked, this, [this]() {
@@ -60,7 +59,7 @@ QWidget* MainWindow::build_commands_page(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_status_panel(QWidget* parent) {
-    auto* group = new QGroupBox("Command gate", parent);
+    auto* group = new QGroupBox("命令门禁", parent);
     auto* grid = new QGridLayout(group);
     grid->setContentsMargins(12, 12, 12, 12);
     grid->setHorizontalSpacing(10);
@@ -88,7 +87,7 @@ QWidget* MainWindow::build_status_panel(QWidget* parent) {
     auto* session_label = new QLabel("session id", group);
     auto* remote_label = new QLabel("对端", group);
     auto* listen_label = new QLabel("本地监听", group);
-    auto* authority_label = new QLabel("Authority", group);
+    auto* authority_label = new QLabel("控制权", group);
     auto* note_label = new QLabel("最近说明", group);
     auto* error_label = new QLabel("最近错误", group);
 
@@ -118,15 +117,11 @@ QWidget* MainWindow::build_status_panel(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_command_panel(QWidget* parent) {
-    auto* group = new QGroupBox("Command workspace", parent);
+    auto* group = new QGroupBox("飞行控制", parent);
     auto* layout = new QGridLayout(group);
     layout->setHorizontalSpacing(8);
     layout->setVerticalSpacing(8);
 
-    takeoff_height_spin_ = make_spin(0.6, 0.1, 20.0, 0.1);
-    takeoff_velocity_spin_ = make_spin(0.8, 0.1, 5.0, 0.1);
-    land_velocity_spin_ = make_spin(0.5, 0.1, 5.0, 0.1);
-    return_loiter_spin_ = make_spin(0.0, 0.0, 30.0, 0.5);
     point_x_spin_ = make_spin(0.0, -100.0, 100.0, 0.1);
     point_y_spin_ = make_spin(0.0, -100.0, 100.0, 0.1);
     point_z_spin_ = make_spin(0.8, -10.0, 100.0, 0.1);
@@ -136,11 +131,11 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     vel_z_spin_ = make_spin(0.0, -5.0, 5.0, 0.1);
     vel_yaw_rate_spin_ = make_spin(0.0, -180.0, 180.0, 1.0, 1);
 
-    takeoff_button_ = new QPushButton("Stage TAKEOFF", group);
-    land_button_ = new QPushButton("Stage LAND", group);
-    return_button_ = new QPushButton("Stage RETURN", group);
-    point_button_ = new QPushButton("Send MOVE_POINT", group);
-    velocity_button_ = new QPushButton("Send MOVE_VELOCITY", group);
+    takeoff_button_ = new QPushButton("发送 TAKEOFF", group);
+    land_button_ = new QPushButton("发送 LAND", group);
+    return_button_ = new QPushButton("发送 RETURN", group);
+    point_button_ = new QPushButton("发送 MOVE_POINT", group);
+    velocity_button_ = new QPushButton("发送 MOVE_VELOCITY", group);
     monitor_ui::style_button(takeoff_button_, monitor_ui::ButtonRole::kWarning);
     monitor_ui::style_button(land_button_, monitor_ui::ButtonRole::kWarning);
     monitor_ui::style_button(return_button_, monitor_ui::ButtonRole::kWarning);
@@ -163,32 +158,24 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
     connect(point_button_, &QPushButton::clicked, this, &MainWindow::stage_move_point);
     connect(velocity_button_, &QPushButton::clicked, this, &MainWindow::stage_move_velocity);
 
-    layout->addWidget(new QLabel("起飞高度(m)"), 0, 0);
-    layout->addWidget(takeoff_height_spin_, 0, 1);
-    layout->addWidget(new QLabel("起飞速度(m/s)"), 0, 2);
-    layout->addWidget(takeoff_velocity_spin_, 0, 3);
-    layout->addWidget(takeoff_button_, 0, 4);
+    layout->addWidget(new QLabel("飞行动作"), 0, 0);
+    layout->addWidget(takeoff_button_, 0, 1);
+    layout->addWidget(land_button_, 0, 2);
+    layout->addWidget(return_button_, 0, 3);
 
-    layout->addWidget(new QLabel("降落速度(m/s)"), 1, 0);
-    layout->addWidget(land_velocity_spin_, 1, 1);
-    layout->addWidget(new QLabel("返航盘旋(s)"), 1, 2);
-    layout->addWidget(return_loiter_spin_, 1, 3);
-    layout->addWidget(land_button_, 1, 4);
-    layout->addWidget(return_button_, 1, 5);
+    layout->addWidget(new QLabel("目标点 x/y/z/yaw(deg)"), 1, 0);
+    layout->addWidget(point_x_spin_, 1, 1);
+    layout->addWidget(point_y_spin_, 1, 2);
+    layout->addWidget(point_z_spin_, 1, 3);
+    layout->addWidget(point_yaw_spin_, 1, 4);
+    layout->addWidget(point_button_, 1, 5);
 
-    layout->addWidget(new QLabel("目标点 x/y/z/yaw(deg)"), 2, 0);
-    layout->addWidget(point_x_spin_, 2, 1);
-    layout->addWidget(point_y_spin_, 2, 2);
-    layout->addWidget(point_z_spin_, 2, 3);
-    layout->addWidget(point_yaw_spin_, 2, 4);
-    layout->addWidget(point_button_, 2, 5);
-
-    layout->addWidget(new QLabel("惯性系速度 vx/vy/vz/yaw_rate(deg/s)"), 3, 0);
-    layout->addWidget(vel_x_spin_, 3, 1);
-    layout->addWidget(vel_y_spin_, 3, 2);
-    layout->addWidget(vel_z_spin_, 3, 3);
-    layout->addWidget(vel_yaw_rate_spin_, 3, 4);
-    layout->addWidget(velocity_button_, 3, 5);
+    layout->addWidget(new QLabel("惯性系速度 vx/vy/vz/yaw_rate(deg/s)"), 2, 0);
+    layout->addWidget(vel_x_spin_, 2, 1);
+    layout->addWidget(vel_y_spin_, 2, 2);
+    layout->addWidget(vel_z_spin_, 2, 3);
+    layout->addWidget(vel_yaw_rate_spin_, 2, 4);
+    layout->addWidget(velocity_button_, 2, 5);
 
     layout->addWidget(new QLabel("当前命令"), 4, 0);
     layout->addWidget(current_command_value_, 4, 1);
@@ -209,7 +196,7 @@ QWidget* MainWindow::build_command_panel(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
-    auto* group = new QGroupBox("Command history / ACK audit", parent);
+    auto* group = new QGroupBox("命令历史 / ACK 审计", parent);
     auto* layout = new QVBoxLayout(group);
     layout->setSpacing(8);
 
@@ -221,28 +208,14 @@ QWidget* MainWindow::build_command_history_panel(QWidget* parent) {
     command_history_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     command_history_table_->setSelectionMode(QAbstractItemView::SingleSelection);
     command_history_table_->verticalHeader()->setVisible(false);
-    command_history_table_->horizontalHeader()->setStretchLastSection(false);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(0,
-                                                                     QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(1,
-                                                                     QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(2,
-                                                                     QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(3,
-                                                                     QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(4,
-                                                                     QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(5,
-                                                                     QHeaderView::ResizeToContents);
-    command_history_table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
-    command_history_table_->setWordWrap(false);
+    monitor_ui::configure_command_history_table(command_history_table_);
     monitor_ui::style_table(command_history_table_);
     layout->addWidget(command_history_table_);
     return group;
 }
 
 QWidget* MainWindow::build_topics_panel(QWidget* parent) {
-    auto* group = new QGroupBox("State telemetry", parent);
+    auto* group = new QGroupBox("状态遥测", parent);
     auto* root = new QVBoxLayout(group);
     root->setSpacing(8);
 
@@ -263,7 +236,7 @@ QWidget* MainWindow::build_topics_panel(QWidget* parent) {
         layout->setSpacing(8);
 
         auto* summary = new QLabel(page);
-        summary->setText("状态: WAIT | last update: -- | session: -- | message: --");
+        summary->setText("状态: WAIT | 最近更新: -- | session: -- | message: --");
         monitor_ui::set_mono(summary);
         topic_summary_labels_[key] = summary;
         layout->addWidget(summary);

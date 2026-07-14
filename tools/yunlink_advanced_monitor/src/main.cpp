@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 
     QTimer poll_timer;
     QObject::connect(&poll_timer, &QTimer::timeout, [&backend]() { backend.poll_runtime(); });
-    poll_timer.start(1000);
+    poll_timer.start(250);
     backend.poll_runtime();
 
     return app.exec();

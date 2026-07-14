@@ -17,7 +17,7 @@ bool feature_list_matches(QListWidget* list,
     int row = 0;
     if (!status.empty()) {
         if (list->count() <= row ||
-            list->item(row)->text() != QString::fromStdString("status: " + status) ||
+            list->item(row)->text() != QString::fromStdString("状态: " + status) ||
             !list->item(row)->data(Qt::UserRole).toString().isEmpty()) {
             return false;
         }
@@ -93,7 +93,7 @@ void update_feature_list_if_changed(QListWidget* list,
     const int old_scroll_value = scroll_bar == nullptr ? 0 : scroll_bar->value();
     list->clear();
     if (!status.empty()) {
-        auto* status_item = new QListWidgetItem(QString::fromStdString("status: " + status));
+        auto* status_item = new QListWidgetItem(QString::fromStdString("状态: " + status));
         status_item->setFlags(status_item->flags() & ~Qt::ItemIsSelectable);
         list->addItem(status_item);
     }

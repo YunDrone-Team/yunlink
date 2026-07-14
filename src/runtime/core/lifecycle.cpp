@@ -39,7 +39,8 @@ TransportPreference transport_for_envelope(const RuntimeConfig& config, SecureEn
 Runtime::Runtime()
     : impl_(std::make_unique<Impl>()), session_client_(this), session_server_(this),
       command_publisher_(this), command_subscriber_(this), state_subscriber_(this),
-      event_subscriber_(this), system_service_publisher_(this), system_service_subscriber_(this) {}
+      event_subscriber_(this), system_service_publisher_(this), system_service_subscriber_(this),
+      configuration_service_publisher_(this), configuration_service_subscriber_(this) {}
 
 Runtime::~Runtime() {
     stop();

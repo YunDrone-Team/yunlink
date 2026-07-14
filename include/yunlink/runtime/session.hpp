@@ -31,6 +31,8 @@ class SessionServer {
     explicit SessionServer(Runtime* runtime = nullptr);
 
     bool has_active_session(uint64_t session_id) const;
+    bool has_authenticated_active_session(const std::string& peer_id,
+                                          uint64_t session_id) const;
     bool describe_session(uint64_t session_id, SessionDescriptor* out) const;
     bool
     describe_session(const std::string& peer_id, uint64_t session_id, SessionDescriptor* out) const;

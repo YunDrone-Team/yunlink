@@ -17,6 +17,11 @@ constexpr size_t kMaxSemanticStringBytes = 1024;
 
 struct BufferWriter {
     ByteBuffer data;
+    bool valid = true;
+
+    void invalidate() {
+        valid = false;
+    }
 
     void write_u8(uint8_t value) {
         data.push_back(value);
@@ -58,9 +63,12 @@ struct BufferWriter {
     }
 
     void write_string(const std::string& value) {
-        const size_t size = std::min(value.size(), kMaxSemanticStringBytes);
-        write_u16(static_cast<uint16_t>(size));
-        data.insert(data.end(), value.begin(), value.begin() + static_cast<std::ptrdiff_t>(size));
+        if (value.size() > kMaxSemanticStringBytes) {
+            invalidate();
+            return;
+        }
+        write_u16(static_cast<uint16_t>(value.size()));
+        data.insert(data.end(), value.begin(), value.end());
     }
 };
 
@@ -155,7 +163,7 @@ struct BufferReader {
 template <typename Fn> ByteBuffer build_payload(Fn&& fn) {
     BufferWriter writer;
     fn(writer);
-    return writer.data;
+    return writer.valid ? std::move(writer.data) : ByteBuffer{};
 }
 
 template <typename T, typename Fn> bool parse_payload(const ByteBuffer& bytes, T* out, Fn&& fn) {

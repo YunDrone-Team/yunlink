@@ -8,6 +8,8 @@ import time
 from ._yunlink_native import RuntimeCore
 from .errors import YunlinkError, call_native
 from .events import ErrorEvent, coerce_event
+from .configuration import coerce_configuration_response
+from .configuration_runtime import ConfigurationRuntimeMixin
 from .types import (
     AuthorityLease,
     CommandHandle,
@@ -21,13 +23,17 @@ from .types import (
 )
 
 
-class Runtime:
+class Runtime(ConfigurationRuntimeMixin):
     def __init__(self, core: RuntimeCore):
         self._core = core
         self._stop = threading.Event()
         self._poll_error: YunlinkError | None = None
         self._subscribers: list[queue.Queue] = []
         self._async_subscribers: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
+        self._configuration_subscribers: list[queue.Queue] = []
+        self._async_configuration_subscribers: list[
+            tuple[asyncio.AbstractEventLoop, asyncio.Queue]
+        ] = []
         self._thread = threading.Thread(target=self._poll_loop, daemon=True)
         self._thread.start()
 
@@ -53,6 +59,17 @@ class Runtime:
         q: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
         self._async_subscribers.append((loop, q))
+        return q
+
+    def subscribe_configuration(self) -> queue.Queue:
+        q: queue.Queue = queue.Queue()
+        self._configuration_subscribers.append(q)
+        return q
+
+    def subscribe_configuration_async(self) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        self._async_configuration_subscribers.append((loop, q))
         return q
 
     def last_poll_error(self) -> YunlinkError | None:
@@ -217,22 +234,41 @@ class Runtime:
     def _poll_loop(self) -> None:
         while not self._stop.is_set():
             try:
+                configuration_payload = None
+                poll_configuration = getattr(
+                    self._core, "poll_configuration_response", None
+                )
+                if poll_configuration is not None:
+                    configuration_payload = call_native(poll_configuration)
                 event = call_native(self._core.poll_event)
             except YunlinkError as exc:
                 self._poll_error = exc
                 parsed = ErrorEvent(-1, str(exc))
                 self._publish_event(parsed)
                 break
-            if event is None:
+            if configuration_payload is not None:
+                configuration_response = coerce_configuration_response(
+                    configuration_payload
+                )
+                if configuration_response is not None:
+                    self._publish_configuration(configuration_response)
+            if event is None and configuration_payload is None:
                 time.sleep(0.01)
                 continue
 
-            parsed = coerce_event(event)
-            if parsed is not None:
-                self._publish_event(parsed)
+            if event is not None:
+                parsed = coerce_event(event)
+                if parsed is not None:
+                    self._publish_event(parsed)
 
     def _publish_event(self, event: object) -> None:
         for subscriber in list(self._subscribers):
             subscriber.put(event)
         for loop, subscriber in list(self._async_subscribers):
             loop.call_soon_threadsafe(subscriber.put_nowait, event)
+
+    def _publish_configuration(self, response: object) -> None:
+        for subscriber in list(self._configuration_subscribers):
+            subscriber.put(response)
+        for loop, subscriber in list(self._async_configuration_subscribers):
+            loop.call_soon_threadsafe(subscriber.put_nowait, response)

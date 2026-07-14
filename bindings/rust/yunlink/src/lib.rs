@@ -5,12 +5,20 @@
 //! into fixed C buffers, parses tagged C unions into Rust enums, and maps raw
 //! result codes into `YunlinkError`.
 
+mod configuration;
 mod error;
 mod events;
 mod ffi_util;
 mod runtime;
 mod types;
 
+pub use configuration::{
+    ConfigApplyOutcome, ConfigApplyRequirement, ConfigChoice, ConfigEffects, ConfigFieldError,
+    ConfigFieldSchema, ConfigFieldValue, ConfigResourceApplyResponse,
+    ConfigResourceDescribeResponse, ConfigResourceDescriptor, ConfigResourceGetResponse,
+    ConfigResourceListResponse, ConfigResourcePatchResponse, ConfigSnapshot, ConfigStatus,
+    ConfigValue, ConfigurationHandle, ConfigurationResponse,
+};
 pub use error::{FfiErrorCode, Result, YunlinkError};
 pub use events::{
     CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event, LinkEvent,

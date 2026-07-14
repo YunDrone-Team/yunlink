@@ -51,35 +51,35 @@ QWidget* MainWindow::build_packets_page(QWidget* parent) {
     table_root->setContentsMargins(0, 0, 0, 0);
     table_root->setSpacing(8);
 
-    auto* toolbar = new QGroupBox("Packet filters", table_tab);
+    auto* toolbar = new QGroupBox("数据包筛选", table_tab);
     auto* toolbar_layout = new QGridLayout(toolbar);
     toolbar_layout->setContentsMargins(10, 10, 10, 10);
     toolbar_layout->setHorizontalSpacing(8);
     toolbar_layout->setVerticalSpacing(6);
 
-    packet_pause_checkbox_ = new QCheckBox("Pause", toolbar);
-    packet_follow_checkbox_ = new QCheckBox("Follow latest", toolbar);
+    packet_pause_checkbox_ = new QCheckBox("暂停", toolbar);
+    packet_follow_checkbox_ = new QCheckBox("跟随最新", toolbar);
     packet_follow_checkbox_->setChecked(true);
-    packet_errors_only_checkbox_ = new QCheckBox("Errors only", toolbar);
+    packet_errors_only_checkbox_ = new QCheckBox("仅错误", toolbar);
     packet_search_edit_ = new QLineEdit(toolbar);
-    packet_search_edit_->setPlaceholderText("Search trace, peer, session, message, error");
+    packet_search_edit_->setPlaceholderText("搜索 trace、peer、session、message 或 error");
     packet_search_edit_->setClearButtonEnabled(true);
-    clear_packets_button_ = new QPushButton("Clear", toolbar);
+    clear_packets_button_ = new QPushButton("清空", toolbar);
     monitor_ui::style_button(clear_packets_button_, monitor_ui::ButtonRole::kSecondary);
     packet_status_label_ = new QLabel(toolbar);
     packet_status_label_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     packet_direction_combo_ = new QComboBox(toolbar);
-    packet_direction_combo_->addItems({"All directions", "RX", "TX"});
+    packet_direction_combo_->addItems({"全部方向", "RX", "TX"});
     packet_transport_combo_ = new QComboBox(toolbar);
-    packet_transport_combo_->addItems({"All transports",
+    packet_transport_combo_->addItems({"全部传输",
                                        "TCP_SERVER",
                                        "TCP_CLIENT",
                                        "UDP_UNICAST",
                                        "UDP_BROADCAST",
                                        "UDP_MULTICAST"});
     packet_family_combo_ = new QComboBox(toolbar);
-    packet_family_combo_->addItems({"All families",
+    packet_family_combo_->addItems({"全部消息族",
                                     "Session",
                                     "Authority",
                                     "Command",
@@ -123,14 +123,14 @@ QWidget* MainWindow::build_packets_page(QWidget* parent) {
     packet_raw_text_ = make_packet_text(details);
     packet_semantic_text_ = make_packet_text(details);
     packet_errors_text_ = make_packet_text(details);
-    details->addTab(packet_summary_text_, "Summary");
-    details->addTab(packet_header_text_, "Header");
-    details->addTab(packet_target_text_, "Source / Target");
-    details->addTab(packet_security_text_, "Security / QoS");
+    details->addTab(packet_summary_text_, "摘要");
+    details->addTab(packet_header_text_, "帧头");
+    details->addTab(packet_target_text_, "来源 / 目标");
+    details->addTab(packet_security_text_, "安全 / QoS");
     details->addTab(packet_payload_text_, "Payload");
     details->addTab(packet_raw_text_, "Raw Hex");
-    details->addTab(packet_semantic_text_, "Semantic");
-    details->addTab(packet_errors_text_, "Errors");
+    details->addTab(packet_semantic_text_, "语义");
+    details->addTab(packet_errors_text_, "错误");
 
     packet_splitter_->addWidget(packet_trace_table_);
     packet_splitter_->addWidget(details);
@@ -139,8 +139,8 @@ QWidget* MainWindow::build_packets_page(QWidget* parent) {
 
     table_root->addWidget(toolbar, 0);
     table_root->addWidget(packet_splitter_, 1);
-    tabs->addTab(flow_tab, "Flow");
-    tabs->addTab(table_tab, "Table");
+    tabs->addTab(flow_tab, "流程");
+    tabs->addTab(table_tab, "列表");
     root->addWidget(tabs, 1);
 
     connect(

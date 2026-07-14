@@ -84,7 +84,6 @@ void append_control_cmd_rows(std::vector<MonitorFieldDef>& rows,
     append_vec2_rows(rows, prefix + "desired_body_xy_pos_m", label + "机体系 XY 位置");
     append_vec2_rows(rows, prefix + "desired_body_xy_vel_mps", label + "机体系 XY 速度");
     rows.push_back(field(prefix + "fixed_height_m", label + "固定高度 | " + prefix + "fixed_height_m"));
-    append_geo_rows(rows, prefix + "desired_wgs84_pos.", label + "WGS84 目标");
     rows.push_back(field(prefix + "yaw_mode", label + "偏航模式 | " + prefix + "yaw_mode"));
     rows.push_back(field(prefix + "desired_yaw_rad", label + "期望偏航角 | " + prefix + "desired_yaw_rad"));
     rows.push_back(
@@ -249,7 +248,6 @@ MonitorTopicState make_px4_state_topic() {
     topic.rows.push_back(field("thrust_setpoint", "推力 setpoint | thrust_setpoint"));
     topic.rows.push_back(field("satellites", "卫星数量 | satellites"));
     topic.rows.push_back(field("gps_status", "GPS 状态 | gps_status"));
-    topic.rows.push_back(field("gps_service", "GPS 服务 | gps_service"));
     topic.rows.push_back(field("latitude_deg", "纬度 | latitude_deg"));
     topic.rows.push_back(field("longitude_deg", "经度 | longitude_deg"));
     topic.rows.push_back(field("altitude_m", "高度 | altitude_m"));

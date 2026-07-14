@@ -7,6 +7,9 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 use yunlink_sys as sys;
 
+use crate::configuration::{
+    register_callbacks, ConfigurationCallbackContext, ConfigurationResponse,
+};
 use crate::error::{ensure, Result};
 use crate::events::{parse_event, Event, EVENT_CHANNEL_CAPACITY};
 use crate::ffi_util::write_c_buffer;
@@ -16,11 +19,10 @@ use crate::types::{
 };
 
 mod commands;
+mod configuration;
 
 /// Raw C ABI runtime pointer.
 ///
-/// The pointer is opaque to Rust. The safe wrapper is responsible for creating,
-/// stopping, and destroying it through C ABI functions.
 #[derive(Debug, Clone, Copy)]
 struct RawRuntime(*mut sys::yunlink_runtime_t);
 
@@ -48,6 +50,9 @@ pub struct Runtime {
     shutdown: std::sync::Arc<AtomicBool>,
     /// Broadcast channel used by Rust subscribers.
     sender: broadcast::Sender<Event>,
+    configuration_sender: broadcast::Sender<ConfigurationResponse>,
+    configuration_callback_context: Box<ConfigurationCallbackContext>,
+    configuration_tokens: Vec<usize>,
     /// Background thread that polls `yunlink_runtime_poll_event`.
     poll_thread: Option<JoinHandle<()>>,
 }
@@ -78,6 +83,7 @@ impl Runtime {
                     AgentType::Unknown(_) => sys::YUNLINK_ROLE_OBSERVER,
                 },
             },
+            security_tags_enabled: 1,
             ..Default::default()
         };
         write_c_buffer(&mut native_cfg.shared_secret, &config.shared_secret);
@@ -86,6 +92,16 @@ impl Runtime {
         ensure(unsafe { sys::yunlink_runtime_start(raw_ptr, &native_cfg) })?;
 
         let (sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
+        let (configuration_sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
+        let (configuration_callback_context, configuration_tokens) =
+            match register_callbacks(raw_ptr, configuration_sender.clone()) {
+                Ok(registration) => registration,
+                Err(error) => {
+                    let _ = unsafe { sys::yunlink_runtime_stop(raw_ptr) };
+                    unsafe { sys::yunlink_runtime_destroy(raw_ptr) };
+                    return Err(error);
+                }
+            };
         let shutdown = std::sync::Arc::new(AtomicBool::new(false));
         let thread_shutdown = shutdown.clone();
         let thread_sender = sender.clone();
@@ -112,6 +128,9 @@ impl Runtime {
             raw: Mutex::new(RawRuntime(raw_ptr)),
             shutdown,
             sender,
+            configuration_sender,
+            configuration_callback_context,
+            configuration_tokens,
             poll_thread: Some(poll_thread),
         })
     }
@@ -119,6 +138,11 @@ impl Runtime {
     /// Subscribe to parsed runtime events.
     pub fn subscribe(&self) -> broadcast::Receiver<Event> {
         self.sender.subscribe()
+    }
+
+    /// Subscribe to owned configuration service responses.
+    pub fn subscribe_configuration(&self) -> broadcast::Receiver<ConfigurationResponse> {
+        self.configuration_sender.subscribe()
     }
 
     /// Connect to a remote peer through the C ABI TCP client helper.
@@ -265,7 +289,11 @@ impl Drop for Runtime {
             let _ = handle.join();
         }
         let raw = self.raw.lock().expect("raw runtime mutex poisoned").0;
+        for token in self.configuration_tokens.drain(..) {
+            let _ = unsafe { sys::yunlink_configuration_unsubscribe(raw, token) };
+        }
         let _ = unsafe { sys::yunlink_runtime_stop(raw) };
         unsafe { sys::yunlink_runtime_destroy(raw) };
+        let _ = &self.configuration_callback_context;
     }
 }

@@ -127,4 +127,39 @@ typedef enum yunlink_runtime_event_type {
     YUNLINK_RUNTIME_EVENT_VEHICLE_EVENT = 5,
 } yunlink_runtime_event_type_t;
 
+typedef enum yunlink_config_value_type {
+    YUNLINK_CONFIG_VALUE_BOOL = 1,
+    YUNLINK_CONFIG_VALUE_INT64 = 2,
+    YUNLINK_CONFIG_VALUE_DOUBLE = 3,
+    YUNLINK_CONFIG_VALUE_STRING = 4,
+    YUNLINK_CONFIG_VALUE_STRING_LIST = 5,
+} yunlink_config_value_type_t;
+
+typedef enum yunlink_config_status {
+    YUNLINK_CONFIG_STATUS_OK = 0,
+    YUNLINK_CONFIG_STATUS_NOT_FOUND = 1,
+    YUNLINK_CONFIG_STATUS_UNSUPPORTED = 2,
+    YUNLINK_CONFIG_STATUS_UNAUTHENTICATED = 3,
+    YUNLINK_CONFIG_STATUS_UNAUTHORIZED = 4,
+    YUNLINK_CONFIG_STATUS_CONFLICT = 5,
+    YUNLINK_CONFIG_STATUS_INVALID = 6,
+    YUNLINK_CONFIG_STATUS_UNSAFE_STATE = 7,
+    YUNLINK_CONFIG_STATUS_INTERNAL_ERROR = 8,
+} yunlink_config_status_t;
+
+typedef enum yunlink_config_apply_requirement {
+    YUNLINK_CONFIG_APPLY_NONE = 0,
+    YUNLINK_CONFIG_APPLY_COMPONENT_RESTART = 1,
+    YUNLINK_CONFIG_APPLY_ENDPOINT_RESTART = 2,
+    YUNLINK_CONFIG_APPLY_DEVICE_REBOOT = 3,
+    YUNLINK_CONFIG_APPLY_MANUAL = 4,
+} yunlink_config_apply_requirement_t;
+
+typedef enum yunlink_config_apply_outcome {
+    YUNLINK_CONFIG_OUTCOME_APPLIED = 1,
+    YUNLINK_CONFIG_OUTCOME_RESTART_SCHEDULED = 2,
+    YUNLINK_CONFIG_OUTCOME_MANUAL_ACTION_REQUIRED = 3,
+    YUNLINK_CONFIG_OUTCOME_FAILED = 4,
+} yunlink_config_apply_outcome_t;
+
 #endif  // YUNLINK_C_ABI_ENUMS_H

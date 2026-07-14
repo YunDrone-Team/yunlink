@@ -37,9 +37,9 @@ int main() {
     yunlink::Runtime ground;
 
     yunlink::RuntimeConfig air_cfg;
-    air_cfg.udp_bind_port = 12620;
-    air_cfg.udp_target_port = 12620;
-    air_cfg.tcp_listen_port = 12720;
+    air_cfg.udp_bind_port = 12920;
+    air_cfg.udp_target_port = 12920;
+    air_cfg.tcp_listen_port = 13020;
     air_cfg.self_identity.agent_type = yunlink::AgentType::kUav;
     air_cfg.self_identity.agent_id = 31;
     air_cfg.self_identity.role = yunlink::EndpointRole::kVehicle;
@@ -47,9 +47,9 @@ int main() {
     air_cfg.command_handling_mode = yunlink::CommandHandlingMode::kExternalHandler;
 
     yunlink::RuntimeConfig ground_cfg;
-    ground_cfg.udp_bind_port = 12621;
-    ground_cfg.udp_target_port = 12621;
-    ground_cfg.tcp_listen_port = 12721;
+    ground_cfg.udp_bind_port = 12921;
+    ground_cfg.udp_target_port = 12921;
+    ground_cfg.tcp_listen_port = 13021;
     ground_cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     ground_cfg.self_identity.agent_id = 310;
     ground_cfg.self_identity.role = yunlink::EndpointRole::kController;

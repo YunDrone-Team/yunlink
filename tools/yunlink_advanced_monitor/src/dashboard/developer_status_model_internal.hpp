@@ -104,7 +104,7 @@ inline bool should_replace_summary(DeveloperStatusLevel current_level,
                                    const std::string& current_detail,
                                    DeveloperStatusLevel candidate_level) {
     return static_cast<int>(candidate_level) > static_cast<int>(current_level) ||
-           (candidate_level == current_level && (current_detail.empty() || current_detail == "idle"));
+           (candidate_level == current_level && (current_detail.empty() || current_detail == "空闲"));
 }
 
 inline void merge_topic_diagnostic_status(DeveloperStatusLevel* level,

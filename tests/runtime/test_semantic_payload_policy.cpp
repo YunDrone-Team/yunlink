@@ -41,14 +41,9 @@ int main() {
     long_label.group_id = 1;
     long_label.label.assign(2000, 'x');
     const auto label_bytes = yunlink::encode_payload(long_label);
-    yunlink::FormationTaskCommand decoded_label{};
-    if (!yunlink::decode_typed_payload(label_bytes, &decoded_label)) {
-        std::cerr << "long label decode failed instead of truncating\n";
+    if (!label_bytes.empty()) {
+        std::cerr << "long label was silently truncated instead of rejected\n";
         return 1;
-    }
-    if (decoded_label.label.size() != 1024) {
-        std::cerr << "long label was not truncated to fixed semantic capacity\n";
-        return 2;
     }
 
     yunlink::ByteBuffer unknown_event_kind = {

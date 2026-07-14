@@ -13,9 +13,9 @@
 | packet trace runtime 诊断 | `Implemented` | `RuntimeConfig.packet_trace_enabled` 可打开本地 RX/TX trace；`EventSubscriber::subscribe_packet_trace()` 可订阅 `PacketTraceRecord`；该记录是 SDK/诊断 API，不是新的线协议 payload |
 | UDP / TCP transport | `Implemented` | 已支持 `UdpTransport`、`TcpClientPool`、`TcpServer` |
 | 语义 payload 编码 | `Implemented` | 当前为手写二进制编码，不是 codegen schema |
-| 语义 payload 稳定错误策略 | `Implemented` | 字符串编码固定截断到 1024 字节；未知 enum decode 失败；malformed command 返回稳定 `CommandResult.Failed`，malformed state/event/bulk 发布 decode error |
+| 语义 payload 稳定错误策略 | `Implemented` | 超过 1024 字节的字符串编码失败；未知 enum decode 失败；malformed command 返回稳定 `CommandResult.Failed`，malformed state/event/bulk/config 发布 decode error |
 | 会话状态推进 | `Implemented` | 已支持 ready ack、active/lost/invalid/closed 收敛，断链后旧 session 不会静默复活 |
-| 认证 | `Partial` | 默认仍兼容 `shared_secret` 会话认证；声明 `kCapabilitySecurityTags` 后 runtime 会生成/验证 auth tag、key epoch，并维护 replay window |
+| 认证 | `Partial` | 默认仍兼容 `shared_secret` 会话认证；`security_tags_enabled` 可在不占 required capability bit 时生成并验证 tag，`security_tags_required` 或旧 capability 位可全局强制；维护 key epoch 与 replay window |
 | 能力协商 | `Implemented` | capability flags 已作为 runtime required bitset 裁决，不满足能力的 session 进入 invalid |
 | 控制权租约 | `Implemented` | authority 已按 normalized target 分片，并主动发送 `AuthorityStatus` grant/reject/preempt/release/expire 回执 |
 | 命令发布 API | `Implemented` | 已覆盖最小命令集合 |
@@ -30,10 +30,11 @@
 | Broadcast target | `Implemented` | command broadcast 被 runtime policy 拒绝，state/event broadcast 允许按目标类型分发 |
 | `BulkChannelDescriptor` 编解码 | `Implemented` | 类型、traits 与 payload codec 已存在，包含 `channel_id/state/detail` 生命周期字段 |
 | Bulk descriptor 运行时 | `Implemented` | runtime 已提供 typed publish/subscribe、active descriptor registry，并在 `Failed/Closed` 时释放 registry；bulk 失败不阻塞主 command plane |
+| 类型化配置资源 | `Implemented` | schema 1 family 9 的 list/describe/get/patch/apply、严格 codec、runtime correlation、provider registry 和 Advanced Monitor 动态表单已实现 |
 | TTL 执行 | `Implemented` | runtime 收包入口已执行 TTL freshness；过期 command 返回 `CommandResult.Expired(detail=runtime-ttl-expired)` |
 | QoS 到 runtime/transport 策略 | `Partial` | command 已强制 `ReliableOrdered`，state `ReliableLatest` 已丢弃迟到旧快照，event 默认 `BestEffort`，bulk descriptor 强制 `ReliableOrdered`；尚未实现完整异步发送队列调度器 |
 | C++ runtime facade | `Implemented` | `Runtime` 与辅助类已可直接联调单机最小闭环 |
-| C ABI 语义接口 | `Partial` | 已提供 typed session describe、typed command-result poll、typed vehicle-core-state poll 与基础 typed command/state publish；PX4/Odom/FSM/Bulk 等完整 typed SDK 仍待扩展 |
+| C ABI 语义接口 | `Partial` | 配置资源提供五类 request API 与 callback-lifetime readonly response view；Rust/Python 在回调内深拷贝。PX4/Odom/FSM/Bulk 等完整 typed SDK 仍待扩展 |
 | C ABI layout / symbol contract | `Implemented` | `test_c_ffi_contract` 固定关键 struct layout/字段容量，`test_c_ffi_loader` 校验共享库加载和导出符号 allowlist；CI 三平台 bindings job 纳入 FFI contract/loader |
 
 ## 2. 已验证路径
@@ -76,6 +77,10 @@
   `shared_secret` mismatch 与 protocol mismatch 的 session invalid 收敛。
 - `test_security_tags`
   auth tag、replay window 与 key epoch 拒绝路径。
+- `test_configuration_service_codec` / `test_configuration_service_runtime`
+  schema 1 配置值、十类消息、非法 tag/截断/超长输入、ReliableOrdered correlation。
+- `test_configuration_provider_registry` / `test_c_ffi_configuration`
+  C++ provider 注册路由和 C ABI callback view 的真实 TCP 请求响应。
 - `test_routing_and_source_validation`
   wrong-target command/state 的稳定拒绝与 source / target 隔离。
 - `test_bulk_channel_runtime`

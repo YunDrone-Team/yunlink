@@ -107,7 +107,6 @@ void set_control_cmd(std::unordered_map<std::string, std::string>& values,
     set_vec2(values, prefix + "desired_body_xy_pos_m", msg.desired_body_xy_pos_m);
     set_vec2(values, prefix + "desired_body_xy_vel_mps", msg.desired_body_xy_vel_mps);
     set_float(values, prefix + "fixed_height_m", msg.fixed_height_m);
-    set_geo(values, prefix + "desired_wgs84_pos.", msg.desired_wgs84_pos);
     set_numeric(values, prefix + "yaw_mode", msg.yaw_mode);
     set_float(values, prefix + "desired_yaw_rad", msg.desired_yaw_rad);
     set_float(values, prefix + "desired_yaw_rate_radps", msg.desired_yaw_rate_radps);

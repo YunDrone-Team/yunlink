@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(yunlink_advanced_monitor)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -46,6 +48,8 @@ add_executable(yunlink_advanced_monitor
   src/backend/advanced_monitor_runtime.cpp
   src/backend/system_service/advanced_monitor_backend_system_service_feedback.cpp
   src/backend/system_service/advanced_monitor_backend_system_service_requests.cpp
+  src/backend/configuration/advanced_monitor_backend_configuration_feedback.cpp
+  src/backend/configuration/advanced_monitor_backend_configuration_requests.cpp
   src/common/monitor_format.cpp
   src/common/monitor_topics_command_execution.cpp
   src/common/monitor_ui_style.cpp
@@ -69,6 +73,7 @@ add_executable(yunlink_advanced_monitor
   src/packets/flow/packet_flow_model.cpp
   src/packets/flow/packet_flow_samples.cpp
   src/packets/format/packet_trace_format.cpp
+  src/packets/format/configuration_trace_format.cpp
   src/packets/format/packet_trace_format_detail.cpp
   src/packets/packet_trace_detail.cpp
   src/packets/filters/packet_trace_filters.cpp
@@ -77,6 +82,7 @@ add_executable(yunlink_advanced_monitor
   src/packets/status/main_window_packet_status.cpp
   src/packets/packet_trace_semantic.cpp
   src/ui/commands/main_window_command_history.cpp
+  src/ui/commands/command_history_table.cpp
   src/ui/main_window_commands.cpp
   src/ui/main_window.cpp
   src/ui/discovery/main_window_devices.cpp
@@ -91,6 +97,8 @@ add_executable(yunlink_advanced_monitor
   src/ui/main_window_refresh.cpp
   src/ui/system_service/system_service_ui_helpers.cpp
   src/ui/main_window_system_services.cpp
+  src/ui/configuration/main_window_configuration.cpp
+  src/ui/configuration/main_window_configuration_refresh.cpp
 )
 
 target_link_libraries(yunlink_advanced_monitor
@@ -102,3 +110,17 @@ target_link_libraries(yunlink_advanced_monitor
 install(TARGETS yunlink_advanced_monitor
   RUNTIME DESTINATION bin
 )
+
+if(BUILD_TESTING)
+  add_executable(test_command_history_table
+    tests/test_command_history_table.cpp
+    src/ui/commands/command_history_table.cpp
+  )
+  target_link_libraries(test_command_history_table
+    ${YUNLINK_QT_WIDGETS_TARGET}
+  )
+  add_test(NAME command_history_table COMMAND test_command_history_table)
+  set_tests_properties(command_history_table PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+  )
+endif()

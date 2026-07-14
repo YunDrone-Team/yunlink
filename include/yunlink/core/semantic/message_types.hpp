@@ -7,6 +7,7 @@
 #define YUNLINK_CORE_SEMANTIC_MESSAGE_TYPES_AGGREGATE_HPP
 
 #include "yunlink/core/semantic/command_types.hpp"
+#include "yunlink/core/semantic/configuration/service_types.hpp"
 #include "yunlink/core/semantic/message_ids.hpp"
 #include "yunlink/core/semantic/session_authority_types.hpp"
 #include "yunlink/core/semantic/state_types.hpp"

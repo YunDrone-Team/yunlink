@@ -10,11 +10,13 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+mod configuration;
 mod constants;
 mod events;
 mod functions;
 mod types;
 
+pub use configuration::*;
 pub use constants::*;
 pub use events::*;
 pub use functions::*;

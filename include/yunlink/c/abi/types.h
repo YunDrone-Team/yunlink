@@ -32,6 +32,9 @@ typedef struct yunlink_runtime_config {
     uint8_t qos_best_effort_transport;
     uint8_t qos_bulk_transport;
     uint8_t qos_udp_fallback_to_tcp;
+    uint32_t security_key_epoch;
+    uint8_t security_tags_enabled;
+    uint8_t security_tags_required;
 } yunlink_runtime_config_t;
 
 typedef struct yunlink_peer {
@@ -181,5 +184,7 @@ typedef struct yunlink_runtime_event {
         yunlink_vehicle_event_data_t vehicle_event;
     } data;
 } yunlink_runtime_event_t;
+
+#include "yunlink/c/abi/configuration.h"
 
 #endif  // YUNLINK_C_ABI_TYPES_H

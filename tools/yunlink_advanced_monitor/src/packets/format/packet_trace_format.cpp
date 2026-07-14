@@ -76,6 +76,32 @@ std::string system_service_type_label(uint16_t type) {
     return std::to_string(type);
 }
 
+std::string configuration_service_type_label(uint16_t type) {
+    switch (static_cast<yunlink::ConfigurationServiceType>(type)) {
+    case yunlink::ConfigurationServiceType::kResourceListRequest:
+        return "ConfigResourceListRequest";
+    case yunlink::ConfigurationServiceType::kResourceListResponse:
+        return "ConfigResourceListResponse";
+    case yunlink::ConfigurationServiceType::kResourceDescribeRequest:
+        return "ConfigResourceDescribeRequest";
+    case yunlink::ConfigurationServiceType::kResourceDescribeResponse:
+        return "ConfigResourceDescribeResponse";
+    case yunlink::ConfigurationServiceType::kResourceGetRequest:
+        return "ConfigResourceGetRequest";
+    case yunlink::ConfigurationServiceType::kResourceGetResponse:
+        return "ConfigResourceGetResponse";
+    case yunlink::ConfigurationServiceType::kResourcePatchRequest:
+        return "ConfigResourcePatchRequest";
+    case yunlink::ConfigurationServiceType::kResourcePatchResponse:
+        return "ConfigResourcePatchResponse";
+    case yunlink::ConfigurationServiceType::kResourceApplyRequest:
+        return "ConfigResourceApplyRequest";
+    case yunlink::ConfigurationServiceType::kResourceApplyResponse:
+        return "ConfigResourceApplyResponse";
+    }
+    return std::to_string(type);
+}
+
 }  // namespace
 
 std::string packet_direction_label(yunlink::PacketTraceDirection direction) {
@@ -138,6 +164,8 @@ std::string packet_family_label(yunlink::MessageFamily family) {
         return "BulkChannelDescriptor";
     case yunlink::MessageFamily::kSystemService:
         return "SystemService";
+    case yunlink::MessageFamily::kConfigurationService:
+        return "ConfigurationService";
     }
     return "Unknown";
 }
@@ -152,6 +180,8 @@ std::string packet_message_type_label(yunlink::MessageFamily family, uint16_t me
         return state_snapshot_type_label(message_type);
     case yunlink::MessageFamily::kSystemService:
         return system_service_type_label(message_type);
+    case yunlink::MessageFamily::kConfigurationService:
+        return configuration_service_type_label(message_type);
     case yunlink::MessageFamily::kSession:
     case yunlink::MessageFamily::kAuthority:
     case yunlink::MessageFamily::kStateEvent:

@@ -21,7 +21,7 @@ void MainWindow::update_packet_status_label() {
             ++visible_errors;
         }
     }
-    const QString text = QString("shown %1 / total %2, errors %3 / %4")
+    const QString text = QString("显示 %1 / 共 %2，错误 %3 / %4")
                              .arg(packet_trace_model_->rowCount())
                              .arg(static_cast<qulonglong>(traces.size()))
                              .arg(static_cast<qulonglong>(visible_errors))

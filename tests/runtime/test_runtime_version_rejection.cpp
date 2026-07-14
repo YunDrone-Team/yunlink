@@ -27,6 +27,11 @@ bool wait_until(const std::function<bool()>& pred, int retries = 160, int sleep_
 }  // namespace
 
 int main() {
+    if (yunlink::kCurrentSchemaVersion != 1) {
+        std::cerr << "unreleased wire schema must remain at version 1\n";
+        return 10;
+    }
+
     yunlink::Runtime air;
     yunlink::Runtime ground;
 

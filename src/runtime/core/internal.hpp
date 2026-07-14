@@ -77,6 +77,26 @@ struct Runtime::Impl {
         feature_stop_request_handlers;
     std::unordered_map<size_t, SystemServiceSubscriber::FeatureStopResponseHandler>
         feature_stop_response_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListRequestHandler>
+        config_resource_list_request_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListResponseHandler>
+        config_resource_list_response_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceDescribeRequestHandler>
+        config_resource_describe_request_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceDescribeResponseHandler>
+        config_resource_describe_response_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceGetRequestHandler>
+        config_resource_get_request_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceGetResponseHandler>
+        config_resource_get_response_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourcePatchRequestHandler>
+        config_resource_patch_request_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourcePatchResponseHandler>
+        config_resource_patch_response_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceApplyRequestHandler>
+        config_resource_apply_request_handlers;
+    std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceApplyResponseHandler>
+        config_resource_apply_response_handlers;
     std::unordered_map<size_t, EventSubscriber::BulkChannelDescriptorHandler>
         bulk_channel_descriptor_handlers;
     std::unordered_map<uint32_t, BulkChannelDescriptor> active_bulk_channels;
@@ -182,7 +202,7 @@ inline SecureEnvelope make_runtime_envelope(const EndpointIdentity& source,
     envelope.qos_class = qos_class;
     envelope.message_family = message_family;
     envelope.message_type = message_type;
-    envelope.schema_version = 1;
+    envelope.schema_version = kCurrentSchemaVersion;
     envelope.session_id = session_id;
     envelope.correlation_id = correlation_id;
     envelope.source = source;

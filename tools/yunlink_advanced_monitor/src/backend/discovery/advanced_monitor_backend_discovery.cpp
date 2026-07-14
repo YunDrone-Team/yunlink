@@ -114,6 +114,16 @@ bool AdvancedMonitorBackend::connect_to_discovered_device(const std::string& ded
         remote_ip_ = device.source_ip;
         remote_tcp_port_ = static_cast<int>(device.tcp_listen_port);
         agent_id_ = static_cast<int>(device.agent_id);
+        configuration_.supported =
+            std::find(device.capabilities.begin(),
+                      device.capabilities.end(),
+                      "config-resource-v1") != device.capabilities.end();
+        configuration_.list_pending = false;
+        configuration_.resources.clear();
+        configuration_.resource_states.clear();
+        configuration_.last_status = configuration_.supported
+                                         ? "端点支持类型化配置资源"
+                                         : "端点未声明 config-resource-v1";
         connection_.remote_endpoint = device.source_ip + ":" + std::to_string(device.tcp_listen_port);
         connection_.udp_target_endpoint = device.source_ip + ":" + std::to_string(clamp_port(udp_target_port_));
         connection_.last_note = "切换到发现设备 " + device.display_name;
@@ -163,6 +173,7 @@ bool AdvancedMonitorBackend::disconnect_current_device() {
         }
 
         selected_discovery_key_.clear();
+        configuration_ = MonitorConfigurationState{};
         remote_ip_.clear();
         remote_tcp_port_ = 0;
         peer_ready_ = false;

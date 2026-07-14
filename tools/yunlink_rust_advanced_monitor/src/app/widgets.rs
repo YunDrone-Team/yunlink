@@ -18,9 +18,9 @@ pub(super) fn label_value(ui: &mut egui::Ui, label: &str, value: &str) {
 /// Convert a boolean runtime condition into a monitor-style status label.
 pub(super) fn bool_label(value: bool) -> &'static str {
     if value {
-        "READY"
+        "就绪 (READY)"
     } else {
-        "WAIT"
+        "等待 (WAIT)"
     }
 }
 

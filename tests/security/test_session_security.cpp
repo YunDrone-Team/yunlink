@@ -155,6 +155,33 @@ int main() {
         return 8;
     }
 
+    const uint64_t unauthenticated_session = 9002;
+    auto unauthenticated_hello =
+        make_session_envelope(source, unauthenticated_session, correlation_id, hello);
+    unauthenticated_hello.message_id = 50005;
+    yunlink::SessionReady unauthenticated_ready{};
+    unauthenticated_ready.accepted_protocol_major = 1;
+    auto unauthenticated_ready_env = make_session_envelope(
+        source, unauthenticated_session, correlation_id, unauthenticated_ready);
+    unauthenticated_ready_env.message_id = 50006;
+    if (manual_client.tcp_clients().send_envelope(manual_peer, unauthenticated_hello) < 0 ||
+        manual_client.tcp_clients().send_envelope(manual_peer, unauthenticated_ready_env) < 0) {
+        std::cerr << "unauthenticated session handshake send failed\n";
+        return 9;
+    }
+    if (!wait_until([&]() {
+            return server.session_server().describe_session(unauthenticated_session, &desc) &&
+                   desc.state == yunlink::SessionState::kActive;
+        })) {
+        std::cerr << "unauthenticated session did not reach legacy active state\n";
+        return 10;
+    }
+    if (desc.authenticated || server.session_server().has_authenticated_active_session(
+                                  manual_peer, unauthenticated_session)) {
+        std::cerr << "unauthenticated active session passed privileged-session check\n";
+        return 11;
+    }
+
     manual_client.stop();
     wrong_secret_client.stop();
     server.stop();

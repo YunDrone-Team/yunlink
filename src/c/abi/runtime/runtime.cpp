@@ -31,7 +31,10 @@ void yunlink_runtime_destroy(yunlink_runtime_t* runtime) {
 
 yunlink_result_t yunlink_runtime_start(yunlink_runtime_t* runtime,
                                        const yunlink_runtime_config_t* cfg) {
-    if (!validate_input_runtime(runtime) || cfg == nullptr || cfg->struct_size != sizeof(*cfg)) {
+    constexpr size_t kLegacyConfigSize =
+        offsetof(yunlink_runtime_config_t, qos_udp_fallback_to_tcp) + sizeof(uint8_t);
+    if (!validate_input_runtime(runtime) || cfg == nullptr ||
+        cfg->struct_size < kLegacyConfigSize) {
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     if (runtime->started) {
@@ -52,9 +55,11 @@ yunlink_result_t yunlink_runtime_stop(yunlink_runtime_t* runtime) {
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     if (!runtime->started) {
+        unsubscribe_configuration_callbacks(runtime);
         clear_queue(runtime);
         return YUNLINK_RESULT_OK;
     }
+    unsubscribe_configuration_callbacks(runtime);
     unsubscribe_runtime_events(runtime);
     runtime->runtime.stop();
     runtime->started = false;

@@ -67,39 +67,32 @@ pub(super) async fn run(
                 )
                 .await;
             }
-            Ok(RuntimeCommand::Takeoff {
-                height_m,
-                max_velocity_mps,
-            }) => {
+            Ok(RuntimeCommand::Takeoff) => {
                 actions::publish_takeoff(
                     &runtime,
                     peer.as_ref(),
                     session.as_ref(),
                     &target,
-                    height_m,
-                    max_velocity_mps,
                     &update_tx,
                 )
                 .await;
             }
-            Ok(RuntimeCommand::Land { max_velocity_mps }) => {
+            Ok(RuntimeCommand::Land) => {
                 actions::publish_land(
                     &runtime,
                     peer.as_ref(),
                     session.as_ref(),
                     &target,
-                    max_velocity_mps,
                     &update_tx,
                 )
                 .await;
             }
-            Ok(RuntimeCommand::Return { loiter_s }) => {
+            Ok(RuntimeCommand::Return) => {
                 actions::publish_return(
                     &runtime,
                     peer.as_ref(),
                     session.as_ref(),
                     &target,
-                    loiter_s,
                     &update_tx,
                 )
                 .await;

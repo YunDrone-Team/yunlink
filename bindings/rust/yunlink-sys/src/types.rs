@@ -60,6 +60,9 @@ pub struct yunlink_runtime_config_t {
     pub qos_bulk_transport: u8,
     /// Non-zero allows UDP sends to fall back to TCP.
     pub qos_udp_fallback_to_tcp: u8,
+    pub security_key_epoch: u32,
+    pub security_tags_enabled: u8,
+    pub security_tags_required: u8,
 }
 
 impl Default for yunlink_runtime_config_t {
@@ -82,6 +85,9 @@ impl Default for yunlink_runtime_config_t {
             qos_best_effort_transport: 2,
             qos_bulk_transport: 2,
             qos_udp_fallback_to_tcp: 1,
+            security_key_epoch: 1,
+            security_tags_enabled: 0,
+            security_tags_required: 0,
         }
     }
 }
@@ -280,7 +286,6 @@ pub struct yunlink_vehicle_core_state_t {
 pub struct yunlink_authority_lease_t {
     /// One of the `YUNLINK_AUTHORITY_STATE_*` constants.
     pub state: u8,
-    /// Session currently associated with the lease.
     pub session_id: u64,
     /// Target covered by the lease.
     pub target: yunlink_target_selector_t,

@@ -103,17 +103,50 @@ QString card_rows_text(const DeveloperStatusCard& card) {
 }  // namespace
 
 void MainWindow::refresh_view() {
-    refresh_dashboard();
-    refresh_status();
-    refresh_discovery_devices(false);
-    refresh_recent_issues();
-    refresh_command_controls();
-    refresh_command_history();
-    refresh_system_services();
-    refresh_topics();
-    refresh_packets();
-    refresh_packet_flow();
-    refresh_logs();
+    if (page_stack_ == nullptr) {
+        return;
+    }
+    if (backend_ != nullptr && page_nav_buttons_.size() > 4) {
+        const bool config_supported = backend_->snapshot_configuration().supported;
+        page_nav_buttons_[4]->setVisible(config_supported);
+        if (!config_supported && page_stack_->currentIndex() == 4) {
+            set_current_page(0);
+            return;
+        }
+    }
+    switch (page_stack_->currentIndex()) {
+    case 0:
+        refresh_status();
+        refresh_dashboard();
+        break;
+    case 1:
+        refresh_discovery_devices(false);
+        break;
+    case 2:
+        refresh_status();
+        refresh_recent_issues();
+        refresh_command_controls();
+        refresh_command_history();
+        break;
+    case 3:
+        refresh_system_services();
+        break;
+    case 4:
+        refresh_configuration();
+        break;
+    case 5:
+        refresh_topics();
+        break;
+    case 6:
+        refresh_packets();
+        refresh_packet_flow();
+        break;
+    case 7:
+        refresh_logs();
+        break;
+    default:
+        break;
+    }
 }
 
 void MainWindow::refresh_dashboard() {
@@ -159,7 +192,7 @@ void MainWindow::refresh_dashboard() {
         if (snapshot.issues.empty()) {
             dashboard_issues_value_->setTextFormat(Qt::RichText);
             dashboard_issues_value_->setText(monitor_ui::inline_notice_html(
-                monitor_ui::Level::kOk, "No blocking issues", "当前没有关键 WARN / ERROR。"));
+                monitor_ui::Level::kOk, "无阻塞问题", "当前没有关键 WARN / ERROR。"));
         } else {
             QStringList lines;
             for (const auto& issue : snapshot.issues) {
@@ -170,7 +203,7 @@ void MainWindow::refresh_dashboard() {
             }
             dashboard_issues_value_->setTextFormat(Qt::RichText);
             dashboard_issues_value_->setText(monitor_ui::inline_notice_html(
-                monitor_ui::Level::kWarn, "Blocking issues", lines.join("<br>")));
+                monitor_ui::Level::kWarn, "阻塞问题", lines.join("\n")));
         }
     }
 }

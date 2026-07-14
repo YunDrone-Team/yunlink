@@ -14,6 +14,13 @@ use eframe::egui;
 use crate::model::{LogLevel, MonitorConfig, MonitorPage, MonitorState};
 use crate::runtime_client::{RuntimeClient, RuntimeCommand, RuntimeUpdate};
 
+#[derive(Debug, Clone, Copy)]
+pub(super) enum PendingHighRiskCommand {
+    Takeoff,
+    Land,
+    Return,
+}
+
 /// Top-level egui application state.
 ///
 /// The fields are split into three groups: static launch configuration, UI
@@ -27,14 +34,8 @@ pub struct MonitorApp {
     state: MonitorState,
     /// Channel-backed handle to the background safe-SDK runtime worker.
     client: RuntimeClient,
-    /// Draft takeoff relative height.
-    takeoff_height_m: f32,
-    /// Draft takeoff maximum velocity.
-    takeoff_max_velocity_mps: f32,
-    /// Draft land maximum velocity.
-    land_max_velocity_mps: f32,
-    /// Draft return loiter duration.
-    return_loiter_s: f32,
+    /// High-risk action waiting for explicit operator confirmation.
+    pending_high_risk: Option<PendingHighRiskCommand>,
     /// Draft goto X coordinate.
     goto_x_m: f32,
     /// Draft goto Y coordinate.
@@ -66,10 +67,7 @@ impl MonitorApp {
             page: MonitorPage::Commands,
             state: MonitorState::default(),
             client,
-            takeoff_height_m: 1.5,
-            takeoff_max_velocity_mps: 1.0,
-            land_max_velocity_mps: 0.8,
-            return_loiter_s: 0.0,
+            pending_high_risk: None,
             goto_x_m: 5.0,
             goto_y_m: 0.0,
             goto_z_m: 2.0,
@@ -92,11 +90,8 @@ impl MonitorApp {
             match update {
                 RuntimeUpdate::Started => {
                     self.state.runtime_started = true;
-                    self.state.push_log(
-                        LogLevel::Info,
-                        "Runtime",
-                        "runtime started via safe Rust SDK",
-                    );
+                    self.state
+                        .push_log(LogLevel::Info, "运行时", "运行时已通过安全 Rust SDK 启动");
                 }
                 RuntimeUpdate::Connected {
                     peer_id,
@@ -106,16 +101,13 @@ impl MonitorApp {
                     self.state.peer_id = peer_id;
                     self.state.session_id = session_id;
                     self.state.session_state = "OPENED".to_string();
-                    self.state.push_log(
-                        LogLevel::Info,
-                        "Connection",
-                        "peer connected and session opened",
-                    );
+                    self.state
+                        .push_log(LogLevel::Info, "连接", "peer 已连接，session 已建立");
                 }
                 RuntimeUpdate::Authority { state } => {
                     self.state.authority_state = state;
                     self.state
-                        .push_log(LogLevel::Info, "Authority", "authority state updated");
+                        .push_log(LogLevel::Info, "控制权", "控制权状态已更新");
                 }
                 RuntimeUpdate::CommandSent {
                     action,
@@ -123,16 +115,16 @@ impl MonitorApp {
                     handle,
                 } => {
                     self.state.record_command(&action, detail, handle);
-                    self.state.push_log(LogLevel::Info, "Command", action);
+                    self.state.push_log(LogLevel::Info, "命令", action);
                 }
                 RuntimeUpdate::Event(event) => self.state.apply_event(event),
                 RuntimeUpdate::Error(error) => {
                     self.state.last_error = error.clone();
-                    self.state.push_log(LogLevel::Error, "Runtime", error);
+                    self.state.push_log(LogLevel::Error, "运行时", error);
                 }
                 RuntimeUpdate::Note(note) => {
                     self.state.last_note = note.clone();
-                    self.state.push_log(LogLevel::Warn, "Runtime", note);
+                    self.state.push_log(LogLevel::Warn, "运行时", note);
                 }
             }
         }
@@ -156,13 +148,13 @@ impl eframe::App for MonitorApp {
             .exact_size(180.0)
             .show_inside(ui, |ui| {
                 ui.heading("YunLink");
-                ui.label("Rust Monitor");
+                ui.label("Rust 监视器");
                 ui.separator();
-                self.nav_button(ui, MonitorPage::Commands, "Commands");
-                self.nav_button(ui, MonitorPage::System, "System");
-                self.nav_button(ui, MonitorPage::State, "State");
-                self.nav_button(ui, MonitorPage::Logs, "Logs");
-                self.nav_button(ui, MonitorPage::Abi, "ABI");
+                self.nav_button(ui, MonitorPage::Commands, "控制");
+                self.nav_button(ui, MonitorPage::System, "系统服务");
+                self.nav_button(ui, MonitorPage::State, "状态");
+                self.nav_button(ui, MonitorPage::Logs, "日志");
+                self.nav_button(ui, MonitorPage::Abi, "ABI 说明");
             });
         egui::CentralPanel::default().show_inside(ui, |ui| match self.page {
             MonitorPage::Commands => self.commands_page(ui),

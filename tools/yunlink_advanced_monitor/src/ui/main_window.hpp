@@ -16,6 +16,7 @@
 #include <QDoubleSpinBox>
 #include <QSplitter>
 #include <QStackedWidget>
+#include <QSpinBox>
 #include <QTableWidget>
 #include <QTableView>
 #include <QTabWidget>
@@ -25,6 +26,7 @@
 #include "backend/advanced_monitor_backend.hpp"
 #include "common/monitor_format.hpp"
 #include "model/command_model.hpp"
+#include "model/configuration/model.hpp"
 #include "dashboard/developer_status_model.hpp"
 #include "model/monitor_state.hpp"
 #include "model/monitor_topics.hpp"
@@ -48,6 +50,7 @@ class MainWindow : public QMainWindow {
     QWidget* build_command_panel(QWidget* parent);
     QWidget* build_command_history_panel(QWidget* parent);
     QWidget* build_system_service_panel(QWidget* parent);
+    QWidget* build_configuration_page(QWidget* parent);
     QWidget* build_topics_panel(QWidget* parent);
     QWidget* build_recent_issues_panel(QWidget* parent);
     QWidget* build_log_page_body(QWidget* parent);
@@ -64,6 +67,7 @@ class MainWindow : public QMainWindow {
     void refresh_command_controls();
     void refresh_command_history();
     void refresh_system_services();
+    void refresh_configuration();
     void refresh_topics();
     void refresh_topic(const std::string& key, const MonitorTopicState& topic);
     void refresh_logs();
@@ -94,6 +98,12 @@ class MainWindow : public QMainWindow {
     void stage_refresh_feature_detail();
     void stage_start_feature();
     void stage_stop_feature();
+    void stage_refresh_configuration();
+    void stage_validate_configuration();
+    void stage_save_configuration();
+    void stage_apply_configuration();
+    void rebuild_configuration_editors(const MonitorConfigurationResourceState& resource);
+    std::vector<yunlink::ConfigFieldValue> collect_configuration_updates() const;
     bool confirm_command_send(const QString& command, const QString& payload) const;
 
     AdvancedMonitorBackend* backend_{nullptr};
@@ -148,6 +158,17 @@ class MainWindow : public QMainWindow {
     QCheckBox* feature_restart_checkbox_{nullptr};
     QCheckBox* feature_terminal_checkbox_{nullptr};
     QCheckBox* feature_force_stop_checkbox_{nullptr};
+    QComboBox* config_resource_combo_{nullptr};
+    QTableWidget* config_fields_table_{nullptr};
+    QLabel* config_status_label_{nullptr};
+    QPushButton* config_refresh_button_{nullptr};
+    QPushButton* config_validate_button_{nullptr};
+    QPushButton* config_save_button_{nullptr};
+    QPushButton* config_apply_button_{nullptr};
+    std::unordered_map<std::string, QWidget*> config_editors_;
+    std::vector<yunlink::ConfigFieldSchema> config_editor_schema_;
+    std::string config_editor_resource_id_;
+    std::string config_loaded_revision_;
     std::unordered_map<std::string, QTableWidget*> topic_tables_;
     std::unordered_map<std::string, QLabel*> topic_summary_labels_;
     QPlainTextEdit* logs_{nullptr};
@@ -190,10 +211,6 @@ class MainWindow : public QMainWindow {
     QPushButton* refresh_feature_detail_button_{nullptr};
     QPushButton* start_feature_button_{nullptr};
     QPushButton* stop_feature_button_{nullptr};
-    QDoubleSpinBox* takeoff_height_spin_{nullptr};
-    QDoubleSpinBox* takeoff_velocity_spin_{nullptr};
-    QDoubleSpinBox* land_velocity_spin_{nullptr};
-    QDoubleSpinBox* return_loiter_spin_{nullptr};
     QDoubleSpinBox* point_x_spin_{nullptr};
     QDoubleSpinBox* point_y_spin_{nullptr};
     QDoubleSpinBox* point_z_spin_{nullptr};

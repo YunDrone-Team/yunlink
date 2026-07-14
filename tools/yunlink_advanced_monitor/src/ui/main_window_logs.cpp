@@ -36,7 +36,7 @@ QWidget* MainWindow::build_recent_issues_panel(QWidget* parent) {
 }
 
 QWidget* MainWindow::build_log_page_body(QWidget* parent) {
-    auto* group = new QGroupBox("Audit log", parent);
+    auto* group = new QGroupBox("审计日志", parent);
     auto* root = new QVBoxLayout(group);
     root->setSpacing(8);
 
@@ -44,17 +44,17 @@ QWidget* MainWindow::build_log_page_body(QWidget* parent) {
     log_filter_combo_ = new QComboBox(group);
     log_filter_combo_->addItems({"全部日志(不含状态)",
                                  "全部日志",
-                                 "仅 Warn / Error",
-                                 "Connection",
-                                 "Authority",
-                                 "Command Events",
-                                 "Command Status",
-                                 "Bridge",
-                                 "System",
-                                 "Debug"});
+                                 "仅 WARN / ERROR",
+                                 "连接",
+                                 "控制权",
+                                 "命令事件",
+                                 "命令状态",
+                                 "桥接",
+                                 "系统服务",
+                                 "调试"});
     log_autofollow_checkbox_ = new QCheckBox("自动跟随", group);
     log_autofollow_checkbox_->setChecked(log_autofollow_);
-    clear_logs_button_ = new QPushButton("Clear log", group);
+    clear_logs_button_ = new QPushButton("清空日志", group);
     monitor_ui::style_button(clear_logs_button_, monitor_ui::ButtonRole::kSecondary);
     actions->addWidget(log_filter_combo_);
     actions->addWidget(log_autofollow_checkbox_);
@@ -150,7 +150,7 @@ void MainWindow::refresh_logs() {
         if (entry.repeat_count > 0) {
             const uint64_t first = entry.repeat_first_ms == 0 ? entry.timestamp_ms : entry.repeat_first_ms;
             const uint64_t last = entry.repeat_last_ms == 0 ? entry.timestamp_ms : entry.repeat_last_ms;
-            message += QString("  [repeated %1 times over %2s]")
+            message += QString("  [在 %2 秒内重复 %1 次]")
                            .arg(entry.repeat_count)
                            .arg((last > first ? last - first : 0) / 1000);
         }

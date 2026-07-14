@@ -38,6 +38,7 @@ void AdvancedMonitorBackend::start_runtime() {
     cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     cfg.self_identity.agent_id = static_cast<uint32_t>(1000 + std::max(agent_id_, 0));
     cfg.self_identity.role = yunlink::EndpointRole::kController;
+    cfg.security_tags_enabled = true;
     cfg.packet_trace_enabled = true;
     cfg.packet_trace_max_records = packet_trace_limit_;
     cfg.packet_trace_max_total_bytes = packet_trace_max_bytes_;

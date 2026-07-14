@@ -83,6 +83,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/semantic_messages_session_authority.cpp
   src/core/semantic_messages_command.cpp
   src/core/semantic_messages_system_service.cpp
+  src/core/configuration_service/codec.cpp
   src/core/state/semantic_messages_state_bulk_core.cpp
   src/core/state/semantic_messages_state_bulk_extended.cpp
   src/core/state/semantic_messages_state_snapshots_core.cpp
@@ -106,6 +107,10 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/core/security.cpp
   src/runtime/system_service/publish.cpp
   src/runtime/system_service/receive.cpp
+  src/runtime/configuration_service/publish.cpp
+  src/runtime/configuration_service/receive.cpp
+  src/runtime/configuration_service/provider_registry.cpp
+  src/runtime/configuration_service/subscriptions.cpp
   src/runtime/session/session.cpp
   src/runtime/state/command_status.cpp
   src/runtime/state/fanout.cpp
@@ -116,6 +121,8 @@ set(YUNLINK_LIBRARY_SOURCES
   src/c/abi/commands/authority.cpp
   src/c/abi/commands/command.cpp
   src/c/abi/commands/state.cpp
+  src/c/abi/configuration/publish.cpp
+  src/c/abi/configuration/subscriptions.cpp
   src/c/abi/core/helpers.cpp
   src/c/abi/core/result.cpp
   src/c/abi/runtime/event_queue.cpp
@@ -272,6 +279,27 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_system_service_runtime PRIVATE yunlink)
   add_test(NAME test_system_service_runtime COMMAND test_system_service_runtime)
 
+  add_executable(
+    test_configuration_service_codec
+    tests/core/test_configuration_service_codec.cpp
+  )
+  target_link_libraries(test_configuration_service_codec PRIVATE yunlink)
+  add_test(NAME test_configuration_service_codec COMMAND test_configuration_service_codec)
+
+  add_executable(
+    test_configuration_service_runtime
+    tests/runtime/test_configuration_service_runtime.cpp
+  )
+  target_link_libraries(test_configuration_service_runtime PRIVATE yunlink)
+  add_test(NAME test_configuration_service_runtime COMMAND test_configuration_service_runtime)
+
+  add_executable(
+    test_configuration_provider_registry
+    tests/runtime/test_configuration_provider_registry.cpp
+  )
+  target_link_libraries(test_configuration_provider_registry PRIVATE yunlink)
+  add_test(NAME test_configuration_provider_registry COMMAND test_configuration_provider_registry)
+
   add_executable(test_command_result_edges tests/runtime/test_command_result_edges.cpp)
   target_link_libraries(test_command_result_edges PRIVATE yunlink)
   add_test(NAME test_command_result_edges COMMAND test_command_result_edges)
@@ -324,6 +352,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_security_tags PRIVATE yunlink)
   add_test(NAME test_security_tags COMMAND test_security_tags)
 
+  add_executable(test_optional_security_tags tests/security/test_optional_security_tags.cpp)
+  target_link_libraries(test_optional_security_tags PRIVATE yunlink)
+  add_test(NAME test_optional_security_tags COMMAND test_optional_security_tags)
+
   add_executable(
     test_routing_and_source_validation
     tests/security/test_routing_and_source_validation.cpp
@@ -345,6 +377,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_c_ffi_contract tests/bindings/test_c_ffi_contract.cpp)
   target_link_libraries(test_c_ffi_contract PRIVATE yunlink)
   add_test(NAME test_c_ffi_contract COMMAND test_c_ffi_contract)
+
+  add_executable(test_c_ffi_configuration tests/bindings/test_c_ffi_configuration.cpp)
+  target_link_libraries(test_c_ffi_configuration PRIVATE yunlink)
+  add_test(NAME test_c_ffi_configuration COMMAND test_c_ffi_configuration)
 
   add_test(
     NAME test_c_ffi_loader

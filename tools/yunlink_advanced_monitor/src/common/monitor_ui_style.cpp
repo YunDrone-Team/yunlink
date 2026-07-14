@@ -212,25 +212,27 @@ QString tag_html(Level level, const QString& text) {
 }
 
 QString inline_notice_html(Level level, const QString& title, const QString& detail) {
+    QString escaped_detail = detail.toHtmlEscaped();
+    escaped_detail.replace("\n", "<br>");
     return QString("<div style=\"background:%1;border-left:4px solid %2;padding:8px;\">"
                    "<b>%3</b><br><span style=\"color:#525252;\">%4</span></div>")
-        .arg(background_for(level), color_for(level), title.toHtmlEscaped(), detail.toHtmlEscaped());
+        .arg(background_for(level), color_for(level), title.toHtmlEscaped(), escaped_detail);
 }
 
 QString topic_summary_text(const MonitorTopicState& topic, uint64_t now_ms) {
     if (!monitor_has_snapshot(topic.latest)) {
-        return "状态: WAIT | last update: -- | session: -- | message: --";
+        return "状态: WAIT | 最近更新: -- | session: -- | message: --";
     }
     const uint64_t age_ms =
         now_ms >= topic.latest.received_at_ms ? now_ms - topic.latest.received_at_ms : 0;
-    return QString("状态: ACTIVE | last update: %1 | session: %2 | message: %3")
+    return QString("状态: ACTIVE | 最近更新: %1 | session: %2 | message: %3")
         .arg(QString::fromStdString(monitor_fmt_age_ms(age_ms)))
         .arg(topic.latest.session_id == 0 ? "--" : QString::number(topic.latest.session_id))
         .arg(topic.latest.message_id == 0 ? "--" : QString::number(topic.latest.message_id));
 }
 
 QString command_context_text(const MonitorConnectionSnapshot& snapshot) {
-    return QString("target=%1\npeer id=%2\nsession id=%3\nauthority=%4\nremote=%5")
+    return QString("目标=%1\npeer id=%2\nsession id=%3\n控制权=%4\n对端=%5")
         .arg(QString::fromStdString(snapshot.agent_label))
         .arg(snapshot.peer_id.empty() ? "-" : QString::fromStdString(snapshot.peer_id))
         .arg(snapshot.session_id == 0 ? "-" : QString::number(static_cast<qulonglong>(snapshot.session_id)))
@@ -248,21 +250,23 @@ QString command_gate_notice(bool session_ready,
                             const std::string& execution_name,
                             const std::string& reason_text) {
     if (!session_ready) {
-        return inline_notice_html(Level::kWarn, "Session required", "当前尚未拿到 active session，command 已禁用。");
+        return inline_notice_html(Level::kWarn,
+                                  "缺少有效会话 (active session)",
+                                  "当前尚未建立有效会话，命令已禁用。");
     }
     if (!authority_ready) {
         return inline_notice_html(Level::kWarn,
-                                  "Authority required",
-                                  "TAKEOFF / LAND / RETURN 需要 active authority。MOVE_POINT / MOVE_VELOCITY 可发送，但是否接纳以 CommandResult 为准。");
+                                  "缺少有效控制权 (active authority)",
+                                  "TAKEOFF / LAND / RETURN 需要有效控制权。MOVE_POINT / MOVE_VELOCITY 可发送，但是否接纳以 CommandResult 为准。");
     }
     if (exec_stale) {
         return inline_notice_html(Level::kWarn,
-                                  "Execution status stale",
+                                  "执行状态已过期",
                                   "command_execution_status 已过期，旧 ready/busy 门禁已忽略；请结合最新控制侧状态继续判断。");
     }
     if (has_exec && !ready_takeoff && !ready_land && reason_text != "-") {
         return inline_notice_html(Level::kWarn,
-                                  "Vehicle gate not ready",
+                                  "载具门禁未就绪",
                                   QString::fromStdString(reason_text + "。LAND/TAKEOFF 按 ready/busy 字段门禁。"));
     }
     if (has_exec) {
@@ -272,11 +276,11 @@ QString command_gate_notice(bool session_ready,
         if (reason_text != "-") {
             detail += " 原因=" + reason_text;
         }
-        return inline_notice_html(Level::kOk, "Command gate ready", QString::fromStdString(detail));
+        return inline_notice_html(Level::kOk, "命令门禁已就绪", QString::fromStdString(detail));
     }
     return inline_notice_html(Level::kOk,
-                              "Command gate ready",
-                              "当前 session 与 authority 已就绪。高风险指令会先确认，再下发 YunLink command。");
+                              "命令门禁已就绪",
+                              "当前会话与控制权已就绪。高风险指令会先确认，再下发 YunLink command。");
 }
 
 QString feature_request_preview(const QString& feature,
@@ -285,7 +289,7 @@ QString feature_request_preview(const QString& feature,
                                 bool terminal,
                                 bool force_stop) {
     return inline_notice_html(force_stop ? Level::kWarn : Level::kInfo,
-                              "System service request",
+                              "系统服务请求",
                               QString("feature=%1 | override_args=%2 | restart=%3 | terminal=%4 | force_stop=%5")
                                   .arg(feature.isEmpty() ? "-" : feature)
                                   .arg(args.isEmpty() ? "-" : args)

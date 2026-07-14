@@ -32,22 +32,11 @@ pub enum RuntimeCommand {
     /// Release the current control authority for the prototype UAV target.
     ReleaseAuthority,
     /// Publish a typed takeoff command.
-    Takeoff {
-        /// Relative takeoff height in meters.
-        height_m: f32,
-        /// Maximum vertical velocity in meters per second.
-        max_velocity_mps: f32,
-    },
+    Takeoff,
     /// Publish a typed land command.
-    Land {
-        /// Maximum landing velocity in meters per second.
-        max_velocity_mps: f32,
-    },
+    Land,
     /// Publish a typed return command.
-    Return {
-        /// Optional loiter time before the vehicle starts returning.
-        loiter_s: f32,
-    },
+    Return,
     /// Publish a typed goto command in the local frame used by the protocol.
     Goto {
         /// Target X coordinate in meters.

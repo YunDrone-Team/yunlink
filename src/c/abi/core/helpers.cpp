@@ -124,6 +124,11 @@ yunlink::RuntimeConfig to_runtime_config(const yunlink_runtime_config_t& cfg) {
     out.qos_policy.bulk = to_transport(cfg.qos_bulk_transport, out.qos_policy.bulk);
     out.qos_policy.udp_fallback_to_tcp =
         cfg.qos_udp_fallback_to_tcp == 0 ? out.qos_policy.udp_fallback_to_tcp : true;
+    if (cfg.struct_size >= sizeof(yunlink_runtime_config_t)) {
+        out.security_key_epoch = cfg.security_key_epoch == 0 ? 1 : cfg.security_key_epoch;
+        out.security_tags_enabled = cfg.security_tags_enabled != 0;
+        out.security_tags_required = cfg.security_tags_required != 0;
+    }
     return out;
 }
 

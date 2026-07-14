@@ -1,5 +1,13 @@
 use std::ffi::c_char;
 
+use crate::configuration::{
+    yunlink_config_field_value_view_t, yunlink_config_resource_apply_response_callback_t,
+    yunlink_config_resource_describe_response_callback_t,
+    yunlink_config_resource_get_response_callback_t,
+    yunlink_config_resource_list_response_callback_t,
+    yunlink_config_resource_patch_response_callback_t, yunlink_configuration_handle_t,
+    yunlink_string_view_t,
+};
 use crate::constants::yunlink_result_t;
 use crate::events::yunlink_runtime_event_t;
 use crate::types::{
@@ -149,5 +157,85 @@ unsafe extern "C" {
     pub fn yunlink_runtime_poll_event(
         runtime: *mut yunlink_runtime_t,
         out_event: *mut yunlink_runtime_event_t,
+    ) -> yunlink_result_t;
+
+    pub fn yunlink_configuration_publish_resource_list_request(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        out_handle: *mut yunlink_configuration_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_publish_resource_describe_request(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        resource_id: yunlink_string_view_t,
+        out_handle: *mut yunlink_configuration_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_publish_resource_get_request(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        resource_id: yunlink_string_view_t,
+        out_handle: *mut yunlink_configuration_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_publish_resource_patch_request(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        resource_id: yunlink_string_view_t,
+        expected_revision: yunlink_string_view_t,
+        updates: *const yunlink_config_field_value_view_t,
+        update_count: usize,
+        validate_only: u8,
+        out_handle: *mut yunlink_configuration_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_publish_resource_apply_request(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        resource_id: yunlink_string_view_t,
+        expected_revision: yunlink_string_view_t,
+        out_handle: *mut yunlink_configuration_handle_t,
+    ) -> yunlink_result_t;
+
+    pub fn yunlink_configuration_subscribe_resource_list_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_config_resource_list_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_subscribe_resource_describe_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_config_resource_describe_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_subscribe_resource_get_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_config_resource_get_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_subscribe_resource_patch_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_config_resource_patch_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_subscribe_resource_apply_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_config_resource_apply_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_configuration_unsubscribe(
+        runtime: *mut yunlink_runtime_t,
+        token: usize,
     ) -> yunlink_result_t;
 }

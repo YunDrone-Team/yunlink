@@ -19,7 +19,7 @@ pub(super) async fn drain_events(
                 // Backpressure is part of the Rust adapter contract. Surface it
                 // visibly instead of hiding it behind an automatic recovery path.
                 let _ = update_tx.send(RuntimeUpdate::Note(format!(
-                    "event receiver lagged by {skipped}"
+                    "事件接收队列落后 {skipped} 条"
                 )));
             }
             Err(broadcast::error::TryRecvError::Closed) => break,

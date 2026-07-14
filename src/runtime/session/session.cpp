@@ -95,6 +95,13 @@ bool SessionServer::has_active_session(uint64_t session_id) const {
     return describe_session(session_id, &desc) && desc.state == SessionState::kActive;
 }
 
+bool SessionServer::has_authenticated_active_session(const std::string& peer_id,
+                                                     uint64_t session_id) const {
+    SessionDescriptor desc;
+    return describe_session(peer_id, session_id, &desc) && desc.state == SessionState::kActive &&
+           desc.authenticated;
+}
+
 bool SessionServer::describe_session(uint64_t session_id, SessionDescriptor* out) const {
     return runtime_ != nullptr && runtime_->describe_session_internal(session_id, out);
 }
@@ -141,6 +148,7 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
 
         if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kHello)) {
             SessionHello payload{};
+            session.authenticated = false;
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.node_name = payload.node_name;
                 session.capability_flags = payload.capability_flags;
@@ -163,10 +171,11 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
 
         if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kAuthenticate)) {
             SessionAuthenticate payload{};
+            session.authenticated = false;
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
-                session.state = payload.shared_secret == config_.shared_secret
-                                    ? SessionState::kAuthenticated
-                                    : SessionState::kInvalid;
+                session.authenticated = payload.shared_secret == config_.shared_secret;
+                session.state =
+                    session.authenticated ? SessionState::kAuthenticated : SessionState::kInvalid;
             } else {
                 session.state = SessionState::kInvalid;
             }

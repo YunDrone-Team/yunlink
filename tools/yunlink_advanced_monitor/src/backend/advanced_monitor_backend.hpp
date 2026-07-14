@@ -13,6 +13,7 @@
 #include <yunlink/yunlink.hpp>
 
 #include "model/command_model.hpp"
+#include "model/configuration/model.hpp"
 #include "model/discovery/discovery_device.hpp"
 #include "model/monitor_state.hpp"
 #include "model/monitor_topics.hpp"
@@ -54,6 +55,7 @@ class AdvancedMonitorBackend {
     std::vector<DiscoveryDevice> snapshot_discovery_devices() const;
     std::vector<MonitorCommandHistoryEntry> snapshot_command_history() const;
     MonitorSystemServiceState snapshot_system_services() const;
+    MonitorConfigurationState snapshot_configuration() const;
     std::vector<MonitorSystemServiceHistoryEntry> snapshot_system_service_history() const;
     bool can_send_commands() const;
     void set_debug_stream_enabled(bool enabled);
@@ -75,6 +77,15 @@ class AdvancedMonitorBackend {
                                bool restart_if_running,
                                bool start_with_terminal);
     void request_feature_stop(const std::string& feature_name, bool force);
+    void request_config_resource_list();
+    void request_config_resource_describe(const std::string& resource_id);
+    void request_config_resource_get(const std::string& resource_id);
+    void request_config_resource_patch(const std::string& resource_id,
+                                       const std::string& expected_revision,
+                                       const std::vector<yunlink::ConfigFieldValue>& updates,
+                                       bool validate_only);
+    void request_config_resource_apply(const std::string& resource_id,
+                                       const std::string& expected_revision);
 
   private:
     void load_params();
@@ -84,6 +95,7 @@ class AdvancedMonitorBackend {
     void bind_yunlink_subscribers();
     void bind_command_feedback();
     void bind_system_service_feedback();
+    void bind_configuration_feedback();
     void start_discovery_listener();
     void setup_reconnect_timer();
     void update_config_snapshot();
@@ -91,6 +103,7 @@ class AdvancedMonitorBackend {
     void request_command_authority_if_needed();
     yunlink::TargetSelector command_target() const;
     yunlink::TargetSelector system_service_target() const;
+    yunlink::TargetSelector configuration_service_target() const;
     bool snapshot_send_context(std::string* peer_id, uint64_t* session_id) const;
     bool authority_active_unlocked() const;
     void mark_authority_pending_unlocked(uint64_t now_ms);
@@ -138,6 +151,16 @@ class AdvancedMonitorBackend {
                                        const std::string& feature_name,
                                        const yunlink::SystemServiceHandle& handle);
     void refresh_system_service_timeouts(uint64_t now_ms);
+    void on_config_resource_list_response(
+        const yunlink::TypedMessage<yunlink::ConfigResourceListResponse>& message);
+    void on_config_resource_describe_response(
+        const yunlink::TypedMessage<yunlink::ConfigResourceDescribeResponse>& message);
+    void on_config_resource_get_response(
+        const yunlink::TypedMessage<yunlink::ConfigResourceGetResponse>& message);
+    void on_config_resource_patch_response(
+        const yunlink::TypedMessage<yunlink::ConfigResourcePatchResponse>& message);
+    void on_config_resource_apply_response(
+        const yunlink::TypedMessage<yunlink::ConfigResourceApplyResponse>& message);
     void log(MonitorLogLevel level, MonitorLogSource source, const std::string& line);
     void log_debug(MonitorLogSource source, const std::string& line);
     static std::string
@@ -172,6 +195,11 @@ class AdvancedMonitorBackend {
     size_t feature_get_response_token_{0};
     size_t feature_start_response_token_{0};
     size_t feature_stop_response_token_{0};
+    size_t config_list_response_token_{0};
+    size_t config_describe_response_token_{0};
+    size_t config_get_response_token_{0};
+    size_t config_patch_response_token_{0};
+    size_t config_apply_response_token_{0};
     std::vector<size_t> state_sub_tokens_;
 
     std::string remote_ip_;
@@ -207,6 +235,8 @@ class AdvancedMonitorBackend {
     size_t command_history_limit_{32};
     uint64_t command_timeout_ms_{3000};
     MonitorSystemServiceState system_services_;
+    MonitorConfigurationState configuration_;
+    std::unordered_map<uint64_t, bool> config_patch_validate_requests_;
     std::vector<MonitorSystemServiceHistoryEntry> system_service_history_;
     size_t system_service_history_limit_{32};
     uint64_t system_service_timeout_ms_{5000};

@@ -4,7 +4,7 @@
 
 - 整数按 little-endian 编码。
 - `bool` 编码为 `uint8_t`，`0=false`，非 0 为 true。
-- `string` 编码为 `uint16_t length + bytes`，当前实现最多写入 1024 bytes。
+- `string` 编码为 `uint16_t length + bytes`，超过 1024 bytes 时编码失败，不静默截断。
 - `vector<T>` 编码为 `uint16_t count + repeated T`。
 
 ## 1. Payload Index
@@ -35,6 +35,16 @@
 | `SystemService` | 6 | 1 | `FeatureStartResponse` | 启动功能响应 |
 | `SystemService` | 7 | 1 | `FeatureStopRequest` | 停止功能请求 |
 | `SystemService` | 8 | 1 | `FeatureStopResponse` | 停止功能响应 |
+| `ConfigurationService` | 1 | 1 | `ConfigResourceListRequest` | 查询配置资源列表 |
+| `ConfigurationService` | 2 | 1 | `ConfigResourceListResponse` | 返回配置资源列表 |
+| `ConfigurationService` | 3 | 1 | `ConfigResourceDescribeRequest` | 查询资源字段 schema |
+| `ConfigurationService` | 4 | 1 | `ConfigResourceDescribeResponse` | 返回资源字段 schema |
+| `ConfigurationService` | 5 | 1 | `ConfigResourceGetRequest` | 读取完整配置 snapshot |
+| `ConfigurationService` | 6 | 1 | `ConfigResourceGetResponse` | 返回完整配置 snapshot |
+| `ConfigurationService` | 7 | 1 | `ConfigResourcePatchRequest` | 按 revision 校验或保存字段 patch |
+| `ConfigurationService` | 8 | 1 | `ConfigResourcePatchResponse` | 返回 snapshot、字段错误和 effects |
+| `ConfigurationService` | 9 | 1 | `ConfigResourceApplyRequest` | 生效指定 revision |
+| `ConfigurationService` | 10 | 1 | `ConfigResourceApplyResponse` | 返回生效 outcome 和 effects |
 | `StateSnapshot` | 1 | 1 | `VehicleCoreState` | 基础飞行状态 |
 | `StateSnapshot` | 2 | 1 | `Px4StateSnapshot` | PX4 综合状态快照 |
 | `StateSnapshot` | 3 | 1 | `OdomStatusSnapshot` | 里程计源与状态摘要 |
