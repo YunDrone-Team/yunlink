@@ -15,6 +15,7 @@ inline yunlink_string_view_t view_of(const std::string& value) {
 
 struct ViewArena {
     std::deque<std::vector<yunlink_string_view_t>> string_lists;
+    std::deque<std::vector<double>> double_lists;
     std::deque<std::vector<yunlink_config_choice_view_t>> choice_lists;
     std::vector<yunlink_config_resource_descriptor_view_t> resources;
     std::vector<yunlink_config_field_schema_view_t> fields;
@@ -38,6 +39,11 @@ struct ViewArena {
             }
             target.string_list = items.data();
             target.string_list_count = items.size();
+        } else if (source.type == yunlink::ConfigValueType::kDoubleList) {
+            double_lists.push_back(source.double_list_value);
+            const auto& items = double_lists.back();
+            target.double_list = items.data();
+            target.double_list_count = items.size();
         }
         return target;
     }

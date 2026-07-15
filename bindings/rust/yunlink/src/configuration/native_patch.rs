@@ -12,6 +12,7 @@ pub(crate) fn string_view(value: &str) -> sys::yunlink_string_view_t {
 pub(crate) struct NativePatch<'a> {
     pub updates: Vec<sys::yunlink_config_field_value_view_t>,
     string_lists: Vec<Vec<sys::yunlink_string_view_t>>,
+    double_lists: Vec<&'a [f64]>,
     _marker: std::marker::PhantomData<&'a [ConfigFieldValue]>,
 }
 
@@ -20,6 +21,7 @@ impl<'a> NativePatch<'a> {
         let mut output = Self {
             updates: Vec::with_capacity(source.len()),
             string_lists: Vec::new(),
+            double_lists: Vec::new(),
             _marker: std::marker::PhantomData,
         };
         for item in source {
@@ -53,6 +55,16 @@ impl<'a> NativePatch<'a> {
                         type_: sys::YUNLINK_CONFIG_VALUE_STRING_LIST,
                         string_list: list.as_ptr(),
                         string_list_count: list.len(),
+                        ..Default::default()
+                    }
+                }
+                ConfigValue::DoubleList(values) => {
+                    output.double_lists.push(values.as_slice());
+                    let list = output.double_lists.last().expect("just pushed");
+                    sys::yunlink_config_value_view_t {
+                        type_: sys::YUNLINK_CONFIG_VALUE_DOUBLE_LIST,
+                        double_list: list.as_ptr(),
+                        double_list_count: list.len(),
                         ..Default::default()
                     }
                 }

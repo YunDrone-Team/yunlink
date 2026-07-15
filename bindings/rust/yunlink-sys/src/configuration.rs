@@ -19,6 +19,8 @@ pub struct yunlink_config_value_view_t {
     pub string_value: yunlink_string_view_t,
     pub string_list: *const yunlink_string_view_t,
     pub string_list_count: usize,
+    pub double_list: *const f64,
+    pub double_list_count: usize,
 }
 
 #[repr(C)]

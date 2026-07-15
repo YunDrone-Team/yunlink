@@ -7,6 +7,7 @@ pub enum ConfigValue {
     Double(f64),
     String(String),
     StringList(Vec<String>),
+    DoubleList(Vec<f64>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

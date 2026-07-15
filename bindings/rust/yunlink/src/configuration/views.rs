@@ -43,6 +43,11 @@ pub(super) unsafe fn value_from_view(
                 .collect::<Option<Vec<_>>>()?;
             Some(ConfigValue::StringList(values))
         }
+        sys::YUNLINK_CONFIG_VALUE_DOUBLE_LIST => {
+            let values = unsafe { slice_from_raw(view.double_list, view.double_list_count) }?
+                .to_vec();
+            Some(ConfigValue::DoubleList(values))
+        }
         _ => None,
     }
 }

@@ -50,6 +50,16 @@ bool to_cpp_value(const yunlink_config_value_view_t& source, yunlink::ConfigValu
         *target = yunlink::ConfigValue::from_string_list(std::move(values));
         return true;
     }
+    case YUNLINK_CONFIG_VALUE_DOUBLE_LIST: {
+        if (source.double_list_count > 256 ||
+            (source.double_list_count != 0 && source.double_list == nullptr)) {
+            return false;
+        }
+        std::vector<double> values(source.double_list,
+                                   source.double_list + source.double_list_count);
+        *target = yunlink::ConfigValue::from_double_list(std::move(values));
+        return true;
+    }
     default:
         return false;
     }

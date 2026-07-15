@@ -29,7 +29,10 @@
 
 ## 类型模型
 
-`ConfigValue` 只允许五种显式 tag：`bool`、`int64`、`double`、`string` 和 `string_list`。未知 tag、截断 payload、超过 1024 bytes 的字符串和超过 256 项的配置数组必须编码失败或解码失败，不能静默截断。
+`ConfigValue` 只允许六种显式 tag：`bool`、`int64`、`double`、`string`、`string_list` 和
+`double_list`。`double_list` 用于平坦的数值序列，例如参数数组；它不是任意嵌套文档。
+未知 tag、截断 payload、超过 1024 bytes 的字符串和超过 256 项的配置数组必须编码失败或
+解码失败，不能静默截断。
 
 字段使用 provider 定义的稳定 `path`。协议不解释 path，也不允许客户端借 path 指定文件名、命令或任意嵌套对象。
 

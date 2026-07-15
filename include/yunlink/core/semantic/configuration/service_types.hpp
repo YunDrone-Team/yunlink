@@ -19,6 +19,7 @@ enum class ConfigValueType : uint8_t {
     kDouble = 3,
     kString = 4,
     kStringList = 5,
+    kDoubleList = 6,
 };
 
 enum class ConfigServiceStatus : uint8_t {
@@ -55,6 +56,7 @@ struct ConfigValue {
     double double_value = 0.0;
     std::string string_value;
     std::vector<std::string> string_list_value;
+    std::vector<double> double_list_value;
 
     static ConfigValue from_bool(bool value) {
         ConfigValue out;
@@ -84,6 +86,12 @@ struct ConfigValue {
         ConfigValue out;
         out.type = ConfigValueType::kStringList;
         out.string_list_value = std::move(value);
+        return out;
+    }
+    static ConfigValue from_double_list(std::vector<double> value) {
+        ConfigValue out;
+        out.type = ConfigValueType::kDoubleList;
+        out.double_list_value = std::move(value);
         return out;
     }
 };

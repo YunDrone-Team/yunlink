@@ -55,7 +55,7 @@ inline bool read_strings(BufferReader& reader, std::vector<std::string>* out) {
 
 inline bool valid_value_type(uint8_t value) {
     return value >= static_cast<uint8_t>(ConfigValueType::kBool) &&
-           value <= static_cast<uint8_t>(ConfigValueType::kStringList);
+           value <= static_cast<uint8_t>(ConfigValueType::kDoubleList);
 }
 
 inline bool valid_status(uint8_t value) {
@@ -89,6 +89,11 @@ inline void write_value(BufferWriter& writer, const ConfigValue& value) {
     case ConfigValueType::kStringList:
         write_strings(writer, value.string_list_value);
         return;
+    case ConfigValueType::kDoubleList:
+        write_vector(writer, value.double_list_value, [](BufferWriter& target, double item) {
+            target.write_double(item);
+        });
+        return;
     }
 }
 
@@ -116,6 +121,11 @@ inline bool read_value(BufferReader& reader, ConfigValue* out) {
         return reader.read_string(&out->string_value);
     case ConfigValueType::kStringList:
         return read_strings(reader, &out->string_list_value);
+    case ConfigValueType::kDoubleList:
+        return read_vector(reader, &out->double_list_value,
+                           [](BufferReader& source, double* item) {
+                               return source.read_double(item);
+                           });
     }
     return false;
 }
