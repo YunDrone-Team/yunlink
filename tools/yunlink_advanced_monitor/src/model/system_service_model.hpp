@@ -31,11 +31,29 @@ struct MonitorFeatureDetail {
     uint64_t updated_at_ms{0};
 };
 
+struct MonitorRuntimeLog {
+    std::string runtime_id;
+    std::string feature_name;
+    std::string title;
+    std::string state;
+    uint64_t started_at_ns{0};
+    uint64_t finished_at_ns{0};
+    bool has_exit_code{false};
+    int32_t exit_code{0};
+    std::string message;
+    std::string chunk;
+    uint64_t cursor{0};
+    bool truncated{false};
+    bool eof{false};
+    uint64_t updated_at_ms{0};
+};
+
 struct MonitorSystemServiceState {
     uint64_t updated_at_ms{0};
     std::string last_status;
     std::vector<std::string> feature_names;
     std::unordered_map<std::string, MonitorFeatureDetail> feature_details;
+    std::vector<MonitorRuntimeLog> runtime_logs;
 };
 
 struct MonitorSystemServiceHistoryEntry {

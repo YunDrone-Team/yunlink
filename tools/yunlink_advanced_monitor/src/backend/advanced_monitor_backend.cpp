@@ -47,6 +47,12 @@ AdvancedMonitorBackend::~AdvancedMonitorBackend() {
     if (feature_stop_response_token_ != 0) {
         runtime_.system_service_subscriber().unsubscribe(feature_stop_response_token_);
     }
+    if (runtime_log_list_response_token_ != 0) {
+        runtime_.system_service_subscriber().unsubscribe(runtime_log_list_response_token_);
+    }
+    if (runtime_log_read_response_token_ != 0) {
+        runtime_.system_service_subscriber().unsubscribe(runtime_log_read_response_token_);
+    }
     for (size_t token : {config_list_response_token_,
                          config_describe_response_token_,
                          config_get_response_token_,

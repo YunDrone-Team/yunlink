@@ -68,6 +68,30 @@ void MainWindow::stage_stop_feature() {
     backend_->request_feature_stop(feature_name.toStdString(), force);
 }
 
+void MainWindow::stage_refresh_runtime_logs() {
+    if (backend_ != nullptr) {
+        backend_->request_runtime_log_list();
+    }
+}
+
+void MainWindow::stage_read_selected_runtime_log() {
+    if (backend_ == nullptr || runtime_log_list_widget_ == nullptr) {
+        return;
+    }
+    const auto* item = runtime_log_list_widget_->currentItem();
+    if (item == nullptr) {
+        return;
+    }
+    const std::string runtime_id = item->data(Qt::UserRole).toString().toStdString();
+    const auto state = backend_->snapshot_system_services();
+    for (const auto& runtime : state.runtime_logs) {
+        if (runtime.runtime_id == runtime_id) {
+            backend_->request_runtime_log_read(runtime_id, runtime.cursor);
+            return;
+        }
+    }
+}
+
 QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     auto* group = new QGroupBox("功能服务调试台", parent);
     auto* root = new QVBoxLayout(group);
@@ -106,6 +130,26 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     control_row->addWidget(stop_feature_button_);
     root->addLayout(control_row);
 
+    auto* runtime_row = new QHBoxLayout();
+    refresh_runtime_logs_button_ = new QPushButton("刷新运行日志", group);
+    read_runtime_log_button_ = new QPushButton("读取选中日志", group);
+    monitor_ui::style_button(refresh_runtime_logs_button_, monitor_ui::ButtonRole::kSecondary);
+    monitor_ui::style_button(read_runtime_log_button_, monitor_ui::ButtonRole::kSecondary);
+    runtime_row->addWidget(new QLabel("运行日志", group));
+    runtime_row->addWidget(refresh_runtime_logs_button_);
+    runtime_row->addWidget(read_runtime_log_button_);
+    runtime_row->addStretch(1);
+    root->addLayout(runtime_row);
+
+    auto* runtime_splitter = new QSplitter(Qt::Horizontal, group);
+    runtime_log_list_widget_ = new QListWidget(runtime_splitter);
+    runtime_log_list_widget_->setSelectionMode(QAbstractItemView::SingleSelection);
+    runtime_log_text_ = new QPlainTextEdit(runtime_splitter);
+    monitor_ui::configure_copyable_log_view(runtime_log_text_);
+    runtime_splitter->setStretchFactor(0, 1);
+    runtime_splitter->setStretchFactor(1, 3);
+    root->addWidget(runtime_splitter, 1);
+
     feature_list_widget_ = new QListWidget(group);
     feature_list_widget_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     feature_list_widget_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -121,7 +165,7 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     system_service_history_table_ = new QTableWidget(group);
     system_service_history_table_->setColumnCount(6);
     system_service_history_table_->setHorizontalHeaderLabels(
-        {"时间", "请求", "功能", "状态", "会话", "结果"});
+        {"时间", "请求", "目标", "状态", "会话", "结果"});
     system_service_history_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     system_service_history_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
     system_service_history_table_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -177,6 +221,18 @@ QWidget* MainWindow::build_system_service_panel(QWidget* parent) {
     });
     connect(start_feature_button_, &QPushButton::clicked, this, &MainWindow::stage_start_feature);
     connect(stop_feature_button_, &QPushButton::clicked, this, &MainWindow::stage_stop_feature);
+    connect(refresh_runtime_logs_button_,
+            &QPushButton::clicked,
+            this,
+            &MainWindow::stage_refresh_runtime_logs);
+    connect(read_runtime_log_button_,
+            &QPushButton::clicked,
+            this,
+            &MainWindow::stage_read_selected_runtime_log);
+    connect(runtime_log_list_widget_,
+            &QListWidget::itemClicked,
+            this,
+            [this](QListWidgetItem*) { stage_read_selected_runtime_log(); });
     return group;
 }
 
@@ -242,6 +298,36 @@ void MainWindow::refresh_system_services() {
         }
     }
     update_plain_text_if_changed(feature_detail_text_, detail_lines.join('\n'));
+
+    if (runtime_log_list_widget_ != nullptr) {
+        const QString selected_runtime = runtime_log_list_widget_->currentItem() == nullptr
+                                             ? QString()
+                                             : runtime_log_list_widget_->currentItem()
+                                                   ->data(Qt::UserRole)
+                                                   .toString();
+        runtime_log_list_widget_->clear();
+        for (const auto& runtime : state.runtime_logs) {
+            const QString label = QString::fromStdString(runtime.title.empty() ? runtime.runtime_id
+                                                                                : runtime.title) +
+                                  " [" + QString::fromStdString(runtime.state) + "]";
+            auto* item = new QListWidgetItem(label, runtime_log_list_widget_);
+            item->setData(Qt::UserRole, QString::fromStdString(runtime.runtime_id));
+            if (item->data(Qt::UserRole).toString() == selected_runtime) {
+                runtime_log_list_widget_->setCurrentItem(item);
+            }
+        }
+    }
+    if (runtime_log_text_ != nullptr && runtime_log_list_widget_ != nullptr &&
+        runtime_log_list_widget_->currentItem() != nullptr) {
+        const std::string selected =
+            runtime_log_list_widget_->currentItem()->data(Qt::UserRole).toString().toStdString();
+        for (const auto& runtime : state.runtime_logs) {
+            if (runtime.runtime_id == selected) {
+                update_plain_text_if_changed(runtime_log_text_, QString::fromStdString(runtime.chunk));
+                break;
+            }
+        }
+    }
 
     system_service_history_table_->setRowCount(static_cast<int>(history.size()));
     for (int row = 0; row < static_cast<int>(history.size()); ++row) {

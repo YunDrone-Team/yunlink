@@ -78,6 +78,9 @@ class AdvancedMonitorBackend {
                                bool restart_if_running,
                                bool start_with_terminal);
     void request_feature_stop(const std::string& feature_name, bool force);
+    void request_runtime_log_list();
+    void request_runtime_log_read(const std::string& runtime_id, uint64_t cursor = 0,
+                                  uint32_t max_bytes = 32768);
     void request_config_resource_list();
     void request_config_resource_describe(const std::string& resource_id);
     void request_config_resource_get(const std::string& resource_id);
@@ -149,6 +152,10 @@ class AdvancedMonitorBackend {
     on_feature_start_response(const yunlink::TypedMessage<yunlink::FeatureStartResponse>& message);
     void
     on_feature_stop_response(const yunlink::TypedMessage<yunlink::FeatureStopResponse>& message);
+    void on_runtime_log_list_response(
+        const yunlink::TypedMessage<yunlink::RuntimeLogListResponse>& message);
+    void on_runtime_log_read_response(
+        const yunlink::TypedMessage<yunlink::RuntimeLogReadResponse>& message);
     void record_system_service_request(const std::string& action,
                                        const std::string& feature_name,
                                        const yunlink::SystemServiceHandle& handle);
@@ -195,6 +202,8 @@ class AdvancedMonitorBackend {
     size_t feature_get_response_token_{0};
     size_t feature_start_response_token_{0};
     size_t feature_stop_response_token_{0};
+    size_t runtime_log_list_response_token_{0};
+    size_t runtime_log_read_response_token_{0};
     size_t config_list_response_token_{0};
     size_t config_describe_response_token_{0};
     size_t config_get_response_token_{0};

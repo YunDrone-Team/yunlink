@@ -21,6 +21,16 @@ void AdvancedMonitorBackend::bind_system_service_feedback() {
             [this](const yunlink::TypedMessage<yunlink::FeatureStopResponse>& message) {
                 on_feature_stop_response(message);
             });
+    runtime_log_list_response_token_ =
+        runtime_.system_service_subscriber().subscribe_runtime_log_list_responses(
+            [this](const yunlink::TypedMessage<yunlink::RuntimeLogListResponse>& message) {
+                on_runtime_log_list_response(message);
+            });
+    runtime_log_read_response_token_ =
+        runtime_.system_service_subscriber().subscribe_runtime_log_read_responses(
+            [this](const yunlink::TypedMessage<yunlink::RuntimeLogReadResponse>& message) {
+                on_runtime_log_read_response(message);
+            });
     log(MonitorLogLevel::kInfo, MonitorLogSource::kRuntime, "system service response 订阅器已就绪");
 }
 
@@ -164,6 +174,55 @@ void AdvancedMonitorBackend::request_feature_stop(const std::string& feature_nam
         MonitorLogSource::kSystemService,
         "已发送 FeatureStop 请求，feature=" + feature_name +
             " message_id=" + std::to_string(handle.message_id));
+}
+
+void AdvancedMonitorBackend::request_runtime_log_list() {
+    std::string peer_id;
+    uint64_t session_id = 0;
+    if (!snapshot_send_context(&peer_id, &session_id)) {
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kSystemService,
+            "RuntimeLogList 未发送，session 未就绪");
+        return;
+    }
+    yunlink::SystemServiceHandle handle{};
+    const auto ec = runtime_.system_service_publisher().publish_runtime_log_list_request(
+        peer_id, session_id, system_service_target(), {}, &handle);
+    if (ec != yunlink::ErrorCode::kOk) {
+        log(MonitorLogLevel::kError, MonitorLogSource::kSystemService,
+            "RuntimeLogList 发送失败，ec=" + error_code_label(ec));
+        return;
+    }
+    record_system_service_request("RuntimeLogList", std::string(), handle);
+}
+
+void AdvancedMonitorBackend::request_runtime_log_read(const std::string& runtime_id,
+                                                      uint64_t cursor,
+                                                      uint32_t max_bytes) {
+    if (runtime_id.empty()) {
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kSystemService,
+            "RuntimeLogRead 未发送，runtime_id 为空");
+        return;
+    }
+    std::string peer_id;
+    uint64_t session_id = 0;
+    if (!snapshot_send_context(&peer_id, &session_id)) {
+        log(MonitorLogLevel::kWarn, MonitorLogSource::kSystemService,
+            "RuntimeLogRead 未发送，session 未就绪");
+        return;
+    }
+    yunlink::RuntimeLogReadRequest request{};
+    request.runtime_id = runtime_id;
+    request.cursor = cursor;
+    request.max_bytes = max_bytes;
+    yunlink::SystemServiceHandle handle{};
+    const auto ec = runtime_.system_service_publisher().publish_runtime_log_read_request(
+        peer_id, session_id, system_service_target(), request, &handle);
+    if (ec != yunlink::ErrorCode::kOk) {
+        log(MonitorLogLevel::kError, MonitorLogSource::kSystemService,
+            "RuntimeLogRead 发送失败，runtime=" + runtime_id + " ec=" + error_code_label(ec));
+        return;
+    }
+    record_system_service_request("RuntimeLogRead", runtime_id, handle);
 }
 
 void AdvancedMonitorBackend::record_system_service_request(

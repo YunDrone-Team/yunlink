@@ -238,6 +238,38 @@ size_t Runtime::subscribe_feature_stop_response_internal(
     return token;
 }
 
+size_t Runtime::subscribe_runtime_log_list_request_internal(
+    SystemServiceSubscriber::RuntimeLogListRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->runtime_log_list_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_runtime_log_list_response_internal(
+    SystemServiceSubscriber::RuntimeLogListResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->runtime_log_list_response_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_runtime_log_read_request_internal(
+    SystemServiceSubscriber::RuntimeLogReadRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->runtime_log_read_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_runtime_log_read_response_internal(
+    SystemServiceSubscriber::RuntimeLogReadResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->runtime_log_read_response_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_bulk_channel_descriptor_internal(
     EventSubscriber::BulkChannelDescriptorHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
@@ -283,6 +315,10 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->feature_start_response_handlers.erase(token);
     impl_->feature_stop_request_handlers.erase(token);
     impl_->feature_stop_response_handlers.erase(token);
+    impl_->runtime_log_list_request_handlers.erase(token);
+    impl_->runtime_log_list_response_handlers.erase(token);
+    impl_->runtime_log_read_request_handlers.erase(token);
+    impl_->runtime_log_read_response_handlers.erase(token);
     unsubscribe_configuration_semantic_locked(token);
     impl_->bulk_channel_descriptor_handlers.erase(token);
 }

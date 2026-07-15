@@ -80,6 +80,32 @@ void Runtime::handle_system_service_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case SystemServiceType::kRuntimeLogListRequest:
+        if (!runtime_fanout_inbound_request<RuntimeLogListRequest>(
+                impl_->mu, ev, ev.envelope.payload, impl_->runtime_log_list_request_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kRuntimeLogListResponse:
+        if (!runtime_fanout_snapshot<RuntimeLogListResponse>(
+                impl_->mu, ev.envelope, ev.envelope.payload,
+                impl_->runtime_log_list_response_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kRuntimeLogReadRequest:
+        if (!runtime_fanout_inbound_request<RuntimeLogReadRequest>(
+                impl_->mu, ev, ev.envelope.payload, impl_->runtime_log_read_request_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kRuntimeLogReadResponse:
+        if (!runtime_fanout_snapshot<RuntimeLogReadResponse>(
+                impl_->mu, ev.envelope, ev.envelope.payload,
+                impl_->runtime_log_read_response_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     }
 }
 

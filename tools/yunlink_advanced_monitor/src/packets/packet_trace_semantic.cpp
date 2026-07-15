@@ -213,6 +213,48 @@ void append_system_service(const yunlink::PacketTraceRecord& record, std::ostrin
         }
         break;
     }
+    case yunlink::SystemServiceType::kRuntimeLogListRequest: {
+        yunlink::RuntimeLogListRequest payload{};
+        if (decode_payload(record, &payload, ss)) {
+            *ss << "reserved: " << static_cast<int>(payload.reserved) << "\n";
+        }
+        break;
+    }
+    case yunlink::SystemServiceType::kRuntimeLogListResponse: {
+        yunlink::RuntimeLogListResponse payload{};
+        if (decode_payload(record, &payload, ss)) {
+            *ss << "success: " << yes_no(payload.success) << "\n";
+            *ss << "message: " << payload.message << "\n";
+            *ss << "runtime_count: " << payload.runtimes.size() << "\n";
+            for (const auto& item : payload.runtimes) {
+                *ss << "runtime: " << item.runtime_id << " state=" << item.state
+                    << " feature=" << item.feature_name << "\n";
+            }
+        }
+        break;
+    }
+    case yunlink::SystemServiceType::kRuntimeLogReadRequest: {
+        yunlink::RuntimeLogReadRequest payload{};
+        if (decode_payload(record, &payload, ss)) {
+            *ss << "runtime_id: " << payload.runtime_id << "\n";
+            *ss << "cursor: " << payload.cursor << "\n";
+            *ss << "max_bytes: " << payload.max_bytes << "\n";
+        }
+        break;
+    }
+    case yunlink::SystemServiceType::kRuntimeLogReadResponse: {
+        yunlink::RuntimeLogReadResponse payload{};
+        if (decode_payload(record, &payload, ss)) {
+            *ss << "success: " << yes_no(payload.success) << "\n";
+            *ss << "message: " << payload.message << "\n";
+            *ss << "runtime_id: " << payload.runtime_id << "\n";
+            *ss << "chunk_bytes: " << payload.chunk.size() << "\n";
+            *ss << "next_cursor: " << payload.next_cursor << "\n";
+            *ss << "truncated: " << yes_no(payload.truncated) << "\n";
+            *ss << "eof: " << yes_no(payload.eof) << "\n";
+        }
+        break;
+    }
     }
 }
 
