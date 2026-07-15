@@ -215,6 +215,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_protocol_corruption PRIVATE yunlink)
   add_test(NAME test_protocol_corruption COMMAND test_protocol_corruption)
 
+  add_executable(test_endpoint_discovery_active tests/core/test_endpoint_discovery_active.cpp)
+  target_link_libraries(test_endpoint_discovery_active PRIVATE yunlink)
+  add_test(NAME test_endpoint_discovery_active COMMAND test_endpoint_discovery_active)
+
   add_executable(test_compat_roundtrip tests/test_compat_roundtrip.cpp)
   target_link_libraries(test_compat_roundtrip PRIVATE yunlink)
   add_test(NAME test_compat_roundtrip COMMAND test_compat_roundtrip)

@@ -1,8 +1,11 @@
 #include "backend/advanced_monitor_backend.hpp"
 
 #include <algorithm>
+#include <random>
 
 namespace {
+
+constexpr uint64_t kDiscoveryScanWindowMs = 1200U;
 
 std::string join_capabilities(const std::vector<std::string>& capabilities) {
     std::string out;
@@ -31,6 +34,11 @@ void AdvancedMonitorBackend::poll_discovery() {
     if (!packets.empty()) {
         std::lock_guard<std::mutex> lock(mu_);
         for (const auto& packet : packets) {
+            if (packet.is_query_reply &&
+                (packet.reply_nonce != discovery_scan_nonce_ ||
+                 packet.received_at_ms > discovery_scan_expires_ms_)) {
+                continue;
+            }
             DiscoveryDevice device{};
             device.endpoint_id = packet.advertisement.endpoint_id;
             device.display_name_prefix = packet.advertisement.display_name_prefix;
@@ -46,17 +54,19 @@ void AdvancedMonitorBackend::poll_discovery() {
             device.protocol_version = packet.advertisement.protocol_version;
             device.capabilities = packet.advertisement.capabilities;
             device.last_seen_ms = packet.received_at_ms;
+            device.last_query_reply_ms = packet.is_query_reply ? packet.received_at_ms : 0;
             device.started_at_ms = packet.advertisement.started_at_ms;
             device.sequence = packet.advertisement.sequence;
             device.discovery_period_ms = packet.advertisement.discovery_period_ms;
             device.stale = false;
-            device.selected = selected_discovery_key_ == make_discovery_key(packet.source_ip,
-                                                                            packet.advertisement.endpoint_id,
-                                                                            packet.advertisement.tcp_listen_port);
-            device.dedupe_key =
-                make_discovery_key(packet.source_ip,
-                                   packet.advertisement.endpoint_id,
-                                   packet.advertisement.tcp_listen_port);
+            device.dedupe_key = make_discovery_key(packet.advertisement.endpoint_id);
+            if (!packet.is_query_reply) {
+                const auto existing = discovery_devices_.find(device.dedupe_key);
+                if (existing != discovery_devices_.end()) {
+                    device.last_query_reply_ms = existing->second.last_query_reply_ms;
+                }
+            }
+            device.selected = selected_discovery_key_ == device.dedupe_key;
             discovery_devices_[device.dedupe_key] = std::move(device);
         }
     }
@@ -79,6 +89,41 @@ void AdvancedMonitorBackend::poll_discovery() {
     }
 }
 
+void AdvancedMonitorBackend::request_discovery_scan() {
+    if (!discovery_listener_started_) {
+        return;
+    }
+    std::random_device random;
+    const uint64_t nonce = (static_cast<uint64_t>(random()) << 32U) | random();
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        discovery_scan_nonce_ = nonce == 0 ? 1 : nonce;
+        discovery_scan_next_send_ms_ = wall_time_ms();
+        discovery_scan_expires_ms_ = discovery_scan_next_send_ms_ + kDiscoveryScanWindowMs;
+        discovery_scan_remaining_ = 3;
+    }
+    log(MonitorLogLevel::kInfo, MonitorLogSource::kConnection, "已发起局域网设备主动搜索");
+}
+
+void AdvancedMonitorBackend::poll_discovery_scan() {
+    uint64_t nonce = 0;
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        if (discovery_scan_remaining_ <= 0 || wall_time_ms() < discovery_scan_next_send_ms_) {
+            return;
+        }
+        nonce = discovery_scan_nonce_;
+        discovery_scan_next_send_ms_ = wall_time_ms() + 250U;
+        --discovery_scan_remaining_;
+    }
+    const auto ec = discovery_listener_.send_query(nonce, 1000U);
+    if (ec != yunlink::ErrorCode::kOk) {
+        log(MonitorLogLevel::kWarn,
+            MonitorLogSource::kConnection,
+            "局域网设备搜索发送失败 ec=" + error_code_label(ec));
+    }
+}
+
 std::vector<DiscoveryDevice> AdvancedMonitorBackend::snapshot_discovery_devices() const {
     std::vector<DiscoveryDevice> devices;
     std::lock_guard<std::mutex> lock(mu_);
@@ -90,6 +135,14 @@ std::vector<DiscoveryDevice> AdvancedMonitorBackend::snapshot_discovery_devices(
     std::sort(devices.begin(), devices.end(), [](const DiscoveryDevice& left, const DiscoveryDevice& right) {
         if (left.stale != right.stale) {
             return !left.stale && right.stale;
+        }
+        const uint64_t now_ms = wall_time_ms();
+        const bool left_query_reply_fresh =
+            left.last_query_reply_ms != 0 && now_ms <= left.last_query_reply_ms + kDiscoveryScanWindowMs;
+        const bool right_query_reply_fresh =
+            right.last_query_reply_ms != 0 && now_ms <= right.last_query_reply_ms + kDiscoveryScanWindowMs;
+        if (left_query_reply_fresh != right_query_reply_fresh) {
+            return left_query_reply_fresh;
         }
         if (left.last_seen_ms != right.last_seen_ms) {
             return left.last_seen_ms > right.last_seen_ms;
@@ -207,16 +260,15 @@ std::string AdvancedMonitorBackend::selected_discovery_device_key() const {
     return selected_discovery_key_;
 }
 
-std::string AdvancedMonitorBackend::make_discovery_key(const std::string& source_ip,
-                                                       const std::string& endpoint_id,
-                                                       uint16_t tcp_listen_port) {
-    return endpoint_id + "|" + source_ip + "|" + std::to_string(tcp_listen_port);
+std::string AdvancedMonitorBackend::make_discovery_key(const std::string& endpoint_id) {
+    return endpoint_id;
 }
 
 void AdvancedMonitorBackend::start_discovery_listener() {
     yunlink::EndpointDiscoveryConfig config;
     config.discovery_port = clamp_port(discovery_port_);
     config.target_ip = discovery_target_ip_;
+    config.shared_secret = shared_secret_;
 
     const auto ec = discovery_listener_.start(config);
     if (ec != yunlink::ErrorCode::kOk) {
@@ -231,6 +283,7 @@ void AdvancedMonitorBackend::start_discovery_listener() {
     log(MonitorLogLevel::kInfo,
         MonitorLogSource::kConnection,
         "Discovery listener 已启动，listen=0.0.0.0:" + std::to_string(config.discovery_port));
+    request_discovery_scan();
 }
 
 void AdvancedMonitorBackend::update_discovery_snapshot_unlocked(const DiscoveryDevice& device) {

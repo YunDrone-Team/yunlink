@@ -76,6 +76,7 @@ void MainWindow::stage_refresh_discovery_devices() {
     if (backend_ == nullptr) {
         return;
     }
+    backend_->request_discovery_scan();
     backend_->poll_runtime();
     refresh_discovery_devices(true);
 }

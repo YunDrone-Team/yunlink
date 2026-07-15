@@ -17,6 +17,8 @@
 namespace yunlink {
 
 constexpr const char* kEndpointDiscoveryMagic = "YUNLINK_ENDPOINT_DISCOVERY_V1";
+constexpr const char* kEndpointDiscoveryQueryMagic = "YLQ1";
+constexpr const char* kEndpointDiscoveryReplyMagic = "YLR1";
 constexpr const char* kDefaultEndpointNamePrefix = "yundrone_uav";
 constexpr uint16_t kDefaultEndpointDiscoveryPort = 9966;
 
@@ -42,12 +44,22 @@ struct EndpointAdvertisementPacket {
     std::string source_ip;
     uint16_t source_port{0};
     uint64_t received_at_ms{0};
+    bool is_query_reply{false};
+    uint64_t reply_nonce{0};
 };
 
 struct EndpointDiscoveryConfig {
     uint16_t discovery_port{kDefaultEndpointDiscoveryPort};
     std::string target_ip{"255.255.255.255"};
     int io_poll_interval_ms{10};
+    std::string shared_secret{"yunlink-default-secret"};
+    uint16_t query_response_window_ms{1000};
+    uint16_t query_rate_limit_per_sec{6};
+};
+
+struct EndpointDiscoveryQuery {
+    uint64_t nonce{0};
+    uint16_t response_window_ms{1000};
 };
 
 std::string make_endpoint_display_name(const std::string& prefix,
@@ -61,6 +73,20 @@ bool decode_endpoint_advertisement(const ByteBuffer& bytes,
 bool decode_endpoint_advertisement_text(const std::string& text,
                                         EndpointAdvertisement* out,
                                         std::string* error = nullptr);
+ByteBuffer encode_endpoint_discovery_query(const EndpointDiscoveryQuery& query,
+                                           const std::string& shared_secret);
+bool decode_endpoint_discovery_query(const ByteBuffer& bytes,
+                                     const std::string& shared_secret,
+                                     EndpointDiscoveryQuery* out,
+                                     std::string* error = nullptr);
+ByteBuffer encode_endpoint_discovery_reply(uint64_t nonce,
+                                           const EndpointAdvertisement& advertisement,
+                                           const std::string& shared_secret);
+bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
+                                     const std::string& shared_secret,
+                                     uint64_t* nonce,
+                                     EndpointAdvertisement* out,
+                                     std::string* error = nullptr);
 
 class EndpointAdvertiser {
   public:
@@ -71,6 +97,7 @@ class EndpointAdvertiser {
     void stop();
 
     bool is_running() const;
+    void set_advertisement(const EndpointAdvertisement& advertisement);
     int send(const EndpointAdvertisement& advertisement);
     std::string last_error() const;
 
@@ -78,6 +105,7 @@ class EndpointAdvertiser {
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
+    void recv_loop();
     void set_last_error(const std::string& error);
 };
 
@@ -90,6 +118,7 @@ class EndpointListener {
     void stop();
 
     bool is_running() const;
+    ErrorCode send_query(uint64_t nonce, uint16_t response_window_ms);
     size_t drain(std::vector<EndpointAdvertisementPacket>* out);
     std::string last_error() const;
 

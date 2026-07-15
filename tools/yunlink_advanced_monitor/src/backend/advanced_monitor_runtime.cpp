@@ -33,6 +33,7 @@ bool has_remote_target(const std::string& ip, int port) {
 }  // namespace
 
 void AdvancedMonitorBackend::poll_runtime() {
+    poll_discovery_scan();
     poll_discovery();
     if (!runtime_started_) {
         return;

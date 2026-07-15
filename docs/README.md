@@ -15,13 +15,14 @@
 5. [protocol/integration-guide.md](protocol/integration-guide.md)
 6. [protocol/scenario-walkthroughs.md](protocol/scenario-walkthroughs.md)
 7. [protocol/migration-notes.md](protocol/migration-notes.md)
-8. [bindings/overview.md](bindings/overview.md)
-9. [bindings/ros-sunray-bridge-overview.md](bindings/ros-sunray-bridge-overview.md)
-10. [bindings/test-world-map.md](bindings/test-world-map.md)
-11. [bindings/ros1-docker-ubuntu26-guide.md](bindings/ros1-docker-ubuntu26-guide.md)
-12. [bindings/test-matrix.md](bindings/test-matrix.md)
-13. [bindings/testing-todo-checklist.md](bindings/testing-todo-checklist.md)
-14. [../tools/README.md](../tools/README.md)
+8. [protocol/lan-discovery.md](protocol/lan-discovery.md)
+9. [bindings/overview.md](bindings/overview.md)
+10. [bindings/ros-sunray-bridge-overview.md](bindings/ros-sunray-bridge-overview.md)
+11. [bindings/test-world-map.md](bindings/test-world-map.md)
+12. [bindings/ros1-docker-ubuntu26-guide.md](bindings/ros1-docker-ubuntu26-guide.md)
+13. [bindings/test-matrix.md](bindings/test-matrix.md)
+14. [bindings/testing-todo-checklist.md](bindings/testing-todo-checklist.md)
+15. [../tools/README.md](../tools/README.md)
 
 ## 目录说明
 

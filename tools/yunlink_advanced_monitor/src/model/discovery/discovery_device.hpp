@@ -21,6 +21,7 @@ struct DiscoveryDevice {
     std::string protocol_version;
     std::vector<std::string> capabilities;
     uint64_t last_seen_ms{0};
+    uint64_t last_query_reply_ms{0};
     uint64_t started_at_ms{0};
     uint64_t sequence{0};
     uint32_t discovery_period_ms{1000};

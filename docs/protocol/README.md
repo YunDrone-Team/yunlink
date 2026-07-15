@@ -12,6 +12,8 @@
   读 [payload-reference.md](payload-reference.md)
 - 想接入动态配置资源：
   读 [configuration-resource-service.md](configuration-resource-service.md)
+- 想接入低扰动局域网发现：
+  读 [lan-discovery.md](lan-discovery.md)
 - 想看端到端场景：
   读 [scenario-walkthroughs.md](scenario-walkthroughs.md)
 - 想从历史认知迁移：
@@ -41,6 +43,8 @@
   面向开发、联调和协议查阅，列出当前 repo 已实现的 payload、字段、类型、单位、约束和编码边界。
 - [configuration-resource-service.md](configuration-resource-service.md)
   定义 schema 1 类型化配置资源的发现、schema、revision、Patch、Apply、安全边界和跨语言生命周期。
+- [lan-discovery.md](lan-discovery.md)
+  定义主动探测、低频兼容信标、认证 tag、限流与 Monitor 扫描窗口。
 - [scenario-walkthroughs.md](scenario-walkthroughs.md)
   面向开发与联调。给出单 UAV、单 UGV、Swarm 三类场景的协议路径，以及当前 repo 对这些场景的可落地点和限制。
 - [migration-notes.md](migration-notes.md)
