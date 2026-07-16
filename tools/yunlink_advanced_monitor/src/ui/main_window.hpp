@@ -98,6 +98,8 @@ class MainWindow : public QMainWindow {
     void stage_refresh_feature_detail();
     void stage_start_feature();
     void stage_stop_feature();
+    void stage_refresh_runtime_logs();
+    void stage_read_selected_runtime_log();
     void stage_refresh_configuration();
     void stage_validate_configuration();
     void stage_save_configuration();
@@ -151,7 +153,9 @@ class MainWindow : public QMainWindow {
     QStackedWidget* page_stack_{nullptr};
     std::vector<QPushButton*> page_nav_buttons_;
     QListWidget* feature_list_widget_{nullptr};
+    QListWidget* runtime_log_list_widget_{nullptr};
     QPlainTextEdit* feature_detail_text_{nullptr};
+    QPlainTextEdit* runtime_log_text_{nullptr};
     QLabel* feature_request_preview_{nullptr};
     QLineEdit* feature_override_args_edit_{nullptr};
     QLineEdit* feature_name_edit_{nullptr};
@@ -211,6 +215,8 @@ class MainWindow : public QMainWindow {
     QPushButton* refresh_feature_detail_button_{nullptr};
     QPushButton* start_feature_button_{nullptr};
     QPushButton* stop_feature_button_{nullptr};
+    QPushButton* refresh_runtime_logs_button_{nullptr};
+    QPushButton* read_runtime_log_button_{nullptr};
     QDoubleSpinBox* point_x_spin_{nullptr};
     QDoubleSpinBox* point_y_spin_{nullptr};
     QDoubleSpinBox* point_z_spin_{nullptr};

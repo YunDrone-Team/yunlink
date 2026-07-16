@@ -69,6 +69,13 @@ ErrorCode EndpointListener::start(const EndpointDiscoveryConfig& config) {
         return ErrorCode::kSocketError;
     }
 
+    impl_->socket->set_option(asio::socket_base::broadcast(true), ec);
+    if (ec) {
+        impl_->socket.reset();
+        set_last_error("listener broadcast option failed: " + ec.message());
+        return ErrorCode::kSocketError;
+    }
+
     impl_->socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), config.discovery_port), ec);
     if (ec) {
         impl_->socket.reset();
@@ -117,6 +124,29 @@ bool EndpointListener::is_running() const {
     return impl_->running.load();
 }
 
+ErrorCode EndpointListener::send_query(uint64_t nonce, uint16_t response_window_ms) {
+    if (!impl_->running.load() || impl_->socket == nullptr || nonce == 0) {
+        return ErrorCode::kInvalidArgument;
+    }
+    std::error_code ec;
+    const auto address = asio::ip::make_address(impl_->config.target_ip, ec);
+    if (ec) {
+        set_last_error("invalid discovery target ip: " + impl_->config.target_ip);
+        return ErrorCode::kInvalidArgument;
+    }
+    const ByteBuffer query = encode_endpoint_discovery_query(
+        EndpointDiscoveryQuery{nonce, response_window_ms}, impl_->config.shared_secret);
+    impl_->socket->send_to(asio::buffer(query),
+                           asio::ip::udp::endpoint(address, impl_->config.discovery_port),
+                           0,
+                           ec);
+    if (ec) {
+        set_last_error("discovery query send failed: " + ec.message());
+        return ErrorCode::kSocketError;
+    }
+    return ErrorCode::kOk;
+}
+
 size_t EndpointListener::drain(std::vector<EndpointAdvertisementPacket>* out) {
     if (out == nullptr) {
         return 0;
@@ -159,11 +189,14 @@ void EndpointListener::recv_loop() {
             continue;
         }
 
+        const ByteBuffer bytes(buffer.begin(), buffer.begin() + received);
         EndpointAdvertisement advertisement{};
         std::string error;
-        if (!decode_endpoint_advertisement(
-                ByteBuffer(buffer.begin(), buffer.begin() + received), &advertisement, &error)) {
-            set_last_error("listener decode failed: " + error);
+        uint64_t nonce = 0;
+        const bool query_reply = decode_endpoint_discovery_reply(
+            bytes, impl_->config.shared_secret, &nonce, &advertisement, &error);
+        if (!query_reply && !decode_endpoint_advertisement(bytes, &advertisement, &error)) {
+            // Queries on the shared discovery port are expected and are not listener errors.
             continue;
         }
 
@@ -175,6 +208,8 @@ void EndpointListener::recv_loop() {
         }
         packet.source_port = source.port();
         packet.received_at_ms = wall_time_ms();
+        packet.is_query_reply = query_reply;
+        packet.reply_nonce = query_reply ? nonce : 0;
 
         std::lock_guard<std::mutex> lock(impl_->queue_mu);
         impl_->queue.push_back(std::move(packet));

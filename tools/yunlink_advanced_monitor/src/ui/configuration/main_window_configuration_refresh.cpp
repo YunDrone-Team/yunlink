@@ -27,6 +27,14 @@ QString join_string_list(const std::vector<std::string>& values) {
     return result.join(";");
 }
 
+QString join_double_list(const std::vector<double>& values) {
+    QStringList result;
+    for (const double value : values) {
+        result.append(QString::number(value, 'g', 17));
+    }
+    return result.join(";");
+}
+
 QString status_text(const MonitorConfigurationState& state) {
     QString text =
         QString::fromStdString(state.last_status.empty() ? "等待配置响应" : state.last_status);
@@ -144,6 +152,9 @@ void MainWindow::refresh_configuration() {
             } else if (field.type == yunlink::ConfigValueType::kStringList) {
                 qobject_cast<QLineEdit*>(editor)->setText(
                     join_string_list(current->value.string_list_value));
+            } else if (field.type == yunlink::ConfigValueType::kDoubleList) {
+                qobject_cast<QLineEdit*>(editor)->setText(
+                    join_double_list(current->value.double_list_value));
             } else {
                 qobject_cast<QLineEdit*>(editor)->setText(
                     QString::fromStdString(current->value.string_value));

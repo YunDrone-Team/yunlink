@@ -127,15 +127,21 @@ int main() {
     bool saw_get_request = false;
     bool saw_start_request = false;
     bool saw_stop_request = false;
+    bool saw_runtime_log_list_request = false;
+    bool saw_runtime_log_read_request = false;
     std::mutex mu;
     std::vector<yunlink::TypedMessage<yunlink::FeatureListResponse>> list_responses;
     std::vector<yunlink::TypedMessage<yunlink::FeatureGetResponse>> get_responses;
     std::vector<yunlink::TypedMessage<yunlink::FeatureStartResponse>> start_responses;
     std::vector<yunlink::TypedMessage<yunlink::FeatureStopResponse>> stop_responses;
+    std::vector<yunlink::TypedMessage<yunlink::RuntimeLogListResponse>> runtime_log_list_responses;
+    std::vector<yunlink::TypedMessage<yunlink::RuntimeLogReadResponse>> runtime_log_read_responses;
     uint64_t list_request_message_id = 0;
     uint64_t get_request_message_id = 0;
     uint64_t start_request_message_id = 0;
     uint64_t stop_request_message_id = 0;
+    uint64_t runtime_log_list_request_message_id = 0;
+    uint64_t runtime_log_read_request_message_id = 0;
 
     const size_t list_req_token =
         server.system_service_subscriber().subscribe_feature_list_requests(
@@ -201,6 +207,40 @@ int main() {
                 saw_stop_request = true;
                 stop_request_message_id = view.inbound.envelope.message_id;
             });
+    const size_t runtime_log_list_req_token =
+        server.system_service_subscriber().subscribe_runtime_log_list_requests(
+            [&](const yunlink::InboundSystemServiceRequestView<yunlink::RuntimeLogListRequest>& view) {
+                yunlink::RuntimeLogListResponse response{};
+                response.success = true;
+                response.message = "ok";
+                response.runtimes.push_back({"runtime-1", "sunray_uav_control", "UAV Control",
+                                             "RUNNING", 1234000000ULL, 0, false, 0, "healthy"});
+                if (server.system_service_publisher().publish_runtime_log_list_response(
+                        view.inbound, response) != yunlink::ErrorCode::kOk) {
+                    std::cerr << "publish runtime log list response failed\n";
+                }
+                saw_runtime_log_list_request = true;
+                runtime_log_list_request_message_id = view.inbound.envelope.message_id;
+            });
+    const size_t runtime_log_read_req_token =
+        server.system_service_subscriber().subscribe_runtime_log_read_requests(
+            [&](const yunlink::InboundSystemServiceRequestView<yunlink::RuntimeLogReadRequest>& view) {
+                yunlink::RuntimeLogReadResponse response{};
+                response.success = view.payload.runtime_id == "runtime-1" && view.payload.cursor == 7 &&
+                                   view.payload.max_bytes == 1024;
+                response.message = response.success ? "ok" : "invalid request";
+                response.runtime_id = view.payload.runtime_id;
+                response.chunk = "line one\n";
+                response.next_cursor = 16;
+                response.truncated = false;
+                response.eof = true;
+                if (server.system_service_publisher().publish_runtime_log_read_response(
+                        view.inbound, response) != yunlink::ErrorCode::kOk) {
+                    std::cerr << "publish runtime log read response failed\n";
+                }
+                saw_runtime_log_read_request = true;
+                runtime_log_read_request_message_id = view.inbound.envelope.message_id;
+            });
 
     const size_t list_resp_token =
         client.system_service_subscriber().subscribe_feature_list_responses(
@@ -225,6 +265,18 @@ int main() {
             [&](const yunlink::TypedMessage<yunlink::FeatureStopResponse>& view) {
                 std::lock_guard<std::mutex> lock(mu);
                 stop_responses.push_back(view);
+            });
+    const size_t runtime_log_list_resp_token =
+        client.system_service_subscriber().subscribe_runtime_log_list_responses(
+            [&](const yunlink::TypedMessage<yunlink::RuntimeLogListResponse>& view) {
+                std::lock_guard<std::mutex> lock(mu);
+                runtime_log_list_responses.push_back(view);
+            });
+    const size_t runtime_log_read_resp_token =
+        client.system_service_subscriber().subscribe_runtime_log_read_responses(
+            [&](const yunlink::TypedMessage<yunlink::RuntimeLogReadResponse>& view) {
+                std::lock_guard<std::mutex> lock(mu);
+                runtime_log_read_responses.push_back(view);
             });
 
     yunlink::SystemServiceHandle list_handle{};
@@ -266,11 +318,31 @@ int main() {
         return 9;
     }
 
+    yunlink::SystemServiceHandle runtime_log_list_handle{};
+    if (client.system_service_publisher().publish_runtime_log_list_request(
+            peer_id, session_id, target, {}, &runtime_log_list_handle) != yunlink::ErrorCode::kOk) {
+        std::cerr << "publish runtime log list request failed\n";
+        return 91;
+    }
+    yunlink::SystemServiceHandle runtime_log_read_handle{};
+    yunlink::RuntimeLogReadRequest runtime_log_read_request{};
+    runtime_log_read_request.runtime_id = "runtime-1";
+    runtime_log_read_request.cursor = 7;
+    runtime_log_read_request.max_bytes = 1024;
+    if (client.system_service_publisher().publish_runtime_log_read_request(
+            peer_id, session_id, target, runtime_log_read_request, &runtime_log_read_handle) !=
+        yunlink::ErrorCode::kOk) {
+        std::cerr << "publish runtime log read request failed\n";
+        return 92;
+    }
+
     if (!wait_until([&]() {
             std::lock_guard<std::mutex> lock(mu);
             return saw_list_request && saw_get_request && saw_start_request && saw_stop_request &&
+                   saw_runtime_log_list_request && saw_runtime_log_read_request &&
                    list_responses.size() == 1 && get_responses.size() == 1 &&
-                   start_responses.size() == 1 && stop_responses.size() == 1;
+                   start_responses.size() == 1 && stop_responses.size() == 1 &&
+                   runtime_log_list_responses.size() == 1 && runtime_log_read_responses.size() == 1;
         })) {
         std::cerr << "system service roundtrip not observed\n";
         return 10;
@@ -280,16 +352,21 @@ int main() {
     server.system_service_subscriber().unsubscribe(get_req_token);
     server.system_service_subscriber().unsubscribe(start_req_token);
     server.system_service_subscriber().unsubscribe(stop_req_token);
+    server.system_service_subscriber().unsubscribe(runtime_log_list_req_token);
+    server.system_service_subscriber().unsubscribe(runtime_log_read_req_token);
     client.system_service_subscriber().unsubscribe(list_resp_token);
     client.system_service_subscriber().unsubscribe(get_resp_token);
     client.system_service_subscriber().unsubscribe(start_resp_token);
     client.system_service_subscriber().unsubscribe(stop_resp_token);
+    client.system_service_subscriber().unsubscribe(runtime_log_list_resp_token);
+    client.system_service_subscriber().unsubscribe(runtime_log_read_resp_token);
 
     client.stop();
     server.stop();
 
     std::lock_guard<std::mutex> lock(mu);
-    if (!saw_list_request || !saw_get_request || !saw_start_request || !saw_stop_request) {
+    if (!saw_list_request || !saw_get_request || !saw_start_request || !saw_stop_request ||
+        !saw_runtime_log_list_request || !saw_runtime_log_read_request) {
         std::cerr << "request handler not invoked\n";
         return 11;
     }
@@ -336,6 +413,26 @@ int main() {
         stop_responses.front().payload.message != "force stop requested") {
         std::cerr << "feature stop response payload mismatch\n";
         return 19;
+    }
+    if (runtime_log_list_responses.front().envelope.correlation_id !=
+            runtime_log_list_request_message_id ||
+        runtime_log_list_responses.front().envelope.correlation_id != runtime_log_list_handle.message_id ||
+        !runtime_log_list_responses.front().payload.success ||
+        runtime_log_list_responses.front().payload.runtimes.size() != 1 ||
+        runtime_log_list_responses.front().payload.runtimes.front().runtime_id != "runtime-1") {
+        std::cerr << "runtime log list response mismatch\n";
+        return 20;
+    }
+    if (runtime_log_read_responses.front().envelope.correlation_id !=
+            runtime_log_read_request_message_id ||
+        runtime_log_read_responses.front().envelope.correlation_id != runtime_log_read_handle.message_id ||
+        !runtime_log_read_responses.front().payload.success ||
+        runtime_log_read_responses.front().payload.runtime_id != "runtime-1" ||
+        runtime_log_read_responses.front().payload.chunk != "line one\n" ||
+        runtime_log_read_responses.front().payload.next_cursor != 16 ||
+        !runtime_log_read_responses.front().payload.eof) {
+        std::cerr << "runtime log read response mismatch\n";
+        return 21;
     }
 
     return 0;

@@ -18,6 +18,8 @@ typedef struct yunlink_config_value_view {
     yunlink_string_view_t string_value;
     const yunlink_string_view_t* string_list;
     size_t string_list_count;
+    const double* double_list;
+    size_t double_list_count;
 } yunlink_config_value_view_t;
 
 typedef struct yunlink_config_resource_descriptor_view {

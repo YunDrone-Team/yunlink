@@ -72,6 +72,14 @@ std::string system_service_type_label(uint16_t type) {
         return "FeatureStopRequest";
     case yunlink::SystemServiceType::kFeatureStopResponse:
         return "FeatureStopResponse";
+    case yunlink::SystemServiceType::kRuntimeLogListRequest:
+        return "RuntimeLogListRequest";
+    case yunlink::SystemServiceType::kRuntimeLogListResponse:
+        return "RuntimeLogListResponse";
+    case yunlink::SystemServiceType::kRuntimeLogReadRequest:
+        return "RuntimeLogReadRequest";
+    case yunlink::SystemServiceType::kRuntimeLogReadResponse:
+        return "RuntimeLogReadResponse";
     }
     return std::to_string(type);
 }

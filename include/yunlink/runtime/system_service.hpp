@@ -57,6 +57,22 @@ class SystemServicePublisher {
     ErrorCode publish_feature_stop_response(const EnvelopeEvent& inbound,
                                             const FeatureStopResponse& payload,
                                             uint32_t ttl_ms = 3000);
+    ErrorCode publish_runtime_log_list_request(const std::string& peer_id,
+                                               uint64_t session_id,
+                                               const TargetSelector& target,
+                                               const RuntimeLogListRequest& payload,
+                                               SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_runtime_log_read_request(const std::string& peer_id,
+                                               uint64_t session_id,
+                                               const TargetSelector& target,
+                                               const RuntimeLogReadRequest& payload,
+                                               SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_runtime_log_list_response(const EnvelopeEvent& inbound,
+                                                const RuntimeLogListResponse& payload,
+                                                uint32_t ttl_ms = 5000);
+    ErrorCode publish_runtime_log_read_response(const EnvelopeEvent& inbound,
+                                                const RuntimeLogReadResponse& payload,
+                                                uint32_t ttl_ms = 5000);
     void bind(Runtime* runtime);
 
   private:
@@ -80,6 +96,14 @@ class SystemServiceSubscriber {
         std::function<void(const InboundSystemServiceRequestView<FeatureStopRequest>&)>;
     using FeatureStopResponseHandler =
         std::function<void(const TypedMessage<FeatureStopResponse>&)>;
+    using RuntimeLogListRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<RuntimeLogListRequest>&)>;
+    using RuntimeLogListResponseHandler =
+        std::function<void(const TypedMessage<RuntimeLogListResponse>&)>;
+    using RuntimeLogReadRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<RuntimeLogReadRequest>&)>;
+    using RuntimeLogReadResponseHandler =
+        std::function<void(const TypedMessage<RuntimeLogReadResponse>&)>;
 
     explicit SystemServiceSubscriber(Runtime* runtime = nullptr);
 
@@ -91,6 +115,10 @@ class SystemServiceSubscriber {
     size_t subscribe_feature_start_responses(FeatureStartResponseHandler cb);
     size_t subscribe_feature_stop_requests(FeatureStopRequestHandler cb);
     size_t subscribe_feature_stop_responses(FeatureStopResponseHandler cb);
+    size_t subscribe_runtime_log_list_requests(RuntimeLogListRequestHandler cb);
+    size_t subscribe_runtime_log_list_responses(RuntimeLogListResponseHandler cb);
+    size_t subscribe_runtime_log_read_requests(RuntimeLogReadRequestHandler cb);
+    size_t subscribe_runtime_log_read_responses(RuntimeLogReadResponseHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

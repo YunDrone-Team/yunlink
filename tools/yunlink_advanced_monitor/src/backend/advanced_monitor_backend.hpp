@@ -61,6 +61,7 @@ class AdvancedMonitorBackend {
     void set_debug_stream_enabled(bool enabled);
     void clear_logs();
     void clear_packet_traces();
+    void request_discovery_scan();
     void request_reconnect_now();
     bool connect_to_discovered_device(const std::string& dedupe_key);
     bool disconnect_current_device();
@@ -77,6 +78,9 @@ class AdvancedMonitorBackend {
                                bool restart_if_running,
                                bool start_with_terminal);
     void request_feature_stop(const std::string& feature_name, bool force);
+    void request_runtime_log_list();
+    void request_runtime_log_read(const std::string& runtime_id, uint64_t cursor = 0,
+                                  uint32_t max_bytes = 32768);
     void request_config_resource_list();
     void request_config_resource_describe(const std::string& resource_id);
     void request_config_resource_get(const std::string& resource_id);
@@ -100,6 +104,7 @@ class AdvancedMonitorBackend {
     void setup_reconnect_timer();
     void update_config_snapshot();
     void poll_discovery();
+    void poll_discovery_scan();
     void request_command_authority_if_needed();
     yunlink::TargetSelector command_target() const;
     yunlink::TargetSelector system_service_target() const;
@@ -147,6 +152,10 @@ class AdvancedMonitorBackend {
     on_feature_start_response(const yunlink::TypedMessage<yunlink::FeatureStartResponse>& message);
     void
     on_feature_stop_response(const yunlink::TypedMessage<yunlink::FeatureStopResponse>& message);
+    void on_runtime_log_list_response(
+        const yunlink::TypedMessage<yunlink::RuntimeLogListResponse>& message);
+    void on_runtime_log_read_response(
+        const yunlink::TypedMessage<yunlink::RuntimeLogReadResponse>& message);
     void record_system_service_request(const std::string& action,
                                        const std::string& feature_name,
                                        const yunlink::SystemServiceHandle& handle);
@@ -169,9 +178,7 @@ class AdvancedMonitorBackend {
     void on_sunray_runtime_diagnostic(
         const yunlink::TypedMessage<yunlink::SunrayRuntimeDiagnosticSnapshot>& message);
     void update_discovery_snapshot_unlocked(const DiscoveryDevice& device);
-    static std::string make_discovery_key(const std::string& source_ip,
-                                          const std::string& endpoint_id,
-                                          uint16_t tcp_listen_port);
+    static std::string make_discovery_key(const std::string& endpoint_id);
 
     mutable std::mutex mu_;
     std::unordered_map<std::string, MonitorTopicState> topics_;
@@ -195,6 +202,8 @@ class AdvancedMonitorBackend {
     size_t feature_get_response_token_{0};
     size_t feature_start_response_token_{0};
     size_t feature_stop_response_token_{0};
+    size_t runtime_log_list_response_token_{0};
+    size_t runtime_log_read_response_token_{0};
     size_t config_list_response_token_{0};
     size_t config_describe_response_token_{0};
     size_t config_get_response_token_{0};
@@ -229,6 +238,10 @@ class AdvancedMonitorBackend {
     uint64_t next_log_sequence_{1};
     bool runtime_started_{false};
     bool discovery_listener_started_{false};
+    uint64_t discovery_scan_nonce_{0};
+    uint64_t discovery_scan_next_send_ms_{0};
+    uint64_t discovery_scan_expires_ms_{0};
+    int discovery_scan_remaining_{0};
     bool peer_ready_{false};
     std::string selected_discovery_key_;
     MonitorConnectionSnapshot connection_;

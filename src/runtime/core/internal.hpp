@@ -77,6 +77,14 @@ struct Runtime::Impl {
         feature_stop_request_handlers;
     std::unordered_map<size_t, SystemServiceSubscriber::FeatureStopResponseHandler>
         feature_stop_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::RuntimeLogListRequestHandler>
+        runtime_log_list_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::RuntimeLogListResponseHandler>
+        runtime_log_list_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::RuntimeLogReadRequestHandler>
+        runtime_log_read_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::RuntimeLogReadResponseHandler>
+        runtime_log_read_response_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListRequestHandler>
         config_resource_list_request_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListResponseHandler>

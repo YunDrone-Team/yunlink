@@ -255,6 +255,14 @@ class Runtime {
     subscribe_feature_stop_request_internal(SystemServiceSubscriber::FeatureStopRequestHandler cb);
     size_t subscribe_feature_stop_response_internal(
         SystemServiceSubscriber::FeatureStopResponseHandler cb);
+    size_t subscribe_runtime_log_list_request_internal(
+        SystemServiceSubscriber::RuntimeLogListRequestHandler cb);
+    size_t subscribe_runtime_log_list_response_internal(
+        SystemServiceSubscriber::RuntimeLogListResponseHandler cb);
+    size_t subscribe_runtime_log_read_request_internal(
+        SystemServiceSubscriber::RuntimeLogReadRequestHandler cb);
+    size_t subscribe_runtime_log_read_response_internal(
+        SystemServiceSubscriber::RuntimeLogReadResponseHandler cb);
     size_t
     subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);

@@ -137,6 +137,7 @@ typedef enum yunlink_config_value_type {
     YUNLINK_CONFIG_VALUE_DOUBLE = 3,
     YUNLINK_CONFIG_VALUE_STRING = 4,
     YUNLINK_CONFIG_VALUE_STRING_LIST = 5,
+    YUNLINK_CONFIG_VALUE_DOUBLE_LIST = 6,
 } yunlink_config_value_type_t;
 
 typedef enum yunlink_config_status {

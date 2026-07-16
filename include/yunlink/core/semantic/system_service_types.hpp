@@ -66,6 +66,44 @@ struct FeatureStopResponse {
     std::string feature_name;
 };
 
+struct RuntimeLogSummary {
+    std::string runtime_id;
+    std::string feature_name;
+    std::string title;
+    std::string state;
+    uint64_t started_at_ns = 0;
+    uint64_t finished_at_ns = 0;
+    bool has_exit_code = false;
+    int32_t exit_code = 0;
+    std::string message;
+};
+
+struct RuntimeLogListRequest {
+    uint8_t reserved = 0;
+};
+
+struct RuntimeLogListResponse {
+    bool success = false;
+    std::string message;
+    std::vector<RuntimeLogSummary> runtimes;
+};
+
+struct RuntimeLogReadRequest {
+    std::string runtime_id;
+    uint64_t cursor = 0;
+    uint32_t max_bytes = 0;
+};
+
+struct RuntimeLogReadResponse {
+    bool success = false;
+    std::string message;
+    std::string runtime_id;
+    std::string chunk;
+    uint64_t next_cursor = 0;
+    bool truncated = false;
+    bool eof = false;
+};
+
 struct SystemServiceHandle {
     uint64_t session_id = 0;
     uint64_t message_id = 0;

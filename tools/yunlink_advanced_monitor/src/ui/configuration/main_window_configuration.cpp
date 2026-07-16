@@ -27,6 +27,18 @@ std::vector<std::string> split_string_list(const QString& text) {
     return result;
 }
 
+std::vector<double> split_double_list(const QString& text) {
+    std::vector<double> values;
+    for (const QString& item : text.split(';', Qt::SkipEmptyParts)) {
+        bool ok = false;
+        const double value = item.trimmed().toDouble(&ok);
+        if (ok) {
+            values.push_back(value);
+        }
+    }
+    return values;
+}
+
 yunlink::ConfigValue int64_value_from_text(const QString& text) {
     const std::string value = text.trimmed().toStdString();
     int64_t parsed = 0;
@@ -225,6 +237,9 @@ std::vector<yunlink::ConfigFieldValue> MainWindow::collect_configuration_updates
         } else if (field.type == yunlink::ConfigValueType::kStringList) {
             value = yunlink::ConfigValue::from_string_list(
                 split_string_list(qobject_cast<QLineEdit*>(editor_it->second)->text()));
+        } else if (field.type == yunlink::ConfigValueType::kDoubleList) {
+            value = yunlink::ConfigValue::from_double_list(
+                split_double_list(qobject_cast<QLineEdit*>(editor_it->second)->text()));
         } else {
             value = yunlink::ConfigValue::from_string(
                 qobject_cast<QLineEdit*>(editor_it->second)->text().toStdString());

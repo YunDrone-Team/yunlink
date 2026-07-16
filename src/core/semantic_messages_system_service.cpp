@@ -33,6 +33,52 @@ bool read_string_vector(BufferReader& reader, std::vector<std::string>* out) {
     return true;
 }
 
+void write_runtime_log_summary(BufferWriter& writer, const RuntimeLogSummary& value) {
+    writer.write_string(value.runtime_id);
+    writer.write_string(value.feature_name);
+    writer.write_string(value.title);
+    writer.write_string(value.state);
+    writer.write_u64(value.started_at_ns);
+    writer.write_u64(value.finished_at_ns);
+    writer.write_bool(value.has_exit_code);
+    writer.write_u32(static_cast<uint32_t>(value.exit_code));
+    writer.write_string(value.message);
+}
+
+bool read_runtime_log_summary(BufferReader& reader, RuntimeLogSummary* out) {
+    uint32_t exit_code = 0;
+    return out != nullptr && reader.read_string(&out->runtime_id) &&
+           reader.read_string(&out->feature_name) && reader.read_string(&out->title) &&
+           reader.read_string(&out->state) && reader.read_u64(&out->started_at_ns) &&
+           reader.read_u64(&out->finished_at_ns) && reader.read_bool(&out->has_exit_code) &&
+           reader.read_u32(&exit_code) && reader.read_string(&out->message) &&
+           ((out->exit_code = static_cast<int32_t>(exit_code)), true);
+}
+
+void write_runtime_log_summaries(BufferWriter& writer, const std::vector<RuntimeLogSummary>& values) {
+    writer.write_u16(static_cast<uint16_t>(values.size()));
+    for (const auto& value : values) {
+        write_runtime_log_summary(writer, value);
+    }
+}
+
+bool read_runtime_log_summaries(BufferReader& reader, std::vector<RuntimeLogSummary>* out) {
+    uint16_t count = 0;
+    if (out == nullptr || !reader.read_u16(&count)) {
+        return false;
+    }
+    out->clear();
+    out->reserve(count);
+    for (uint16_t index = 0; index < count; ++index) {
+        RuntimeLogSummary value;
+        if (!read_runtime_log_summary(reader, &value)) {
+            return false;
+        }
+        out->push_back(std::move(value));
+    }
+    return true;
+}
+
 }  // namespace
 
 ByteBuffer encode_payload(const FeatureListRequest& payload) {
@@ -156,6 +202,67 @@ bool decode_payload(const ByteBuffer& bytes, FeatureStopResponse* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, FeatureStopResponse* out) {
         return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
                reader.read_string(&out->feature_name);
+    });
+}
+
+ByteBuffer encode_payload(const RuntimeLogListRequest& payload) {
+    return build_payload([&](BufferWriter& writer) { writer.write_u8(payload.reserved); });
+}
+
+bool decode_payload(const ByteBuffer& bytes, RuntimeLogListRequest* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, RuntimeLogListRequest* out) {
+        return reader.read_u8(&out->reserved);
+    });
+}
+
+ByteBuffer encode_payload(const RuntimeLogListResponse& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_bool(payload.success);
+        writer.write_string(payload.message);
+        write_runtime_log_summaries(writer, payload.runtimes);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, RuntimeLogListResponse* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, RuntimeLogListResponse* out) {
+        return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
+               read_runtime_log_summaries(reader, &out->runtimes);
+    });
+}
+
+ByteBuffer encode_payload(const RuntimeLogReadRequest& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_string(payload.runtime_id);
+        writer.write_u64(payload.cursor);
+        writer.write_u32(payload.max_bytes);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, RuntimeLogReadRequest* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, RuntimeLogReadRequest* out) {
+        return reader.read_string(&out->runtime_id) && reader.read_u64(&out->cursor) &&
+               reader.read_u32(&out->max_bytes);
+    });
+}
+
+ByteBuffer encode_payload(const RuntimeLogReadResponse& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_bool(payload.success);
+        writer.write_string(payload.message);
+        writer.write_string(payload.runtime_id);
+        writer.write_string(payload.chunk);
+        writer.write_u64(payload.next_cursor);
+        writer.write_bool(payload.truncated);
+        writer.write_bool(payload.eof);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, RuntimeLogReadResponse* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, RuntimeLogReadResponse* out) {
+        return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
+               reader.read_string(&out->runtime_id) && reader.read_string(&out->chunk) &&
+               reader.read_u64(&out->next_cursor) && reader.read_bool(&out->truncated) &&
+               reader.read_bool(&out->eof);
     });
 }
 

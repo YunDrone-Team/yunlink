@@ -16,7 +16,8 @@ bool same_value(const yunlink::ConfigValue& lhs, const yunlink::ConfigValue& rhs
     return lhs.type == rhs.type && lhs.bool_value == rhs.bool_value &&
            lhs.int64_value == rhs.int64_value &&
            std::abs(lhs.double_value - rhs.double_value) < 1e-9 &&
-           lhs.string_value == rhs.string_value && lhs.string_list_value == rhs.string_list_value;
+           lhs.string_value == rhs.string_value && lhs.string_list_value == rhs.string_list_value &&
+           lhs.double_list_value == rhs.double_list_value;
 }
 
 template <typename T> bool roundtrip(const T& source, T* decoded) {
@@ -38,6 +39,7 @@ bool test_value_types_and_snapshot() {
         {"name", yunlink::ConfigValue::from_string("uav")},
         {"profile_dirs",
          yunlink::ConfigValue::from_string_list({"~/.profiles", "/opt/vendor/profiles"})},
+        {"coefficients", yunlink::ConfigValue::from_double_list({1.0, 0.5, 0.25})},
     };
 
     yunlink::ConfigResourceGetResponse decoded{};

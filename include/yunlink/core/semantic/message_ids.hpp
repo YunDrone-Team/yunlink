@@ -64,6 +64,10 @@ enum class SystemServiceType : uint16_t {
     kFeatureStartResponse = 6,
     kFeatureStopRequest = 7,
     kFeatureStopResponse = 8,
+    kRuntimeLogListRequest = 9,
+    kRuntimeLogListResponse = 10,
+    kRuntimeLogReadRequest = 11,
+    kRuntimeLogReadResponse = 12,
 };
 
 enum class ConfigurationServiceType : uint16_t {
