@@ -124,6 +124,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/c/abi/configuration/publish.cpp
   src/c/abi/configuration/subscriptions.cpp
   src/c/abi/commands/system_service.cpp
+  src/c/abi/system_service/runtime_logs.cpp
   src/c/abi/core/helpers.cpp
   src/c/abi/core/result.cpp
   src/c/abi/runtime/event_queue.cpp

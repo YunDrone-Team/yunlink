@@ -108,6 +108,34 @@ yunlink_system_service_request_feature_get(yunlink_runtime_t* runtime,
                                            const yunlink_target_selector_t* target,
                                            const char* feature_name,
                                            yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_runtime_log_list(yunlink_runtime_t* runtime,
+                                                const yunlink_peer_t* peer,
+                                                const yunlink_session_t* session,
+                                                const yunlink_target_selector_t* target,
+                                                yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_runtime_log_read(yunlink_runtime_t* runtime,
+                                                const yunlink_peer_t* peer,
+                                                const yunlink_session_t* session,
+                                                const yunlink_target_selector_t* target,
+                                                yunlink_string_view_t runtime_id,
+                                                uint64_t cursor,
+                                                uint32_t max_bytes,
+                                                yunlink_command_handle_t* out_handle);
+
+YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_list_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_runtime_log_list_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_read_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_runtime_log_read_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_unsubscribe(yunlink_runtime_t* runtime,
+                                                                   size_t token);
 
 YUNLINK_C_API yunlink_result_t yunlink_runtime_poll_event(yunlink_runtime_t* runtime,
                                                           yunlink_runtime_event_t* out_event);

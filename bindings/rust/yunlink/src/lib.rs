@@ -10,6 +10,7 @@ mod error;
 mod events;
 mod ffi_util;
 mod runtime;
+mod runtime_logs;
 mod runtime_system_service;
 mod types;
 
@@ -27,6 +28,9 @@ pub use events::{
     EVENT_CHANNEL_CAPACITY,
 };
 pub use runtime::Runtime;
+pub use runtime_logs::{
+    RuntimeLogListResponse, RuntimeLogReadResponse, RuntimeLogResponse, RuntimeLogSummary,
+};
 pub use types::{
     AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, GotoCommand,
     LandCommand, PeerConnection, ReturnCommand, RuntimeConfig, Session, SessionInfo, SessionState,

@@ -56,10 +56,12 @@ yunlink_result_t yunlink_runtime_stop(yunlink_runtime_t* runtime) {
     }
     if (!runtime->started) {
         unsubscribe_configuration_callbacks(runtime);
+        unsubscribe_system_service_callbacks(runtime);
         clear_queue(runtime);
         return YUNLINK_RESULT_OK;
     }
     unsubscribe_configuration_callbacks(runtime);
+    unsubscribe_system_service_callbacks(runtime);
     unsubscribe_runtime_events(runtime);
     runtime->runtime.stop();
     runtime->started = false;

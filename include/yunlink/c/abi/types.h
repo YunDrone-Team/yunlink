@@ -252,5 +252,6 @@ typedef struct yunlink_runtime_event {
 } yunlink_runtime_event_t;
 
 #include "yunlink/c/abi/configuration.h"
+#include "yunlink/c/abi/runtime_logs.h"
 
 #endif  // YUNLINK_C_ABI_TYPES_H
