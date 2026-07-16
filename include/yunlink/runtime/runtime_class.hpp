@@ -145,6 +145,10 @@ class Runtime {
                                                 const TargetSelector& target,
                                                 const SunrayRuntimeDiagnosticSnapshot& payload,
                                                 uint64_t session_id = 0);
+    ErrorCode publish_host_system(const std::string& peer_id,
+                                  const TargetSelector& target,
+                                  const HostSystemSnapshot& payload,
+                                  uint64_t session_id = 0);
     ErrorCode publish_vehicle_event(const std::string& peer_id,
                                     const TargetSelector& target,
                                     const VehicleEvent& payload,
@@ -236,6 +240,7 @@ class Runtime {
     size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);
     size_t
     subscribe_command_execution_status_internal(StateSubscriber::CommandExecutionStatusHandler cb);
+    size_t subscribe_host_system_internal(StateSubscriber::HostSystemHandler cb);
     size_t subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb);
     size_t subscribe_sunray_runtime_diagnostic_internal(
         StateSubscriber::SunrayRuntimeDiagnosticHandler cb);

@@ -67,6 +67,7 @@ YUNLINK_DEFINE_TRAITS(UavControlStateSnapshot, MessageFamily::kStateSnapshot, 9)
 YUNLINK_DEFINE_TRAITS(OdomStateSnapshot, MessageFamily::kStateSnapshot, 10);
 YUNLINK_DEFINE_TRAITS(SunrayRuntimeDiagnosticSnapshot, MessageFamily::kStateSnapshot, 11);
 YUNLINK_DEFINE_TRAITS(CommandExecutionStatusSnapshot, MessageFamily::kStateSnapshot, 12);
+YUNLINK_DEFINE_TRAITS(HostSystemSnapshot, MessageFamily::kStateSnapshot, 13);
 YUNLINK_DEFINE_TRAITS(VehicleEvent, MessageFamily::kStateEvent, 1);
 YUNLINK_DEFINE_TRAITS(BulkChannelDescriptor, MessageFamily::kBulkChannelDescriptor, 1);
 

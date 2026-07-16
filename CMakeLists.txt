@@ -265,6 +265,13 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_state_plane_semantics PRIVATE yunlink)
   add_test(NAME test_state_plane_semantics COMMAND test_state_plane_semantics)
 
+  add_executable(
+    test_host_system_snapshot_codec
+    tests/core/test_host_system_snapshot_codec.cpp
+  )
+  target_link_libraries(test_host_system_snapshot_codec PRIVATE yunlink)
+  add_test(NAME test_host_system_snapshot_codec COMMAND test_host_system_snapshot_codec)
+
   add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
   target_link_libraries(test_capability_negotiation PRIVATE yunlink)
   add_test(NAME test_capability_negotiation COMMAND test_capability_negotiation)

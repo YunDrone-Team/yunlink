@@ -45,6 +45,7 @@ enum class StateSnapshotType : uint16_t {
     kOdomState = 10,
     kSunrayRuntimeDiagnostic = 11,
     kCommandExecutionStatus = 12,
+    kHostSystem = 13,
 };
 
 enum class StateEventType : uint16_t {

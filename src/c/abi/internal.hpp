@@ -23,6 +23,7 @@ struct yunlink_runtime {
     size_t tok_link = 0;
     size_t tok_vehicle_core = 0;
     size_t tok_px4_state = 0;
+    size_t tok_host_system = 0;
     size_t tok_authority_status = 0;
     size_t tok_vehicle_event = 0;
     size_t tok_command_result = 0;

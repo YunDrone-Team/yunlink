@@ -5,9 +5,17 @@
 
 #include "state_codec_common.hpp"
 
+#include <utility>
+
 namespace yunlink {
 
 using namespace state_codec_detail;
+
+namespace {
+
+constexpr uint32_t kMaxHostSystemComponents = 512;
+
+}  // namespace
 
 ByteBuffer encode_payload(const UavControlStateSnapshot& payload) {
     return build_payload([&](BufferWriter& writer) {
@@ -157,6 +165,42 @@ bool decode_payload(const ByteBuffer& bytes, SunrayRuntimeDiagnosticSnapshot* pa
                    read_topic_diagnostic(reader, &out->px4_state) &&
                    reader.read_string(&out->worst_level) && reader.read_string(&out->summary);
         });
+}
+
+ByteBuffer encode_payload(const HostSystemSnapshot& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        write_header(writer, payload.header);
+        writer.write_float(payload.cpu_percent);
+        writer.write_float(payload.memory_percent);
+        writer.write_u32(payload.sample_period_ms);
+        writer.write_string(payload.component_kind);
+        writer.write_u32(static_cast<uint32_t>(payload.active_components.size()));
+        for (const auto& component : payload.active_components) {
+            writer.write_string(component);
+        }
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, HostSystemSnapshot* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, HostSystemSnapshot* out) {
+        uint32_t component_count = 0;
+        if (!read_header(reader, &out->header) || !reader.read_float(&out->cpu_percent) ||
+            !reader.read_float(&out->memory_percent) || !reader.read_u32(&out->sample_period_ms) ||
+            !reader.read_string(&out->component_kind) || !reader.read_u32(&component_count) ||
+            component_count > kMaxHostSystemComponents) {
+            return false;
+        }
+        out->active_components.clear();
+        out->active_components.reserve(component_count);
+        for (uint32_t index = 0; index < component_count; ++index) {
+            std::string component;
+            if (!reader.read_string(&component)) {
+                return false;
+            }
+            out->active_components.push_back(std::move(component));
+        }
+        return true;
+    });
 }
 
 ByteBuffer encode_payload(const CommandExecutionStatusSnapshot& payload) {

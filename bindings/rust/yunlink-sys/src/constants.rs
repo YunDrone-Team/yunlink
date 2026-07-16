@@ -183,3 +183,5 @@ pub const YUNLINK_RUNTIME_EVENT_FEATURE_GET: u8 = 7;
 pub const YUNLINK_RUNTIME_EVENT_PX4_STATE: u8 = 8;
 /// Authority lease status response.
 pub const YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS: u8 = 9;
+/// Host CPU, memory, and active-component snapshot.
+pub const YUNLINK_RUNTIME_EVENT_HOST_SYSTEM: u8 = 10;

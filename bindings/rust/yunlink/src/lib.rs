@@ -24,8 +24,8 @@ pub use configuration::{
 pub use error::{FfiErrorCode, Result, YunlinkError};
 pub use events::{
     AuthorityStatusEvent, CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event,
-    FeatureGetEvent, FeatureListEvent, LinkEvent, Px4StateEvent, VehicleCoreStateEvent,
-    EVENT_CHANNEL_CAPACITY,
+    FeatureGetEvent, FeatureListEvent, HostSystemEvent, LinkEvent, Px4StateEvent,
+    VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
 };
 pub use runtime::Runtime;
 pub use runtime_logs::{
@@ -65,6 +65,10 @@ mod tests {
             local_vy_mps: 0.2,
             local_vz_mps: 0.3,
             local_yaw_rad: 0.5,
+            local_orientation_x: 0.1,
+            local_orientation_y: 0.2,
+            local_orientation_z: 0.3,
+            local_orientation_w: 0.9,
             target_x_m: 4.0,
             target_y_m: 5.0,
             target_z_m: 6.0,
@@ -75,6 +79,7 @@ mod tests {
         assert!(event.connected);
         assert_eq!(event.source_id, 4);
         assert_eq!(event.landed_state, 1);
+        assert_eq!(event.local_orientation_w, 0.9);
     }
 
     #[test]

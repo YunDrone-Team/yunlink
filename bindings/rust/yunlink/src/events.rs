@@ -153,6 +153,10 @@ pub struct Px4StateEvent {
     pub local_vy_mps: f32,
     pub local_vz_mps: f32,
     pub local_yaw_rad: f32,
+    pub local_orientation_x: f32,
+    pub local_orientation_y: f32,
+    pub local_orientation_z: f32,
+    pub local_orientation_w: f32,
     pub target_x_m: f32,
     pub target_y_m: f32,
     pub target_z_m: f32,
@@ -185,6 +189,21 @@ pub struct AuthorityStatusEvent {
     pub lease_ttl_ms: u32,
     pub reason_code: u16,
     pub detail: String,
+}
+
+/// Safe owned host resource and active-component snapshot.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HostSystemEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_id: u32,
+    pub source_stamp_ns: u64,
+    pub cpu_percent: f32,
+    pub memory_percent: f32,
+    pub sample_period_ms: u32,
+    pub component_kind: String,
+    pub active_components: Vec<String>,
 }
 
 /// Safe runtime event enum exposed to Rust callers.
@@ -229,6 +248,7 @@ pub enum Event {
     AuthorityStatus(AuthorityStatusEvent),
     FeatureList(FeatureListEvent),
     FeatureGet(FeatureGetEvent),
+    HostSystem(HostSystemEvent),
 }
 
 /// Broadcast channel capacity used by the Rust adapter.
@@ -236,6 +256,14 @@ pub const EVENT_CHANNEL_CAPACITY: usize = 64;
 
 fn csv_list(raw: String) -> Vec<String> {
     raw.split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn line_list(raw: String) -> Vec<String> {
+    raw.lines()
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToString::to_string)
@@ -315,6 +343,10 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 local_vy_mps: data.local_vy_mps,
                 local_vz_mps: data.local_vz_mps,
                 local_yaw_rad: data.local_yaw_rad,
+                local_orientation_x: data.local_orientation_x,
+                local_orientation_y: data.local_orientation_y,
+                local_orientation_z: data.local_orientation_z,
+                local_orientation_w: data.local_orientation_w,
                 target_x_m: data.target_x_m,
                 target_y_m: data.target_y_m,
                 target_z_m: data.target_z_m,
@@ -330,6 +362,21 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 lease_ttl_ms: data.lease_ttl_ms,
                 reason_code: data.reason_code,
                 detail: string_from_c_buf(&data.detail),
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_HOST_SYSTEM => {
+            let data = unsafe { event.data.host_system };
+            Some(Event::HostSystem(HostSystemEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                source_id: data.source_id,
+                source_stamp_ns: data.source_stamp_ns,
+                cpu_percent: data.cpu_percent,
+                memory_percent: data.memory_percent,
+                sample_period_ms: data.sample_period_ms,
+                component_kind: string_from_c_buf(&data.component_kind),
+                active_components: line_list(string_from_c_buf(&data.active_components)),
             }))
         }
         sys::YUNLINK_RUNTIME_EVENT_FEATURE_LIST => {
@@ -402,6 +449,10 @@ mod tests {
                     local_vy_mps: -0.2,
                     local_vz_mps: 0.3,
                     local_yaw_rad: 1.25,
+                    local_orientation_x: 0.1,
+                    local_orientation_y: -0.2,
+                    local_orientation_z: 0.3,
+                    local_orientation_w: 0.9,
                     target_x_m: 4.0,
                     target_y_m: 5.0,
                     target_z_m: 6.0,
@@ -432,6 +483,7 @@ mod tests {
                 assert_eq!(event.local_vy_mps, -0.2);
                 assert_eq!(event.local_vz_mps, 0.3);
                 assert_eq!(event.local_yaw_rad, 1.25);
+                assert_eq!(event.local_orientation_w, 0.9);
                 assert_eq!(event.target_x_m, 4.0);
                 assert_eq!(event.target_y_m, 5.0);
                 assert_eq!(event.target_z_m, 6.0);
@@ -470,6 +522,52 @@ mod tests {
                 assert_eq!(event.detail, "authority granted");
             }
             other => panic!("expected authority status event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_host_system_event_into_owned_values() {
+        let mut component_kind = [0; 32];
+        for (target, source) in component_kind.iter_mut().zip(b"ros1_node") {
+            *target = *source as std::ffi::c_char;
+        }
+        let mut active_components = [0; 8192];
+        for (target, source) in active_components
+            .iter_mut()
+            .zip(b"/gazebo\n/sunray_system\n/yunlink_ros_bridge_node")
+        {
+            *target = *source as std::ffi::c_char;
+        }
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_HOST_SYSTEM,
+            data: sys::yunlink_runtime_event_union_t {
+                host_system: sys::yunlink_host_system_event_t {
+                    session_id: 11,
+                    message_id: 12,
+                    correlation_id: 13,
+                    source_id: 1,
+                    source_stamp_ns: 123_456_789,
+                    cpu_percent: 11.5,
+                    memory_percent: 22.25,
+                    sample_period_ms: 1_000,
+                    component_kind,
+                    active_components,
+                },
+            },
+        };
+
+        match parse_event(raw).expect("host system event should parse") {
+            Event::HostSystem(event) => {
+                assert_eq!(event.source_stamp_ns, 123_456_789);
+                assert_eq!(event.cpu_percent, 11.5);
+                assert_eq!(event.memory_percent, 22.25);
+                assert_eq!(event.component_kind, "ros1_node");
+                assert_eq!(
+                    event.active_components,
+                    ["/gazebo", "/sunray_system", "/yunlink_ros_bridge_node"]
+                );
+            }
+            other => panic!("expected host system event, got {other:?}"),
         }
     }
 }

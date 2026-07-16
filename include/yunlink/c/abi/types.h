@@ -192,6 +192,10 @@ typedef struct yunlink_px4_state_event {
     float target_z_m;
     float target_yaw_rad;
     uint8_t target_valid;
+    float local_orientation_x;
+    float local_orientation_y;
+    float local_orientation_z;
+    float local_orientation_w;
 } yunlink_px4_state_event_t;
 
 typedef struct yunlink_authority_status_event {
@@ -210,6 +214,19 @@ typedef struct yunlink_vehicle_event_data {
     uint8_t severity;
     char detail[256];
 } yunlink_vehicle_event_data_t;
+
+typedef struct yunlink_host_system_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint32_t source_id;
+    uint64_t source_stamp_ns;
+    float cpu_percent;
+    float memory_percent;
+    uint32_t sample_period_ms;
+    char component_kind[32];
+    char active_components[8192];
+} yunlink_host_system_event_t;
 
 typedef struct yunlink_feature_list_event {
     uint64_t session_id;
@@ -248,6 +265,7 @@ typedef struct yunlink_runtime_event {
         yunlink_vehicle_event_data_t vehicle_event;
         yunlink_feature_list_event_t feature_list;
         yunlink_feature_get_event_t feature_get;
+        yunlink_host_system_event_t host_system;
     } data;
 } yunlink_runtime_event_t;
 

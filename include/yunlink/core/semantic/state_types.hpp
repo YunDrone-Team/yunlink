@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "yunlink/core/semantic/message_ids.hpp"
 #include "yunlink/core/types.hpp"
@@ -41,6 +42,15 @@ struct Vector2f {
 struct HeaderSnapshot {
     std::string frame_id;
     uint64_t stamp_ns = 0;
+};
+
+struct HostSystemSnapshot {
+    HeaderSnapshot header;
+    float cpu_percent = 0.0F;
+    float memory_percent = 0.0F;
+    uint32_t sample_period_ms = 1000;
+    std::string component_kind;
+    std::vector<std::string> active_components;
 };
 
 struct Quaternionf {

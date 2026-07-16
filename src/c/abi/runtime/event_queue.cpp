@@ -24,6 +24,17 @@ std::string join_csv(const std::vector<std::string>& values) {
     return out.str();
 }
 
+std::string join_lines(const std::vector<std::string>& values) {
+    std::ostringstream out;
+    for (size_t index = 0; index < values.size(); ++index) {
+        if (index != 0) {
+            out << '\n';
+        }
+        out << values[index];
+    }
+    return out.str();
+}
+
 float yaw_from_quaternion(const yunlink::Quaternionf& orientation) {
     const float sin_yaw =
         2.0F * (orientation.w * orientation.z + orientation.x * orientation.y);
@@ -121,12 +132,37 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             out.data.px4_state.local_vz_mps = msg.payload.local_velocity.linear_mps.z;
             out.data.px4_state.local_yaw_rad =
                 yaw_from_quaternion(msg.payload.local_pose.orientation);
+            out.data.px4_state.local_orientation_x = msg.payload.local_pose.orientation.x;
+            out.data.px4_state.local_orientation_y = msg.payload.local_pose.orientation.y;
+            out.data.px4_state.local_orientation_z = msg.payload.local_pose.orientation.z;
+            out.data.px4_state.local_orientation_w = msg.payload.local_pose.orientation.w;
             out.data.px4_state.target_x_m = msg.payload.pos_setpoint_m.x;
             out.data.px4_state.target_y_m = msg.payload.pos_setpoint_m.y;
             out.data.px4_state.target_z_m = msg.payload.pos_setpoint_m.z;
             out.data.px4_state.target_yaw_rad = msg.payload.yaw_setpoint_rad;
             out.data.px4_state.target_valid =
                 msg.payload.setpoint_coordinate_frame != 0 ? 1 : 0;
+            push_event(runtime, out);
+        });
+
+    runtime->tok_host_system = runtime->runtime.state_subscriber().subscribe_host_system(
+        [runtime](const yunlink::TypedMessage<yunlink::HostSystemSnapshot>& msg) {
+            yunlink_runtime_event_t out{};
+            out.type = YUNLINK_RUNTIME_EVENT_HOST_SYSTEM;
+            out.data.host_system.session_id = msg.envelope.session_id;
+            out.data.host_system.message_id = msg.envelope.message_id;
+            out.data.host_system.correlation_id = msg.envelope.correlation_id;
+            out.data.host_system.source_id = msg.envelope.source.agent_id;
+            out.data.host_system.source_stamp_ns = msg.payload.header.stamp_ns;
+            out.data.host_system.cpu_percent = msg.payload.cpu_percent;
+            out.data.host_system.memory_percent = msg.payload.memory_percent;
+            out.data.host_system.sample_period_ms = msg.payload.sample_period_ms;
+            safe_copy(out.data.host_system.component_kind,
+                      sizeof(out.data.host_system.component_kind),
+                      msg.payload.component_kind);
+            safe_copy(out.data.host_system.active_components,
+                      sizeof(out.data.host_system.active_components),
+                      join_lines(msg.payload.active_components));
             push_event(runtime, out);
         });
 
@@ -245,6 +281,10 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
     if (runtime->tok_px4_state != 0) {
         runtime->runtime.state_subscriber().unsubscribe(runtime->tok_px4_state);
         runtime->tok_px4_state = 0;
+    }
+    if (runtime->tok_host_system != 0) {
+        runtime->runtime.state_subscriber().unsubscribe(runtime->tok_host_system);
+        runtime->tok_host_system = 0;
     }
     if (runtime->tok_authority_status != 0) {
         runtime->runtime.event_subscriber().unsubscribe(runtime->tok_authority_status);

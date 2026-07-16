@@ -165,6 +165,10 @@ pub struct yunlink_px4_state_event_t {
     pub target_z_m: f32,
     pub target_yaw_rad: f32,
     pub target_valid: u8,
+    pub local_orientation_x: f32,
+    pub local_orientation_y: f32,
+    pub local_orientation_z: f32,
+    pub local_orientation_w: f32,
 }
 
 /// Raw authority lease status event payload.
@@ -221,6 +225,39 @@ impl Default for yunlink_vehicle_event_data_t {
             kind: 0,
             severity: 0,
             detail: [0; 256],
+        }
+    }
+}
+
+/// Raw host resource and active-component snapshot.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_host_system_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_id: u32,
+    pub source_stamp_ns: u64,
+    pub cpu_percent: f32,
+    pub memory_percent: f32,
+    pub sample_period_ms: u32,
+    pub component_kind: [c_char; 32],
+    pub active_components: [c_char; 8192],
+}
+
+impl Default for yunlink_host_system_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            source_id: 0,
+            source_stamp_ns: 0,
+            cpu_percent: 0.0,
+            memory_percent: 0.0,
+            sample_period_ms: 0,
+            component_kind: [0; 32],
+            active_components: [0; 8192],
         }
     }
 }
@@ -311,6 +348,8 @@ pub union yunlink_runtime_event_union_t {
     pub vehicle_event: yunlink_vehicle_event_data_t,
     pub feature_list: yunlink_feature_list_event_t,
     pub feature_get: yunlink_feature_get_event_t,
+    /// Active when the event type is `YUNLINK_RUNTIME_EVENT_HOST_SYSTEM`.
+    pub host_system: yunlink_host_system_event_t,
 }
 
 impl Default for yunlink_runtime_event_union_t {
