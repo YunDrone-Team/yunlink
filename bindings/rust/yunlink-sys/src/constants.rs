@@ -185,3 +185,5 @@ pub const YUNLINK_RUNTIME_EVENT_PX4_STATE: u8 = 8;
 pub const YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS: u8 = 9;
 /// Host CPU, memory, and active-component snapshot.
 pub const YUNLINK_RUNTIME_EVENT_HOST_SYSTEM: u8 = 10;
+/// Response to a feature start request.
+pub const YUNLINK_RUNTIME_EVENT_FEATURE_START: u8 = 11;

@@ -302,6 +302,7 @@ pub struct yunlink_feature_get_event_t {
     pub auto_start: u8,
     pub message: [c_char; 256],
     pub name: [c_char; 128],
+    pub title: [c_char; 128],
     pub group: [c_char; 128],
     pub description: [c_char; 512],
     pub depends_on: [c_char; 1024],
@@ -320,11 +321,36 @@ impl Default for yunlink_feature_get_event_t {
             auto_start: 0,
             message: [0; 256],
             name: [0; 128],
+            title: [0; 128],
             group: [0; 128],
             description: [0; 512],
             depends_on: [0; 1024],
             start_preview_units: [0; 1024],
             start_preview_commands: [0; 2048],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_feature_start_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: u8,
+    pub message: [c_char; 256],
+    pub feature_name: [c_char; 128],
+}
+
+impl Default for yunlink_feature_start_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            success: 0,
+            message: [0; 256],
+            feature_name: [0; 128],
         }
     }
 }
@@ -348,6 +374,7 @@ pub union yunlink_runtime_event_union_t {
     pub vehicle_event: yunlink_vehicle_event_data_t,
     pub feature_list: yunlink_feature_list_event_t,
     pub feature_get: yunlink_feature_get_event_t,
+    pub feature_start: yunlink_feature_start_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_HOST_SYSTEM`.
     pub host_system: yunlink_host_system_event_t,
 }

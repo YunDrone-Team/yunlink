@@ -227,11 +227,22 @@ pub struct FeatureGetEvent {
     pub auto_start: bool,
     pub message: String,
     pub name: String,
+    pub title: String,
     pub group: String,
     pub description: String,
     pub depends_on: Vec<String>,
     pub start_preview_units: Vec<String>,
     pub start_preview_commands: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FeatureStartEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: bool,
+    pub message: String,
+    pub feature_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -248,6 +259,7 @@ pub enum Event {
     AuthorityStatus(AuthorityStatusEvent),
     FeatureList(FeatureListEvent),
     FeatureGet(FeatureGetEvent),
+    FeatureStart(FeatureStartEvent),
     HostSystem(HostSystemEvent),
 }
 
@@ -401,11 +413,23 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 auto_start: data.auto_start != 0,
                 message: string_from_c_buf(&data.message),
                 name: string_from_c_buf(&data.name),
+                title: string_from_c_buf(&data.title),
                 group: string_from_c_buf(&data.group),
                 description: string_from_c_buf(&data.description),
                 depends_on: csv_list(string_from_c_buf(&data.depends_on)),
                 start_preview_units: csv_list(string_from_c_buf(&data.start_preview_units)),
                 start_preview_commands: csv_list(string_from_c_buf(&data.start_preview_commands)),
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_FEATURE_START => {
+            let data = unsafe { event.data.feature_start };
+            Some(Event::FeatureStart(FeatureStartEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                success: data.success != 0,
+                message: string_from_c_buf(&data.message),
+                feature_name: string_from_c_buf(&data.feature_name),
             }))
         }
         _ => None,
@@ -417,6 +441,12 @@ mod tests {
     use super::{parse_event, Event};
     use crate::AuthorityState;
     use yunlink_sys as sys;
+
+    fn write_c_buf<const N: usize>(target: &mut [std::ffi::c_char; N], source: &[u8]) {
+        for (target, source) in target.iter_mut().zip(source) {
+            *target = *source as std::ffi::c_char;
+        }
+    }
 
     #[test]
     fn parses_px4_state_event_from_c_abi_union() {
@@ -568,6 +598,67 @@ mod tests {
                 );
             }
             other => panic!("expected host system event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_feature_get_title_from_c_abi_union() {
+        let mut data = sys::yunlink_feature_get_event_t {
+            session_id: 31,
+            message_id: 32,
+            correlation_id: 33,
+            success: 1,
+            ..Default::default()
+        };
+        write_c_buf(&mut data.name, b"communication");
+        write_c_buf(&mut data.title, "通信模块".as_bytes());
+        write_c_buf(&mut data.group, b"system");
+        write_c_buf(
+            &mut data.description,
+            "[通信模块]：启动云链 ROS bridge".as_bytes(),
+        );
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_FEATURE_GET,
+            data: sys::yunlink_runtime_event_union_t { feature_get: data },
+        };
+
+        match parse_event(raw).expect("FeatureGet event should parse") {
+            Event::FeatureGet(event) => {
+                assert_eq!(event.name, "communication");
+                assert_eq!(event.title, "通信模块");
+                assert_eq!(event.group, "system");
+                assert_eq!(event.description, "[通信模块]：启动云链 ROS bridge");
+            }
+            other => panic!("expected FeatureGet event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_feature_start_response_from_c_abi_union() {
+        let mut data = sys::yunlink_feature_start_event_t {
+            session_id: 41,
+            message_id: 42,
+            correlation_id: 43,
+            success: 1,
+            ..Default::default()
+        };
+        write_c_buf(&mut data.message, b"started");
+        write_c_buf(&mut data.feature_name, b"communication");
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_FEATURE_START,
+            data: sys::yunlink_runtime_event_union_t {
+                feature_start: data,
+            },
+        };
+
+        match parse_event(raw).expect("FeatureStart event should parse") {
+            Event::FeatureStart(event) => {
+                assert!(event.success);
+                assert_eq!(event.correlation_id, 43);
+                assert_eq!(event.feature_name, "communication");
+                assert_eq!(event.message, "started");
+            }
+            other => panic!("expected FeatureStart event, got {other:?}"),
         }
     }
 }

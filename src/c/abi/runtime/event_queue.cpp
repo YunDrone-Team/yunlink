@@ -246,6 +246,9 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
                           sizeof(out.data.feature_get.message),
                           msg.payload.message);
                 safe_copy(out.data.feature_get.name, sizeof(out.data.feature_get.name), msg.payload.name);
+                safe_copy(out.data.feature_get.title,
+                          sizeof(out.data.feature_get.title),
+                          msg.payload.title);
                 safe_copy(out.data.feature_get.group,
                           sizeof(out.data.feature_get.group),
                           msg.payload.group);
@@ -261,6 +264,24 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
                 safe_copy(out.data.feature_get.start_preview_commands,
                           sizeof(out.data.feature_get.start_preview_commands),
                           join_csv(msg.payload.start_preview_commands));
+                push_event(runtime, out);
+            });
+
+    runtime->tok_feature_start =
+        runtime->runtime.system_service_subscriber().subscribe_feature_start_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::FeatureStartResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_FEATURE_START;
+                out.data.feature_start.session_id = msg.envelope.session_id;
+                out.data.feature_start.message_id = msg.envelope.message_id;
+                out.data.feature_start.correlation_id = msg.envelope.correlation_id;
+                out.data.feature_start.success = msg.payload.success ? 1 : 0;
+                safe_copy(out.data.feature_start.message,
+                          sizeof(out.data.feature_start.message),
+                          msg.payload.message);
+                safe_copy(out.data.feature_start.feature_name,
+                          sizeof(out.data.feature_start.feature_name),
+                          msg.payload.feature_name);
                 push_event(runtime, out);
             });
 }
@@ -305,6 +326,10 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
     if (runtime->tok_feature_get != 0) {
         runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_get);
         runtime->tok_feature_get = 0;
+    }
+    if (runtime->tok_feature_start != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_start);
+        runtime->tok_feature_start = 0;
     }
 }
 

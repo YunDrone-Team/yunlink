@@ -167,6 +167,18 @@ unsafe extern "C" {
         feature_name: *const c_char,
         out_handle: *mut yunlink_command_handle_t,
     ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_feature_start(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        feature_name: *const c_char,
+        override_args: *const *const c_char,
+        override_arg_count: usize,
+        restart_if_running: u8,
+        start_with_terminal: u8,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
     pub fn yunlink_system_service_request_runtime_log_list(
         runtime: *mut yunlink_runtime_t,
         peer: *const yunlink_peer_t,

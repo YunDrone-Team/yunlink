@@ -246,12 +246,22 @@ typedef struct yunlink_feature_get_event {
     uint8_t auto_start;
     char message[256];
     char name[128];
+    char title[128];
     char group[128];
     char description[512];
     char depends_on[1024];
     char start_preview_units[1024];
     char start_preview_commands[2048];
 } yunlink_feature_get_event_t;
+
+typedef struct yunlink_feature_start_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    char message[256];
+    char feature_name[128];
+} yunlink_feature_start_event_t;
 
 typedef struct yunlink_runtime_event {
     uint8_t type;
@@ -265,6 +275,7 @@ typedef struct yunlink_runtime_event {
         yunlink_vehicle_event_data_t vehicle_event;
         yunlink_feature_list_event_t feature_list;
         yunlink_feature_get_event_t feature_get;
+        yunlink_feature_start_event_t feature_start;
         yunlink_host_system_event_t host_system;
     } data;
 } yunlink_runtime_event_t;

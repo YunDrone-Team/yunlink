@@ -31,6 +31,7 @@ struct yunlink_runtime {
     std::vector<size_t> system_service_tokens;
     size_t tok_feature_list = 0;
     size_t tok_feature_get = 0;
+    size_t tok_feature_start = 0;
     bool started = false;
 };
 

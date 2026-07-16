@@ -24,8 +24,8 @@ pub use configuration::{
 pub use error::{FfiErrorCode, Result, YunlinkError};
 pub use events::{
     AuthorityStatusEvent, CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event,
-    FeatureGetEvent, FeatureListEvent, HostSystemEvent, LinkEvent, Px4StateEvent,
-    VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
+    FeatureGetEvent, FeatureListEvent, FeatureStartEvent, HostSystemEvent, LinkEvent,
+    Px4StateEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
 };
 pub use runtime::Runtime;
 pub use runtime_logs::{
