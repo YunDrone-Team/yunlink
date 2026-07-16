@@ -1,6 +1,7 @@
 use yunlink_sys as sys;
 
 use crate::ffi_util::string_from_c_buf;
+use crate::types::AuthorityState;
 
 /// Command kind decoded from `yunlink_command_result_event_t`.
 ///
@@ -151,6 +152,12 @@ pub struct Px4StateEvent {
     pub local_vx_mps: f32,
     pub local_vy_mps: f32,
     pub local_vz_mps: f32,
+    pub local_yaw_rad: f32,
+    pub target_x_m: f32,
+    pub target_y_m: f32,
+    pub target_z_m: f32,
+    pub target_yaw_rad: f32,
+    pub target_valid: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -168,6 +175,16 @@ pub struct ErrorEvent {
     pub code: u16,
     /// Human-readable message copied from the fixed C buffer.
     pub message: String,
+}
+
+/// Authority lease status confirmed by the remote target.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AuthorityStatusEvent {
+    pub state: AuthorityState,
+    pub session_id: u64,
+    pub lease_ttl_ms: u32,
+    pub reason_code: u16,
+    pub detail: String,
 }
 
 /// Safe runtime event enum exposed to Rust callers.
@@ -209,6 +226,7 @@ pub enum Event {
     /// Vehicle core state arrived.
     VehicleCoreState(VehicleCoreStateEvent),
     Px4State(Px4StateEvent),
+    AuthorityStatus(AuthorityStatusEvent),
     FeatureList(FeatureListEvent),
     FeatureGet(FeatureGetEvent),
 }
@@ -296,6 +314,22 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 local_vx_mps: data.local_vx_mps,
                 local_vy_mps: data.local_vy_mps,
                 local_vz_mps: data.local_vz_mps,
+                local_yaw_rad: data.local_yaw_rad,
+                target_x_m: data.target_x_m,
+                target_y_m: data.target_y_m,
+                target_z_m: data.target_z_m,
+                target_yaw_rad: data.target_yaw_rad,
+                target_valid: data.target_valid != 0,
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS => {
+            let data = unsafe { event.data.authority_status };
+            Some(Event::AuthorityStatus(AuthorityStatusEvent {
+                state: AuthorityState::from_native(data.state),
+                session_id: data.session_id,
+                lease_ttl_ms: data.lease_ttl_ms,
+                reason_code: data.reason_code,
+                detail: string_from_c_buf(&data.detail),
             }))
         }
         sys::YUNLINK_RUNTIME_EVENT_FEATURE_LIST => {
@@ -334,6 +368,7 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
 #[cfg(test)]
 mod tests {
     use super::{parse_event, Event};
+    use crate::AuthorityState;
     use yunlink_sys as sys;
 
     #[test]
@@ -366,6 +401,12 @@ mod tests {
                     local_vx_mps: 0.1,
                     local_vy_mps: -0.2,
                     local_vz_mps: 0.3,
+                    local_yaw_rad: 1.25,
+                    target_x_m: 4.0,
+                    target_y_m: 5.0,
+                    target_z_m: 6.0,
+                    target_yaw_rad: -0.75,
+                    target_valid: 1,
                 },
             },
         };
@@ -390,8 +431,45 @@ mod tests {
                 assert_eq!(event.local_vx_mps, 0.1);
                 assert_eq!(event.local_vy_mps, -0.2);
                 assert_eq!(event.local_vz_mps, 0.3);
+                assert_eq!(event.local_yaw_rad, 1.25);
+                assert_eq!(event.target_x_m, 4.0);
+                assert_eq!(event.target_y_m, 5.0);
+                assert_eq!(event.target_z_m, 6.0);
+                assert_eq!(event.target_yaw_rad, -0.75);
+                assert!(event.target_valid);
             }
             other => panic!("expected PX4 state event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_authority_status_event_from_c_abi_union() {
+        let mut detail = [0; 256];
+        for (target, source) in detail.iter_mut().zip(b"authority granted") {
+            *target = *source as std::ffi::c_char;
+        }
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS,
+            data: sys::yunlink_runtime_event_union_t {
+                authority_status: sys::yunlink_authority_status_event_t {
+                    state: sys::YUNLINK_AUTHORITY_STATE_CONTROLLER,
+                    session_id: 42,
+                    lease_ttl_ms: 3_000,
+                    reason_code: 0,
+                    detail,
+                },
+            },
+        };
+
+        match parse_event(raw).expect("authority status event should parse") {
+            Event::AuthorityStatus(event) => {
+                assert_eq!(event.state, AuthorityState::Controller);
+                assert_eq!(event.session_id, 42);
+                assert_eq!(event.lease_ttl_ms, 3_000);
+                assert_eq!(event.reason_code, 0);
+                assert_eq!(event.detail, "authority granted");
+            }
+            other => panic!("expected authority status event, got {other:?}"),
         }
     }
 }

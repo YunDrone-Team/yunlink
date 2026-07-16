@@ -186,7 +186,21 @@ typedef struct yunlink_px4_state_event {
     float local_vx_mps;
     float local_vy_mps;
     float local_vz_mps;
+    float local_yaw_rad;
+    float target_x_m;
+    float target_y_m;
+    float target_z_m;
+    float target_yaw_rad;
+    uint8_t target_valid;
 } yunlink_px4_state_event_t;
+
+typedef struct yunlink_authority_status_event {
+    uint8_t state;
+    uint64_t session_id;
+    uint32_t lease_ttl_ms;
+    uint16_t reason_code;
+    char detail[256];
+} yunlink_authority_status_event_t;
 
 typedef struct yunlink_vehicle_event_data {
     uint64_t session_id;
@@ -230,6 +244,7 @@ typedef struct yunlink_runtime_event {
         yunlink_command_result_event_t command_result;
         yunlink_vehicle_core_state_event_t vehicle_core_state;
         yunlink_px4_state_event_t px4_state;
+        yunlink_authority_status_event_t authority_status;
         yunlink_vehicle_event_data_t vehicle_event;
         yunlink_feature_list_event_t feature_list;
         yunlink_feature_get_event_t feature_get;

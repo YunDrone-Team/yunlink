@@ -128,6 +128,7 @@ typedef enum yunlink_runtime_event_type {
     YUNLINK_RUNTIME_EVENT_FEATURE_LIST = 6,
     YUNLINK_RUNTIME_EVENT_FEATURE_GET = 7,
     YUNLINK_RUNTIME_EVENT_PX4_STATE = 8,
+    YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS = 9,
 } yunlink_runtime_event_type_t;
 
 typedef enum yunlink_config_value_type {

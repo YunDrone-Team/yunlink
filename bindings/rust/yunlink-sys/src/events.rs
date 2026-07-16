@@ -159,6 +159,40 @@ pub struct yunlink_px4_state_event_t {
     pub local_vx_mps: f32,
     pub local_vy_mps: f32,
     pub local_vz_mps: f32,
+    pub local_yaw_rad: f32,
+    pub target_x_m: f32,
+    pub target_y_m: f32,
+    pub target_z_m: f32,
+    pub target_yaw_rad: f32,
+    pub target_valid: u8,
+}
+
+/// Raw authority lease status event payload.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_authority_status_event_t {
+    /// One of the `YUNLINK_AUTHORITY_STATE_*` constants.
+    pub state: u8,
+    /// Session whose request, renewal, release, or revocation was reported.
+    pub session_id: u64,
+    /// Granted lease lifetime in milliseconds.
+    pub lease_ttl_ms: u32,
+    /// Stable authority reason code.
+    pub reason_code: u16,
+    /// Null-terminated human-readable detail.
+    pub detail: [c_char; 256],
+}
+
+impl Default for yunlink_authority_status_event_t {
+    fn default() -> Self {
+        Self {
+            state: 0,
+            session_id: 0,
+            lease_ttl_ms: 0,
+            reason_code: 0,
+            detail: [0; 256],
+        }
+    }
 }
 
 #[repr(C)]
@@ -271,6 +305,8 @@ pub union yunlink_runtime_event_union_t {
     pub vehicle_core_state: yunlink_vehicle_core_state_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_PX4_STATE`.
     pub px4_state: yunlink_px4_state_event_t,
+    /// Active when the event type is `YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS`.
+    pub authority_status: yunlink_authority_status_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_VEHICLE_EVENT`.
     pub vehicle_event: yunlink_vehicle_event_data_t,
     pub feature_list: yunlink_feature_list_event_t,

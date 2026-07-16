@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -6,6 +7,22 @@ fn run(cmd: &mut Command) {
     let status = cmd.status().expect("failed to spawn command");
     if !status.success() {
         panic!("command failed with status {status}");
+    }
+}
+
+fn watch_source_tree(root: &std::path::Path) {
+    let entries = fs::read_dir(root)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", root.display()));
+    for entry in entries {
+        let path = entry.expect("failed to read source entry").path();
+        if path.is_dir() {
+            watch_source_tree(&path);
+        } else if matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("c" | "cc" | "cpp" | "h" | "hpp")
+        ) {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
     }
 }
 
@@ -17,15 +34,13 @@ fn main() {
     repo_root.pop();
     let build_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("cmake-build");
     let generator = env::var("CMAKE_GENERATOR").unwrap_or_else(|_| "Ninja".to_string());
+    let build_type = match env::var("PROFILE").as_deref() {
+        Ok("release") => "Release",
+        _ => "Debug",
+    };
 
-    println!(
-        "cargo:rerun-if-changed={}",
-        repo_root.join("include/yunlink/c/yunlink_c.h").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        repo_root.join("src/c/yunlink_c.cpp").display()
-    );
+    watch_source_tree(&repo_root.join("include/yunlink"));
+    watch_source_tree(&repo_root.join("src"));
     println!(
         "cargo:rerun-if-changed={}",
         repo_root.join("CMakeLists.txt").display()
@@ -38,7 +53,7 @@ fn main() {
         .arg(&build_dir)
         .arg("-G")
         .arg(&generator)
-        .arg("-DCMAKE_BUILD_TYPE=Debug")
+        .arg(format!("-DCMAKE_BUILD_TYPE={build_type}"))
         .arg("-DYUNLINK_BUILD_EXAMPLES=OFF")
         .arg("-DYUNLINK_BUILD_TESTS=OFF"));
 
