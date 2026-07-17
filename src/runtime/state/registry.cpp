@@ -145,6 +145,13 @@ size_t Runtime::subscribe_sunray_runtime_diagnostic_internal(
     return token;
 }
 
+size_t Runtime::subscribe_host_system_internal(StateSubscriber::HostSystemHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->host_system_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;

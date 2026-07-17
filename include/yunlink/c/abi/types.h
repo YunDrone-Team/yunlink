@@ -165,6 +165,47 @@ typedef struct yunlink_vehicle_core_state_event {
     float battery_percent;
 } yunlink_vehicle_core_state_event_t;
 
+typedef struct yunlink_px4_state_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t source_type;
+    uint32_t source_id;
+    uint8_t source_role;
+    uint8_t connected;
+    uint8_t armed;
+    char flight_mode[32];
+    uint8_t system_status;
+    uint8_t landed_state;
+    float battery_voltage_v;
+    float battery_current_a;
+    float battery_percentage;
+    float local_x_m;
+    float local_y_m;
+    float local_z_m;
+    float local_vx_mps;
+    float local_vy_mps;
+    float local_vz_mps;
+    float local_yaw_rad;
+    float target_x_m;
+    float target_y_m;
+    float target_z_m;
+    float target_yaw_rad;
+    uint8_t target_valid;
+    float local_orientation_x;
+    float local_orientation_y;
+    float local_orientation_z;
+    float local_orientation_w;
+} yunlink_px4_state_event_t;
+
+typedef struct yunlink_authority_status_event {
+    uint8_t state;
+    uint64_t session_id;
+    uint32_t lease_ttl_ms;
+    uint16_t reason_code;
+    char detail[256];
+} yunlink_authority_status_event_t;
+
 typedef struct yunlink_vehicle_event_data {
     uint64_t session_id;
     uint64_t message_id;
@@ -174,6 +215,54 @@ typedef struct yunlink_vehicle_event_data {
     char detail[256];
 } yunlink_vehicle_event_data_t;
 
+typedef struct yunlink_host_system_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint32_t source_id;
+    uint64_t source_stamp_ns;
+    float cpu_percent;
+    float memory_percent;
+    uint32_t sample_period_ms;
+    char component_kind[32];
+    char active_components[8192];
+} yunlink_host_system_event_t;
+
+typedef struct yunlink_feature_list_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    char message[256];
+    char feature_names[2048];
+} yunlink_feature_list_event_t;
+
+typedef struct yunlink_feature_get_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    uint8_t running;
+    uint8_t auto_start;
+    char message[256];
+    char name[128];
+    char title[128];
+    char group[128];
+    char description[512];
+    char depends_on[1024];
+    char start_preview_units[1024];
+    char start_preview_commands[2048];
+} yunlink_feature_get_event_t;
+
+typedef struct yunlink_feature_start_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    char message[256];
+    char feature_name[128];
+} yunlink_feature_start_event_t;
+
 typedef struct yunlink_runtime_event {
     uint8_t type;
     union {
@@ -181,10 +270,17 @@ typedef struct yunlink_runtime_event {
         yunlink_error_event_t error;
         yunlink_command_result_event_t command_result;
         yunlink_vehicle_core_state_event_t vehicle_core_state;
+        yunlink_px4_state_event_t px4_state;
+        yunlink_authority_status_event_t authority_status;
         yunlink_vehicle_event_data_t vehicle_event;
+        yunlink_feature_list_event_t feature_list;
+        yunlink_feature_get_event_t feature_get;
+        yunlink_feature_start_event_t feature_start;
+        yunlink_host_system_event_t host_system;
     } data;
 } yunlink_runtime_event_t;
 
 #include "yunlink/c/abi/configuration.h"
+#include "yunlink/c/abi/runtime_logs.h"
 
 #endif  // YUNLINK_C_ABI_TYPES_H

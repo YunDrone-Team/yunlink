@@ -5,9 +5,45 @@
 
 #include "../internal.hpp"
 
+#include <cmath>
 #include <cstring>
+#include <sstream>
 
 namespace yunlink_c_abi {
+
+namespace {
+
+std::string join_csv(const std::vector<std::string>& values) {
+    std::ostringstream out;
+    for (size_t index = 0; index < values.size(); ++index) {
+        if (index != 0) {
+            out << ",";
+        }
+        out << values[index];
+    }
+    return out.str();
+}
+
+std::string join_lines(const std::vector<std::string>& values) {
+    std::ostringstream out;
+    for (size_t index = 0; index < values.size(); ++index) {
+        if (index != 0) {
+            out << '\n';
+        }
+        out << values[index];
+    }
+    return out.str();
+}
+
+float yaw_from_quaternion(const yunlink::Quaternionf& orientation) {
+    const float sin_yaw =
+        2.0F * (orientation.w * orientation.z + orientation.x * orientation.y);
+    const float cos_yaw =
+        1.0F - 2.0F * (orientation.y * orientation.y + orientation.z * orientation.z);
+    return std::atan2(sin_yaw, cos_yaw);
+}
+
+}  // namespace
 
 void push_event(yunlink_runtime_t* runtime, const yunlink_runtime_event_t& event) {
     std::lock_guard<std::mutex> lock(runtime->mu);
@@ -68,6 +104,83 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             push_event(runtime, out);
         });
 
+    runtime->tok_px4_state = runtime->runtime.state_subscriber().subscribe_px4_state(
+        [runtime](const yunlink::TypedMessage<yunlink::Px4StateSnapshot>& msg) {
+            yunlink_runtime_event_t out{};
+            out.type = YUNLINK_RUNTIME_EVENT_PX4_STATE;
+            out.data.px4_state.session_id = msg.envelope.session_id;
+            out.data.px4_state.message_id = msg.envelope.message_id;
+            out.data.px4_state.correlation_id = msg.envelope.correlation_id;
+            out.data.px4_state.source_type = static_cast<uint8_t>(msg.envelope.source.agent_type);
+            out.data.px4_state.source_id = msg.envelope.source.agent_id;
+            out.data.px4_state.source_role = static_cast<uint8_t>(msg.envelope.source.role);
+            out.data.px4_state.connected = msg.payload.connected ? 1 : 0;
+            out.data.px4_state.armed = msg.payload.armed ? 1 : 0;
+            safe_copy(out.data.px4_state.flight_mode,
+                      sizeof(out.data.px4_state.flight_mode),
+                      msg.payload.flight_mode);
+            out.data.px4_state.system_status = msg.payload.system_status;
+            out.data.px4_state.landed_state = msg.payload.landed_state;
+            out.data.px4_state.battery_voltage_v = msg.payload.battery_voltage_v;
+            out.data.px4_state.battery_current_a = msg.payload.battery_current_a;
+            out.data.px4_state.battery_percentage = msg.payload.battery_percentage;
+            out.data.px4_state.local_x_m = msg.payload.local_pose.position_m.x;
+            out.data.px4_state.local_y_m = msg.payload.local_pose.position_m.y;
+            out.data.px4_state.local_z_m = msg.payload.local_pose.position_m.z;
+            out.data.px4_state.local_vx_mps = msg.payload.local_velocity.linear_mps.x;
+            out.data.px4_state.local_vy_mps = msg.payload.local_velocity.linear_mps.y;
+            out.data.px4_state.local_vz_mps = msg.payload.local_velocity.linear_mps.z;
+            out.data.px4_state.local_yaw_rad =
+                yaw_from_quaternion(msg.payload.local_pose.orientation);
+            out.data.px4_state.local_orientation_x = msg.payload.local_pose.orientation.x;
+            out.data.px4_state.local_orientation_y = msg.payload.local_pose.orientation.y;
+            out.data.px4_state.local_orientation_z = msg.payload.local_pose.orientation.z;
+            out.data.px4_state.local_orientation_w = msg.payload.local_pose.orientation.w;
+            out.data.px4_state.target_x_m = msg.payload.pos_setpoint_m.x;
+            out.data.px4_state.target_y_m = msg.payload.pos_setpoint_m.y;
+            out.data.px4_state.target_z_m = msg.payload.pos_setpoint_m.z;
+            out.data.px4_state.target_yaw_rad = msg.payload.yaw_setpoint_rad;
+            out.data.px4_state.target_valid =
+                msg.payload.setpoint_coordinate_frame != 0 ? 1 : 0;
+            push_event(runtime, out);
+        });
+
+    runtime->tok_host_system = runtime->runtime.state_subscriber().subscribe_host_system(
+        [runtime](const yunlink::TypedMessage<yunlink::HostSystemSnapshot>& msg) {
+            yunlink_runtime_event_t out{};
+            out.type = YUNLINK_RUNTIME_EVENT_HOST_SYSTEM;
+            out.data.host_system.session_id = msg.envelope.session_id;
+            out.data.host_system.message_id = msg.envelope.message_id;
+            out.data.host_system.correlation_id = msg.envelope.correlation_id;
+            out.data.host_system.source_id = msg.envelope.source.agent_id;
+            out.data.host_system.source_stamp_ns = msg.payload.header.stamp_ns;
+            out.data.host_system.cpu_percent = msg.payload.cpu_percent;
+            out.data.host_system.memory_percent = msg.payload.memory_percent;
+            out.data.host_system.sample_period_ms = msg.payload.sample_period_ms;
+            safe_copy(out.data.host_system.component_kind,
+                      sizeof(out.data.host_system.component_kind),
+                      msg.payload.component_kind);
+            safe_copy(out.data.host_system.active_components,
+                      sizeof(out.data.host_system.active_components),
+                      join_lines(msg.payload.active_components));
+            push_event(runtime, out);
+        });
+
+    runtime->tok_authority_status =
+        runtime->runtime.event_subscriber().subscribe_authority_status(
+            [runtime](const yunlink::TypedMessage<yunlink::AuthorityStatus>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS;
+                out.data.authority_status.state = static_cast<uint8_t>(msg.payload.state);
+                out.data.authority_status.session_id = msg.payload.session_id;
+                out.data.authority_status.lease_ttl_ms = msg.payload.lease_ttl_ms;
+                out.data.authority_status.reason_code = msg.payload.reason_code;
+                safe_copy(out.data.authority_status.detail,
+                          sizeof(out.data.authority_status.detail),
+                          msg.payload.detail);
+                push_event(runtime, out);
+            });
+
     runtime->tok_vehicle_event = runtime->runtime.event_subscriber().subscribe_vehicle_event(
         [runtime](const yunlink::TypedMessage<yunlink::VehicleEvent>& msg) {
             yunlink_runtime_event_t out{};
@@ -99,6 +212,78 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
                       view.payload.detail);
             push_event(runtime, out);
         });
+
+    runtime->tok_feature_list =
+        runtime->runtime.system_service_subscriber().subscribe_feature_list_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::FeatureListResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_FEATURE_LIST;
+                out.data.feature_list.session_id = msg.envelope.session_id;
+                out.data.feature_list.message_id = msg.envelope.message_id;
+                out.data.feature_list.correlation_id = msg.envelope.correlation_id;
+                out.data.feature_list.success = msg.payload.success ? 1 : 0;
+                safe_copy(out.data.feature_list.message,
+                          sizeof(out.data.feature_list.message),
+                          msg.payload.message);
+                safe_copy(out.data.feature_list.feature_names,
+                          sizeof(out.data.feature_list.feature_names),
+                          join_csv(msg.payload.feature_names));
+                push_event(runtime, out);
+            });
+
+    runtime->tok_feature_get =
+        runtime->runtime.system_service_subscriber().subscribe_feature_get_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::FeatureGetResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_FEATURE_GET;
+                out.data.feature_get.session_id = msg.envelope.session_id;
+                out.data.feature_get.message_id = msg.envelope.message_id;
+                out.data.feature_get.correlation_id = msg.envelope.correlation_id;
+                out.data.feature_get.success = msg.payload.success ? 1 : 0;
+                out.data.feature_get.running = msg.payload.running ? 1 : 0;
+                out.data.feature_get.auto_start = msg.payload.auto_start ? 1 : 0;
+                safe_copy(out.data.feature_get.message,
+                          sizeof(out.data.feature_get.message),
+                          msg.payload.message);
+                safe_copy(out.data.feature_get.name, sizeof(out.data.feature_get.name), msg.payload.name);
+                safe_copy(out.data.feature_get.title,
+                          sizeof(out.data.feature_get.title),
+                          msg.payload.title);
+                safe_copy(out.data.feature_get.group,
+                          sizeof(out.data.feature_get.group),
+                          msg.payload.group);
+                safe_copy(out.data.feature_get.description,
+                          sizeof(out.data.feature_get.description),
+                          msg.payload.description);
+                safe_copy(out.data.feature_get.depends_on,
+                          sizeof(out.data.feature_get.depends_on),
+                          join_csv(msg.payload.depends_on));
+                safe_copy(out.data.feature_get.start_preview_units,
+                          sizeof(out.data.feature_get.start_preview_units),
+                          join_csv(msg.payload.start_preview_units));
+                safe_copy(out.data.feature_get.start_preview_commands,
+                          sizeof(out.data.feature_get.start_preview_commands),
+                          join_csv(msg.payload.start_preview_commands));
+                push_event(runtime, out);
+            });
+
+    runtime->tok_feature_start =
+        runtime->runtime.system_service_subscriber().subscribe_feature_start_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::FeatureStartResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_FEATURE_START;
+                out.data.feature_start.session_id = msg.envelope.session_id;
+                out.data.feature_start.message_id = msg.envelope.message_id;
+                out.data.feature_start.correlation_id = msg.envelope.correlation_id;
+                out.data.feature_start.success = msg.payload.success ? 1 : 0;
+                safe_copy(out.data.feature_start.message,
+                          sizeof(out.data.feature_start.message),
+                          msg.payload.message);
+                safe_copy(out.data.feature_start.feature_name,
+                          sizeof(out.data.feature_start.feature_name),
+                          msg.payload.feature_name);
+                push_event(runtime, out);
+            });
 }
 
 void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
@@ -114,6 +299,18 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
         runtime->runtime.state_subscriber().unsubscribe(runtime->tok_vehicle_core);
         runtime->tok_vehicle_core = 0;
     }
+    if (runtime->tok_px4_state != 0) {
+        runtime->runtime.state_subscriber().unsubscribe(runtime->tok_px4_state);
+        runtime->tok_px4_state = 0;
+    }
+    if (runtime->tok_host_system != 0) {
+        runtime->runtime.state_subscriber().unsubscribe(runtime->tok_host_system);
+        runtime->tok_host_system = 0;
+    }
+    if (runtime->tok_authority_status != 0) {
+        runtime->runtime.event_subscriber().unsubscribe(runtime->tok_authority_status);
+        runtime->tok_authority_status = 0;
+    }
     if (runtime->tok_vehicle_event != 0) {
         runtime->runtime.event_subscriber().unsubscribe(runtime->tok_vehicle_event);
         runtime->tok_vehicle_event = 0;
@@ -121,6 +318,18 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
     if (runtime->tok_command_result != 0) {
         runtime->runtime.event_subscriber().unsubscribe(runtime->tok_command_result);
         runtime->tok_command_result = 0;
+    }
+    if (runtime->tok_feature_list != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_list);
+        runtime->tok_feature_list = 0;
+    }
+    if (runtime->tok_feature_get != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_get);
+        runtime->tok_feature_get = 0;
+    }
+    if (runtime->tok_feature_start != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_start);
+        runtime->tok_feature_start = 0;
     }
 }
 

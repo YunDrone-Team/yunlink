@@ -125,6 +125,8 @@ set(YUNLINK_LIBRARY_SOURCES
   src/c/abi/commands/state.cpp
   src/c/abi/configuration/publish.cpp
   src/c/abi/configuration/subscriptions.cpp
+  src/c/abi/commands/system_service.cpp
+  src/c/abi/system_service/runtime_logs.cpp
   src/c/abi/core/helpers.cpp
   src/c/abi/core/result.cpp
   src/c/abi/runtime/event_queue.cpp
@@ -264,6 +266,13 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_state_plane_semantics tests/runtime/test_state_plane_semantics.cpp)
   target_link_libraries(test_state_plane_semantics PRIVATE yunlink)
   add_test(NAME test_state_plane_semantics COMMAND test_state_plane_semantics)
+
+  add_executable(
+    test_host_system_snapshot_codec
+    tests/core/test_host_system_snapshot_codec.cpp
+  )
+  target_link_libraries(test_host_system_snapshot_codec PRIVATE yunlink)
+  add_test(NAME test_host_system_snapshot_codec COMMAND test_host_system_snapshot_codec)
 
   add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
   target_link_libraries(test_capability_negotiation PRIVATE yunlink)

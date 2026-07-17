@@ -13,6 +13,10 @@ use crate::configuration::{
 use crate::error::{ensure, Result};
 use crate::events::{parse_event, Event, EVENT_CHANNEL_CAPACITY};
 use crate::ffi_util::write_c_buffer;
+use crate::runtime_logs::{
+    register_callbacks as register_runtime_log_callbacks, RuntimeLogCallbackContext,
+    RuntimeLogResponse,
+};
 use crate::types::{
     AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, PeerConnection,
     RuntimeConfig, Session, SessionInfo, SessionState, TargetSelector,
@@ -53,6 +57,9 @@ pub struct Runtime {
     configuration_sender: broadcast::Sender<ConfigurationResponse>,
     configuration_callback_context: Box<ConfigurationCallbackContext>,
     configuration_tokens: Vec<usize>,
+    runtime_log_sender: broadcast::Sender<RuntimeLogResponse>,
+    runtime_log_callback_context: Box<RuntimeLogCallbackContext>,
+    runtime_log_tokens: Vec<usize>,
     /// Background thread that polls `yunlink_runtime_poll_event`.
     poll_thread: Option<JoinHandle<()>>,
 }
@@ -93,8 +100,18 @@ impl Runtime {
 
         let (sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let (configuration_sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
+        let (runtime_log_sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let (configuration_callback_context, configuration_tokens) =
             match register_callbacks(raw_ptr, configuration_sender.clone()) {
+                Ok(registration) => registration,
+                Err(error) => {
+                    let _ = unsafe { sys::yunlink_runtime_stop(raw_ptr) };
+                    unsafe { sys::yunlink_runtime_destroy(raw_ptr) };
+                    return Err(error);
+                }
+            };
+        let (runtime_log_callback_context, runtime_log_tokens) =
+            match register_runtime_log_callbacks(raw_ptr, runtime_log_sender.clone()) {
                 Ok(registration) => registration,
                 Err(error) => {
                     let _ = unsafe { sys::yunlink_runtime_stop(raw_ptr) };
@@ -131,6 +148,9 @@ impl Runtime {
             configuration_sender,
             configuration_callback_context,
             configuration_tokens,
+            runtime_log_sender,
+            runtime_log_callback_context,
+            runtime_log_tokens,
             poll_thread: Some(poll_thread),
         })
     }
@@ -143,6 +163,11 @@ impl Runtime {
     /// Subscribe to owned configuration service responses.
     pub fn subscribe_configuration(&self) -> broadcast::Receiver<ConfigurationResponse> {
         self.configuration_sender.subscribe()
+    }
+
+    /// Subscribe to owned managed-runtime log service responses.
+    pub fn subscribe_runtime_logs(&self) -> broadcast::Receiver<RuntimeLogResponse> {
+        self.runtime_log_sender.subscribe()
     }
 
     /// Connect to a remote peer through the C ABI TCP client helper.
@@ -261,7 +286,7 @@ impl Runtime {
     }
 
     /// Return the current opaque runtime pointer.
-    fn raw_ptr(&self) -> *mut sys::yunlink_runtime_t {
+    pub(crate) fn raw_ptr(&self) -> *mut sys::yunlink_runtime_t {
         self.raw_lock().0
     }
 
@@ -292,8 +317,12 @@ impl Drop for Runtime {
         for token in self.configuration_tokens.drain(..) {
             let _ = unsafe { sys::yunlink_configuration_unsubscribe(raw, token) };
         }
+        for token in self.runtime_log_tokens.drain(..) {
+            let _ = unsafe { sys::yunlink_system_service_unsubscribe(raw, token) };
+        }
         let _ = unsafe { sys::yunlink_runtime_stop(raw) };
         unsafe { sys::yunlink_runtime_destroy(raw) };
         let _ = &self.configuration_callback_context;
+        let _ = &self.runtime_log_callback_context;
     }
 }

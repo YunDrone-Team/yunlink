@@ -60,6 +60,10 @@ size_t StateSubscriber::subscribe_sunray_runtime_diagnostic(SunrayRuntimeDiagnos
     return runtime_ ? runtime_->subscribe_sunray_runtime_diagnostic_internal(std::move(cb)) : 0;
 }
 
+size_t StateSubscriber::subscribe_host_system(HostSystemHandler cb) {
+    return runtime_ ? runtime_->subscribe_host_system_internal(std::move(cb)) : 0;
+}
+
 void StateSubscriber::unsubscribe(size_t token) {
     if (runtime_)
         runtime_->unsubscribe_semantic(token);

@@ -65,6 +65,7 @@ ByteBuffer encode_payload(const UavControlStateSnapshot& payload);
 ByteBuffer encode_payload(const OdomStateSnapshot& payload);
 ByteBuffer encode_payload(const SunrayRuntimeDiagnosticSnapshot& payload);
 ByteBuffer encode_payload(const CommandExecutionStatusSnapshot& payload);
+ByteBuffer encode_payload(const HostSystemSnapshot& payload);
 
 bool decode_payload(const ByteBuffer& bytes, SessionHello* payload);
 bool decode_payload(const ByteBuffer& bytes, SessionAuthenticate* payload);
@@ -116,6 +117,7 @@ bool decode_payload(const ByteBuffer& bytes, UavControlStateSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, OdomStateSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, SunrayRuntimeDiagnosticSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, CommandExecutionStatusSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, HostSystemSnapshot* payload);
 
 template <typename T> ByteBuffer encode_typed_payload(const T& payload) {
     return encode_payload(payload);

@@ -22,9 +22,16 @@ struct yunlink_runtime {
     size_t tok_error = 0;
     size_t tok_link = 0;
     size_t tok_vehicle_core = 0;
+    size_t tok_px4_state = 0;
+    size_t tok_host_system = 0;
+    size_t tok_authority_status = 0;
     size_t tok_vehicle_event = 0;
     size_t tok_command_result = 0;
     std::vector<size_t> configuration_tokens;
+    std::vector<size_t> system_service_tokens;
+    size_t tok_feature_list = 0;
+    size_t tok_feature_get = 0;
+    size_t tok_feature_start = 0;
     bool started = false;
 };
 
@@ -42,7 +49,8 @@ void push_event(yunlink_runtime_t* runtime, const yunlink_runtime_event_t& event
 void clear_queue(yunlink_runtime_t* runtime);
 void subscribe_runtime_events(yunlink_runtime_t* runtime);
 void unsubscribe_runtime_events(yunlink_runtime_t* runtime);
-void unsubscribe_configuration_callbacks(yunlink_runtime_t* runtime);
+    void unsubscribe_configuration_callbacks(yunlink_runtime_t* runtime);
+    void unsubscribe_system_service_callbacks(yunlink_runtime_t* runtime);
 
 bool validate_input_runtime(yunlink_runtime_t* runtime);
 bool validate_peer(const yunlink_peer_t* peer);

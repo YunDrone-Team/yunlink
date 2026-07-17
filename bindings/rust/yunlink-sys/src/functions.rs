@@ -10,6 +10,9 @@ use crate::configuration::{
 };
 use crate::constants::yunlink_result_t;
 use crate::events::yunlink_runtime_event_t;
+use crate::runtime_logs::{
+    yunlink_runtime_log_list_response_callback_t, yunlink_runtime_log_read_response_callback_t,
+};
 use crate::types::{
     yunlink_authority_lease_t, yunlink_command_handle_t, yunlink_goto_command_t,
     yunlink_land_command_t, yunlink_peer_t, yunlink_return_command_t, yunlink_runtime_config_t,
@@ -147,6 +150,67 @@ unsafe extern "C" {
         target: *const yunlink_target_selector_t,
         payload: *const yunlink_vehicle_core_state_t,
         session_id: u64,
+    ) -> yunlink_result_t;
+
+    pub fn yunlink_system_service_request_feature_list(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_feature_get(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        feature_name: *const c_char,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_feature_start(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        feature_name: *const c_char,
+        override_args: *const *const c_char,
+        override_arg_count: usize,
+        restart_if_running: u8,
+        start_with_terminal: u8,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_runtime_log_list(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_runtime_log_read(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        runtime_id: yunlink_string_view_t,
+        cursor: u64,
+        max_bytes: u32,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_subscribe_runtime_log_list_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_runtime_log_list_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_subscribe_runtime_log_read_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_runtime_log_read_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_unsubscribe(
+        runtime: *mut yunlink_runtime_t,
+        token: usize,
     ) -> yunlink_result_t;
 
     /// Poll one tagged runtime event.

@@ -10,6 +10,8 @@ mod error;
 mod events;
 mod ffi_util;
 mod runtime;
+mod runtime_logs;
+mod runtime_system_service;
 mod types;
 
 pub use configuration::{
@@ -21,10 +23,14 @@ pub use configuration::{
 };
 pub use error::{FfiErrorCode, Result, YunlinkError};
 pub use events::{
-    CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event, LinkEvent,
-    VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
+    AuthorityStatusEvent, CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event,
+    FeatureGetEvent, FeatureListEvent, FeatureStartEvent, HostSystemEvent, LinkEvent,
+    Px4StateEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
 };
 pub use runtime::Runtime;
+pub use runtime_logs::{
+    RuntimeLogListResponse, RuntimeLogReadResponse, RuntimeLogResponse, RuntimeLogSummary,
+};
 pub use types::{
     AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, GotoCommand,
     LandCommand, PeerConnection, ReturnCommand, RuntimeConfig, Session, SessionInfo, SessionState,
@@ -33,9 +39,48 @@ pub use types::{
 
 #[cfg(test)]
 mod tests {
-    use super::{CommandKind, CommandPhase, Event, FfiErrorCode};
+    use super::{CommandKind, CommandPhase, Event, FfiErrorCode, Px4StateEvent};
     use crate::events;
     use yunlink_sys as sys;
+
+    #[test]
+    fn public_api_exports_px4_state_event() {
+        let event = Px4StateEvent {
+            session_id: 1,
+            message_id: 2,
+            correlation_id: 3,
+            source_id: 4,
+            connected: true,
+            armed: false,
+            flight_mode: "POSCTL".to_string(),
+            system_status: 8,
+            landed_state: 1,
+            battery_voltage_v: 16.2,
+            battery_current_a: 1.5,
+            battery_percentage: 0.76,
+            local_x_m: 1.0,
+            local_y_m: 2.0,
+            local_z_m: 3.0,
+            local_vx_mps: 0.1,
+            local_vy_mps: 0.2,
+            local_vz_mps: 0.3,
+            local_yaw_rad: 0.5,
+            local_orientation_x: 0.1,
+            local_orientation_y: 0.2,
+            local_orientation_z: 0.3,
+            local_orientation_w: 0.9,
+            target_x_m: 4.0,
+            target_y_m: 5.0,
+            target_z_m: 6.0,
+            target_yaw_rad: 0.75,
+            target_valid: true,
+        };
+
+        assert!(event.connected);
+        assert_eq!(event.source_id, 4);
+        assert_eq!(event.landed_state, 1);
+        assert_eq!(event.local_orientation_w, 0.9);
+    }
 
     #[test]
     fn ffi_error_code_mapping_is_complete_for_stable_result_set() {

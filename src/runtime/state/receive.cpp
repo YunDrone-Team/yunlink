@@ -101,6 +101,12 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case StateSnapshotType::kHostSystem:
+        if (!runtime_fanout_snapshot<HostSystemSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->host_system_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     }
 }
 
