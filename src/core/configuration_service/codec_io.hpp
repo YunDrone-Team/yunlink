@@ -122,10 +122,9 @@ inline bool read_value(BufferReader& reader, ConfigValue* out) {
     case ConfigValueType::kStringList:
         return read_strings(reader, &out->string_list_value);
     case ConfigValueType::kDoubleList:
-        return read_vector(reader, &out->double_list_value,
-                           [](BufferReader& source, double* item) {
-                               return source.read_double(item);
-                           });
+        return read_vector(reader, &out->double_list_value, [](BufferReader& source, double* item) {
+            return source.read_double(item);
+        });
     }
     return false;
 }

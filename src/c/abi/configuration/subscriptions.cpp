@@ -19,7 +19,7 @@ template <typename Callback, typename View>
 void invoke_callback(Callback callback, void* user_data, const View& view) noexcept {
     try {
         callback(user_data, &view);
-    } catch (...) {
+    } catch (...) {  // NOLINT(bugprone-empty-catch): callbacks cannot unwind across the C ABI.
     }
 }
 

@@ -132,19 +132,23 @@ size_t SystemServiceSubscriber::subscribe_feature_stop_responses(FeatureStopResp
     return runtime_ ? runtime_->subscribe_feature_stop_response_internal(std::move(cb)) : 0;
 }
 
-size_t SystemServiceSubscriber::subscribe_runtime_log_list_requests(RuntimeLogListRequestHandler cb) {
+size_t
+SystemServiceSubscriber::subscribe_runtime_log_list_requests(RuntimeLogListRequestHandler cb) {
     return runtime_ ? runtime_->subscribe_runtime_log_list_request_internal(std::move(cb)) : 0;
 }
 
-size_t SystemServiceSubscriber::subscribe_runtime_log_list_responses(RuntimeLogListResponseHandler cb) {
+size_t
+SystemServiceSubscriber::subscribe_runtime_log_list_responses(RuntimeLogListResponseHandler cb) {
     return runtime_ ? runtime_->subscribe_runtime_log_list_response_internal(std::move(cb)) : 0;
 }
 
-size_t SystemServiceSubscriber::subscribe_runtime_log_read_requests(RuntimeLogReadRequestHandler cb) {
+size_t
+SystemServiceSubscriber::subscribe_runtime_log_read_requests(RuntimeLogReadRequestHandler cb) {
     return runtime_ ? runtime_->subscribe_runtime_log_read_request_internal(std::move(cb)) : 0;
 }
 
-size_t SystemServiceSubscriber::subscribe_runtime_log_read_responses(RuntimeLogReadResponseHandler cb) {
+size_t
+SystemServiceSubscriber::subscribe_runtime_log_read_responses(RuntimeLogReadResponseHandler cb) {
     return runtime_ ? runtime_->subscribe_runtime_log_read_response_internal(std::move(cb)) : 0;
 }
 

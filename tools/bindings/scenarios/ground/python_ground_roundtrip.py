@@ -61,6 +61,8 @@ def main() -> int:
         deadline = time.time() + 4.0
         saw_state = False
         result_count = 0
+        observed_event_types: dict[str, int] = {}
+        observed_events: list[str] = []
         first_state_at: float | None = None
         first_result_at: float | None = None
         while time.time() < deadline:
@@ -68,6 +70,10 @@ def main() -> int:
                 event = events.get(timeout=0.1)
             except queue.Empty:
                 continue
+            event_type = type(event).__name__
+            observed_event_types[event_type] = observed_event_types.get(event_type, 0) + 1
+            if len(observed_events) < 16:
+                observed_events.append(repr(event))
             if isinstance(event, CommandResultEvent) and event.session_id == session.session_id:
                 result_count += 1
                 if first_result_at is None:
@@ -96,7 +102,12 @@ def main() -> int:
                 print("python-ground-roundtrip ok")
                 runtime.release_authority(peer, session, target)
                 return 0
-        raise RuntimeError("did not observe state + command result flow")
+        raise RuntimeError(
+            "did not observe state + command result flow: "
+            f"saw_state={saw_state}, result_count={result_count}, "
+            f"events={observed_event_types}, observed={observed_events}, "
+            f"poll_error={runtime.last_poll_error()}"
+        )
     finally:
         runtime.close()
 

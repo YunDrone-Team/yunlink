@@ -1,5 +1,4 @@
 #include "common/monitor_ui_style.hpp"
-
 #include <algorithm>
 
 #include <QBrush>

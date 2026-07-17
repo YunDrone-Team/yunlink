@@ -55,7 +55,8 @@ bool read_runtime_log_summary(BufferReader& reader, RuntimeLogSummary* out) {
            ((out->exit_code = static_cast<int32_t>(exit_code)), true);
 }
 
-void write_runtime_log_summaries(BufferWriter& writer, const std::vector<RuntimeLogSummary>& values) {
+void write_runtime_log_summaries(BufferWriter& writer,
+                                 const std::vector<RuntimeLogSummary>& values) {
     writer.write_u16(static_cast<uint16_t>(values.size()));
     for (const auto& value : values) {
         write_runtime_log_summary(writer, value);

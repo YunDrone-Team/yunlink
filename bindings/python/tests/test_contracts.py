@@ -8,6 +8,12 @@ from yunlink import AgentType, Runtime, RuntimeConfig
 
 
 class RuntimeContractTests(unittest.TestCase):
+    def test_runtime_config_keeps_interop_shared_secret_default(self) -> None:
+        config = RuntimeConfig(15049, 15049, 15149, AgentType.GROUND_STATION, 9)
+
+        self.assertEqual(config.shared_secret, "yunlink-secret")
+        self.assertEqual(config.to_native()["shared_secret"], "yunlink-secret")
+
     def test_wrap_native_error_maps_known_and_unknown_codes(self) -> None:
         known = yunlink._wrap_native_error(RuntimeError("YUNLINK_RESULT_NOT_FOUND"))
         self.assertIsInstance(known, yunlink.NotFoundError)

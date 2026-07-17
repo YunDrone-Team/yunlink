@@ -155,7 +155,8 @@ void EndpointAdvertiser::recv_loop() {
     while (impl_->running.load()) {
         std::error_code ec;
         asio::ip::udp::endpoint source;
-        const std::size_t received = impl_->socket->receive_from(asio::buffer(buffer), source, 0, ec);
+        const std::size_t received =
+            impl_->socket->receive_from(asio::buffer(buffer), source, 0, ec);
         if (ec) {
             if (ec == asio::error::would_block || ec == asio::error::try_again) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(
@@ -169,14 +170,17 @@ void EndpointAdvertiser::recv_loop() {
             continue;
         }
 
-        if (source.port() == 0 || source.address().is_multicast() || source.address().is_unspecified() ||
+        if (source.port() == 0 || source.address().is_multicast() ||
+            source.address().is_unspecified() ||
             (source.address().is_v4() && source.address().to_v4().to_uint() == 0xffffffffU)) {
             continue;
         }
         EndpointDiscoveryQuery query{};
         std::string error;
-        if (!decode_endpoint_discovery_query(
-                ByteBuffer(buffer.begin(), buffer.begin() + received), impl_->config.shared_secret, &query, &error)) {
+        if (!decode_endpoint_discovery_query(ByteBuffer(buffer.begin(), buffer.begin() + received),
+                                             impl_->config.shared_secret,
+                                             &query,
+                                             &error)) {
             continue;
         }
 
@@ -192,9 +196,10 @@ void EndpointAdvertiser::recv_loop() {
         if (ec) {
             continue;
         }
-        const uint64_t now = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count());
+        const uint64_t now =
+            static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                      std::chrono::steady_clock::now().time_since_epoch())
+                                      .count());
         {
             std::lock_guard<std::mutex> lock(impl_->rate_mu);
             for (auto it = impl_->handled_nonces.begin(); it != impl_->handled_nonces.end();) {
@@ -234,9 +239,10 @@ void EndpointAdvertiser::recv_loop() {
             seen = now;
         }
 
-        const uint64_t mix = query.nonce ^ (std::hash<std::string>{}(advertisement.endpoint_id) << 1U);
-        const uint16_t window = std::min<uint16_t>(query.response_window_ms,
-                                                   impl_->config.query_response_window_ms);
+        const uint64_t mix =
+            query.nonce ^ (std::hash<std::string>{}(advertisement.endpoint_id) << 1U);
+        const uint16_t window =
+            std::min<uint16_t>(query.response_window_ms, impl_->config.query_response_window_ms);
         const uint16_t delay_ms = static_cast<uint16_t>(mix % std::max<uint16_t>(window, 50U));
         std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
         advertisement.sequence += 1U;

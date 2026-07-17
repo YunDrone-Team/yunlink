@@ -136,10 +136,8 @@ ErrorCode EndpointListener::send_query(uint64_t nonce, uint16_t response_window_
     }
     const ByteBuffer query = encode_endpoint_discovery_query(
         EndpointDiscoveryQuery{nonce, response_window_ms}, impl_->config.shared_secret);
-    impl_->socket->send_to(asio::buffer(query),
-                           asio::ip::udp::endpoint(address, impl_->config.discovery_port),
-                           0,
-                           ec);
+    impl_->socket->send_to(
+        asio::buffer(query), asio::ip::udp::endpoint(address, impl_->config.discovery_port), 0, ec);
     if (ec) {
         set_last_error("discovery query send failed: " + ec.message());
         return ErrorCode::kSocketError;

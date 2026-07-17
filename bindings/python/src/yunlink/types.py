@@ -21,7 +21,7 @@ class RuntimeConfig:
     tcp_listen_port: int
     agent_type: AgentType
     agent_id: int
-    shared_secret: str = "yunlink-default-secret"
+    shared_secret: str = "yunlink-secret"
     multicast_group: str = "224.1.1.1"
 
     def to_native(self) -> dict[str, int | str]:

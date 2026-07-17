@@ -9,11 +9,13 @@ int main() {
     yunlink::EndpointDiscoveryQuery decoded_query{};
     std::string error;
     if (!yunlink::decode_endpoint_discovery_query(encoded_query, secret, &decoded_query, &error) ||
-        decoded_query.nonce != query.nonce || decoded_query.response_window_ms != query.response_window_ms) {
+        decoded_query.nonce != query.nonce ||
+        decoded_query.response_window_ms != query.response_window_ms) {
         std::cerr << "主动发现 query round-trip failed: " << error << '\n';
         return 1;
     }
-    if (yunlink::decode_endpoint_discovery_query(encoded_query, "wrong-secret", &decoded_query, &error)) {
+    if (yunlink::decode_endpoint_discovery_query(
+            encoded_query, "wrong-secret", &decoded_query, &error)) {
         std::cerr << "主动发现 query accepted an invalid authentication tag\n";
         return 2;
     }
@@ -36,7 +38,8 @@ int main() {
     }
     uint64_t reply_nonce = 0;
     yunlink::EndpointAdvertisement decoded_reply{};
-    if (!yunlink::decode_endpoint_discovery_reply(reply, secret, &reply_nonce, &decoded_reply, &error) ||
+    if (!yunlink::decode_endpoint_discovery_reply(
+            reply, secret, &reply_nonce, &decoded_reply, &error) ||
         reply_nonce != query.nonce || decoded_reply.endpoint_id != advertisement.endpoint_id ||
         decoded_reply.tcp_listen_port != advertisement.tcp_listen_port ||
         decoded_reply.discovery_period_ms != advertisement.discovery_period_ms ||
@@ -44,12 +47,14 @@ int main() {
         std::cerr << "主动发现 reply round-trip failed: " << error << '\n';
         return 4;
     }
-    if (yunlink::decode_endpoint_discovery_reply(reply, "wrong-secret", &reply_nonce, &decoded_reply, &error)) {
+    if (yunlink::decode_endpoint_discovery_reply(
+            reply, "wrong-secret", &reply_nonce, &decoded_reply, &error)) {
         std::cerr << "主动发现 reply accepted an invalid authentication tag\n";
         return 5;
     }
     const yunlink::ByteBuffer truncated_reply(reply.begin(), reply.end() - 1U);
-    if (yunlink::decode_endpoint_discovery_reply(truncated_reply, secret, &reply_nonce, &decoded_reply, &error)) {
+    if (yunlink::decode_endpoint_discovery_reply(
+            truncated_reply, secret, &reply_nonce, &decoded_reply, &error)) {
         std::cerr << "主动发现 reply accepted a truncated payload\n";
         return 6;
     }

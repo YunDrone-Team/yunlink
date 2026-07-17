@@ -95,8 +95,8 @@ bool decode_payload(const ByteBuffer& bytes, Px4StateSnapshot* payload) {
                read_vec3(reader, &out->body_rate_setpoint_radps) &&
                reader.read_float(&out->thrust_setpoint) && reader.read_u8(&out->satellites) &&
                reader.read_i8(&out->gps_status) && reader.read_double(&out->latitude_deg) &&
-               reader.read_double(&out->longitude_deg) &&
-               reader.read_double(&out->altitude_m) && reader.read_double(&out->latitude_raw_deg) &&
+               reader.read_double(&out->longitude_deg) && reader.read_double(&out->altitude_m) &&
+               reader.read_double(&out->latitude_raw_deg) &&
                reader.read_double(&out->longitude_raw_deg) &&
                reader.read_double(&out->altitude_amsl_m);
     });

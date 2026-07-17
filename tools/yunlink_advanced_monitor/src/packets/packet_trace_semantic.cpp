@@ -1,5 +1,4 @@
 #include "packets/packet_trace_semantic.hpp"
-
 #include <sstream>
 
 #include "packets/format/packet_trace_format.hpp"

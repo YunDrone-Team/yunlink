@@ -209,12 +209,20 @@ int main() {
             });
     const size_t runtime_log_list_req_token =
         server.system_service_subscriber().subscribe_runtime_log_list_requests(
-            [&](const yunlink::InboundSystemServiceRequestView<yunlink::RuntimeLogListRequest>& view) {
+            [&](const yunlink::InboundSystemServiceRequestView<yunlink::RuntimeLogListRequest>&
+                    view) {
                 yunlink::RuntimeLogListResponse response{};
                 response.success = true;
                 response.message = "ok";
-                response.runtimes.push_back({"runtime-1", "sunray_uav_control", "UAV Control",
-                                             "RUNNING", 1234000000ULL, 0, false, 0, "healthy"});
+                response.runtimes.push_back({"runtime-1",
+                                             "sunray_uav_control",
+                                             "UAV Control",
+                                             "RUNNING",
+                                             1234000000ULL,
+                                             0,
+                                             false,
+                                             0,
+                                             "healthy"});
                 if (server.system_service_publisher().publish_runtime_log_list_response(
                         view.inbound, response) != yunlink::ErrorCode::kOk) {
                     std::cerr << "publish runtime log list response failed\n";
@@ -224,10 +232,11 @@ int main() {
             });
     const size_t runtime_log_read_req_token =
         server.system_service_subscriber().subscribe_runtime_log_read_requests(
-            [&](const yunlink::InboundSystemServiceRequestView<yunlink::RuntimeLogReadRequest>& view) {
+            [&](const yunlink::InboundSystemServiceRequestView<yunlink::RuntimeLogReadRequest>&
+                    view) {
                 yunlink::RuntimeLogReadResponse response{};
-                response.success = view.payload.runtime_id == "runtime-1" && view.payload.cursor == 7 &&
-                                   view.payload.max_bytes == 1024;
+                response.success = view.payload.runtime_id == "runtime-1" &&
+                                   view.payload.cursor == 7 && view.payload.max_bytes == 1024;
                 response.message = response.success ? "ok" : "invalid request";
                 response.runtime_id = view.payload.runtime_id;
                 response.chunk = "line one\n";
@@ -416,7 +425,8 @@ int main() {
     }
     if (runtime_log_list_responses.front().envelope.correlation_id !=
             runtime_log_list_request_message_id ||
-        runtime_log_list_responses.front().envelope.correlation_id != runtime_log_list_handle.message_id ||
+        runtime_log_list_responses.front().envelope.correlation_id !=
+            runtime_log_list_handle.message_id ||
         !runtime_log_list_responses.front().payload.success ||
         runtime_log_list_responses.front().payload.runtimes.size() != 1 ||
         runtime_log_list_responses.front().payload.runtimes.front().runtime_id != "runtime-1") {
@@ -425,7 +435,8 @@ int main() {
     }
     if (runtime_log_read_responses.front().envelope.correlation_id !=
             runtime_log_read_request_message_id ||
-        runtime_log_read_responses.front().envelope.correlation_id != runtime_log_read_handle.message_id ||
+        runtime_log_read_responses.front().envelope.correlation_id !=
+            runtime_log_read_handle.message_id ||
         !runtime_log_read_responses.front().payload.success ||
         runtime_log_read_responses.front().payload.runtime_id != "runtime-1" ||
         runtime_log_read_responses.front().payload.chunk != "line one\n" ||

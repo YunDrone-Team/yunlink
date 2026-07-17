@@ -96,7 +96,9 @@ add_executable(yunlink_advanced_monitor
   src/packets/model/packet_trace_table_model.cpp
   src/ui/main_window_refresh.cpp
   src/ui/system_service/system_service_ui_helpers.cpp
+  src/ui/system_service/main_window_system_service_refresh.cpp
   src/ui/main_window_system_services.cpp
+  src/ui/telemetry/main_window_topic_refresh.cpp
   src/ui/configuration/main_window_configuration.cpp
   src/ui/configuration/main_window_configuration_refresh.cpp
 )

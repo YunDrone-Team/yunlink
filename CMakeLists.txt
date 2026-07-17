@@ -88,6 +88,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/state/semantic_messages_state_bulk_extended.cpp
   src/core/state/semantic_messages_state_snapshots_core.cpp
   src/core/state/semantic_messages_state_snapshots_extended.cpp
+  src/discovery/endpoint_active_codec.cpp
   src/discovery/endpoint_codec.cpp
   src/discovery/endpoint_advertiser.cpp
   src/discovery/endpoint_listener.cpp
@@ -117,6 +118,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/state/publish.cpp
   src/runtime/state/receive.cpp
   src/runtime/state/registry.cpp
+  src/runtime/state/registry_system_service.cpp
   src/runtime/state/subscriptions.cpp
   src/c/abi/commands/authority.cpp
   src/c/abi/commands/command.cpp

@@ -174,8 +174,15 @@ int main() {
     yunlink::RuntimeLogListResponse runtime_log_list{};
     runtime_log_list.success = true;
     runtime_log_list.message = "ok";
-    runtime_log_list.runtimes.push_back({"runtime-1", "sunray_uav_control", "UAV Control",
-                                         "RUNNING", 1234000000ULL, 0, false, 0, "healthy"});
+    runtime_log_list.runtimes.push_back({"runtime-1",
+                                         "sunray_uav_control",
+                                         "UAV Control",
+                                         "RUNNING",
+                                         1234000000ULL,
+                                         0,
+                                         false,
+                                         0,
+                                         "healthy"});
     const auto runtime_log_list_bytes = yunlink::encode_payload(runtime_log_list);
     yunlink::RuntimeLogListResponse runtime_log_list_decoded{};
     if (!yunlink::decode_typed_payload(runtime_log_list_bytes, &runtime_log_list_decoded) ||
@@ -212,7 +219,8 @@ int main() {
     const auto runtime_log_read_bytes = yunlink::encode_payload(runtime_log_read);
     yunlink::RuntimeLogReadResponse runtime_log_read_decoded{};
     if (!yunlink::decode_typed_payload(runtime_log_read_bytes, &runtime_log_read_decoded) ||
-        !runtime_log_read_decoded.success || runtime_log_read_decoded.chunk != runtime_log_read.chunk ||
+        !runtime_log_read_decoded.success ||
+        runtime_log_read_decoded.chunk != runtime_log_read.chunk ||
         runtime_log_read_decoded.next_cursor != 95 || !runtime_log_read_decoded.truncated ||
         runtime_log_read_decoded.eof) {
         std::cerr << "runtime log read response roundtrip failed\n";

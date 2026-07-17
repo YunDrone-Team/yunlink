@@ -194,40 +194,62 @@ ErrorCode SystemServicePublisher::publish_feature_stop_response(const EnvelopeEv
                                      ttl_ms);
 }
 
-ErrorCode SystemServicePublisher::publish_runtime_log_list_request(
-    const std::string& peer_id, uint64_t session_id, const TargetSelector& target,
-    const RuntimeLogListRequest& payload, SystemServiceHandle* out_handle) {
+ErrorCode
+SystemServicePublisher::publish_runtime_log_list_request(const std::string& peer_id,
+                                                         uint64_t session_id,
+                                                         const TargetSelector& target,
+                                                         const RuntimeLogListRequest& payload,
+                                                         SystemServiceHandle* out_handle) {
     return runtime_ == nullptr ? ErrorCode::kInvalidArgument
                                : runtime_->publish_system_service_request_payload(
-                                     peer_id, session_id, target,
+                                     peer_id,
+                                     session_id,
+                                     target,
                                      MessageTraits<RuntimeLogListRequest>::kMessageType,
-                                     encode_payload(payload), out_handle, 5000);
+                                     encode_payload(payload),
+                                     out_handle,
+                                     5000);
 }
 
-ErrorCode SystemServicePublisher::publish_runtime_log_read_request(
-    const std::string& peer_id, uint64_t session_id, const TargetSelector& target,
-    const RuntimeLogReadRequest& payload, SystemServiceHandle* out_handle) {
+ErrorCode
+SystemServicePublisher::publish_runtime_log_read_request(const std::string& peer_id,
+                                                         uint64_t session_id,
+                                                         const TargetSelector& target,
+                                                         const RuntimeLogReadRequest& payload,
+                                                         SystemServiceHandle* out_handle) {
     return runtime_ == nullptr ? ErrorCode::kInvalidArgument
                                : runtime_->publish_system_service_request_payload(
-                                     peer_id, session_id, target,
+                                     peer_id,
+                                     session_id,
+                                     target,
                                      MessageTraits<RuntimeLogReadRequest>::kMessageType,
-                                     encode_payload(payload), out_handle, 5000);
+                                     encode_payload(payload),
+                                     out_handle,
+                                     5000);
 }
 
-ErrorCode SystemServicePublisher::publish_runtime_log_list_response(
-    const EnvelopeEvent& inbound, const RuntimeLogListResponse& payload, uint32_t ttl_ms) {
+ErrorCode
+SystemServicePublisher::publish_runtime_log_list_response(const EnvelopeEvent& inbound,
+                                                          const RuntimeLogListResponse& payload,
+                                                          uint32_t ttl_ms) {
     return runtime_ == nullptr ? ErrorCode::kInvalidArgument
                                : runtime_->reply_system_service_payload(
-                                     inbound, MessageTraits<RuntimeLogListResponse>::kMessageType,
-                                     encode_payload(payload), ttl_ms);
+                                     inbound,
+                                     MessageTraits<RuntimeLogListResponse>::kMessageType,
+                                     encode_payload(payload),
+                                     ttl_ms);
 }
 
-ErrorCode SystemServicePublisher::publish_runtime_log_read_response(
-    const EnvelopeEvent& inbound, const RuntimeLogReadResponse& payload, uint32_t ttl_ms) {
+ErrorCode
+SystemServicePublisher::publish_runtime_log_read_response(const EnvelopeEvent& inbound,
+                                                          const RuntimeLogReadResponse& payload,
+                                                          uint32_t ttl_ms) {
     return runtime_ == nullptr ? ErrorCode::kInvalidArgument
                                : runtime_->reply_system_service_payload(
-                                     inbound, MessageTraits<RuntimeLogReadResponse>::kMessageType,
-                                     encode_payload(payload), ttl_ms);
+                                     inbound,
+                                     MessageTraits<RuntimeLogReadResponse>::kMessageType,
+                                     encode_payload(payload),
+                                     ttl_ms);
 }
 
 }  // namespace yunlink

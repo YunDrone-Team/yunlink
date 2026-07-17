@@ -72,7 +72,7 @@ std::vector<ConfigResourceDescriptor> ConfigurationProviderRegistry::list_resour
     for (const auto& provider : providers) {
         try {
             descriptors.push_back(provider->descriptor());
-        } catch (...) {
+        } catch (...) {  // NOLINT(bugprone-empty-catch): isolate a failing provider from the list.
         }
     }
     return descriptors;
