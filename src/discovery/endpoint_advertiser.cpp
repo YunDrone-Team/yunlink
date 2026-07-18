@@ -248,6 +248,10 @@ void EndpointAdvertiser::recv_loop() {
         advertisement.sequence += 1U;
         const ByteBuffer reply = encode_endpoint_discovery_reply(
             query.nonce, advertisement, impl_->config.shared_secret);
+        if (reply.empty()) {
+            set_last_error("discovery reply encoding failed");
+            continue;
+        }
         std::lock_guard<std::mutex> lock(impl_->send_mu);
         impl_->socket->send_to(asio::buffer(reply), source, 0, ec);
         if (ec && !socket_closed(ec)) {

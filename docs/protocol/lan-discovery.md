@@ -48,14 +48,16 @@ Monitor 按稳定 `endpoint_id` 去重。DHCP 地址或 TCP 端口变化会更�
 | 字段 | 说明 |
 | --- | --- |
 | magic `YLR1`、nonce | 回显 query 的 nonce |
-| endpoint ID、显示名前缀、node name | 稳定去重与必要显示信息 |
-| agent ID、TCP/UDP 端口 | 连接属性 |
-| capability bitmask | `state`、`commands`、`system_service`、`config-resource-v1` |
+| endpoint ID、显示名前缀、Agent 类型、角色、node name | 稳定去重、真实端点身份与必要显示信息 |
+| agent ID、TCP/UDP 端口 | 身份与连接属性 |
+| capability bitmask | `state`、`commands`、`system_service`、`config-resource-v1`、`topic-stream-v1` |
 | sequence、discovery period ms | 新鲜度与过期计算 |
 | authentication tag | 共享口令校验 |
 
 未知 capability bit 必须忽略。解码失败、tag 不匹配、零 nonce、非法响应窗口、
 截断包或超过 128 B 的 reply 必须丢弃，且不产生响应。
+编码端同样必须失败关闭：字段超过协议上限或组合后的 reply 超过 128 B 时返回编码失败，
+不得发送截断字段、空数据报或伪造的默认 Agent 类型。
 
 ## 端点保护
 

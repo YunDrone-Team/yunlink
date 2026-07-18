@@ -73,6 +73,23 @@ class SystemServicePublisher {
     ErrorCode publish_runtime_log_read_response(const EnvelopeEvent& inbound,
                                                 const RuntimeLogReadResponse& payload,
                                                 uint32_t ttl_ms = 5000);
+    ErrorCode publish_topic_list_request(const std::string& peer_id,
+                                         uint64_t session_id,
+                                         const TargetSelector& target,
+                                         const TopicListRequest& payload,
+                                         SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_topic_list_response(const EnvelopeEvent& inbound,
+                                          const TopicListResponse& payload,
+                                          uint32_t ttl_ms = 3000);
+    ErrorCode publish_topic_subscription_request(
+        const std::string& peer_id,
+        uint64_t session_id,
+        const TargetSelector& target,
+        const TopicSubscriptionRequest& payload,
+        SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_topic_subscription_response(const EnvelopeEvent& inbound,
+                                                  const TopicSubscriptionResponse& payload,
+                                                  uint32_t ttl_ms = 3000);
     void bind(Runtime* runtime);
 
   private:
@@ -104,6 +121,14 @@ class SystemServiceSubscriber {
         std::function<void(const InboundSystemServiceRequestView<RuntimeLogReadRequest>&)>;
     using RuntimeLogReadResponseHandler =
         std::function<void(const TypedMessage<RuntimeLogReadResponse>&)>;
+    using TopicListRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<TopicListRequest>&)>;
+    using TopicListResponseHandler =
+        std::function<void(const TypedMessage<TopicListResponse>&)>;
+    using TopicSubscriptionRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<TopicSubscriptionRequest>&)>;
+    using TopicSubscriptionResponseHandler =
+        std::function<void(const TypedMessage<TopicSubscriptionResponse>&)>;
 
     explicit SystemServiceSubscriber(Runtime* runtime = nullptr);
 
@@ -119,6 +144,10 @@ class SystemServiceSubscriber {
     size_t subscribe_runtime_log_list_responses(RuntimeLogListResponseHandler cb);
     size_t subscribe_runtime_log_read_requests(RuntimeLogReadRequestHandler cb);
     size_t subscribe_runtime_log_read_responses(RuntimeLogReadResponseHandler cb);
+    size_t subscribe_topic_list_requests(TopicListRequestHandler cb);
+    size_t subscribe_topic_list_responses(TopicListResponseHandler cb);
+    size_t subscribe_topic_subscription_requests(TopicSubscriptionRequestHandler cb);
+    size_t subscribe_topic_subscription_responses(TopicSubscriptionResponseHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

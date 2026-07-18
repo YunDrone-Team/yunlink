@@ -28,17 +28,6 @@ struct VehicleCoreState {
     float battery_percent = 0.0F;
 };
 
-struct Vector3f {
-    float x = 0.0F;
-    float y = 0.0F;
-    float z = 0.0F;
-};
-
-struct Vector2f {
-    float x = 0.0F;
-    float y = 0.0F;
-};
-
 struct HeaderSnapshot {
     std::string frame_id;
     uint64_t stamp_ns = 0;
@@ -277,6 +266,19 @@ struct BulkChannelDescriptor {
     uint32_t mtu_bytes = 0;
     bool reliable = false;
     std::string detail;
+};
+
+/** One complete sample from an explicitly subscribed topic. */
+struct TopicSample {
+    std::string topic_name;
+    std::string type_name;
+    std::string type_hash;
+    std::string encoding;
+    std::string message_definition;
+    uint64_t receive_time_ns = 0;
+    uint64_t sequence = 0;
+    bool metadata_included = false;
+    ByteBuffer data;
 };
 
 }  // namespace yunlink

@@ -10,7 +10,7 @@ namespace yunlink {
 namespace {
 
 bool valid_command_kind(uint16_t value) {
-    return value <= static_cast<uint16_t>(CommandKind::kFormationTask);
+    return value <= static_cast<uint16_t>(CommandKind::kUavControl);
 }
 
 bool valid_command_phase(uint8_t value) {
@@ -138,6 +138,53 @@ bool decode_payload(const ByteBuffer& bytes, FormationTaskCommand* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, FormationTaskCommand* out) {
         return reader.read_u32(&out->group_id) && reader.read_u8(&out->formation_shape) &&
                reader.read_float(&out->spacing_m) && reader.read_string(&out->label);
+    });
+}
+
+ByteBuffer encode_payload(const UavControlCommand& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_u8(payload.control_cmd);
+        writer.write_float(payload.desired_position_m.x);
+        writer.write_float(payload.desired_position_m.y);
+        writer.write_float(payload.desired_position_m.z);
+        writer.write_float(payload.desired_velocity_mps.x);
+        writer.write_float(payload.desired_velocity_mps.y);
+        writer.write_float(payload.desired_velocity_mps.z);
+        writer.write_float(payload.desired_acceleration_mps2.x);
+        writer.write_float(payload.desired_acceleration_mps2.y);
+        writer.write_float(payload.desired_acceleration_mps2.z);
+        writer.write_float(payload.desired_body_xy_position_m.x);
+        writer.write_float(payload.desired_body_xy_position_m.y);
+        writer.write_float(payload.desired_body_xy_velocity_mps.x);
+        writer.write_float(payload.desired_body_xy_velocity_mps.y);
+        writer.write_float(payload.fixed_height_m);
+        writer.write_u8(payload.yaw_mode);
+        writer.write_float(payload.desired_yaw_rad);
+        writer.write_float(payload.desired_yaw_rate_radps);
+        writer.write_u8(payload.controller_type);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, UavControlCommand* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, UavControlCommand* out) {
+        return reader.read_u8(&out->control_cmd) &&
+               reader.read_float(&out->desired_position_m.x) &&
+               reader.read_float(&out->desired_position_m.y) &&
+               reader.read_float(&out->desired_position_m.z) &&
+               reader.read_float(&out->desired_velocity_mps.x) &&
+               reader.read_float(&out->desired_velocity_mps.y) &&
+               reader.read_float(&out->desired_velocity_mps.z) &&
+               reader.read_float(&out->desired_acceleration_mps2.x) &&
+               reader.read_float(&out->desired_acceleration_mps2.y) &&
+               reader.read_float(&out->desired_acceleration_mps2.z) &&
+               reader.read_float(&out->desired_body_xy_position_m.x) &&
+               reader.read_float(&out->desired_body_xy_position_m.y) &&
+               reader.read_float(&out->desired_body_xy_velocity_mps.x) &&
+               reader.read_float(&out->desired_body_xy_velocity_mps.y) &&
+               reader.read_float(&out->fixed_height_m) && reader.read_u8(&out->yaw_mode) &&
+               reader.read_float(&out->desired_yaw_rad) &&
+               reader.read_float(&out->desired_yaw_rate_radps) &&
+               reader.read_u8(&out->controller_type);
     });
 }
 

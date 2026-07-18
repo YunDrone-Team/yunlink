@@ -30,6 +30,7 @@ enum class CommandType : uint16_t {
     kVelocitySetpoint = 5,
     kTrajectoryChunk = 6,
     kFormationTask = 7,
+    kUavControl = 8,
 };
 
 enum class StateSnapshotType : uint16_t {
@@ -46,6 +47,7 @@ enum class StateSnapshotType : uint16_t {
     kSunrayRuntimeDiagnostic = 11,
     kCommandExecutionStatus = 12,
     kHostSystem = 13,
+    kTopicSample = 14,
 };
 
 enum class StateEventType : uint16_t {
@@ -69,6 +71,10 @@ enum class SystemServiceType : uint16_t {
     kRuntimeLogListResponse = 10,
     kRuntimeLogReadRequest = 11,
     kRuntimeLogReadResponse = 12,
+    kTopicListRequest = 13,
+    kTopicListResponse = 14,
+    kTopicSubscriptionRequest = 15,
+    kTopicSubscriptionResponse = 16,
 };
 
 enum class ConfigurationServiceType : uint16_t {
@@ -93,6 +99,7 @@ enum class CommandKind : uint16_t {
     kVelocitySetpoint = 5,
     kTrajectoryChunk = 6,
     kFormationTask = 7,
+    kUavControl = 8,
 };
 
 enum class AuthorityAction : uint8_t {

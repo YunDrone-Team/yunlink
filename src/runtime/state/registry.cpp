@@ -57,6 +57,13 @@ size_t Runtime::subscribe_formation_task_internal(CommandSubscriber::FormationTa
     return token;
 }
 
+size_t Runtime::subscribe_uav_control_internal(CommandSubscriber::UavControlHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->uav_control_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_vehicle_core_internal(StateSubscriber::VehicleCoreHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
@@ -152,6 +159,13 @@ size_t Runtime::subscribe_host_system_internal(StateSubscriber::HostSystemHandle
     return token;
 }
 
+size_t Runtime::subscribe_topic_sample_internal(StateSubscriber::TopicSampleHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->topic_sample_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_vehicle_event_internal(EventSubscriber::VehicleEventHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
@@ -198,6 +212,7 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->velocity_setpoint_handlers.erase(token);
     impl_->trajectory_chunk_handlers.erase(token);
     impl_->formation_task_handlers.erase(token);
+    impl_->uav_control_handlers.erase(token);
     impl_->vehicle_core_handlers.erase(token);
     impl_->px4_state_handlers.erase(token);
     impl_->odom_status_handlers.erase(token);
@@ -210,6 +225,8 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->command_execution_status_handlers.erase(token);
     impl_->odom_state_handlers.erase(token);
     impl_->sunray_runtime_diagnostic_handlers.erase(token);
+    impl_->host_system_handlers.erase(token);
+    impl_->topic_sample_handlers.erase(token);
     impl_->vehicle_event_handlers.erase(token);
     impl_->command_result_handlers.erase(token);
     impl_->authority_status_handlers.erase(token);
@@ -230,6 +247,10 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->runtime_log_list_response_handlers.erase(token);
     impl_->runtime_log_read_request_handlers.erase(token);
     impl_->runtime_log_read_response_handlers.erase(token);
+    impl_->topic_list_request_handlers.erase(token);
+    impl_->topic_list_response_handlers.erase(token);
+    impl_->topic_subscription_request_handlers.erase(token);
+    impl_->topic_subscription_response_handlers.erase(token);
     unsubscribe_configuration_semantic_locked(token);
     impl_->bulk_channel_descriptor_handlers.erase(token);
 }

@@ -504,6 +504,7 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | `5` | `VelocitySetpointCommand` | 连续控制 | `ReliableOrdered` | 速度指令 |
 | `6` | `TrajectoryChunkCommand` | 连续控制 | `ReliableOrdered` | 轨迹分块 |
 | `7` | `FormationTaskCommand` | 群组任务 | `ReliableOrdered` | 编队/群组任务 |
+| `8` | `UavControlCommand` | 完整控制 | `ReliableOrdered` | 中间件无关的 UAV 控制字段 |
 
 ### 11.4 典型字段
 
@@ -555,6 +556,23 @@ header_len = 76 + target_count * 4 + auth_tag_len
 - `formation_shape`
 - `spacing_m`
 - `label`
+
+#### `UavControlCommand`
+
+- `control_cmd`
+- `desired_position_m`
+- `desired_velocity_mps`
+- `desired_acceleration_mps2`
+- `desired_body_xy_position_m`
+- `desired_body_xy_velocity_mps`
+- `fixed_height_m`
+- `yaw_mode`
+- `desired_yaw_rad`
+- `desired_yaw_rate_radps`
+- `controller_type`
+
+该消息覆盖载具控制接口的完整控制字段。具体 ROS 消息名、topic 和命名空间属于 adapter，
+不进入 YunLink 公共协议。
 
 ### 11.5 目标域要求
 
@@ -841,6 +859,7 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | `5` | `VelocitySetpointCommand` |
 | `6` | `TrajectoryChunkCommand` |
 | `7` | `FormationTaskCommand` |
+| `8` | `UavControlCommand` |
 
 #### `CommandResult`
 
@@ -858,6 +877,8 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | `4` | `UavControlFsmStateSnapshot` |
 | `5` | `UavControllerStateSnapshot` |
 | `6` | `GimbalParamsSnapshot` |
+| `7-13` | 其他类型化状态快照，编号以 `message_ids.hpp` 为准 |
+| `14` | `TopicSample` |
 
 #### `StateEvent`
 
@@ -876,6 +897,9 @@ header_len = 76 + target_count * 4 + auth_tag_len
 | 编号 | 名称 |
 | --- | --- |
 | `1-8` | `FeatureList/Get/Start/Stop` 请求与响应 |
+| `9-12` | `RuntimeLogList/Read` 请求与响应 |
+| `13-14` | `TopicList` 请求与响应 |
+| `15-16` | `TopicSubscription` 请求与响应 |
 
 #### `ConfigurationService`
 

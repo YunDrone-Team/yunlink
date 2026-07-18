@@ -64,6 +64,10 @@ size_t StateSubscriber::subscribe_host_system(HostSystemHandler cb) {
     return runtime_ ? runtime_->subscribe_host_system_internal(std::move(cb)) : 0;
 }
 
+size_t StateSubscriber::subscribe_topic_samples(TopicSampleHandler cb) {
+    return runtime_ ? runtime_->subscribe_topic_sample_internal(std::move(cb)) : 0;
+}
+
 void StateSubscriber::unsubscribe(size_t token) {
     if (runtime_)
         runtime_->unsubscribe_semantic(token);
@@ -156,6 +160,24 @@ SystemServiceSubscriber::subscribe_runtime_log_read_responses(RuntimeLogReadResp
     return runtime_ ? runtime_->subscribe_runtime_log_read_response_internal(std::move(cb)) : 0;
 }
 
+size_t SystemServiceSubscriber::subscribe_topic_list_requests(TopicListRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_topic_list_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_topic_list_responses(TopicListResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_topic_list_response_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_topic_subscription_requests(
+    TopicSubscriptionRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_topic_subscription_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_topic_subscription_responses(
+    TopicSubscriptionResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_topic_subscription_response_internal(std::move(cb)) : 0;
+}
+
 void SystemServiceSubscriber::unsubscribe(size_t token) {
     if (runtime_) {
         runtime_->unsubscribe_semantic(token);
@@ -193,6 +215,10 @@ size_t CommandSubscriber::subscribe_trajectory_chunk(TrajectoryChunkHandler cb) 
 
 size_t CommandSubscriber::subscribe_formation_task(FormationTaskHandler cb) {
     return runtime_ ? runtime_->subscribe_formation_task_internal(std::move(cb)) : 0;
+}
+
+size_t CommandSubscriber::subscribe_uav_control(UavControlHandler cb) {
+    return runtime_ ? runtime_->subscribe_uav_control_internal(std::move(cb)) : 0;
 }
 
 void CommandSubscriber::unsubscribe(size_t token) {

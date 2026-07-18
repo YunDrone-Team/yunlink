@@ -83,6 +83,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/semantic_messages_session_authority.cpp
   src/core/semantic_messages_command.cpp
   src/core/semantic_messages_system_service.cpp
+  src/core/semantic_messages_topic.cpp
   src/core/configuration_service/codec.cpp
   src/core/state/semantic_messages_state_bulk_core.cpp
   src/core/state/semantic_messages_state_bulk_extended.cpp
@@ -274,6 +275,17 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_host_system_snapshot_codec PRIVATE yunlink)
   add_test(NAME test_host_system_snapshot_codec COMMAND test_host_system_snapshot_codec)
 
+  add_executable(
+    test_uav_control_command_codec
+    tests/core/test_uav_control_command_codec.cpp
+  )
+  target_link_libraries(test_uav_control_command_codec PRIVATE yunlink)
+  add_test(NAME test_uav_control_command_codec COMMAND test_uav_control_command_codec)
+
+  add_executable(test_topic_service_codec tests/core/test_topic_service_codec.cpp)
+  target_link_libraries(test_topic_service_codec PRIVATE yunlink)
+  add_test(NAME test_topic_service_codec COMMAND test_topic_service_codec)
+
   add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
   target_link_libraries(test_capability_negotiation PRIVATE yunlink)
   add_test(NAME test_capability_negotiation COMMAND test_capability_negotiation)
@@ -293,6 +305,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_system_service_runtime tests/runtime/test_system_service_runtime.cpp)
   target_link_libraries(test_system_service_runtime PRIVATE yunlink)
   add_test(NAME test_system_service_runtime COMMAND test_system_service_runtime)
+
+  add_executable(test_topic_service_runtime tests/runtime/test_topic_service_runtime.cpp)
+  target_link_libraries(test_topic_service_runtime PRIVATE yunlink)
+  add_test(NAME test_topic_service_runtime COMMAND test_topic_service_runtime)
 
   add_executable(
     test_configuration_service_codec

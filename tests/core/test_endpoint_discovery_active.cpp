@@ -30,11 +30,14 @@ int main() {
     yunlink::EndpointAdvertisement advertisement{};
     advertisement.endpoint_id = "a1b2c";
     advertisement.display_name_prefix = "uav";
+    advertisement.agent_type = "ugv";
     advertisement.agent_id = 7;
+    advertisement.role = "relay";
     advertisement.node_name = "bridge";
     advertisement.tcp_listen_port = 9696;
     advertisement.udp_bind_port = 9898;
-    advertisement.capabilities = {"state", "commands", "config-resource-v1"};
+    advertisement.capabilities = {
+        "state", "commands", "config-resource-v1", "topic-stream-v1"};
     advertisement.sequence = 42;
     advertisement.discovery_period_ms = 15000;
 
@@ -48,6 +51,8 @@ int main() {
     if (!yunlink::decode_endpoint_discovery_reply(
             reply, secret, &reply_nonce, &decoded_reply, &error) ||
         reply_nonce != query.nonce || decoded_reply.endpoint_id != advertisement.endpoint_id ||
+        decoded_reply.agent_type != advertisement.agent_type ||
+        decoded_reply.role != advertisement.role ||
         decoded_reply.tcp_listen_port != advertisement.tcp_listen_port ||
         decoded_reply.discovery_period_ms != advertisement.discovery_period_ms ||
         decoded_reply.capabilities.size() != advertisement.capabilities.size()) {
@@ -64,6 +69,29 @@ int main() {
             truncated_reply, secret, &reply_nonce, &decoded_reply, &error)) {
         std::cerr << "主动发现 reply accepted a truncated payload\n";
         return 6;
+    }
+
+    auto invalid_advertisement = advertisement;
+    invalid_advertisement.agent_type = std::string(16U, 'u');
+    if (!yunlink::encode_endpoint_discovery_reply(
+             query.nonce, invalid_advertisement, secret).empty()) {
+        std::cerr << "active discovery accepted an oversized agent type\n";
+        return 13;
+    }
+    invalid_advertisement = advertisement;
+    invalid_advertisement.role = std::string(16U, 'r');
+    if (!yunlink::encode_endpoint_discovery_reply(
+             query.nonce, invalid_advertisement, secret).empty()) {
+        std::cerr << "active discovery accepted an oversized endpoint role\n";
+        return 15;
+    }
+    invalid_advertisement = advertisement;
+    invalid_advertisement.node_name = std::string(63U, 'n');
+    invalid_advertisement.display_name_prefix = std::string(32U, 'p');
+    if (!yunlink::encode_endpoint_discovery_reply(
+             query.nonce, invalid_advertisement, secret).empty()) {
+        std::cerr << "active discovery emitted a reply beyond the packet budget\n";
+        return 14;
     }
 
     const auto v1 = yunlink::encode_endpoint_advertisement(advertisement);

@@ -107,6 +107,12 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case StateSnapshotType::kTopicSample:
+        if (!runtime_fanout_snapshot<TopicSample>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->topic_sample_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     }
 }
 

@@ -234,7 +234,7 @@ inline bool read_attitude_target(BufferReader& reader, AttitudeTargetSnapshot* o
 }
 
 inline bool valid_command_kind(uint16_t value) {
-    return value <= static_cast<uint16_t>(CommandKind::kFormationTask);
+    return value <= static_cast<uint16_t>(CommandKind::kUavControl);
 }
 
 inline bool valid_command_execution_state(uint8_t value) {

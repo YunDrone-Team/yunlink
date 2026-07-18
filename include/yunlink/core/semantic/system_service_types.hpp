@@ -104,6 +104,42 @@ struct RuntimeLogReadResponse {
     bool eof = false;
 };
 
+/** A currently active topic exposed by an endpoint. */
+struct TopicDescriptor {
+    std::string name;
+    std::string type_name;
+    uint32_t publisher_count = 0;
+};
+
+struct TopicListRequest {
+    uint8_t reserved = 0;
+};
+
+struct TopicListResponse {
+    bool success = false;
+    std::string message;
+    std::string revision;
+    std::vector<TopicDescriptor> topics;
+};
+
+/** Subscribe or unsubscribe one topic for the requesting session. */
+struct TopicSubscriptionRequest {
+    std::string topic_name;
+    bool subscribe = true;
+    float max_rate_hz = 0.0F;
+    uint32_t max_payload_bytes = 0;
+};
+
+struct TopicSubscriptionResponse {
+    bool success = false;
+    std::string message;
+    std::string topic_name;
+    bool subscribed = false;
+    std::string type_name;
+    float max_rate_hz = 0.0F;
+    uint32_t max_payload_bytes = 0;
+};
+
 struct SystemServiceHandle {
     uint64_t session_id = 0;
     uint64_t message_id = 0;

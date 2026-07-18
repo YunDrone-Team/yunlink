@@ -35,6 +35,7 @@ class StateSubscriber {
     using CommandExecutionStatusHandler =
         std::function<void(const TypedMessage<CommandExecutionStatusSnapshot>&)>;
     using HostSystemHandler = std::function<void(const TypedMessage<HostSystemSnapshot>&)>;
+    using TopicSampleHandler = std::function<void(const TypedMessage<TopicSample>&)>;
 
     explicit StateSubscriber(Runtime* runtime = nullptr);
 
@@ -51,6 +52,7 @@ class StateSubscriber {
     size_t subscribe_sunray_runtime_diagnostic(SunrayRuntimeDiagnosticHandler cb);
     size_t subscribe_command_execution_status(CommandExecutionStatusHandler cb);
     size_t subscribe_host_system(HostSystemHandler cb);
+    size_t subscribe_topic_samples(TopicSampleHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

@@ -197,6 +197,9 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
         case CommandType::kFormationTask:
             return runtime_fanout_command<FormationTaskCommand>(
                 impl_->mu, ev, ev.envelope.payload, impl_->formation_task_handlers);
+        case CommandType::kUavControl:
+            return runtime_fanout_command<UavControlCommand>(
+                impl_->mu, ev, ev.envelope.payload, impl_->uav_control_handlers);
         }
         return false;
     };

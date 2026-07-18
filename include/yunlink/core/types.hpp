@@ -15,6 +15,17 @@ namespace yunlink {
 
 using ByteBuffer = std::vector<uint8_t>;
 
+struct Vector2f {
+    float x = 0.0F;
+    float y = 0.0F;
+};
+
+struct Vector3f {
+    float x = 0.0F;
+    float y = 0.0F;
+    float z = 0.0F;
+};
+
 constexpr uint16_t kCurrentSchemaVersion = 1;
 
 enum class TransportType : uint8_t {

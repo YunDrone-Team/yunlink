@@ -252,4 +252,61 @@ SystemServicePublisher::publish_runtime_log_read_response(const EnvelopeEvent& i
                                      ttl_ms);
 }
 
+ErrorCode SystemServicePublisher::publish_topic_list_request(
+    const std::string& peer_id,
+    uint64_t session_id,
+    const TargetSelector& target,
+    const TopicListRequest& payload,
+    SystemServiceHandle* out_handle) {
+    return runtime_ == nullptr ? ErrorCode::kInvalidArgument
+                               : runtime_->publish_system_service_request_payload(
+                                     peer_id,
+                                     session_id,
+                                     target,
+                                     MessageTraits<TopicListRequest>::kMessageType,
+                                     encode_payload(payload),
+                                     out_handle,
+                                     3000);
+}
+
+ErrorCode SystemServicePublisher::publish_topic_list_response(const EnvelopeEvent& inbound,
+                                                              const TopicListResponse& payload,
+                                                              uint32_t ttl_ms) {
+    return runtime_ == nullptr ? ErrorCode::kInvalidArgument
+                               : runtime_->reply_system_service_payload(
+                                     inbound,
+                                     MessageTraits<TopicListResponse>::kMessageType,
+                                     encode_payload(payload),
+                                     ttl_ms);
+}
+
+ErrorCode SystemServicePublisher::publish_topic_subscription_request(
+    const std::string& peer_id,
+    uint64_t session_id,
+    const TargetSelector& target,
+    const TopicSubscriptionRequest& payload,
+    SystemServiceHandle* out_handle) {
+    return runtime_ == nullptr ? ErrorCode::kInvalidArgument
+                               : runtime_->publish_system_service_request_payload(
+                                     peer_id,
+                                     session_id,
+                                     target,
+                                     MessageTraits<TopicSubscriptionRequest>::kMessageType,
+                                     encode_payload(payload),
+                                     out_handle,
+                                     3000);
+}
+
+ErrorCode SystemServicePublisher::publish_topic_subscription_response(
+    const EnvelopeEvent& inbound,
+    const TopicSubscriptionResponse& payload,
+    uint32_t ttl_ms) {
+    return runtime_ == nullptr ? ErrorCode::kInvalidArgument
+                               : runtime_->reply_system_service_payload(
+                                     inbound,
+                                     MessageTraits<TopicSubscriptionResponse>::kMessageType,
+                                     encode_payload(payload),
+                                     ttl_ms);
+}
+
 }  // namespace yunlink

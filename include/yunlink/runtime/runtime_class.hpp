@@ -149,6 +149,10 @@ class Runtime {
                                   const TargetSelector& target,
                                   const HostSystemSnapshot& payload,
                                   uint64_t session_id = 0);
+    ErrorCode publish_topic_sample(const std::string& peer_id,
+                                   const TargetSelector& target,
+                                   const TopicSample& payload,
+                                   uint64_t session_id = 0);
     ErrorCode publish_vehicle_event(const std::string& peer_id,
                                     const TargetSelector& target,
                                     const VehicleEvent& payload,
@@ -225,6 +229,7 @@ class Runtime {
     size_t subscribe_velocity_setpoint_internal(CommandSubscriber::VelocitySetpointHandler cb);
     size_t subscribe_trajectory_chunk_internal(CommandSubscriber::TrajectoryChunkHandler cb);
     size_t subscribe_formation_task_internal(CommandSubscriber::FormationTaskHandler cb);
+    size_t subscribe_uav_control_internal(CommandSubscriber::UavControlHandler cb);
     size_t subscribe_vehicle_core_internal(StateSubscriber::VehicleCoreHandler cb);
     size_t subscribe_px4_state_internal(StateSubscriber::Px4StateHandler cb);
     size_t subscribe_odom_status_internal(StateSubscriber::OdomStatusHandler cb);
@@ -241,6 +246,7 @@ class Runtime {
     size_t
     subscribe_command_execution_status_internal(StateSubscriber::CommandExecutionStatusHandler cb);
     size_t subscribe_host_system_internal(StateSubscriber::HostSystemHandler cb);
+    size_t subscribe_topic_sample_internal(StateSubscriber::TopicSampleHandler cb);
     size_t subscribe_odom_state_internal(StateSubscriber::OdomStateHandler cb);
     size_t subscribe_sunray_runtime_diagnostic_internal(
         StateSubscriber::SunrayRuntimeDiagnosticHandler cb);
@@ -268,6 +274,14 @@ class Runtime {
         SystemServiceSubscriber::RuntimeLogReadRequestHandler cb);
     size_t subscribe_runtime_log_read_response_internal(
         SystemServiceSubscriber::RuntimeLogReadResponseHandler cb);
+    size_t subscribe_topic_list_request_internal(
+        SystemServiceSubscriber::TopicListRequestHandler cb);
+    size_t subscribe_topic_list_response_internal(
+        SystemServiceSubscriber::TopicListResponseHandler cb);
+    size_t subscribe_topic_subscription_request_internal(
+        SystemServiceSubscriber::TopicSubscriptionRequestHandler cb);
+    size_t subscribe_topic_subscription_response_internal(
+        SystemServiceSubscriber::TopicSubscriptionResponseHandler cb);
     size_t
     subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);

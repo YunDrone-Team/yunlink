@@ -42,6 +42,21 @@ struct VelocitySetpointCommand {
     bool body_frame = false;
 };
 
+/** A complete UAV control command independent of any vehicle-side middleware. */
+struct UavControlCommand {
+    uint8_t control_cmd = 0;
+    Vector3f desired_position_m;
+    Vector3f desired_velocity_mps;
+    Vector3f desired_acceleration_mps2;
+    Vector2f desired_body_xy_position_m;
+    Vector2f desired_body_xy_velocity_mps;
+    float fixed_height_m = 0.0F;
+    uint8_t yaw_mode = 0;
+    float desired_yaw_rad = 0.0F;
+    float desired_yaw_rate_radps = 0.0F;
+    uint8_t controller_type = 0;
+};
+
 struct TrajectoryPoint {
     float x_m = 0.0F;
     float y_m = 0.0F;

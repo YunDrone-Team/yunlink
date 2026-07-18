@@ -26,6 +26,7 @@
 | `Command` | 5 | 1 | `VelocitySetpointCommand` | 速度设定命令 |
 | `Command` | 6 | 1 | `TrajectoryChunkCommand` | 轨迹分块命令 |
 | `Command` | 7 | 1 | `FormationTaskCommand` | 编队任务命令 |
+| `Command` | 8 | 1 | `UavControlCommand` | 完整 UAV 控制命令 |
 | `CommandResult` | 1 | 1 | `CommandResult` | 命令执行阶段与结果 |
 | `SystemService` | 1 | 1 | `FeatureListRequest` | 查询功能列表请求 |
 | `SystemService` | 2 | 1 | `FeatureListResponse` | 查询功能列表响应 |
@@ -35,6 +36,11 @@
 | `SystemService` | 6 | 1 | `FeatureStartResponse` | 启动功能响应 |
 | `SystemService` | 7 | 1 | `FeatureStopRequest` | 停止功能请求 |
 | `SystemService` | 8 | 1 | `FeatureStopResponse` | 停止功能响应 |
+| `SystemService` | 9-12 | 1 | `RuntimeLogList/Read` | 运行日志列表和分块读取 |
+| `SystemService` | 13 | 1 | `TopicListRequest` | 查询活跃 topic 目录 |
+| `SystemService` | 14 | 1 | `TopicListResponse` | 返回活跃 topic 目录和 revision |
+| `SystemService` | 15 | 1 | `TopicSubscriptionRequest` | 按会话订阅或退订一个 topic |
+| `SystemService` | 16 | 1 | `TopicSubscriptionResponse` | 返回实际订阅限制和类型 |
 | `ConfigurationService` | 1 | 1 | `ConfigResourceListRequest` | 查询配置资源列表 |
 | `ConfigurationService` | 2 | 1 | `ConfigResourceListResponse` | 返回配置资源列表 |
 | `ConfigurationService` | 3 | 1 | `ConfigResourceDescribeRequest` | 查询资源字段 schema |
@@ -57,6 +63,8 @@
 | `StateSnapshot` | 10 | 1 | `OdomStateSnapshot` | 里程计系统总状态快照 |
 | `StateSnapshot` | 11 | 1 | `SunrayRuntimeDiagnosticSnapshot` | Sunray runtime 诊断快照 |
 | `StateSnapshot` | 12 | 1 | `CommandExecutionStatusSnapshot` | 命令执行状态快照 |
+| `StateSnapshot` | 13 | 1 | `HostSystemSnapshot` | 主机资源和活跃组件快照 |
+| `StateSnapshot` | 14 | 1 | `TopicSample` | 显式订阅 topic 的定向完整样本 |
 | `StateEvent` | 1 | 1 | `VehicleEvent` | 稀疏飞行/车辆事件 |
 | `BulkChannelDescriptor` | 1 | 1 | `BulkChannelDescriptor` | 大流旁路通道描述 |
 
@@ -185,7 +193,7 @@
 
 | Enum | Values |
 | --- | --- |
-| `CommandKind` | `0=Unknown`, `1=Takeoff`, `2=Land`, `3=Return`, `4=Goto`, `5=VelocitySetpoint`, `6=TrajectoryChunk`, `7=FormationTask` |
+| `CommandKind` | `0=Unknown`, `1=Takeoff`, `2=Land`, `3=Return`, `4=Goto`, `5=VelocitySetpoint`, `6=TrajectoryChunk`, `7=FormationTask`, `8=UavControl` |
 | `AuthorityAction` | `1=Claim`, `2=Renew`, `3=Release`, `4=Preempt` |
 | `ControlSource` | `0=Unknown`, `1=GroundStation`, `2=RemoteController`, `3=Terminal`, `4=Autonomy` |
 | `AuthorityState` | `0=Observer`, `1=PendingGrant`, `2=Controller`, `3=Preempting`, `4=Revoked`, `5=Released`, `6=Rejected` |

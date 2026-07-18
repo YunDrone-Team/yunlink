@@ -108,7 +108,7 @@ python3 tools/build_fast.py --preset ninja-debug --target lint
 5. 周期发布 `StateSnapshot`
 6. 按需发布 `VehicleEvent`
 
-如果你要做真实执行器集成，需要明确一点：默认 runtime 只负责协议边界和默认 auto-result，不会替你接入飞控、车辆底盘或群组执行器。若自定义 executor 需要自己拥有正式结果流，应显式切到 `CommandHandlingMode::kExternalHandler`，通过 typed inbound command subscribe + `reply_command_result(...)` 自行回包。当前 `sunray_v2/communication/yunlink_ros_bridge` 尚未采用该模式，仍使用默认 auto-result。
+如果你要做真实执行器集成，需要明确一点：默认 runtime 只负责协议边界和默认 auto-result，不会替你接入飞控、车辆底盘或群组执行器。若自定义 executor 需要自己拥有正式结果流，应显式切到 `CommandHandlingMode::kExternalHandler`，通过 typed inbound command subscribe + `reply_command_result(...)` 自行回包。`sunray_v2/communication/yunlink_ros_bridge` 已采用该模式，并以完整 `UavControlCommand` 作为唯一飞控入口。
 
 外部 executor 的 contract 固定为：
 

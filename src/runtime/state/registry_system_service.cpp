@@ -100,4 +100,36 @@ size_t Runtime::subscribe_runtime_log_read_response_internal(
     return token;
 }
 
+size_t Runtime::subscribe_topic_list_request_internal(
+    SystemServiceSubscriber::TopicListRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->topic_list_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_topic_list_response_internal(
+    SystemServiceSubscriber::TopicListResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->topic_list_response_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_topic_subscription_request_internal(
+    SystemServiceSubscriber::TopicSubscriptionRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->topic_subscription_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_topic_subscription_response_internal(
+    SystemServiceSubscriber::TopicSubscriptionResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->topic_subscription_response_handlers[token] = std::move(cb);
+    return token;
+}
+
 }  // namespace yunlink

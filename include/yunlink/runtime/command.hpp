@@ -57,6 +57,11 @@ class CommandPublisher {
                                      const TargetSelector& target,
                                      const FormationTaskCommand& payload,
                                      CommandHandle* out_handle = nullptr);
+    ErrorCode publish_uav_control(const std::string& peer_id,
+                                  uint64_t session_id,
+                                  const TargetSelector& target,
+                                  const UavControlCommand& payload,
+                                  CommandHandle* out_handle = nullptr);
     void bind(Runtime* runtime);
 
   private:
@@ -80,6 +85,8 @@ class CommandSubscriber {
         std::function<void(const InboundCommandView<TrajectoryChunkCommand>&)>;
     using FormationTaskHandler =
         std::function<void(const InboundCommandView<FormationTaskCommand>&)>;
+    using UavControlHandler =
+        std::function<void(const InboundCommandView<UavControlCommand>&)>;
 
     explicit CommandSubscriber(Runtime* runtime = nullptr);
 
@@ -90,6 +97,7 @@ class CommandSubscriber {
     size_t subscribe_velocity_setpoint(VelocitySetpointHandler cb);
     size_t subscribe_trajectory_chunk(TrajectoryChunkHandler cb);
     size_t subscribe_formation_task(FormationTaskHandler cb);
+    size_t subscribe_uav_control(UavControlHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

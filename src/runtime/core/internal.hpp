@@ -41,6 +41,7 @@ struct Runtime::Impl {
         velocity_setpoint_handlers;
     std::unordered_map<size_t, CommandSubscriber::TrajectoryChunkHandler> trajectory_chunk_handlers;
     std::unordered_map<size_t, CommandSubscriber::FormationTaskHandler> formation_task_handlers;
+    std::unordered_map<size_t, CommandSubscriber::UavControlHandler> uav_control_handlers;
     std::unordered_map<size_t, StateSubscriber::VehicleCoreHandler> vehicle_core_handlers;
     std::unordered_map<size_t, StateSubscriber::Px4StateHandler> px4_state_handlers;
     std::unordered_map<size_t, StateSubscriber::OdomStatusHandler> odom_status_handlers;
@@ -58,6 +59,7 @@ struct Runtime::Impl {
     std::unordered_map<size_t, StateSubscriber::SunrayRuntimeDiagnosticHandler>
         sunray_runtime_diagnostic_handlers;
     std::unordered_map<size_t, StateSubscriber::HostSystemHandler> host_system_handlers;
+    std::unordered_map<size_t, StateSubscriber::TopicSampleHandler> topic_sample_handlers;
     std::unordered_map<size_t, EventSubscriber::VehicleEventHandler> vehicle_event_handlers;
     std::unordered_map<size_t, EventSubscriber::CommandResultHandler> command_result_handlers;
     std::unordered_map<size_t, EventSubscriber::AuthorityStatusHandler> authority_status_handlers;
@@ -86,6 +88,14 @@ struct Runtime::Impl {
         runtime_log_read_request_handlers;
     std::unordered_map<size_t, SystemServiceSubscriber::RuntimeLogReadResponseHandler>
         runtime_log_read_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::TopicListRequestHandler>
+        topic_list_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::TopicListResponseHandler>
+        topic_list_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::TopicSubscriptionRequestHandler>
+        topic_subscription_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::TopicSubscriptionResponseHandler>
+        topic_subscription_response_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListRequestHandler>
         config_resource_list_request_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListResponseHandler>

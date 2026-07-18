@@ -110,6 +110,36 @@ void Runtime::handle_system_service_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case SystemServiceType::kTopicListRequest:
+        if (!runtime_fanout_inbound_request<TopicListRequest>(
+                impl_->mu, ev, ev.envelope.payload, impl_->topic_list_request_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kTopicListResponse:
+        if (!runtime_fanout_snapshot<TopicListResponse>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->topic_list_response_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kTopicSubscriptionRequest:
+        if (!runtime_fanout_inbound_request<TopicSubscriptionRequest>(
+                impl_->mu,
+                ev,
+                ev.envelope.payload,
+                impl_->topic_subscription_request_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kTopicSubscriptionResponse:
+        if (!runtime_fanout_snapshot<TopicSubscriptionResponse>(
+                impl_->mu,
+                ev.envelope,
+                ev.envelope.payload,
+                impl_->topic_subscription_response_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     }
 }
 

@@ -115,6 +115,8 @@ uint16_t capability_mask(const std::vector<std::string>& capabilities) {
             mask |= 4U;
         } else if (capability == "config-resource-v1") {
             mask |= 8U;
+        } else if (capability == "topic-stream-v1") {
+            mask |= 16U;
         }
     }
     return mask;
@@ -130,6 +132,8 @@ std::vector<std::string> capabilities_from_mask(uint16_t mask) {
         result.push_back("system_service");
     if ((mask & 8U) != 0U)
         result.push_back("config-resource-v1");
+    if ((mask & 16U) != 0U)
+        result.push_back("topic-stream-v1");
     return result;
 }
 
@@ -183,18 +187,28 @@ bool decode_endpoint_discovery_query(const ByteBuffer& bytes,
 ByteBuffer encode_endpoint_discovery_reply(uint64_t nonce,
                                            const EndpointAdvertisement& advertisement,
                                            const std::string& shared_secret) {
+    if (nonce == 0 || !validate_endpoint_id(advertisement.endpoint_id)) {
+        return {};
+    }
     ByteBuffer out(kEndpointDiscoveryReplyMagic,
                    kEndpointDiscoveryReplyMagic + std::strlen(kEndpointDiscoveryReplyMagic));
     append_u64(&out, nonce);
-    append_text(&out, advertisement.endpoint_id, 16U);
-    append_text(&out, advertisement.display_name_prefix, 32U);
-    append_text(&out, advertisement.node_name, 63U);
+    if (!append_text(&out, advertisement.endpoint_id, 16U) ||
+        !append_text(&out, advertisement.display_name_prefix, 32U) ||
+        !append_text(&out, advertisement.agent_type, 15U) ||
+        !append_text(&out, advertisement.role, 15U) ||
+        !append_text(&out, advertisement.node_name, 63U)) {
+        return {};
+    }
     append_u32(&out, advertisement.agent_id);
     append_u16(&out, advertisement.tcp_listen_port);
     append_u16(&out, advertisement.udp_bind_port);
     append_u16(&out, capability_mask(advertisement.capabilities));
     append_u64(&out, advertisement.sequence);
     append_u32(&out, advertisement.discovery_period_ms);
+    if (out.size() + 8U > 128U) {
+        return {};
+    }
     append_tag(&out, shared_secret);
     return out;
 }
@@ -204,7 +218,7 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
                                      uint64_t* nonce,
                                      EndpointAdvertisement* out,
                                      std::string* error) {
-    if (nonce == nullptr || out == nullptr || bytes.size() < 36U || bytes.size() > 128U ||
+    if (nonce == nullptr || out == nullptr || bytes.size() < 47U || bytes.size() > 128U ||
         !std::equal(bytes.begin(), bytes.begin() + 4, kEndpointDiscoveryReplyMagic) ||
         !verify_tag(bytes, shared_secret)) {
         set_error(error, "invalid discovery reply");
@@ -215,6 +229,8 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
     uint16_t capability_bits = 0;
     if (!take_u64(bytes, &offset, nonce) || !take_text(bytes, &offset, &decoded.endpoint_id) ||
         !take_text(bytes, &offset, &decoded.display_name_prefix) ||
+        !take_text(bytes, &offset, &decoded.agent_type) ||
+        !take_text(bytes, &offset, &decoded.role) ||
         !take_text(bytes, &offset, &decoded.node_name) ||
         !take_u32(bytes, &offset, &decoded.agent_id) ||
         !take_u16(bytes, &offset, &decoded.tcp_listen_port) ||
@@ -222,12 +238,11 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
         !take_u16(bytes, &offset, &capability_bits) ||
         !take_u64(bytes, &offset, &decoded.sequence) ||
         !take_u32(bytes, &offset, &decoded.discovery_period_ms) || offset + 8U != bytes.size() ||
-        *nonce == 0 || !validate_endpoint_id(decoded.endpoint_id)) {
+        *nonce == 0 || !validate_endpoint_id(decoded.endpoint_id) || decoded.agent_type.empty() ||
+        decoded.agent_type.size() > 15U || decoded.role.empty() || decoded.role.size() > 15U) {
         set_error(error, "invalid discovery reply fields");
         return false;
     }
-    decoded.agent_type = "uav";
-    decoded.role = "vehicle";
     decoded.protocol_version = "0.1.0";
     decoded.capabilities = capabilities_from_mask(capability_bits);
     decoded.display_name = make_endpoint_display_name(
