@@ -5,8 +5,8 @@ use crate::ffi_util::string_from_c_buf;
 mod commands;
 
 pub use commands::{
-    CommandHandle, GotoCommand, LandCommand, ReturnCommand, TakeoffCommand, TargetSelector,
-    VehicleCoreState, VelocitySetpointCommand,
+    CommandHandle, GotoCommand, LandCommand, LocalOdom, ReturnCommand, TakeoffCommand,
+    TargetSelector, VehicleCoreState, VelocitySetpointCommand,
 };
 
 /// Endpoint agent type used by the safe Rust SDK.

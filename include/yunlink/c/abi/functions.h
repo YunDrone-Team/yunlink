@@ -95,6 +95,12 @@ yunlink_publish_vehicle_core_state(yunlink_runtime_t* runtime,
                                    const yunlink_vehicle_core_state_t* payload,
                                    uint64_t session_id);
 
+YUNLINK_C_API yunlink_result_t yunlink_publish_local_odom(yunlink_runtime_t* runtime,
+                                                          const yunlink_peer_t* peer,
+                                                          const yunlink_target_selector_t* target,
+                                                          const yunlink_local_odom_t* payload,
+                                                          uint64_t session_id);
+
 YUNLINK_C_API yunlink_result_t
 yunlink_system_service_request_feature_list(yunlink_runtime_t* runtime,
                                             const yunlink_peer_t* peer,

@@ -102,6 +102,27 @@ pub struct VehicleCoreState {
     pub battery_percent: f32,
 }
 
+/// Local odometry snapshot published by a vehicle localization stack.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalOdom {
+    pub source_stamp_ns: u64,
+    pub frame_id: String,
+    pub child_frame_id: String,
+    pub x_m: f32,
+    pub y_m: f32,
+    pub z_m: f32,
+    pub orientation_x: f32,
+    pub orientation_y: f32,
+    pub orientation_z: f32,
+    pub orientation_w: f32,
+    pub vx_mps: f32,
+    pub vy_mps: f32,
+    pub vz_mps: f32,
+    pub angular_x_radps: f32,
+    pub angular_y_radps: f32,
+    pub angular_z_radps: f32,
+}
+
 /// Safe command handle returned by command publish methods.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandHandle {

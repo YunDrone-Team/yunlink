@@ -25,7 +25,7 @@ pub use error::{FfiErrorCode, Result, YunlinkError};
 pub use events::{
     AuthorityStatusEvent, CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event,
     FeatureGetEvent, FeatureListEvent, FeatureStartEvent, HostSystemEvent, LinkEvent,
-    Px4StateEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
+    LocalOdomEvent, Px4StateEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
 };
 pub use runtime::Runtime;
 pub use runtime_logs::{
@@ -33,8 +33,8 @@ pub use runtime_logs::{
 };
 pub use types::{
     AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, GotoCommand,
-    LandCommand, PeerConnection, ReturnCommand, RuntimeConfig, Session, SessionInfo, SessionState,
-    TakeoffCommand, TargetSelector, VehicleCoreState, VelocitySetpointCommand,
+    LandCommand, LocalOdom, PeerConnection, ReturnCommand, RuntimeConfig, Session, SessionInfo,
+    SessionState, TakeoffCommand, TargetSelector, VehicleCoreState, VelocitySetpointCommand,
 };
 
 #[cfg(test)]

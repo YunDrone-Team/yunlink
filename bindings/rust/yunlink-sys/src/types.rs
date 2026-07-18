@@ -280,6 +280,51 @@ pub struct yunlink_vehicle_core_state_t {
     pub battery_percent: f32,
 }
 
+/// Raw local odometry snapshot payload.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_local_odom_t {
+    pub source_stamp_ns: u64,
+    pub frame_id: [c_char; 64],
+    pub child_frame_id: [c_char; 64],
+    pub x_m: f32,
+    pub y_m: f32,
+    pub z_m: f32,
+    pub orientation_x: f32,
+    pub orientation_y: f32,
+    pub orientation_z: f32,
+    pub orientation_w: f32,
+    pub vx_mps: f32,
+    pub vy_mps: f32,
+    pub vz_mps: f32,
+    pub angular_x_radps: f32,
+    pub angular_y_radps: f32,
+    pub angular_z_radps: f32,
+}
+
+impl Default for yunlink_local_odom_t {
+    fn default() -> Self {
+        Self {
+            source_stamp_ns: 0,
+            frame_id: [0; 64],
+            child_frame_id: [0; 64],
+            x_m: 0.0,
+            y_m: 0.0,
+            z_m: 0.0,
+            orientation_x: 0.0,
+            orientation_y: 0.0,
+            orientation_z: 0.0,
+            orientation_w: 1.0,
+            vx_mps: 0.0,
+            vy_mps: 0.0,
+            vz_mps: 0.0,
+            angular_x_radps: 0.0,
+            angular_y_radps: 0.0,
+            angular_z_radps: 0.0,
+        }
+    }
+}
+
 /// Raw authority lease returned by `yunlink_authority_current`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]

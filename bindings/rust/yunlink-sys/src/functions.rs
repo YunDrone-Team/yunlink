@@ -15,9 +15,10 @@ use crate::runtime_logs::{
 };
 use crate::types::{
     yunlink_authority_lease_t, yunlink_command_handle_t, yunlink_goto_command_t,
-    yunlink_land_command_t, yunlink_peer_t, yunlink_return_command_t, yunlink_runtime_config_t,
-    yunlink_runtime_t, yunlink_session_info_t, yunlink_session_t, yunlink_takeoff_command_t,
-    yunlink_target_selector_t, yunlink_vehicle_core_state_t, yunlink_velocity_setpoint_command_t,
+    yunlink_land_command_t, yunlink_local_odom_t, yunlink_peer_t, yunlink_return_command_t,
+    yunlink_runtime_config_t, yunlink_runtime_t, yunlink_session_info_t, yunlink_session_t,
+    yunlink_takeoff_command_t, yunlink_target_selector_t, yunlink_vehicle_core_state_t,
+    yunlink_velocity_setpoint_command_t,
 };
 
 // Raw extern declarations for `libyunlink_ffi`.
@@ -221,6 +222,14 @@ unsafe extern "C" {
     pub fn yunlink_runtime_poll_event(
         runtime: *mut yunlink_runtime_t,
         out_event: *mut yunlink_runtime_event_t,
+    ) -> yunlink_result_t;
+
+    pub fn yunlink_publish_local_odom(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        target: *const yunlink_target_selector_t,
+        payload: *const yunlink_local_odom_t,
+        session_id: u64,
     ) -> yunlink_result_t;
 
     pub fn yunlink_configuration_publish_resource_list_request(

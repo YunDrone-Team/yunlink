@@ -187,3 +187,5 @@ pub const YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS: u8 = 9;
 pub const YUNLINK_RUNTIME_EVENT_HOST_SYSTEM: u8 = 10;
 /// Response to a feature start request.
 pub const YUNLINK_RUNTIME_EVENT_FEATURE_START: u8 = 11;
+/// Local odometry pose and twist snapshot.
+pub const YUNLINK_RUNTIME_EVENT_LOCAL_ODOM: u8 = 12;

@@ -3,8 +3,8 @@ use std::time::Duration;
 use tokio::time::{sleep, timeout};
 
 use yunlink::{
-    AgentType, ControlSource, Event, GotoCommand, Runtime, RuntimeConfig, TargetSelector,
-    VehicleCoreState,
+    AgentType, ControlSource, Event, GotoCommand, LocalOdom, Runtime, RuntimeConfig,
+    TargetSelector, VehicleCoreState,
 };
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -90,7 +90,34 @@ async fn runtime_loop_roundtrip() {
     .await
     .unwrap();
 
+    air.publish_local_odom(
+        &air_peer,
+        &TargetSelector::entity(AgentType::GroundStation, 7),
+        &LocalOdom {
+            source_stamp_ns: 1_234_567_890,
+            frame_id: "odom".into(),
+            child_frame_id: "base_link".into(),
+            x_m: 21.0,
+            y_m: -22.0,
+            z_m: 23.0,
+            orientation_x: 0.0,
+            orientation_y: 0.0,
+            orientation_z: 0.5,
+            orientation_w: 0.8660254,
+            vx_mps: 1.1,
+            vy_mps: 1.2,
+            vz_mps: 1.3,
+            angular_x_radps: 0.0,
+            angular_y_radps: 0.0,
+            angular_z_radps: 0.4,
+        },
+        session.session_id,
+    )
+    .await
+    .unwrap();
+
     let mut saw_state = false;
+    let mut saw_local_odom = false;
     let mut result_count = 0usize;
     timeout(Duration::from_secs(3), async {
         loop {
@@ -104,9 +131,17 @@ async fn runtime_loop_roundtrip() {
                 {
                     saw_state = true;
                 }
+                Event::LocalOdom(odom)
+                    if odom.session_id == session.session_id
+                        && odom.frame_id == "odom"
+                        && (odom.x_m - 21.0).abs() < f32::EPSILON
+                        && (odom.angular_z_radps - 0.4).abs() < f32::EPSILON =>
+                {
+                    saw_local_odom = true;
+                }
                 _ => {}
             }
-            if saw_state && result_count >= 4 {
+            if saw_state && saw_local_odom && result_count >= 4 {
                 return;
             }
         }

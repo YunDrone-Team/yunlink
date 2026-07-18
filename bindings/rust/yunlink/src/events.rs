@@ -164,6 +164,31 @@ pub struct Px4StateEvent {
     pub target_valid: bool,
 }
 
+/// Local odometry pose and twist reported by the vehicle localization stack.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LocalOdomEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_id: u32,
+    pub source_stamp_ns: u64,
+    pub frame_id: String,
+    pub child_frame_id: String,
+    pub x_m: f32,
+    pub y_m: f32,
+    pub z_m: f32,
+    pub orientation_x: f32,
+    pub orientation_y: f32,
+    pub orientation_z: f32,
+    pub orientation_w: f32,
+    pub vx_mps: f32,
+    pub vy_mps: f32,
+    pub vz_mps: f32,
+    pub angular_x_radps: f32,
+    pub angular_y_radps: f32,
+    pub angular_z_radps: f32,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct LinkEvent {
     /// Peer id copied from the fixed C buffer.
@@ -256,6 +281,7 @@ pub enum Event {
     /// Vehicle core state arrived.
     VehicleCoreState(VehicleCoreStateEvent),
     Px4State(Px4StateEvent),
+    LocalOdom(LocalOdomEvent),
     AuthorityStatus(AuthorityStatusEvent),
     FeatureList(FeatureListEvent),
     FeatureGet(FeatureGetEvent),
@@ -364,6 +390,31 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 target_z_m: data.target_z_m,
                 target_yaw_rad: data.target_yaw_rad,
                 target_valid: data.target_valid != 0,
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_LOCAL_ODOM => {
+            let data = unsafe { event.data.local_odom };
+            Some(Event::LocalOdom(LocalOdomEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                source_id: data.source_id,
+                source_stamp_ns: data.source_stamp_ns,
+                frame_id: string_from_c_buf(&data.frame_id),
+                child_frame_id: string_from_c_buf(&data.child_frame_id),
+                x_m: data.x_m,
+                y_m: data.y_m,
+                z_m: data.z_m,
+                orientation_x: data.orientation_x,
+                orientation_y: data.orientation_y,
+                orientation_z: data.orientation_z,
+                orientation_w: data.orientation_w,
+                vx_mps: data.vx_mps,
+                vy_mps: data.vy_mps,
+                vz_mps: data.vz_mps,
+                angular_x_radps: data.angular_x_radps,
+                angular_y_radps: data.angular_y_radps,
+                angular_z_radps: data.angular_z_radps,
             }))
         }
         sys::YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS => {
@@ -521,6 +572,52 @@ mod tests {
                 assert!(event.target_valid);
             }
             other => panic!("expected PX4 state event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_local_odom_event_from_c_abi_union() {
+        let mut data = sys::yunlink_local_odom_event_t {
+            session_id: 41,
+            message_id: 42,
+            correlation_id: 43,
+            source_id: 7,
+            source_stamp_ns: 1_234_567_890,
+            x_m: 1.25,
+            y_m: -2.5,
+            z_m: 3.75,
+            orientation_z: 0.5,
+            orientation_w: 0.8660254,
+            vx_mps: 0.1,
+            vy_mps: -0.2,
+            vz_mps: 0.3,
+            angular_z_radps: 0.4,
+            ..Default::default()
+        };
+        write_c_buf(&mut data.frame_id, b"odom");
+        write_c_buf(&mut data.child_frame_id, b"base_link");
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_LOCAL_ODOM,
+            data: sys::yunlink_runtime_event_union_t { local_odom: data },
+        };
+
+        match parse_event(raw).expect("local odom event should parse") {
+            Event::LocalOdom(event) => {
+                assert_eq!(event.session_id, 41);
+                assert_eq!(event.message_id, 42);
+                assert_eq!(event.correlation_id, 43);
+                assert_eq!(event.source_id, 7);
+                assert_eq!(event.source_stamp_ns, 1_234_567_890);
+                assert_eq!(event.frame_id, "odom");
+                assert_eq!(event.child_frame_id, "base_link");
+                assert_eq!(event.x_m, 1.25);
+                assert_eq!(event.y_m, -2.5);
+                assert_eq!(event.z_m, 3.75);
+                assert_eq!(event.orientation_w, 0.8660254);
+                assert_eq!(event.vy_mps, -0.2);
+                assert_eq!(event.angular_z_radps, 0.4);
+            }
+            other => panic!("expected local odom event, got {other:?}"),
         }
     }
 

@@ -3,7 +3,7 @@ use yunlink_sys as sys;
 use super::Runtime;
 use crate::error::{ensure, Result};
 use crate::types::{
-    CommandHandle, GotoCommand, LandCommand, PeerConnection, ReturnCommand, Session,
+    CommandHandle, GotoCommand, LandCommand, LocalOdom, PeerConnection, ReturnCommand, Session,
     TakeoffCommand, TargetSelector, VehicleCoreState, VelocitySetpointCommand,
 };
 
@@ -160,6 +160,44 @@ impl Runtime {
         };
         ensure(unsafe {
             sys::yunlink_publish_vehicle_core_state(
+                self.raw_ptr(),
+                &peer.raw,
+                &target.raw,
+                &payload,
+                session_id,
+            )
+        })
+    }
+
+    /// Publish local odometry through the state-plane C ABI helper.
+    pub async fn publish_local_odom(
+        &self,
+        peer: &PeerConnection,
+        target: &TargetSelector,
+        odom: &LocalOdom,
+        session_id: u64,
+    ) -> Result<()> {
+        let mut payload = sys::yunlink_local_odom_t {
+            source_stamp_ns: odom.source_stamp_ns,
+            x_m: odom.x_m,
+            y_m: odom.y_m,
+            z_m: odom.z_m,
+            orientation_x: odom.orientation_x,
+            orientation_y: odom.orientation_y,
+            orientation_z: odom.orientation_z,
+            orientation_w: odom.orientation_w,
+            vx_mps: odom.vx_mps,
+            vy_mps: odom.vy_mps,
+            vz_mps: odom.vz_mps,
+            angular_x_radps: odom.angular_x_radps,
+            angular_y_radps: odom.angular_y_radps,
+            angular_z_radps: odom.angular_z_radps,
+            ..Default::default()
+        };
+        crate::ffi_util::write_c_buffer(&mut payload.frame_id, &odom.frame_id);
+        crate::ffi_util::write_c_buffer(&mut payload.child_frame_id, &odom.child_frame_id);
+        ensure(unsafe {
+            sys::yunlink_publish_local_odom(
                 self.raw_ptr(),
                 &peer.raw,
                 &target.raw,

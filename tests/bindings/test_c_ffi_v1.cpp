@@ -275,8 +275,29 @@ int main() {
         return 13;
     }
 
+    yunlink_local_odom_t local_odom{};
+    local_odom.source_stamp_ns = 1'234'567'890ULL;
+    std::strncpy(local_odom.frame_id, "odom", sizeof(local_odom.frame_id) - 1);
+    std::strncpy(local_odom.child_frame_id, "base_link", sizeof(local_odom.child_frame_id) - 1);
+    local_odom.x_m = 21.0F;
+    local_odom.y_m = -22.0F;
+    local_odom.z_m = 23.0F;
+    local_odom.orientation_z = 0.5F;
+    local_odom.orientation_w = 0.8660254F;
+    local_odom.vx_mps = 1.1F;
+    local_odom.vy_mps = 1.2F;
+    local_odom.vz_mps = 1.3F;
+    local_odom.angular_z_radps = 0.4F;
+    if (yunlink_publish_local_odom(
+            air, &lease.peer, &ground_target, &local_odom, session.session_id) !=
+        YUNLINK_RESULT_OK) {
+        std::cerr << "publish local odom failed\n";
+        return 21;
+    }
+
     std::vector<uint8_t> phases;
     bool saw_state = false;
+    bool saw_local_odom = false;
     if (!wait_until([&]() {
             yunlink_command_result_event_t result{};
             while (yunlink_runtime_poll_command_result(ground, &result) == YUNLINK_RESULT_OK) {
@@ -289,7 +310,19 @@ int main() {
                     saw_state = true;
                 }
             }
-            return saw_state && phases.size() >= 4;
+            yunlink_runtime_event_t event{};
+            while (yunlink_runtime_poll_event(ground, &event) == YUNLINK_RESULT_OK &&
+                   event.type != YUNLINK_RUNTIME_EVENT_NONE) {
+                if (event.type == YUNLINK_RUNTIME_EVENT_LOCAL_ODOM &&
+                    event.data.local_odom.source_stamp_ns == local_odom.source_stamp_ns &&
+                    event.data.local_odom.x_m == local_odom.x_m &&
+                    event.data.local_odom.orientation_w == local_odom.orientation_w &&
+                    event.data.local_odom.angular_z_radps == local_odom.angular_z_radps &&
+                    std::strcmp(event.data.local_odom.frame_id, "odom") == 0) {
+                    saw_local_odom = true;
+                }
+            }
+            return saw_state && saw_local_odom && phases.size() >= 4;
         })) {
         std::cerr << "ffi event flow not observed\n";
         return 14;

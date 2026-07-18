@@ -145,6 +145,40 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             push_event(runtime, out);
         });
 
+    runtime->tok_local_odom = runtime->runtime.state_subscriber().subscribe_local_odom(
+        [runtime](const yunlink::TypedMessage<yunlink::LocalOdomSnapshot>& msg) {
+            yunlink_runtime_event_t out{};
+            out.type = YUNLINK_RUNTIME_EVENT_LOCAL_ODOM;
+            out.data.local_odom.session_id = msg.envelope.session_id;
+            out.data.local_odom.message_id = msg.envelope.message_id;
+            out.data.local_odom.correlation_id = msg.envelope.correlation_id;
+            out.data.local_odom.source_type =
+                static_cast<uint8_t>(msg.envelope.source.agent_type);
+            out.data.local_odom.source_id = msg.envelope.source.agent_id;
+            out.data.local_odom.source_role = static_cast<uint8_t>(msg.envelope.source.role);
+            out.data.local_odom.source_stamp_ns = msg.payload.header.stamp_ns;
+            safe_copy(out.data.local_odom.frame_id,
+                      sizeof(out.data.local_odom.frame_id),
+                      msg.payload.header.frame_id);
+            safe_copy(out.data.local_odom.child_frame_id,
+                      sizeof(out.data.local_odom.child_frame_id),
+                      msg.payload.child_frame_id);
+            out.data.local_odom.x_m = msg.payload.pose.position_m.x;
+            out.data.local_odom.y_m = msg.payload.pose.position_m.y;
+            out.data.local_odom.z_m = msg.payload.pose.position_m.z;
+            out.data.local_odom.orientation_x = msg.payload.pose.orientation.x;
+            out.data.local_odom.orientation_y = msg.payload.pose.orientation.y;
+            out.data.local_odom.orientation_z = msg.payload.pose.orientation.z;
+            out.data.local_odom.orientation_w = msg.payload.pose.orientation.w;
+            out.data.local_odom.vx_mps = msg.payload.twist.linear_mps.x;
+            out.data.local_odom.vy_mps = msg.payload.twist.linear_mps.y;
+            out.data.local_odom.vz_mps = msg.payload.twist.linear_mps.z;
+            out.data.local_odom.angular_x_radps = msg.payload.twist.angular_radps.x;
+            out.data.local_odom.angular_y_radps = msg.payload.twist.angular_radps.y;
+            out.data.local_odom.angular_z_radps = msg.payload.twist.angular_radps.z;
+            push_event(runtime, out);
+        });
+
     runtime->tok_host_system = runtime->runtime.state_subscriber().subscribe_host_system(
         [runtime](const yunlink::TypedMessage<yunlink::HostSystemSnapshot>& msg) {
             yunlink_runtime_event_t out{};
@@ -302,6 +336,10 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
     if (runtime->tok_px4_state != 0) {
         runtime->runtime.state_subscriber().unsubscribe(runtime->tok_px4_state);
         runtime->tok_px4_state = 0;
+    }
+    if (runtime->tok_local_odom != 0) {
+        runtime->runtime.state_subscriber().unsubscribe(runtime->tok_local_odom);
+        runtime->tok_local_odom = 0;
     }
     if (runtime->tok_host_system != 0) {
         runtime->runtime.state_subscriber().unsubscribe(runtime->tok_host_system);

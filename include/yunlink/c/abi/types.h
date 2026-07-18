@@ -109,6 +109,25 @@ typedef struct yunlink_vehicle_core_state {
     float battery_percent;
 } yunlink_vehicle_core_state_t;
 
+typedef struct yunlink_local_odom {
+    uint64_t source_stamp_ns;
+    char frame_id[64];
+    char child_frame_id[64];
+    float x_m;
+    float y_m;
+    float z_m;
+    float orientation_x;
+    float orientation_y;
+    float orientation_z;
+    float orientation_w;
+    float vx_mps;
+    float vy_mps;
+    float vz_mps;
+    float angular_x_radps;
+    float angular_y_radps;
+    float angular_z_radps;
+} yunlink_local_odom_t;
+
 typedef struct yunlink_authority_lease {
     uint8_t state;
     uint64_t session_id;
@@ -198,6 +217,31 @@ typedef struct yunlink_px4_state_event {
     float local_orientation_w;
 } yunlink_px4_state_event_t;
 
+typedef struct yunlink_local_odom_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t source_type;
+    uint32_t source_id;
+    uint8_t source_role;
+    uint64_t source_stamp_ns;
+    char frame_id[64];
+    char child_frame_id[64];
+    float x_m;
+    float y_m;
+    float z_m;
+    float orientation_x;
+    float orientation_y;
+    float orientation_z;
+    float orientation_w;
+    float vx_mps;
+    float vy_mps;
+    float vz_mps;
+    float angular_x_radps;
+    float angular_y_radps;
+    float angular_z_radps;
+} yunlink_local_odom_event_t;
+
 typedef struct yunlink_authority_status_event {
     uint8_t state;
     uint64_t session_id;
@@ -271,6 +315,7 @@ typedef struct yunlink_runtime_event {
         yunlink_command_result_event_t command_result;
         yunlink_vehicle_core_state_event_t vehicle_core_state;
         yunlink_px4_state_event_t px4_state;
+        yunlink_local_odom_event_t local_odom;
         yunlink_authority_status_event_t authority_status;
         yunlink_vehicle_event_data_t vehicle_event;
         yunlink_feature_list_event_t feature_list;

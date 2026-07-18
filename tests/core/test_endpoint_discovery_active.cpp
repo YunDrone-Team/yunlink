@@ -1,4 +1,11 @@
+#include <chrono>
 #include <iostream>
+#include <thread>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include "yunlink/discovery/endpoint_discovery.hpp"
 
@@ -65,6 +72,72 @@ int main() {
         decoded_v1.endpoint_id != advertisement.endpoint_id) {
         std::cerr << "V1 compatibility decode failed: " << error << '\n';
         return 7;
+    }
+
+    const int port_probe = ::socket(AF_INET, SOCK_DGRAM, 0);
+    sockaddr_in probe_address{};
+    probe_address.sin_family = AF_INET;
+    probe_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    probe_address.sin_port = 0;
+    socklen_t probe_address_size = sizeof(probe_address);
+    if (port_probe < 0 ||
+        ::bind(port_probe,
+               reinterpret_cast<const sockaddr*>(&probe_address),
+               sizeof(probe_address)) != 0 ||
+        ::getsockname(port_probe,
+                      reinterpret_cast<sockaddr*>(&probe_address),
+                      &probe_address_size) != 0) {
+        if (port_probe >= 0) {
+            ::close(port_probe);
+        }
+        std::cerr << "failed to reserve same-host discovery test port\n";
+        return 8;
+    }
+    const uint16_t discovery_port = ntohs(probe_address.sin_port);
+    ::close(port_probe);
+
+    yunlink::EndpointDiscoveryConfig same_host_config{};
+    same_host_config.discovery_port = discovery_port;
+    same_host_config.target_ip = "127.0.0.1";
+    same_host_config.shared_secret = secret;
+    same_host_config.io_poll_interval_ms = 1;
+
+    yunlink::EndpointAdvertiser advertiser;
+    if (advertiser.start(same_host_config) != yunlink::ErrorCode::kOk) {
+        std::cerr << "same-host advertiser start failed: " << advertiser.last_error() << '\n';
+        return 9;
+    }
+    advertiser.set_advertisement(advertisement);
+
+    yunlink::EndpointListener listener;
+    if (listener.start(same_host_config) != yunlink::ErrorCode::kOk) {
+        std::cerr << "same-host listener start failed: " << listener.last_error() << '\n';
+        return 10;
+    }
+    if (listener.send_query(query.nonce, query.response_window_ms) != yunlink::ErrorCode::kOk) {
+        std::cerr << "same-host query failed: " << listener.last_error() << '\n';
+        return 11;
+    }
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    bool found_same_host_reply = false;
+    while (std::chrono::steady_clock::now() < deadline && !found_same_host_reply) {
+        std::vector<yunlink::EndpointAdvertisementPacket> packets;
+        listener.drain(&packets);
+        for (const auto& packet : packets) {
+            if (packet.is_query_reply && packet.reply_nonce == query.nonce &&
+                packet.advertisement.endpoint_id == advertisement.endpoint_id) {
+                found_same_host_reply = true;
+                break;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    listener.stop();
+    advertiser.stop();
+    if (!found_same_host_reply) {
+        std::cerr << "same-host active discovery reply was not delivered to the query socket\n";
+        return 12;
     }
     return 0;
 }

@@ -33,6 +33,8 @@ struct EndpointListener::Impl {
     std::atomic<bool> running{false};
     asio::io_context io;
     std::unique_ptr<asio::ip::udp::socket> socket;
+    std::unique_ptr<asio::ip::udp::socket> query_socket;
+    mutable std::mutex query_socket_mu;
     std::thread recv_thread;
     mutable std::mutex queue_mu;
     std::deque<EndpointAdvertisementPacket> queue;
@@ -90,6 +92,36 @@ ErrorCode EndpointListener::start(const EndpointDiscoveryConfig& config) {
         return ErrorCode::kSocketError;
     }
 
+    impl_->query_socket = std::make_unique<asio::ip::udp::socket>(impl_->io);
+    impl_->query_socket->open(asio::ip::udp::v4(), ec);
+    if (ec) {
+        impl_->socket.reset();
+        impl_->query_socket.reset();
+        set_last_error("query socket open failed: " + ec.message());
+        return ErrorCode::kSocketError;
+    }
+    impl_->query_socket->set_option(asio::socket_base::broadcast(true), ec);
+    if (ec) {
+        impl_->socket.reset();
+        impl_->query_socket.reset();
+        set_last_error("query socket broadcast option failed: " + ec.message());
+        return ErrorCode::kSocketError;
+    }
+    impl_->query_socket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), 0), ec);
+    if (ec) {
+        impl_->socket.reset();
+        impl_->query_socket.reset();
+        set_last_error("query socket bind failed: " + ec.message());
+        return ErrorCode::kBindError;
+    }
+    impl_->query_socket->non_blocking(true, ec);
+    if (ec) {
+        impl_->socket.reset();
+        impl_->query_socket.reset();
+        set_last_error("query socket non_blocking failed: " + ec.message());
+        return ErrorCode::kSocketError;
+    }
+
     {
         std::lock_guard<std::mutex> lock(impl_->queue_mu);
         impl_->queue.clear();
@@ -110,6 +142,14 @@ void EndpointListener::stop() {
         impl_->socket->cancel(ec);
         impl_->socket->close(ec);
     }
+    {
+        std::lock_guard<std::mutex> lock(impl_->query_socket_mu);
+        if (impl_->query_socket != nullptr) {
+            std::error_code ec;
+            impl_->query_socket->cancel(ec);
+            impl_->query_socket->close(ec);
+        }
+    }
     if (impl_->recv_thread.joinable()) {
         impl_->recv_thread.join();
     }
@@ -118,6 +158,7 @@ void EndpointListener::stop() {
         impl_->queue.clear();
     }
     impl_->socket.reset();
+    impl_->query_socket.reset();
 }
 
 bool EndpointListener::is_running() const {
@@ -125,7 +166,8 @@ bool EndpointListener::is_running() const {
 }
 
 ErrorCode EndpointListener::send_query(uint64_t nonce, uint16_t response_window_ms) {
-    if (!impl_->running.load() || impl_->socket == nullptr || nonce == 0) {
+    std::lock_guard<std::mutex> lock(impl_->query_socket_mu);
+    if (!impl_->running.load() || impl_->query_socket == nullptr || nonce == 0) {
         return ErrorCode::kInvalidArgument;
     }
     std::error_code ec;
@@ -136,11 +178,30 @@ ErrorCode EndpointListener::send_query(uint64_t nonce, uint16_t response_window_
     }
     const ByteBuffer query = encode_endpoint_discovery_query(
         EndpointDiscoveryQuery{nonce, response_window_ms}, impl_->config.shared_secret);
-    impl_->socket->send_to(
+    impl_->query_socket->send_to(
         asio::buffer(query), asio::ip::udp::endpoint(address, impl_->config.discovery_port), 0, ec);
     if (ec) {
         set_last_error("discovery query send failed: " + ec.message());
         return ErrorCode::kSocketError;
+    }
+    // A loopback unicast can be consumed by another SO_REUSEADDR socket bound to the
+    // discovery port. The loopback broadcast reaches every local advertiser while
+    // replies still return directly to this query socket's ephemeral source port.
+    const auto loopback_broadcast = asio::ip::make_address_v4("127.255.255.255", ec);
+    if (ec) {
+        set_last_error("loopback broadcast address failed: " + ec.message());
+        return ErrorCode::kSocketError;
+    }
+    if (address != loopback_broadcast) {
+        impl_->query_socket->send_to(
+            asio::buffer(query),
+            asio::ip::udp::endpoint(loopback_broadcast, impl_->config.discovery_port),
+            0,
+            ec);
+        if (ec) {
+            set_last_error("loopback discovery query send failed: " + ec.message());
+            return ErrorCode::kSocketError;
+        }
     }
     return ErrorCode::kOk;
 }
@@ -169,49 +230,63 @@ void EndpointListener::recv_loop() {
     std::array<uint8_t, 2048> buffer{};
 
     while (impl_->running.load()) {
-        std::error_code ec;
-        asio::ip::udp::endpoint source;
-        const std::size_t received =
-            impl_->socket->receive_from(asio::buffer(buffer), source, 0, ec);
-
-        if (ec) {
-            if (ec == asio::error::would_block || ec == asio::error::try_again) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(
-                    impl_->config.io_poll_interval_ms > 0 ? impl_->config.io_poll_interval_ms : 1));
+        bool received_packet = false;
+        for (auto* socket : {impl_->socket.get(), impl_->query_socket.get()}) {
+            if (socket == nullptr) {
                 continue;
             }
-            if (!impl_->running.load() || socket_closed(ec)) {
-                break;
+            std::error_code ec;
+            asio::ip::udp::endpoint source;
+            std::size_t received = 0;
+            if (socket == impl_->query_socket.get()) {
+                std::lock_guard<std::mutex> lock(impl_->query_socket_mu);
+                received = socket->receive_from(asio::buffer(buffer), source, 0, ec);
+            } else {
+                received = socket->receive_from(asio::buffer(buffer), source, 0, ec);
             }
-            set_last_error("listener receive failed: " + ec.message());
-            continue;
-        }
 
-        const ByteBuffer bytes(buffer.begin(), buffer.begin() + received);
-        EndpointAdvertisement advertisement{};
-        std::string error;
-        uint64_t nonce = 0;
-        const bool query_reply = decode_endpoint_discovery_reply(
-            bytes, impl_->config.shared_secret, &nonce, &advertisement, &error);
-        if (!query_reply && !decode_endpoint_advertisement(bytes, &advertisement, &error)) {
-            // Queries on the shared discovery port are expected and are not listener errors.
-            continue;
-        }
+            if (ec) {
+                if (ec == asio::error::would_block || ec == asio::error::try_again) {
+                    continue;
+                }
+                if (!impl_->running.load() || socket_closed(ec)) {
+                    continue;
+                }
+                set_last_error("listener receive failed: " + ec.message());
+                continue;
+            }
+            received_packet = true;
 
-        EndpointAdvertisementPacket packet{};
-        packet.advertisement = std::move(advertisement);
-        packet.source_ip = source.address().to_string(ec);
-        if (ec) {
-            continue;
-        }
-        packet.source_port = source.port();
-        packet.received_at_ms = wall_time_ms();
-        packet.is_query_reply = query_reply;
-        packet.reply_nonce = query_reply ? nonce : 0;
+            const ByteBuffer bytes(buffer.begin(), buffer.begin() + received);
+            EndpointAdvertisement advertisement{};
+            std::string error;
+            uint64_t nonce = 0;
+            const bool query_reply = decode_endpoint_discovery_reply(
+                bytes, impl_->config.shared_secret, &nonce, &advertisement, &error);
+            if (!query_reply && !decode_endpoint_advertisement(bytes, &advertisement, &error)) {
+                // Queries on the shared discovery port are expected and are not listener errors.
+                continue;
+            }
 
-        std::lock_guard<std::mutex> lock(impl_->queue_mu);
-        impl_->queue.push_back(std::move(packet));
-        set_last_error(std::string());
+            EndpointAdvertisementPacket packet{};
+            packet.advertisement = std::move(advertisement);
+            packet.source_ip = source.address().to_string(ec);
+            if (ec) {
+                continue;
+            }
+            packet.source_port = source.port();
+            packet.received_at_ms = wall_time_ms();
+            packet.is_query_reply = query_reply;
+            packet.reply_nonce = query_reply ? nonce : 0;
+
+            std::lock_guard<std::mutex> lock(impl_->queue_mu);
+            impl_->queue.push_back(std::move(packet));
+            set_last_error(std::string());
+        }
+        if (!received_packet) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(
+                impl_->config.io_poll_interval_ms > 0 ? impl_->config.io_poll_interval_ms : 1));
+        }
     }
 }
 

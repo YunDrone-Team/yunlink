@@ -171,6 +171,63 @@ pub struct yunlink_px4_state_event_t {
     pub local_orientation_w: f32,
 }
 
+/// Raw local odometry runtime event.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_local_odom_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: u8,
+    pub source_id: u32,
+    pub source_role: u8,
+    pub source_stamp_ns: u64,
+    pub frame_id: [c_char; 64],
+    pub child_frame_id: [c_char; 64],
+    pub x_m: f32,
+    pub y_m: f32,
+    pub z_m: f32,
+    pub orientation_x: f32,
+    pub orientation_y: f32,
+    pub orientation_z: f32,
+    pub orientation_w: f32,
+    pub vx_mps: f32,
+    pub vy_mps: f32,
+    pub vz_mps: f32,
+    pub angular_x_radps: f32,
+    pub angular_y_radps: f32,
+    pub angular_z_radps: f32,
+}
+
+impl Default for yunlink_local_odom_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            source_type: 0,
+            source_id: 0,
+            source_role: 0,
+            source_stamp_ns: 0,
+            frame_id: [0; 64],
+            child_frame_id: [0; 64],
+            x_m: 0.0,
+            y_m: 0.0,
+            z_m: 0.0,
+            orientation_x: 0.0,
+            orientation_y: 0.0,
+            orientation_z: 0.0,
+            orientation_w: 1.0,
+            vx_mps: 0.0,
+            vy_mps: 0.0,
+            vz_mps: 0.0,
+            angular_x_radps: 0.0,
+            angular_y_radps: 0.0,
+            angular_z_radps: 0.0,
+        }
+    }
+}
+
 /// Raw authority lease status event payload.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -368,6 +425,8 @@ pub union yunlink_runtime_event_union_t {
     pub vehicle_core_state: yunlink_vehicle_core_state_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_PX4_STATE`.
     pub px4_state: yunlink_px4_state_event_t,
+    /// Active when the event type is `YUNLINK_RUNTIME_EVENT_LOCAL_ODOM`.
+    pub local_odom: yunlink_local_odom_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS`.
     pub authority_status: yunlink_authority_status_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_VEHICLE_EVENT`.

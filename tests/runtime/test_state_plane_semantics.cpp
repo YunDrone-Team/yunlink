@@ -89,6 +89,7 @@ int main() {
     std::mutex mu;
     std::vector<OrderedMessage> state_messages;
     std::vector<OrderedMessage> event_messages;
+    std::vector<yunlink::HostSystemSnapshot> host_system_messages;
 
     const size_t state_token = ground.state_subscriber().subscribe_vehicle_core(
         [&](const yunlink::TypedMessage<yunlink::VehicleCoreState>& message) {
@@ -103,6 +104,11 @@ int main() {
             event_messages.push_back({message.envelope.message_id,
                                       message.envelope.source.agent_id,
                                       static_cast<uint8_t>(message.envelope.source.role)});
+        });
+    const size_t host_system_token = ground.state_subscriber().subscribe_host_system(
+        [&](const yunlink::TypedMessage<yunlink::HostSystemSnapshot>& message) {
+            std::lock_guard<std::mutex> lock(mu);
+            host_system_messages.push_back(message.payload);
         });
 
     yunlink::VehicleCoreState first{};
@@ -119,6 +125,13 @@ int main() {
     yunlink::VehicleEvent second_event = first_event;
     second_event.detail = "second-state-event";
 
+    yunlink::HostSystemSnapshot host_system{};
+    host_system.header.stamp_ns = 123456789ULL;
+    host_system.cpu_percent = 12.5F;
+    host_system.memory_percent = 34.5F;
+    host_system.component_kind = "ros1_node";
+    host_system.active_components = {"/rosout", "/sunray_system"};
+
     if (air.publish_vehicle_core_state(lease.peer.id, ground_target, first, session_id) !=
             yunlink::ErrorCode::kOk ||
         air.publish_vehicle_core_state(lease.peer.id, ground_target, second, session_id) !=
@@ -126,6 +139,8 @@ int main() {
         air.publish_vehicle_event(lease.peer.id, ground_target, first_event, session_id) !=
             yunlink::ErrorCode::kOk ||
         air.publish_vehicle_event(lease.peer.id, ground_target, second_event, session_id) !=
+            yunlink::ErrorCode::kOk ||
+        air.publish_host_system(lease.peer.id, ground_target, host_system, session_id) !=
             yunlink::ErrorCode::kOk) {
         std::cerr << "state/event publish failed\n";
         return 5;
@@ -133,13 +148,15 @@ int main() {
 
     if (!wait_until([&]() {
             std::lock_guard<std::mutex> lock(mu);
-            return state_messages.size() >= 2 && event_messages.size() >= 2;
+            return state_messages.size() >= 2 && event_messages.size() >= 2 &&
+                   !host_system_messages.empty();
         })) {
         std::cerr << "did not observe ordered state/event deliveries\n";
         return 6;
     }
 
     ground.state_subscriber().unsubscribe(state_token);
+    ground.state_subscriber().unsubscribe(host_system_token);
     ground.event_subscriber().unsubscribe(event_token);
     ground.stop();
     air.stop();
@@ -157,6 +174,12 @@ int main() {
             !(event_messages[0].message_id < event_messages[1].message_id)) {
             std::cerr << "state/event ordering mismatch\n";
             return 8;
+        }
+        if (host_system_messages[0].component_kind != "ros1_node" ||
+            host_system_messages[0].active_components != host_system.active_components ||
+            host_system_messages[0].cpu_percent != host_system.cpu_percent) {
+            std::cerr << "host system runtime payload mismatch\n";
+            return 9;
         }
     }
 

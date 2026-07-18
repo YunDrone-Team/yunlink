@@ -44,6 +44,7 @@ async fn drop_releases_ports_for_restart() {
                 | Ok(Ok(Event::Error(_)))
                 | Ok(Ok(Event::CommandResult(_)))
                 | Ok(Ok(Event::VehicleCoreState(_)))
+                | Ok(Ok(Event::HostSystem(_)))
         ));
     }
 
