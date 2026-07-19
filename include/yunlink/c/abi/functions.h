@@ -87,6 +87,13 @@ yunlink_command_publish_velocity_setpoint(yunlink_runtime_t* runtime,
                                           const yunlink_target_selector_t* target,
                                           const yunlink_velocity_setpoint_command_t* payload,
                                           yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_command_publish_uav_control(yunlink_runtime_t* runtime,
+                                    const yunlink_peer_t* peer,
+                                    const yunlink_session_t* session,
+                                    const yunlink_target_selector_t* target,
+                                    const yunlink_uav_control_command_t* payload,
+                                    yunlink_command_handle_t* out_handle);
 
 YUNLINK_C_API yunlink_result_t
 yunlink_publish_vehicle_core_state(yunlink_runtime_t* runtime,
@@ -140,6 +147,22 @@ yunlink_system_service_request_runtime_log_read(yunlink_runtime_t* runtime,
                                                 uint64_t cursor,
                                                 uint32_t max_bytes,
                                                 yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_request_topic_list(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_request_topic_subscription(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    const char* topic_name,
+    uint8_t subscribe,
+    float max_rate_hz,
+    uint32_t max_payload_bytes,
+    yunlink_command_handle_t* out_handle);
 
 YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_list_responses(
     yunlink_runtime_t* runtime,

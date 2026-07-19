@@ -256,6 +256,31 @@ pub struct yunlink_velocity_setpoint_command_t {
     pub body_frame: u8,
 }
 
+/// Raw complete UAV control payload.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct yunlink_uav_control_command_t {
+    pub control_cmd: u8,
+    pub desired_position_x_m: f32,
+    pub desired_position_y_m: f32,
+    pub desired_position_z_m: f32,
+    pub desired_velocity_x_mps: f32,
+    pub desired_velocity_y_mps: f32,
+    pub desired_velocity_z_mps: f32,
+    pub desired_acceleration_x_mps2: f32,
+    pub desired_acceleration_y_mps2: f32,
+    pub desired_acceleration_z_mps2: f32,
+    pub desired_body_xy_position_x_m: f32,
+    pub desired_body_xy_position_y_m: f32,
+    pub desired_body_xy_velocity_x_mps: f32,
+    pub desired_body_xy_velocity_y_mps: f32,
+    pub fixed_height_m: f32,
+    pub yaw_mode: u8,
+    pub desired_yaw_rad: f32,
+    pub desired_yaw_rate_radps: f32,
+    pub controller_type: u8,
+}
+
 /// Raw vehicle core state snapshot payload.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]

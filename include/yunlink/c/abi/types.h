@@ -8,6 +8,9 @@
 
 #include "yunlink/c/abi/enums.h"
 
+#define YUNLINK_TOPIC_LIST_BUFFER_CAPACITY 16384u
+#define YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY 65536u
+
 typedef struct yunlink_identity {
     uint8_t agent_type;
     uint32_t agent_id;
@@ -96,6 +99,29 @@ typedef struct yunlink_velocity_setpoint_command {
     float yaw_rate_radps;
     uint8_t body_frame;
 } yunlink_velocity_setpoint_command_t;
+
+/** Complete UAV control payload used by the schema-1 Bridge. */
+typedef struct yunlink_uav_control_command {
+    uint8_t control_cmd;
+    float desired_position_x_m;
+    float desired_position_y_m;
+    float desired_position_z_m;
+    float desired_velocity_x_mps;
+    float desired_velocity_y_mps;
+    float desired_velocity_z_mps;
+    float desired_acceleration_x_mps2;
+    float desired_acceleration_y_mps2;
+    float desired_acceleration_z_mps2;
+    float desired_body_xy_position_x_m;
+    float desired_body_xy_position_y_m;
+    float desired_body_xy_velocity_x_mps;
+    float desired_body_xy_velocity_y_mps;
+    float fixed_height_m;
+    uint8_t yaw_mode;
+    float desired_yaw_rad;
+    float desired_yaw_rate_radps;
+    uint8_t controller_type;
+} yunlink_uav_control_command_t;
 
 typedef struct yunlink_vehicle_core_state {
     uint8_t armed;
@@ -307,6 +333,50 @@ typedef struct yunlink_feature_start_event {
     char feature_name[128];
 } yunlink_feature_start_event_t;
 
+typedef struct yunlink_topic_list_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    char message[256];
+    char revision[128];
+    /** One topic per line: name<TAB>type<TAB>publisher_count. */
+    char topics[YUNLINK_TOPIC_LIST_BUFFER_CAPACITY];
+} yunlink_topic_list_event_t;
+
+typedef struct yunlink_topic_subscription_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    uint8_t subscribed;
+    float max_rate_hz;
+    uint32_t max_payload_bytes;
+    char message[256];
+    char topic_name[256];
+    char type_name[256];
+} yunlink_topic_subscription_event_t;
+
+typedef struct yunlink_topic_sample_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t source_type;
+    uint32_t source_id;
+    uint8_t source_role;
+    uint64_t receive_time_ns;
+    uint64_t sequence;
+    uint8_t metadata_included;
+    uint8_t data_truncated;
+    uint32_t data_size;
+    char topic_name[256];
+    char type_name[256];
+    char type_hash[128];
+    char encoding[32];
+    char message_definition[4096];
+    uint8_t data[YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY];
+} yunlink_topic_sample_event_t;
+
 typedef struct yunlink_runtime_event {
     uint8_t type;
     union {
@@ -322,6 +392,9 @@ typedef struct yunlink_runtime_event {
         yunlink_feature_get_event_t feature_get;
         yunlink_feature_start_event_t feature_start;
         yunlink_host_system_event_t host_system;
+        yunlink_topic_list_event_t topic_list;
+        yunlink_topic_subscription_event_t topic_subscription;
+        yunlink_topic_sample_event_t topic_sample;
     } data;
 } yunlink_runtime_event_t;
 

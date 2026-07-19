@@ -5,6 +5,7 @@
 
 #include "../internal.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <sstream>
@@ -31,6 +32,14 @@ std::string join_lines(const std::vector<std::string>& values) {
             out << '\n';
         }
         out << values[index];
+    }
+    return out.str();
+}
+
+std::string encode_topic_list(const std::vector<yunlink::TopicDescriptor>& topics) {
+    std::ostringstream out;
+    for (const auto& topic : topics) {
+        out << topic.name << '\t' << topic.type_name << '\t' << topic.publisher_count << '\n';
     }
     return out.str();
 }
@@ -318,6 +327,90 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
                           msg.payload.feature_name);
                 push_event(runtime, out);
             });
+
+    runtime->tok_topic_list =
+        runtime->runtime.system_service_subscriber().subscribe_topic_list_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::TopicListResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_TOPIC_LIST;
+                out.data.topic_list.session_id = msg.envelope.session_id;
+                out.data.topic_list.message_id = msg.envelope.message_id;
+                out.data.topic_list.correlation_id = msg.envelope.correlation_id;
+                out.data.topic_list.success = msg.payload.success ? 1 : 0;
+                safe_copy(out.data.topic_list.message,
+                          sizeof(out.data.topic_list.message),
+                          msg.payload.message);
+                safe_copy(out.data.topic_list.revision,
+                          sizeof(out.data.topic_list.revision),
+                          msg.payload.revision);
+                safe_copy(out.data.topic_list.topics,
+                          sizeof(out.data.topic_list.topics),
+                          encode_topic_list(msg.payload.topics));
+                push_event(runtime, out);
+            });
+
+    runtime->tok_topic_subscription =
+        runtime->runtime.system_service_subscriber().subscribe_topic_subscription_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::TopicSubscriptionResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION;
+                out.data.topic_subscription.session_id = msg.envelope.session_id;
+                out.data.topic_subscription.message_id = msg.envelope.message_id;
+                out.data.topic_subscription.correlation_id = msg.envelope.correlation_id;
+                out.data.topic_subscription.success = msg.payload.success ? 1 : 0;
+                out.data.topic_subscription.subscribed = msg.payload.subscribed ? 1 : 0;
+                out.data.topic_subscription.max_rate_hz = msg.payload.max_rate_hz;
+                out.data.topic_subscription.max_payload_bytes = msg.payload.max_payload_bytes;
+                safe_copy(out.data.topic_subscription.message,
+                          sizeof(out.data.topic_subscription.message),
+                          msg.payload.message);
+                safe_copy(out.data.topic_subscription.topic_name,
+                          sizeof(out.data.topic_subscription.topic_name),
+                          msg.payload.topic_name);
+                safe_copy(out.data.topic_subscription.type_name,
+                          sizeof(out.data.topic_subscription.type_name),
+                          msg.payload.type_name);
+                push_event(runtime, out);
+            });
+
+    runtime->tok_topic_sample = runtime->runtime.state_subscriber().subscribe_topic_samples(
+        [runtime](const yunlink::TypedMessage<yunlink::TopicSample>& msg) {
+            yunlink_runtime_event_t out{};
+            out.type = YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE;
+            out.data.topic_sample.session_id = msg.envelope.session_id;
+            out.data.topic_sample.message_id = msg.envelope.message_id;
+            out.data.topic_sample.correlation_id = msg.envelope.correlation_id;
+            out.data.topic_sample.source_type =
+                static_cast<uint8_t>(msg.envelope.source.agent_type);
+            out.data.topic_sample.source_id = msg.envelope.source.agent_id;
+            out.data.topic_sample.source_role = static_cast<uint8_t>(msg.envelope.source.role);
+            out.data.topic_sample.receive_time_ns = msg.payload.receive_time_ns;
+            out.data.topic_sample.sequence = msg.payload.sequence;
+            out.data.topic_sample.metadata_included = msg.payload.metadata_included ? 1 : 0;
+            safe_copy(out.data.topic_sample.topic_name,
+                      sizeof(out.data.topic_sample.topic_name),
+                      msg.payload.topic_name);
+            safe_copy(out.data.topic_sample.type_name,
+                      sizeof(out.data.topic_sample.type_name),
+                      msg.payload.type_name);
+            safe_copy(out.data.topic_sample.type_hash,
+                      sizeof(out.data.topic_sample.type_hash),
+                      msg.payload.type_hash);
+            safe_copy(out.data.topic_sample.encoding,
+                      sizeof(out.data.topic_sample.encoding),
+                      msg.payload.encoding);
+            safe_copy(out.data.topic_sample.message_definition,
+                      sizeof(out.data.topic_sample.message_definition),
+                      msg.payload.message_definition);
+            const size_t copied = std::min(msg.payload.data.size(),
+                                           static_cast<size_t>(YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY));
+            out.data.topic_sample.data_size = static_cast<uint32_t>(copied);
+            out.data.topic_sample.data_truncated = copied != msg.payload.data.size() ? 1 : 0;
+            if (copied != 0) {
+                std::memcpy(out.data.topic_sample.data, msg.payload.data.data(), copied);
+            }
+            push_event(runtime, out);
+        });
 }
 
 void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
@@ -368,6 +461,18 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
     if (runtime->tok_feature_start != 0) {
         runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_start);
         runtime->tok_feature_start = 0;
+    }
+    if (runtime->tok_topic_list != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_topic_list);
+        runtime->tok_topic_list = 0;
+    }
+    if (runtime->tok_topic_subscription != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_topic_subscription);
+        runtime->tok_topic_subscription = 0;
+    }
+    if (runtime->tok_topic_sample != 0) {
+        runtime->runtime.state_subscriber().unsubscribe(runtime->tok_topic_sample);
+        runtime->tok_topic_sample = 0;
     }
 }
 

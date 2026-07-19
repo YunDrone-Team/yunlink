@@ -52,6 +52,8 @@ uint64_t SessionClient::open_active_session(const std::string& peer_id,
         session.remote_identity = EndpointIdentity{};
         session.node_name = node_name;
         session.capability_flags = runtime_->config_.capability_flags;
+        session.authenticated = false;
+        session.initiated_locally = true;
     }
 
     SessionAuthenticate auth{};
@@ -149,6 +151,7 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
         if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kHello)) {
             SessionHello payload{};
             session.authenticated = false;
+            session.initiated_locally = false;
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.node_name = payload.node_name;
                 session.capability_flags = payload.capability_flags;
@@ -229,10 +232,11 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                                                                      : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
                 session.state = SessionState::kActive;
-                // Some peers reply with Ready before sending a capabilities
-                // acknowledgement. Ready is still proof that authentication
-                // succeeded because an unauthenticated session cannot reach it.
-                session.authenticated = true;
+                // A locally initiated client may receive Ready before its
+                // capabilities acknowledgement. An inbound legacy handshake
+                // can also send Ready without Authenticate, so only the
+                // former may inherit authenticated status here.
+                session.authenticated = session.initiated_locally;
                 if (session.udp_peer.ip.empty()) {
                     session.udp_peer = ev.peer;
                     if (ev.transport != TransportType::kUdpUnicast) {

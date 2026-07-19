@@ -25,6 +25,7 @@ pub enum CommandKind {
     TrajectoryChunk,
     /// Formation task command.
     FormationTask,
+    UavControl,
     /// Unknown future or vendor-specific value.
     Other(u16),
 }
@@ -40,6 +41,7 @@ impl CommandKind {
             sys::YUNLINK_COMMAND_KIND_VELOCITY_SETPOINT => Self::VelocitySetpoint,
             sys::YUNLINK_COMMAND_KIND_TRAJECTORY_CHUNK => Self::TrajectoryChunk,
             sys::YUNLINK_COMMAND_KIND_FORMATION_TASK => Self::FormationTask,
+            sys::YUNLINK_COMMAND_KIND_UAV_CONTROL => Self::UavControl,
             other => Self::Other(other),
         }
     }
@@ -270,6 +272,56 @@ pub struct FeatureStartEvent {
     pub feature_name: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TopicDescriptor {
+    pub name: String,
+    pub type_name: String,
+    pub publisher_count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TopicListEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: bool,
+    pub message: String,
+    pub revision: String,
+    pub topics: Vec<TopicDescriptor>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TopicSubscriptionEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: bool,
+    pub subscribed: bool,
+    pub max_rate_hz: f32,
+    pub max_payload_bytes: u32,
+    pub message: String,
+    pub topic_name: String,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TopicSampleEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_id: u32,
+    pub receive_time_ns: u64,
+    pub sequence: u64,
+    pub metadata_included: bool,
+    pub data_truncated: bool,
+    pub topic_name: String,
+    pub type_name: String,
+    pub type_hash: String,
+    pub encoding: String,
+    pub message_definition: String,
+    pub data: Vec<u8>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     /// Link state changed.
@@ -287,6 +339,9 @@ pub enum Event {
     FeatureGet(FeatureGetEvent),
     FeatureStart(FeatureStartEvent),
     HostSystem(HostSystemEvent),
+    TopicList(TopicListEvent),
+    TopicSubscription(TopicSubscriptionEvent),
+    TopicSample(TopicSampleEvent),
 }
 
 /// Broadcast channel capacity used by the Rust adapter.
@@ -305,6 +360,25 @@ fn line_list(raw: String) -> Vec<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToString::to_string)
+        .collect()
+}
+
+fn topic_list(raw: String) -> Vec<TopicDescriptor> {
+    raw.lines()
+        .filter_map(|line| {
+            let mut fields = line.split('\t');
+            let name = fields.next()?.trim();
+            let type_name = fields.next()?.trim();
+            let publisher_count = fields.next()?.trim().parse().ok()?;
+            if name.is_empty() || type_name.is_empty() {
+                return None;
+            }
+            Some(TopicDescriptor {
+                name: name.into(),
+                type_name: type_name.into(),
+                publisher_count,
+            })
+        })
         .collect()
 }
 
@@ -481,6 +555,53 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 success: data.success != 0,
                 message: string_from_c_buf(&data.message),
                 feature_name: string_from_c_buf(&data.feature_name),
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_TOPIC_LIST => {
+            let data = unsafe { event.data.topic_list };
+            Some(Event::TopicList(TopicListEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                success: data.success != 0,
+                message: string_from_c_buf(&data.message),
+                revision: string_from_c_buf(&data.revision),
+                topics: topic_list(string_from_c_buf(&data.topics)),
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION => {
+            let data = unsafe { event.data.topic_subscription };
+            Some(Event::TopicSubscription(TopicSubscriptionEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                success: data.success != 0,
+                subscribed: data.subscribed != 0,
+                max_rate_hz: data.max_rate_hz,
+                max_payload_bytes: data.max_payload_bytes,
+                message: string_from_c_buf(&data.message),
+                topic_name: string_from_c_buf(&data.topic_name),
+                type_name: string_from_c_buf(&data.type_name),
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE => {
+            let data = unsafe { event.data.topic_sample };
+            let size = (data.data_size as usize).min(data.data.len());
+            Some(Event::TopicSample(TopicSampleEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                source_id: data.source_id,
+                receive_time_ns: data.receive_time_ns,
+                sequence: data.sequence,
+                metadata_included: data.metadata_included != 0,
+                data_truncated: data.data_truncated != 0,
+                topic_name: string_from_c_buf(&data.topic_name),
+                type_name: string_from_c_buf(&data.type_name),
+                type_hash: string_from_c_buf(&data.type_hash),
+                encoding: string_from_c_buf(&data.encoding),
+                message_definition: string_from_c_buf(&data.message_definition),
+                data: data.data[..size].to_vec(),
             }))
         }
         _ => None,
@@ -756,6 +877,91 @@ mod tests {
                 assert_eq!(event.message, "started");
             }
             other => panic!("expected FeatureStart event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_topic_stream_events_and_bounds_sample_copy() {
+        let mut list = sys::yunlink_topic_list_event_t {
+            session_id: 51,
+            message_id: 52,
+            correlation_id: 53,
+            success: 1,
+            ..Default::default()
+        };
+        write_c_buf(&mut list.message, b"topic list ready");
+        write_c_buf(&mut list.revision, b"rev-7");
+        write_c_buf(
+            &mut list.topics,
+            b"/uav/odom\tnav_msgs/Odometry\t1\n/uav/state\tsunray_msgs/Px4State\t1",
+        );
+        let raw_list = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_TOPIC_LIST,
+            data: sys::yunlink_runtime_event_union_t { topic_list: list },
+        };
+        match parse_event(raw_list).expect("topic list event should parse") {
+            Event::TopicList(event) => {
+                assert!(event.success);
+                assert_eq!(event.revision, "rev-7");
+                assert_eq!(event.topics.len(), 2);
+                assert_eq!(event.topics[0].publisher_count, 1);
+                assert_eq!(event.topics[1].type_name, "sunray_msgs/Px4State");
+            }
+            other => panic!("expected TopicList event, got {other:?}"),
+        }
+
+        let mut subscription = sys::yunlink_topic_subscription_event_t {
+            session_id: 51,
+            correlation_id: 54,
+            success: 1,
+            subscribed: 1,
+            max_rate_hz: 10.0,
+            max_payload_bytes: 4096,
+            ..Default::default()
+        };
+        write_c_buf(&mut subscription.topic_name, b"/uav/odom");
+        write_c_buf(&mut subscription.type_name, b"nav_msgs/Odometry");
+        let raw_subscription = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION,
+            data: sys::yunlink_runtime_event_union_t {
+                topic_subscription: subscription,
+            },
+        };
+        match parse_event(raw_subscription).expect("topic subscription event should parse") {
+            Event::TopicSubscription(event) => {
+                assert!(event.subscribed);
+                assert_eq!(event.topic_name, "/uav/odom");
+                assert_eq!(event.max_payload_bytes, 4096);
+            }
+            other => panic!("expected TopicSubscription event, got {other:?}"),
+        }
+
+        let mut sample = sys::yunlink_topic_sample_event_t {
+            session_id: 51,
+            source_id: 7,
+            receive_time_ns: 123,
+            sequence: 9,
+            metadata_included: 1,
+            data_size: (sys::YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY as u32) + 100,
+            ..Default::default()
+        };
+        write_c_buf(&mut sample.topic_name, b"/uav/odom");
+        write_c_buf(&mut sample.type_name, b"nav_msgs/Odometry");
+        sample.data[..4].copy_from_slice(b"odom");
+        let raw_sample = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE,
+            data: sys::yunlink_runtime_event_union_t {
+                topic_sample: sample,
+            },
+        };
+        match parse_event(raw_sample).expect("topic sample event should parse") {
+            Event::TopicSample(event) => {
+                assert_eq!(event.topic_name, "/uav/odom");
+                assert_eq!(event.source_id, 7);
+                assert_eq!(event.data.len(), sys::YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY);
+                assert_eq!(&event.data[..4], b"odom");
+            }
+            other => panic!("expected TopicSample event, got {other:?}"),
         }
     }
 }

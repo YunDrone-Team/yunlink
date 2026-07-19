@@ -8,6 +8,57 @@ use crate::runtime_logs::string_view;
 use crate::types::{CommandHandle, PeerConnection, Session, TargetSelector};
 
 impl Runtime {
+    /// Request the current ROS topic catalogue from the remote runtime.
+    pub async fn request_topic_list(
+        &self,
+        peer: &PeerConnection,
+        session: &Session,
+        target: &TargetSelector,
+    ) -> Result<CommandHandle> {
+        let session = session.to_native();
+        let mut handle = sys::yunlink_command_handle_t::default();
+        ensure(unsafe {
+            sys::yunlink_system_service_request_topic_list(
+                self.raw_ptr(),
+                &peer.raw,
+                &session,
+                &target.raw,
+                &mut handle,
+            )
+        })?;
+        Ok(CommandHandle::from_raw(handle))
+    }
+
+    /// Explicitly subscribe or unsubscribe one bounded ROS topic stream.
+    pub async fn request_topic_subscription(
+        &self,
+        peer: &PeerConnection,
+        session: &Session,
+        target: &TargetSelector,
+        topic_name: &str,
+        subscribe: bool,
+        max_rate_hz: f32,
+        max_payload_bytes: u32,
+    ) -> Result<CommandHandle> {
+        let session = session.to_native();
+        let topic_name = CString::new(topic_name)?;
+        let mut handle = sys::yunlink_command_handle_t::default();
+        ensure(unsafe {
+            sys::yunlink_system_service_request_topic_subscription(
+                self.raw_ptr(),
+                &peer.raw,
+                &session,
+                &target.raw,
+                topic_name.as_ptr(),
+                u8::from(subscribe),
+                max_rate_hz,
+                max_payload_bytes,
+                &mut handle,
+            )
+        })?;
+        Ok(CommandHandle::from_raw(handle))
+    }
+
     pub async fn request_feature_list(
         &self,
         peer: &PeerConnection,

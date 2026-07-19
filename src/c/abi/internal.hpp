@@ -33,6 +33,9 @@ struct yunlink_runtime {
     size_t tok_feature_list = 0;
     size_t tok_feature_get = 0;
     size_t tok_feature_start = 0;
+    size_t tok_topic_list = 0;
+    size_t tok_topic_subscription = 0;
+    size_t tok_topic_sample = 0;
     bool started = false;
 };
 

@@ -4,7 +4,7 @@ use super::Runtime;
 use crate::error::{ensure, Result};
 use crate::types::{
     CommandHandle, GotoCommand, LandCommand, LocalOdom, PeerConnection, ReturnCommand, Session,
-    TakeoffCommand, TargetSelector, VehicleCoreState, VelocitySetpointCommand,
+    TakeoffCommand, TargetSelector, UavControlCommand, VehicleCoreState, VelocitySetpointCommand,
 };
 
 impl Runtime {
@@ -128,6 +128,50 @@ impl Runtime {
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
             sys::yunlink_command_publish_velocity_setpoint(
+                self.raw_ptr(),
+                &peer.raw,
+                &session,
+                &target.raw,
+                &payload,
+                &mut handle,
+            )
+        })?;
+        Ok(Self::command_handle_from_native(handle))
+    }
+
+    /// Publish the complete UAV control payload used by the current Bridge.
+    pub async fn publish_uav_control(
+        &self,
+        peer: &PeerConnection,
+        session: &Session,
+        target: &TargetSelector,
+        command: &UavControlCommand,
+    ) -> Result<CommandHandle> {
+        let session = session.to_native();
+        let payload = sys::yunlink_uav_control_command_t {
+            control_cmd: command.control_cmd,
+            desired_position_x_m: command.desired_position[0],
+            desired_position_y_m: command.desired_position[1],
+            desired_position_z_m: command.desired_position[2],
+            desired_velocity_x_mps: command.desired_velocity[0],
+            desired_velocity_y_mps: command.desired_velocity[1],
+            desired_velocity_z_mps: command.desired_velocity[2],
+            desired_acceleration_x_mps2: command.desired_acceleration[0],
+            desired_acceleration_y_mps2: command.desired_acceleration[1],
+            desired_acceleration_z_mps2: command.desired_acceleration[2],
+            desired_body_xy_position_x_m: command.desired_body_xy_position[0],
+            desired_body_xy_position_y_m: command.desired_body_xy_position[1],
+            desired_body_xy_velocity_x_mps: command.desired_body_xy_velocity[0],
+            desired_body_xy_velocity_y_mps: command.desired_body_xy_velocity[1],
+            fixed_height_m: command.fixed_height_m,
+            yaw_mode: command.yaw_mode,
+            desired_yaw_rad: command.desired_yaw_rad,
+            desired_yaw_rate_radps: command.desired_yaw_rate_radps,
+            controller_type: command.controller_type,
+        };
+        let mut handle = sys::yunlink_command_handle_t::default();
+        ensure(unsafe {
+            sys::yunlink_command_publish_uav_control(
                 self.raw_ptr(),
                 &peer.raw,
                 &session,

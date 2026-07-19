@@ -155,6 +155,26 @@ int main() {
         return 8;
     }
 
+    const uint64_t client_session =
+        manual_client.session_client().open_active_session(manual_peer, "client-auth-sync");
+    if (client_session == 0 || !wait_until([&]() {
+            return server.session_server().describe_session(client_session, &desc) &&
+                   desc.state == yunlink::SessionState::kActive;
+        })) {
+        std::cerr << "authenticated client session did not become active\n";
+        return 9;
+    }
+    yunlink::SessionDescriptor client_desc{};
+    if (!wait_until([&]() {
+            return manual_client.session_server().describe_session(
+                       manual_peer, client_session, &client_desc) &&
+                   client_desc.state == yunlink::SessionState::kActive;
+        }) ||
+        !client_desc.authenticated) {
+        std::cerr << "client Ready acknowledgement did not preserve authentication\n";
+        return 10;
+    }
+
     const uint64_t unauthenticated_session = 9002;
     auto unauthenticated_hello =
         make_session_envelope(source, unauthenticated_session, correlation_id, hello);
@@ -167,19 +187,19 @@ int main() {
     if (manual_client.tcp_clients().send_envelope(manual_peer, unauthenticated_hello) < 0 ||
         manual_client.tcp_clients().send_envelope(manual_peer, unauthenticated_ready_env) < 0) {
         std::cerr << "unauthenticated session handshake send failed\n";
-        return 9;
+        return 11;
     }
     if (!wait_until([&]() {
             return server.session_server().describe_session(unauthenticated_session, &desc) &&
                    desc.state == yunlink::SessionState::kActive;
         })) {
         std::cerr << "unauthenticated session did not reach legacy active state\n";
-        return 10;
+        return 12;
     }
     if (desc.authenticated || server.session_server().has_authenticated_active_session(
                                   manual_peer, unauthenticated_session)) {
         std::cerr << "unauthenticated active session passed privileged-session check\n";
-        return 11;
+        return 13;
     }
 
     manual_client.stop();
