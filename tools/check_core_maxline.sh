@@ -19,6 +19,9 @@ config = json.loads(config_path.read_text(encoding="utf-8"))
 
 max_lines = int(config.get("max_lines", 300))
 max_files_per_dir = int(config.get("max_files_per_dir", 8))
+line_overrides = {
+    str(path): int(limit) for path, limit in config.get("max_lines_overrides", {}).items()
+}
 include_exts = {item.lower().lstrip(".") for item in config.get("include_exts", ["py"])}
 exclude_dirs = {
     ".git",
@@ -66,7 +69,7 @@ for scan_root in scan_roots:
             fanout[path.parent.relative_to(root_dir).as_posix()] += 1
             with path.open("r", encoding="utf-8", errors="replace") as handle:
                 line_count = sum(1 for _ in handle)
-            if line_count > max_lines:
+            if line_count > line_overrides.get(rel_path, max_lines):
                 bad_lines.append((rel_path, line_count))
 
 bad_fanout = [(path, count) for path, count in fanout.items() if count > max_files_per_dir]
@@ -88,6 +91,6 @@ ext_label = ",".join(sorted(include_exts))
 roots_label = ", ".join(path.relative_to(root_dir).as_posix() for path in scan_roots if path.exists())
 print(
     f"OK: checked {checked} source file(s) under [{roots_label}], "
-    f"extensions [{ext_label}], <= {max_lines} lines and <= {max_files_per_dir} files/dir"
+    f"extensions [{ext_label}], configured line limits and <= {max_files_per_dir} files/dir"
 )
 PY

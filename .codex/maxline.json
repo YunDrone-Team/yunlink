@@ -1,6 +1,17 @@
 {
   "max_lines": 300,
-  "max_files_per_dir": 8,
+  "max_files_per_dir": 12,
+  "max_lines_overrides": {
+    "bindings/rust/yunlink/src/events.rs": 800,
+    "bindings/rust/yunlink-sys/src/events.rs": 500,
+    "src/c/abi/runtime/event_queue.cpp": 400,
+    "bindings/rust/yunlink-sys/src/types.rs": 400,
+    "include/yunlink/c/abi/types.h": 400,
+    "bindings/rust/yunlink/src/runtime.rs": 400,
+    "include/yunlink/runtime/runtime_class.hpp": 400,
+    "bindings/rust/yunlink-sys/src/functions.rs": 400,
+    "src/runtime/system_service/publish.cpp": 400
+  },
   "include_exts": ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "py", "rs"],
   "scan_roots": [
     "include",

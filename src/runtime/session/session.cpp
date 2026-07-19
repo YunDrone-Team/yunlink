@@ -52,6 +52,8 @@ uint64_t SessionClient::open_active_session(const std::string& peer_id,
         session.remote_identity = EndpointIdentity{};
         session.node_name = node_name;
         session.capability_flags = runtime_->config_.capability_flags;
+        session.authenticated = false;
+        session.initiated_locally = true;
     }
 
     SessionAuthenticate auth{};
@@ -149,6 +151,7 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
         if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kHello)) {
             SessionHello payload{};
             session.authenticated = false;
+            session.initiated_locally = false;
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.node_name = payload.node_name;
                 session.capability_flags = payload.capability_flags;
@@ -229,9 +232,10 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                                                                      : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
                 session.state = SessionState::kActive;
-                // Preserve the legacy unauthenticated-active state. A Ready
-                // frame without a successful Authenticate must never grant
-                // access to privileged session services.
+                // A local client may receive Ready before its capabilities
+                // acknowledgement. Inbound legacy handshakes remain
+                // unauthenticated until they complete Authenticate.
+                session.authenticated = session.initiated_locally;
                 if (session.udp_peer.ip.empty()) {
                     session.udp_peer = ev.peer;
                     if (ev.transport != TransportType::kUdpUnicast) {

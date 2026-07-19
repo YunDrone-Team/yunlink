@@ -54,6 +54,9 @@ struct SessionDescriptor {
     // Active is a transport lifecycle state. Consumers that authorize privileged
     // operations must also require a completed shared-secret authentication.
     bool authenticated = false;
+    // Distinguish locally initiated handshakes from inbound legacy handshakes
+    // when Ready arrives before the capabilities acknowledgement.
+    bool initiated_locally = false;
     EndpointIdentity remote_identity;
     PeerInfo peer;
     PeerInfo udp_peer;
