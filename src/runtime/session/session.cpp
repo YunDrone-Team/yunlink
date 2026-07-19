@@ -214,6 +214,10 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
             }
             if (session.state == SessionState::kNegotiated) {
                 session.state = SessionState::kActive;
+                // The peer's Ready acknowledgement proves that it accepted
+                // our earlier Authenticate frame. Keep the client-side
+                // descriptor consistent with the server-side session.
+                session.authenticated = true;
                 if (session.udp_peer.ip.empty()) {
                     session.udp_peer = ev.peer;
                     if (ev.transport != TransportType::kUdpUnicast) {
@@ -225,6 +229,10 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                                                                      : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
                 session.state = SessionState::kActive;
+                // Some peers reply with Ready before sending a capabilities
+                // acknowledgement. Ready is still proof that authentication
+                // succeeded because an unauthenticated session cannot reach it.
+                session.authenticated = true;
                 if (session.udp_peer.ip.empty()) {
                     session.udp_peer = ev.peer;
                     if (ev.transport != TransportType::kUdpUnicast) {
