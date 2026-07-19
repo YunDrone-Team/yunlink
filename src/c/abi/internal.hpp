@@ -50,8 +50,8 @@ void push_event(yunlink_runtime_t* runtime, const yunlink_runtime_event_t& event
 void clear_queue(yunlink_runtime_t* runtime);
 void subscribe_runtime_events(yunlink_runtime_t* runtime);
 void unsubscribe_runtime_events(yunlink_runtime_t* runtime);
-    void unsubscribe_configuration_callbacks(yunlink_runtime_t* runtime);
-    void unsubscribe_system_service_callbacks(yunlink_runtime_t* runtime);
+void unsubscribe_configuration_callbacks(yunlink_runtime_t* runtime);
+void unsubscribe_system_service_callbacks(yunlink_runtime_t* runtime);
 
 bool validate_input_runtime(yunlink_runtime_t* runtime);
 bool validate_peer(const yunlink_peer_t* peer);

@@ -47,9 +47,7 @@ yunlink_result_t yunlink_publish_local_odom(yunlink_runtime_t* runtime,
     native.header.stamp_ns = payload->source_stamp_ns;
     native.header.frame_id.assign(
         payload->frame_id,
-        std::find(payload->frame_id,
-                  payload->frame_id + sizeof(payload->frame_id),
-                  '\0'));
+        std::find(payload->frame_id, payload->frame_id + sizeof(payload->frame_id), '\0'));
     native.child_frame_id.assign(
         payload->child_frame_id,
         std::find(payload->child_frame_id,

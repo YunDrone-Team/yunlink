@@ -168,8 +168,8 @@ size_t SystemServiceSubscriber::subscribe_topic_list_responses(TopicListResponse
     return runtime_ ? runtime_->subscribe_topic_list_response_internal(std::move(cb)) : 0;
 }
 
-size_t SystemServiceSubscriber::subscribe_topic_subscription_requests(
-    TopicSubscriptionRequestHandler cb) {
+size_t
+SystemServiceSubscriber::subscribe_topic_subscription_requests(TopicSubscriptionRequestHandler cb) {
     return runtime_ ? runtime_->subscribe_topic_subscription_request_internal(std::move(cb)) : 0;
 }
 

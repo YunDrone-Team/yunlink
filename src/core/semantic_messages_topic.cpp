@@ -139,15 +139,12 @@ ByteBuffer encode_payload(const TopicSubscriptionResponse& payload) {
 }
 
 bool decode_payload(const ByteBuffer& bytes, TopicSubscriptionResponse* payload) {
-    return parse_payload(
-        bytes, payload, [](BufferReader& reader, TopicSubscriptionResponse* out) {
-            return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
-                   reader.read_string(&out->topic_name) &&
-                   reader.read_bool(&out->subscribed) &&
-                   reader.read_string(&out->type_name) &&
-                   reader.read_float(&out->max_rate_hz) &&
-                   reader.read_u32(&out->max_payload_bytes);
-        });
+    return parse_payload(bytes, payload, [](BufferReader& reader, TopicSubscriptionResponse* out) {
+        return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
+               reader.read_string(&out->topic_name) && reader.read_bool(&out->subscribed) &&
+               reader.read_string(&out->type_name) && reader.read_float(&out->max_rate_hz) &&
+               reader.read_u32(&out->max_payload_bytes);
+    });
 }
 
 ByteBuffer encode_payload(const TopicSample& payload) {

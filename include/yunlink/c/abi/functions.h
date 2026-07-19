@@ -152,7 +152,7 @@ YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_read
     void* user_data,
     size_t* out_token);
 YUNLINK_C_API yunlink_result_t yunlink_system_service_unsubscribe(yunlink_runtime_t* runtime,
-                                                                   size_t token);
+                                                                  size_t token);
 
 YUNLINK_C_API yunlink_result_t yunlink_runtime_poll_event(yunlink_runtime_t* runtime,
                                                           yunlink_runtime_event_t* out_event);

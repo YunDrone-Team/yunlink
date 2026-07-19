@@ -252,12 +252,11 @@ SystemServicePublisher::publish_runtime_log_read_response(const EnvelopeEvent& i
                                      ttl_ms);
 }
 
-ErrorCode SystemServicePublisher::publish_topic_list_request(
-    const std::string& peer_id,
-    uint64_t session_id,
-    const TargetSelector& target,
-    const TopicListRequest& payload,
-    SystemServiceHandle* out_handle) {
+ErrorCode SystemServicePublisher::publish_topic_list_request(const std::string& peer_id,
+                                                             uint64_t session_id,
+                                                             const TargetSelector& target,
+                                                             const TopicListRequest& payload,
+                                                             SystemServiceHandle* out_handle) {
     return runtime_ == nullptr ? ErrorCode::kInvalidArgument
                                : runtime_->publish_system_service_request_payload(
                                      peer_id,
@@ -280,12 +279,12 @@ ErrorCode SystemServicePublisher::publish_topic_list_response(const EnvelopeEven
                                      ttl_ms);
 }
 
-ErrorCode SystemServicePublisher::publish_topic_subscription_request(
-    const std::string& peer_id,
-    uint64_t session_id,
-    const TargetSelector& target,
-    const TopicSubscriptionRequest& payload,
-    SystemServiceHandle* out_handle) {
+ErrorCode
+SystemServicePublisher::publish_topic_subscription_request(const std::string& peer_id,
+                                                           uint64_t session_id,
+                                                           const TargetSelector& target,
+                                                           const TopicSubscriptionRequest& payload,
+                                                           SystemServiceHandle* out_handle) {
     return runtime_ == nullptr ? ErrorCode::kInvalidArgument
                                : runtime_->publish_system_service_request_payload(
                                      peer_id,

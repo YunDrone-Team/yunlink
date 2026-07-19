@@ -124,10 +124,7 @@ void Runtime::handle_system_service_envelope(const EnvelopeEvent& ev) {
         return;
     case SystemServiceType::kTopicSubscriptionRequest:
         if (!runtime_fanout_inbound_request<TopicSubscriptionRequest>(
-                impl_->mu,
-                ev,
-                ev.envelope.payload,
-                impl_->topic_subscription_request_handlers)) {
+                impl_->mu, ev, ev.envelope.payload, impl_->topic_subscription_request_handlers)) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;

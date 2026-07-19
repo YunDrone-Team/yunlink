@@ -2,12 +2,8 @@
 #include <iostream>
 #include <thread>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
 #include "yunlink/discovery/endpoint_discovery.hpp"
+#include "../bindings/test_socket_utils.hpp"
 
 int main() {
     const std::string secret = "discovery-test-secret";
@@ -36,8 +32,7 @@ int main() {
     advertisement.node_name = "bridge";
     advertisement.tcp_listen_port = 9696;
     advertisement.udp_bind_port = 9898;
-    advertisement.capabilities = {
-        "state", "commands", "config-resource-v1", "topic-stream-v1"};
+    advertisement.capabilities = {"state", "commands", "config-resource-v1", "topic-stream-v1"};
     advertisement.sequence = 42;
     advertisement.discovery_period_ms = 15000;
 
@@ -73,23 +68,23 @@ int main() {
 
     auto invalid_advertisement = advertisement;
     invalid_advertisement.agent_type = std::string(16U, 'u');
-    if (!yunlink::encode_endpoint_discovery_reply(
-             query.nonce, invalid_advertisement, secret).empty()) {
+    if (!yunlink::encode_endpoint_discovery_reply(query.nonce, invalid_advertisement, secret)
+             .empty()) {
         std::cerr << "active discovery accepted an oversized agent type\n";
         return 13;
     }
     invalid_advertisement = advertisement;
     invalid_advertisement.role = std::string(16U, 'r');
-    if (!yunlink::encode_endpoint_discovery_reply(
-             query.nonce, invalid_advertisement, secret).empty()) {
+    if (!yunlink::encode_endpoint_discovery_reply(query.nonce, invalid_advertisement, secret)
+             .empty()) {
         std::cerr << "active discovery accepted an oversized endpoint role\n";
         return 15;
     }
     invalid_advertisement = advertisement;
     invalid_advertisement.node_name = std::string(63U, 'n');
     invalid_advertisement.display_name_prefix = std::string(32U, 'p');
-    if (!yunlink::encode_endpoint_discovery_reply(
-             query.nonce, invalid_advertisement, secret).empty()) {
+    if (!yunlink::encode_endpoint_discovery_reply(query.nonce, invalid_advertisement, secret)
+             .empty()) {
         std::cerr << "active discovery emitted a reply beyond the packet budget\n";
         return 14;
     }
@@ -102,27 +97,12 @@ int main() {
         return 7;
     }
 
-    const int port_probe = ::socket(AF_INET, SOCK_DGRAM, 0);
-    sockaddr_in probe_address{};
-    probe_address.sin_family = AF_INET;
-    probe_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    probe_address.sin_port = 0;
-    socklen_t probe_address_size = sizeof(probe_address);
-    if (port_probe < 0 ||
-        ::bind(port_probe,
-               reinterpret_cast<const sockaddr*>(&probe_address),
-               sizeof(probe_address)) != 0 ||
-        ::getsockname(port_probe,
-                      reinterpret_cast<sockaddr*>(&probe_address),
-                      &probe_address_size) != 0) {
-        if (port_probe >= 0) {
-            ::close(port_probe);
-        }
+    const uint16_t discovery_port =
+        yunlink::test_socket::find_free_port(yunlink::test_socket::SocketProtocol::kUdp);
+    if (discovery_port == 0) {
         std::cerr << "failed to reserve same-host discovery test port\n";
         return 8;
     }
-    const uint16_t discovery_port = ntohs(probe_address.sin_port);
-    ::close(port_probe);
 
     yunlink::EndpointDiscoveryConfig same_host_config{};
     same_host_config.discovery_port = discovery_port;

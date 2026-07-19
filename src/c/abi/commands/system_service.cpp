@@ -21,12 +21,9 @@ yunlink_system_service_request_feature_list(yunlink_runtime_t* runtime,
     }
     yunlink::SystemServiceHandle handle{};
     yunlink::FeatureListRequest request{};
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_feature_list_request(peer->id,
-                                                                    session->session_id,
-                                                                    to_target_selector(*target),
-                                                                    request,
-                                                                    &handle));
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_feature_list_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }
@@ -39,13 +36,12 @@ yunlink_system_service_request_feature_list(yunlink_runtime_t* runtime,
     return YUNLINK_RESULT_OK;
 }
 
-yunlink_result_t
-yunlink_system_service_request_feature_get(yunlink_runtime_t* runtime,
-                                           const yunlink_peer_t* peer,
-                                           const yunlink_session_t* session,
-                                           const yunlink_target_selector_t* target,
-                                           const char* feature_name,
-                                           yunlink_command_handle_t* out_handle) {
+yunlink_result_t yunlink_system_service_request_feature_get(yunlink_runtime_t* runtime,
+                                                            const yunlink_peer_t* peer,
+                                                            const yunlink_session_t* session,
+                                                            const yunlink_target_selector_t* target,
+                                                            const char* feature_name,
+                                                            yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target) || feature_name == nullptr || feature_name[0] == '\0') {
         return YUNLINK_RESULT_INVALID_ARGUMENT;
@@ -53,12 +49,9 @@ yunlink_system_service_request_feature_get(yunlink_runtime_t* runtime,
     yunlink::SystemServiceHandle handle{};
     yunlink::FeatureGetRequest request{};
     request.feature_name = feature_name;
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_feature_get_request(peer->id,
-                                                                   session->session_id,
-                                                                   to_target_selector(*target),
-                                                                   request,
-                                                                   &handle));
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_feature_get_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }
@@ -101,12 +94,9 @@ yunlink_system_service_request_feature_start(yunlink_runtime_t* runtime,
     }
 
     yunlink::SystemServiceHandle handle{};
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_feature_start_request(peer->id,
-                                                                     session->session_id,
-                                                                     to_target_selector(*target),
-                                                                     request,
-                                                                     &handle));
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_feature_start_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }
@@ -119,23 +109,20 @@ yunlink_system_service_request_feature_start(yunlink_runtime_t* runtime,
     return YUNLINK_RESULT_OK;
 }
 
-yunlink_result_t yunlink_system_service_request_runtime_log_list(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    yunlink_command_handle_t* out_handle) {
+yunlink_result_t
+yunlink_system_service_request_runtime_log_list(yunlink_runtime_t* runtime,
+                                                const yunlink_peer_t* peer,
+                                                const yunlink_session_t* session,
+                                                const yunlink_target_selector_t* target,
+                                                yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target)) {
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     yunlink::SystemServiceHandle handle{};
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_runtime_log_list_request(peer->id,
-                                                                        session->session_id,
-                                                                        to_target_selector(*target),
-                                                                        {},
-                                                                        &handle));
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_runtime_log_list_request(
+            peer->id, session->session_id, to_target_selector(*target), {}, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }
@@ -148,15 +135,15 @@ yunlink_result_t yunlink_system_service_request_runtime_log_list(
     return YUNLINK_RESULT_OK;
 }
 
-yunlink_result_t yunlink_system_service_request_runtime_log_read(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    yunlink_string_view_t runtime_id,
-    uint64_t cursor,
-    uint32_t max_bytes,
-    yunlink_command_handle_t* out_handle) {
+yunlink_result_t
+yunlink_system_service_request_runtime_log_read(yunlink_runtime_t* runtime,
+                                                const yunlink_peer_t* peer,
+                                                const yunlink_session_t* session,
+                                                const yunlink_target_selector_t* target,
+                                                yunlink_string_view_t runtime_id,
+                                                uint64_t cursor,
+                                                uint32_t max_bytes,
+                                                yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target) || runtime_id.data == nullptr || runtime_id.size == 0 ||
         max_bytes == 0) {
@@ -167,12 +154,9 @@ yunlink_result_t yunlink_system_service_request_runtime_log_read(
     request.runtime_id.assign(runtime_id.data, runtime_id.size);
     request.cursor = cursor;
     request.max_bytes = max_bytes;
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_runtime_log_read_request(peer->id,
-                                                                        session->session_id,
-                                                                        to_target_selector(*target),
-                                                                        request,
-                                                                        &handle));
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_runtime_log_read_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }

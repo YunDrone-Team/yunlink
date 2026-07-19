@@ -85,8 +85,7 @@ class CommandSubscriber {
         std::function<void(const InboundCommandView<TrajectoryChunkCommand>&)>;
     using FormationTaskHandler =
         std::function<void(const InboundCommandView<FormationTaskCommand>&)>;
-    using UavControlHandler =
-        std::function<void(const InboundCommandView<UavControlCommand>&)>;
+    using UavControlHandler = std::function<void(const InboundCommandView<UavControlCommand>&)>;
 
     explicit CommandSubscriber(Runtime* runtime = nullptr);
 

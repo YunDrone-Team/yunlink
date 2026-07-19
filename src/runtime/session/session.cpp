@@ -229,10 +229,9 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                                                                      : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
                 session.state = SessionState::kActive;
-                // Some peers reply with Ready before sending a capabilities
-                // acknowledgement. Ready is still proof that authentication
-                // succeeded because an unauthenticated session cannot reach it.
-                session.authenticated = true;
+                // Preserve the legacy unauthenticated-active state. A Ready
+                // frame without a successful Authenticate must never grant
+                // access to privileged session services.
                 if (session.udp_peer.ip.empty()) {
                     session.udp_peer = ev.peer;
                     if (ev.transport != TransportType::kUdpUnicast) {

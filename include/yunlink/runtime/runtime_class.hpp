@@ -274,10 +274,10 @@ class Runtime {
         SystemServiceSubscriber::RuntimeLogReadRequestHandler cb);
     size_t subscribe_runtime_log_read_response_internal(
         SystemServiceSubscriber::RuntimeLogReadResponseHandler cb);
-    size_t subscribe_topic_list_request_internal(
-        SystemServiceSubscriber::TopicListRequestHandler cb);
-    size_t subscribe_topic_list_response_internal(
-        SystemServiceSubscriber::TopicListResponseHandler cb);
+    size_t
+    subscribe_topic_list_request_internal(SystemServiceSubscriber::TopicListRequestHandler cb);
+    size_t
+    subscribe_topic_list_response_internal(SystemServiceSubscriber::TopicListResponseHandler cb);
     size_t subscribe_topic_subscription_request_internal(
         SystemServiceSubscriber::TopicSubscriptionRequestHandler cb);
     size_t subscribe_topic_subscription_response_internal(

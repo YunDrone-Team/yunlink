@@ -81,12 +81,11 @@ class SystemServicePublisher {
     ErrorCode publish_topic_list_response(const EnvelopeEvent& inbound,
                                           const TopicListResponse& payload,
                                           uint32_t ttl_ms = 3000);
-    ErrorCode publish_topic_subscription_request(
-        const std::string& peer_id,
-        uint64_t session_id,
-        const TargetSelector& target,
-        const TopicSubscriptionRequest& payload,
-        SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_topic_subscription_request(const std::string& peer_id,
+                                                 uint64_t session_id,
+                                                 const TargetSelector& target,
+                                                 const TopicSubscriptionRequest& payload,
+                                                 SystemServiceHandle* out_handle = nullptr);
     ErrorCode publish_topic_subscription_response(const EnvelopeEvent& inbound,
                                                   const TopicSubscriptionResponse& payload,
                                                   uint32_t ttl_ms = 3000);
@@ -123,8 +122,7 @@ class SystemServiceSubscriber {
         std::function<void(const TypedMessage<RuntimeLogReadResponse>&)>;
     using TopicListRequestHandler =
         std::function<void(const InboundSystemServiceRequestView<TopicListRequest>&)>;
-    using TopicListResponseHandler =
-        std::function<void(const TypedMessage<TopicListResponse>&)>;
+    using TopicListResponseHandler = std::function<void(const TypedMessage<TopicListResponse>&)>;
     using TopicSubscriptionRequestHandler =
         std::function<void(const InboundSystemServiceRequestView<TopicSubscriptionRequest>&)>;
     using TopicSubscriptionResponseHandler =

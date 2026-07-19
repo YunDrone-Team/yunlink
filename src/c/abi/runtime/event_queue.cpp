@@ -36,8 +36,7 @@ std::string join_lines(const std::vector<std::string>& values) {
 }
 
 float yaw_from_quaternion(const yunlink::Quaternionf& orientation) {
-    const float sin_yaw =
-        2.0F * (orientation.w * orientation.z + orientation.x * orientation.y);
+    const float sin_yaw = 2.0F * (orientation.w * orientation.z + orientation.x * orientation.y);
     const float cos_yaw =
         1.0F - 2.0F * (orientation.y * orientation.y + orientation.z * orientation.z);
     return std::atan2(sin_yaw, cos_yaw);
@@ -140,8 +139,7 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             out.data.px4_state.target_y_m = msg.payload.pos_setpoint_m.y;
             out.data.px4_state.target_z_m = msg.payload.pos_setpoint_m.z;
             out.data.px4_state.target_yaw_rad = msg.payload.yaw_setpoint_rad;
-            out.data.px4_state.target_valid =
-                msg.payload.setpoint_coordinate_frame != 0 ? 1 : 0;
+            out.data.px4_state.target_valid = msg.payload.setpoint_coordinate_frame != 0 ? 1 : 0;
             push_event(runtime, out);
         });
 
@@ -152,8 +150,7 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             out.data.local_odom.session_id = msg.envelope.session_id;
             out.data.local_odom.message_id = msg.envelope.message_id;
             out.data.local_odom.correlation_id = msg.envelope.correlation_id;
-            out.data.local_odom.source_type =
-                static_cast<uint8_t>(msg.envelope.source.agent_type);
+            out.data.local_odom.source_type = static_cast<uint8_t>(msg.envelope.source.agent_type);
             out.data.local_odom.source_id = msg.envelope.source.agent_id;
             out.data.local_odom.source_role = static_cast<uint8_t>(msg.envelope.source.role);
             out.data.local_odom.source_stamp_ns = msg.payload.header.stamp_ns;
@@ -200,20 +197,19 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
             push_event(runtime, out);
         });
 
-    runtime->tok_authority_status =
-        runtime->runtime.event_subscriber().subscribe_authority_status(
-            [runtime](const yunlink::TypedMessage<yunlink::AuthorityStatus>& msg) {
-                yunlink_runtime_event_t out{};
-                out.type = YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS;
-                out.data.authority_status.state = static_cast<uint8_t>(msg.payload.state);
-                out.data.authority_status.session_id = msg.payload.session_id;
-                out.data.authority_status.lease_ttl_ms = msg.payload.lease_ttl_ms;
-                out.data.authority_status.reason_code = msg.payload.reason_code;
-                safe_copy(out.data.authority_status.detail,
-                          sizeof(out.data.authority_status.detail),
-                          msg.payload.detail);
-                push_event(runtime, out);
-            });
+    runtime->tok_authority_status = runtime->runtime.event_subscriber().subscribe_authority_status(
+        [runtime](const yunlink::TypedMessage<yunlink::AuthorityStatus>& msg) {
+            yunlink_runtime_event_t out{};
+            out.type = YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS;
+            out.data.authority_status.state = static_cast<uint8_t>(msg.payload.state);
+            out.data.authority_status.session_id = msg.payload.session_id;
+            out.data.authority_status.lease_ttl_ms = msg.payload.lease_ttl_ms;
+            out.data.authority_status.reason_code = msg.payload.reason_code;
+            safe_copy(out.data.authority_status.detail,
+                      sizeof(out.data.authority_status.detail),
+                      msg.payload.detail);
+            push_event(runtime, out);
+        });
 
     runtime->tok_vehicle_event = runtime->runtime.event_subscriber().subscribe_vehicle_event(
         [runtime](const yunlink::TypedMessage<yunlink::VehicleEvent>& msg) {
@@ -279,7 +275,8 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
                 safe_copy(out.data.feature_get.message,
                           sizeof(out.data.feature_get.message),
                           msg.payload.message);
-                safe_copy(out.data.feature_get.name, sizeof(out.data.feature_get.name), msg.payload.name);
+                safe_copy(
+                    out.data.feature_get.name, sizeof(out.data.feature_get.name), msg.payload.name);
                 safe_copy(out.data.feature_get.title,
                           sizeof(out.data.feature_get.title),
                           msg.payload.title);

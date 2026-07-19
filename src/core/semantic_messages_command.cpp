@@ -167,8 +167,7 @@ ByteBuffer encode_payload(const UavControlCommand& payload) {
 
 bool decode_payload(const ByteBuffer& bytes, UavControlCommand* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, UavControlCommand* out) {
-        return reader.read_u8(&out->control_cmd) &&
-               reader.read_float(&out->desired_position_m.x) &&
+        return reader.read_u8(&out->control_cmd) && reader.read_float(&out->desired_position_m.x) &&
                reader.read_float(&out->desired_position_m.y) &&
                reader.read_float(&out->desired_position_m.z) &&
                reader.read_float(&out->desired_velocity_mps.x) &&

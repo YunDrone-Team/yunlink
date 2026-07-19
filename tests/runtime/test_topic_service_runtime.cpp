@@ -65,15 +65,14 @@ int main() {
     server_config.udp_bind_port = ports.server_udp;
     server_config.udp_target_port = ports.server_udp;
     server_config.tcp_listen_port = ports.server_tcp;
-    server_config.self_identity =
-        {yunlink::AgentType::kUav, 7, yunlink::EndpointRole::kVehicle};
+    server_config.self_identity = {yunlink::AgentType::kUav, 7, yunlink::EndpointRole::kVehicle};
     server_config.shared_secret = "topic-runtime-secret";
     yunlink::RuntimeConfig client_config{};
     client_config.udp_bind_port = ports.client_udp;
     client_config.udp_target_port = ports.client_udp;
     client_config.tcp_listen_port = ports.client_tcp;
-    client_config.self_identity =
-        {yunlink::AgentType::kGroundStation, 42, yunlink::EndpointRole::kController};
+    client_config.self_identity = {
+        yunlink::AgentType::kGroundStation, 42, yunlink::EndpointRole::kController};
     client_config.shared_secret = server_config.shared_secret;
 
     if (server.start(server_config) != yunlink::ErrorCode::kOk ||
@@ -115,15 +114,14 @@ int main() {
                 response.success = true;
                 response.message = "ok";
                 response.revision = "revision-1";
-                response.topics.push_back(
-                    {"/uav7/sunray/px4_state", "sunray_msgs/Px4State", 1});
+                response.topics.push_back({"/uav7/sunray/px4_state", "sunray_msgs/Px4State", 1});
                 (void)server.system_service_publisher().publish_topic_list_response(view.inbound,
-                                                                                   response);
+                                                                                    response);
             });
     const size_t subscription_request_token =
         server.system_service_subscriber().subscribe_topic_subscription_requests(
-            [&](const yunlink::InboundSystemServiceRequestView<
-                yunlink::TopicSubscriptionRequest>& view) {
+            [&](const yunlink::InboundSystemServiceRequestView<yunlink::TopicSubscriptionRequest>&
+                    view) {
                 saw_subscription_request.store(true);
                 yunlink::TopicSubscriptionResponse response{};
                 response.success = true;
@@ -147,12 +145,9 @@ int main() {
                 sample.metadata_included = true;
                 sample.data = {7};
                 const auto target = yunlink::TargetSelector::for_entity(
-                    view.inbound.envelope.source.agent_type,
-                    view.inbound.envelope.source.agent_id);
-                (void)server.publish_topic_sample(view.inbound.peer.id,
-                                                  target,
-                                                  sample,
-                                                  view.inbound.envelope.session_id);
+                    view.inbound.envelope.source.agent_type, view.inbound.envelope.source.agent_id);
+                (void)server.publish_topic_sample(
+                    view.inbound.peer.id, target, sample, view.inbound.envelope.session_id);
             });
     const size_t list_response_token =
         client.system_service_subscriber().subscribe_topic_list_responses(
@@ -181,8 +176,7 @@ int main() {
             has_uav_control = true;
         });
 
-    const auto target =
-        yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 7);
+    const auto target = yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 7);
     yunlink::SystemServiceHandle list_handle{};
     if (client.system_service_publisher().publish_topic_list_request(
             peer_id, session_id, target, {}, &list_handle) != yunlink::ErrorCode::kOk) {
@@ -211,11 +205,9 @@ int main() {
         return 7;
     }
 
-    if (client.request_authority(peer_id,
-                                 session_id,
-                                 target,
-                                 yunlink::ControlSource::kGroundStation,
-                                 3000) != yunlink::ErrorCode::kOk) {
+    if (client.request_authority(
+            peer_id, session_id, target, yunlink::ControlSource::kGroundStation, 3000) !=
+        yunlink::ErrorCode::kOk) {
         std::cerr << "authority request failed\n";
         return 8;
     }
@@ -230,8 +222,8 @@ int main() {
     command.yaw_mode = 1;
     command.desired_yaw_rad = 0.5F;
     command.controller_type = 2;
-    if (client.command_publisher().publish_uav_control(
-            peer_id, session_id, target, command) != yunlink::ErrorCode::kOk ||
+    if (client.command_publisher().publish_uav_control(peer_id, session_id, target, command) !=
+            yunlink::ErrorCode::kOk ||
         !wait_until([&]() {
             std::lock_guard<std::mutex> lock(mutex);
             return has_uav_control;
