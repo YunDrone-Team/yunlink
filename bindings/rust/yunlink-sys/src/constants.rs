@@ -118,6 +118,8 @@ pub const YUNLINK_COMMAND_KIND_VELOCITY_SETPOINT: u16 = 5;
 pub const YUNLINK_COMMAND_KIND_TRAJECTORY_CHUNK: u16 = 6;
 /// Formation task command kind reserved for future monitor coverage.
 pub const YUNLINK_COMMAND_KIND_FORMATION_TASK: u16 = 7;
+/// Unified UAV control command kind.
+pub const YUNLINK_COMMAND_KIND_UAV_CONTROL: u16 = 8;
 
 /// Session was discovered but has not started a handshake.
 pub const YUNLINK_SESSION_STATE_DISCOVERED: u8 = 1;
@@ -137,6 +139,18 @@ pub const YUNLINK_SESSION_STATE_CLOSED: u8 = 7;
 pub const YUNLINK_SESSION_STATE_LOST: u8 = 8;
 /// Session handle is invalid.
 pub const YUNLINK_SESSION_STATE_INVALID: u8 = 9;
+
+pub const YUNLINK_MANAGED_ENTITY_UNKNOWN: u8 = 0;
+pub const YUNLINK_MANAGED_ENTITY_ONLINE: u8 = 1;
+pub const YUNLINK_MANAGED_ENTITY_DEGRADED: u8 = 2;
+pub const YUNLINK_MANAGED_ENTITY_OFFLINE: u8 = 3;
+
+pub const YUNLINK_CAPABILITY_EXTERNAL_EXECUTOR: u32 = 1 << 0;
+pub const YUNLINK_CAPABILITY_BULK_CHANNEL: u32 = 1 << 1;
+pub const YUNLINK_CAPABILITY_PLANNING_BRIDGE: u32 = 1 << 2;
+pub const YUNLINK_CAPABILITY_SWARM_GROUP: u32 = 1 << 3;
+pub const YUNLINK_CAPABILITY_SECURITY_TAGS: u32 = 1 << 4;
+pub const YUNLINK_CAPABILITY_MANAGED_ENTITIES: u32 = 1 << 5;
 
 /// Polling produced no runtime event.
 pub const YUNLINK_RUNTIME_EVENT_NONE: u8 = 0;
@@ -189,3 +203,14 @@ pub const YUNLINK_RUNTIME_EVENT_HOST_SYSTEM: u8 = 10;
 pub const YUNLINK_RUNTIME_EVENT_FEATURE_START: u8 = 11;
 /// Local odometry pose and twist snapshot.
 pub const YUNLINK_RUNTIME_EVENT_LOCAL_ODOM: u8 = 12;
+/// Topic list response event.
+pub const YUNLINK_RUNTIME_EVENT_TOPIC_LIST: u8 = 13;
+/// Topic subscription response event.
+pub const YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION: u8 = 14;
+/// Explicitly subscribed topic sample event.
+pub const YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE: u8 = 15;
+
+/// Maximum encoded topic catalogue bytes carried by the C ABI event.
+pub const YUNLINK_TOPIC_LIST_BUFFER_CAPACITY: usize = 16_384;
+/// Maximum topic sample bytes copied into one C ABI event.
+pub const YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY: usize = 65_536;

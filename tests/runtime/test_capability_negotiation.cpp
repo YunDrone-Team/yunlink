@@ -37,6 +37,7 @@ int main() {
     server_cfg.self_identity.role = yunlink::EndpointRole::kVehicle;
     server_cfg.shared_secret = "capability-secret";
     server_cfg.capability_flags = 0x4;
+    server_cfg.required_peer_capability_flags = 0x4;
 
     yunlink::RuntimeConfig client_cfg;
     client_cfg.udp_bind_port = 12511;
@@ -82,5 +83,51 @@ int main() {
 
     client.stop();
     server.stop();
+
+    yunlink::Runtime compatible_server;
+    yunlink::Runtime compatible_client;
+    server_cfg.udp_bind_port = 12512;
+    server_cfg.udp_target_port = 12512;
+    server_cfg.tcp_listen_port = 12612;
+    server_cfg.required_peer_capability_flags = 0;
+    client_cfg.udp_bind_port = 12513;
+    client_cfg.udp_target_port = 12513;
+    client_cfg.tcp_listen_port = 12613;
+    client_cfg.capability_flags = 0x2;
+    client_cfg.required_peer_capability_flags = 0x4;
+
+    if (compatible_server.start(server_cfg) != yunlink::ErrorCode::kOk ||
+        compatible_client.start(client_cfg) != yunlink::ErrorCode::kOk) {
+        std::cerr << "compatible runtime start failed\n";
+        return 6;
+    }
+    if (compatible_client.tcp_clients().connect_peer(
+            "127.0.0.1", server_cfg.tcp_listen_port, &peer_id) != yunlink::ErrorCode::kOk) {
+        std::cerr << "compatible connect failed\n";
+        return 7;
+    }
+    const uint64_t compatible_session_id =
+        compatible_client.session_client().open_active_session(peer_id, "capability-exchange");
+    yunlink::SessionDescriptor client_desc{};
+    yunlink::SessionDescriptor server_desc{};
+    if (!wait_until([&]() {
+            return compatible_client.session_server().describe_session(
+                       compatible_session_id, &client_desc) &&
+                   compatible_server.session_server().describe_session(
+                       compatible_session_id, &server_desc) &&
+                   client_desc.state == yunlink::SessionState::kActive &&
+                   server_desc.state == yunlink::SessionState::kActive;
+        })) {
+        std::cerr << "compatible session did not become active\n";
+        return 8;
+    }
+    if (client_desc.capability_flags != server_cfg.capability_flags ||
+        server_desc.capability_flags != client_cfg.capability_flags) {
+        std::cerr << "session did not retain the peer capability flags\n";
+        return 9;
+    }
+
+    compatible_client.stop();
+    compatible_server.stop();
     return 0;
 }

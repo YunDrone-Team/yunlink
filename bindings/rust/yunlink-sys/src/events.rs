@@ -72,6 +72,12 @@ pub struct yunlink_command_result_event_t {
     pub message_id: u64,
     /// Correlation id copied from the original command handle.
     pub correlation_id: u64,
+    /// Source endpoint agent type.
+    pub source_type: u8,
+    /// Source endpoint id.
+    pub source_id: u32,
+    /// Source endpoint role.
+    pub source_role: u8,
     /// One of the `YUNLINK_COMMAND_KIND_*` constants.
     pub command_kind: u16,
     /// One of the `YUNLINK_COMMAND_PHASE_*` constants.
@@ -90,6 +96,9 @@ impl Default for yunlink_command_result_event_t {
             session_id: 0,
             message_id: 0,
             correlation_id: 0,
+            source_type: 0,
+            source_id: 0,
+            source_role: 0,
             command_kind: 0,
             phase: 0,
             result_code: 0,
@@ -236,6 +245,9 @@ pub struct yunlink_authority_status_event_t {
     pub state: u8,
     /// Session whose request, renewal, release, or revocation was reported.
     pub session_id: u64,
+    pub source_type: u8,
+    pub source_id: u32,
+    pub source_role: u8,
     /// Granted lease lifetime in milliseconds.
     pub lease_ttl_ms: u32,
     /// Stable authority reason code.
@@ -249,6 +261,9 @@ impl Default for yunlink_authority_status_event_t {
         Self {
             state: 0,
             session_id: 0,
+            source_type: 0,
+            source_id: 0,
+            source_role: 0,
             lease_ttl_ms: 0,
             reason_code: 0,
             detail: [0; 256],
@@ -413,6 +428,110 @@ impl Default for yunlink_feature_start_event_t {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_topic_list_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: u8,
+    pub message: [c_char; 256],
+    pub revision: [c_char; 128],
+    pub topics: [c_char; 16384],
+}
+
+impl Default for yunlink_topic_list_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            success: 0,
+            message: [0; 256],
+            revision: [0; 128],
+            topics: [0; 16384],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_topic_subscription_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: u8,
+    pub subscribed: u8,
+    pub max_rate_hz: f32,
+    pub max_payload_bytes: u32,
+    pub message: [c_char; 256],
+    pub topic_name: [c_char; 256],
+    pub type_name: [c_char; 256],
+}
+
+impl Default for yunlink_topic_subscription_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            success: 0,
+            subscribed: 0,
+            max_rate_hz: 0.0,
+            max_payload_bytes: 0,
+            message: [0; 256],
+            topic_name: [0; 256],
+            type_name: [0; 256],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_topic_sample_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: u8,
+    pub source_id: u32,
+    pub source_role: u8,
+    pub receive_time_ns: u64,
+    pub sequence: u64,
+    pub metadata_included: u8,
+    pub data_truncated: u8,
+    pub data_size: u32,
+    pub topic_name: [c_char; 256],
+    pub type_name: [c_char; 256],
+    pub type_hash: [c_char; 128],
+    pub encoding: [c_char; 32],
+    pub message_definition: [c_char; 4096],
+    pub data: [u8; 65536],
+}
+
+impl Default for yunlink_topic_sample_event_t {
+    fn default() -> Self {
+        Self {
+            session_id: 0,
+            message_id: 0,
+            correlation_id: 0,
+            source_type: 0,
+            source_id: 0,
+            source_role: 0,
+            receive_time_ns: 0,
+            sequence: 0,
+            metadata_included: 0,
+            data_truncated: 0,
+            data_size: 0,
+            topic_name: [0; 256],
+            type_name: [0; 256],
+            type_hash: [0; 128],
+            encoding: [0; 32],
+            message_definition: [0; 4096],
+            data: [0; 65536],
+        }
+    }
+}
+
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub union yunlink_runtime_event_union_t {
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_LINK`.
@@ -436,6 +555,9 @@ pub union yunlink_runtime_event_union_t {
     pub feature_start: yunlink_feature_start_event_t,
     /// Active when the event type is `YUNLINK_RUNTIME_EVENT_HOST_SYSTEM`.
     pub host_system: yunlink_host_system_event_t,
+    pub topic_list: yunlink_topic_list_event_t,
+    pub topic_subscription: yunlink_topic_subscription_event_t,
+    pub topic_sample: yunlink_topic_sample_event_t,
 }
 
 impl Default for yunlink_runtime_event_union_t {

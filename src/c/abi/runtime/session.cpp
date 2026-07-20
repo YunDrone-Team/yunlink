@@ -28,6 +28,18 @@ yunlink_result_t yunlink_peer_connect(yunlink_runtime_t* runtime,
     return YUNLINK_RESULT_OK;
 }
 
+yunlink_result_t yunlink_peer_disconnect(yunlink_runtime_t* runtime,
+                                         const yunlink_peer_t* peer) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer)) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    if (!runtime->started) {
+        return YUNLINK_RESULT_RUNTIME_STOPPED;
+    }
+    runtime->runtime.tcp_clients().close_peer(peer->id);
+    return YUNLINK_RESULT_OK;
+}
+
 yunlink_result_t yunlink_session_open(yunlink_runtime_t* runtime,
                                       const yunlink_peer_t* peer,
                                       const char* node_name,

@@ -51,7 +51,9 @@ uint64_t SessionClient::open_active_session(const std::string& peer_id,
         session.peer.id = peer_id;
         session.remote_identity = EndpointIdentity{};
         session.node_name = node_name;
-        session.capability_flags = runtime_->config_.capability_flags;
+        // Until the peer explicitly reports its capabilities, treat it as a
+        // legacy endpoint with no advertised optional capabilities.
+        session.capability_flags = 0;
         session.authenticated = false;
         session.initiated_locally = true;
     }
@@ -138,6 +140,7 @@ ErrorCode Runtime::send_session_payload(const std::string& peer_id,
 }
 
 void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
+    bool send_capabilities_ack = false;
     bool send_ready_ack = false;
     uint64_t ack_correlation_id = 0;
     {
@@ -146,19 +149,33 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
             impl_->sessions[runtime_session_key(ev.peer.id, ev.envelope.session_id)];
         session.session_id = ev.envelope.session_id;
         session.peer = ev.peer;
-        session.remote_identity = ev.envelope.source;
+
+        const bool has_remote_identity =
+            session.remote_identity.agent_type != AgentType::kUnknown ||
+            session.remote_identity.agent_id != 0;
+        if (has_remote_identity &&
+            !runtime_same_entity(session.remote_identity, ev.envelope.source)) {
+            session.authenticated = false;
+            session.state = SessionState::kInvalid;
+            return;
+        }
+        if (!has_remote_identity) {
+            session.remote_identity = ev.envelope.source;
+        }
 
         if (ev.envelope.message_type == static_cast<uint16_t>(SessionMessageType::kHello)) {
             SessionHello payload{};
             session.authenticated = false;
+            session.remote_managed_identities.clear();
             session.initiated_locally = false;
             if (decode_typed_payload(ev.envelope.payload, &payload)) {
                 session.node_name = payload.node_name;
                 session.capability_flags = payload.capability_flags;
                 session.udp_peer = ev.peer;
                 session.udp_peer.port = payload.udp_bind_port;
-                session.state = satisfies_required_capabilities(payload.capability_flags,
-                                                                config_.capability_flags)
+                session.state = satisfies_required_capabilities(
+                                    payload.capability_flags,
+                                    config_.required_peer_capability_flags)
                                     ? SessionState::kHandshaking
                                     : SessionState::kInvalid;
             } else {
@@ -192,14 +209,15 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                 return;
             }
             if (!satisfies_required_capabilities(payload.capability_flags,
-                                                 config_.capability_flags)) {
+                                                 config_.required_peer_capability_flags)) {
                 session.state = SessionState::kInvalid;
                 session.capability_flags = payload.capability_flags;
                 session.udp_peer = ev.peer;
                 session.udp_peer.port = payload.udp_bind_port;
                 return;
             }
-            if (session.state == SessionState::kAuthenticated) {
+            if (session.state == SessionState::kAuthenticated ||
+                (session.initiated_locally && session.state == SessionState::kHandshaking)) {
                 session.state = SessionState::kNegotiated;
                 session.capability_flags = payload.capability_flags;
                 session.udp_peer = ev.peer;
@@ -227,14 +245,20 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                         session.udp_peer.port = 0;
                     }
                 }
-                send_ready_ack = true;
+                send_capabilities_ack = !session.initiated_locally;
+                send_ready_ack = !session.initiated_locally;
                 ack_correlation_id = ev.envelope.correlation_id != 0 ? ev.envelope.correlation_id
                                                                      : ev.envelope.message_id;
             } else if (session.state == SessionState::kHandshaking) {
+                if (config_.required_peer_capability_flags != 0) {
+                    session.state = SessionState::kInvalid;
+                    return;
+                }
                 session.state = SessionState::kActive;
-                // A local client may receive Ready before its capabilities
-                // acknowledgement. Inbound legacy handshakes remain
-                // unauthenticated until they complete Authenticate.
+                // A locally initiated client may receive Ready before its
+                // capabilities acknowledgement. An inbound legacy handshake
+                // can also send Ready without Authenticate, so only the
+                // former may inherit authenticated status here.
                 session.authenticated = session.initiated_locally;
                 if (session.udp_peer.ip.empty()) {
                     session.udp_peer = ev.peer;
@@ -246,6 +270,17 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
         }
     }
 
+    if (send_capabilities_ack) {
+        SessionCapabilities capabilities{};
+        capabilities.capability_flags = config_.capability_flags;
+        capabilities.udp_bind_port = config_.udp_bind_port;
+        (void)send_session_payload(ev.peer.id,
+                                   ev.envelope.session_id,
+                                   ack_correlation_id,
+                                   static_cast<uint16_t>(SessionMessageType::kCapabilities),
+                                   encode_payload(capabilities),
+                                   1000);
+    }
     if (send_ready_ack) {
         SessionReady ready{};
         ready.accepted_protocol_major = ev.envelope.protocol_major;

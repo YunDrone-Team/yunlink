@@ -17,6 +17,13 @@ from .events import (
     coerce_event as _coerce_event,
 )
 from .runtime import Runtime
+from .managed_entities import (
+    ManagedEntityAvailability,
+    ManagedEntityDescriptor,
+    ManagedEntityDirectory,
+    ManagedEntityDirectoryChanged,
+    coerce_managed_entity_event as _coerce_managed_entity_event,
+)
 from .configuration import (
     ConfigApplyOutcome,
     ConfigApplyRequirement,
@@ -43,6 +50,7 @@ from .types import (
     AuthorityLease,
     CommandHandle,
     ControlSource,
+    EndpointIdentity,
     GotoCommand,
     PeerConnection,
     RuntimeConfig,
@@ -76,11 +84,16 @@ __all__ = [
     "ConfigurationHandle",
     "ConnectError",
     "ControlSource",
+    "EndpointIdentity",
     "ErrorEvent",
     "GotoCommand",
     "InvalidArgumentError",
     "InvalidStateError",
     "LinkEvent",
+    "ManagedEntityAvailability",
+    "ManagedEntityDescriptor",
+    "ManagedEntityDirectory",
+    "ManagedEntityDirectoryChanged",
     "NotFoundError",
     "PeerConnection",
     "Runtime",

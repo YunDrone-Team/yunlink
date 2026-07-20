@@ -79,6 +79,40 @@ pub struct VelocitySetpointCommand {
     pub body_frame: bool,
 }
 
+/// Complete UAV control payload accepted by the current ROS Bridge.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UavControlCommand {
+    pub control_cmd: u8,
+    pub desired_position: [f32; 3],
+    pub desired_velocity: [f32; 3],
+    pub desired_acceleration: [f32; 3],
+    pub desired_body_xy_position: [f32; 2],
+    pub desired_body_xy_velocity: [f32; 2],
+    pub fixed_height_m: f32,
+    pub yaw_mode: u8,
+    pub desired_yaw_rad: f32,
+    pub desired_yaw_rate_radps: f32,
+    pub controller_type: u8,
+}
+
+impl Default for UavControlCommand {
+    fn default() -> Self {
+        Self {
+            control_cmd: 0,
+            desired_position: [0.0; 3],
+            desired_velocity: [0.0; 3],
+            desired_acceleration: [0.0; 3],
+            desired_body_xy_position: [0.0; 2],
+            desired_body_xy_velocity: [0.0; 2],
+            fixed_height_m: 0.0,
+            yaw_mode: 0,
+            desired_yaw_rad: 0.0,
+            desired_yaw_rate_radps: 0.0,
+            controller_type: 0,
+        }
+    }
+}
+
 /// Safe vehicle core state payload.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VehicleCoreState {

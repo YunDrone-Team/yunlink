@@ -15,6 +15,25 @@ class ControlSource(IntEnum):
 
 
 @dataclass(frozen=True)
+class EndpointIdentity:
+    agent_type: int
+    agent_id: int
+    role: int
+    group_ids: tuple[int, ...] = ()
+
+    @staticmethod
+    def uav(agent_id: int) -> "EndpointIdentity":
+        return EndpointIdentity(int(AgentType.UAV), agent_id, 3)
+
+    def to_native(self) -> dict[str, int]:
+        return {
+            "agent_type": self.agent_type,
+            "agent_id": self.agent_id,
+            "role": self.role,
+        }
+
+
+@dataclass(frozen=True)
 class RuntimeConfig:
     udp_bind_port: int
     udp_target_port: int
@@ -23,6 +42,9 @@ class RuntimeConfig:
     agent_id: int
     shared_secret: str = "yunlink-secret"
     multicast_group: str = "224.1.1.1"
+    capability_flags: int = 0
+    required_peer_capability_flags: int = 0
+    managed_identities: tuple[EndpointIdentity, ...] = ()
 
     def to_native(self) -> dict[str, int | str]:
         role = 2 if self.agent_type == AgentType.GROUND_STATION else 3
@@ -35,6 +57,9 @@ class RuntimeConfig:
             "role": role,
             "shared_secret": self.shared_secret,
             "multicast_group": self.multicast_group,
+            "capability_flags": self.capability_flags,
+            "required_peer_capability_flags": self.required_peer_capability_flags,
+            "managed_identities": [item.to_native() for item in self.managed_identities],
         }
 
 

@@ -6,7 +6,7 @@ mod commands;
 
 pub use commands::{
     CommandHandle, GotoCommand, LandCommand, LocalOdom, ReturnCommand, TakeoffCommand,
-    TargetSelector, VehicleCoreState, VelocitySetpointCommand,
+    TargetSelector, UavControlCommand, VehicleCoreState, VelocitySetpointCommand,
 };
 
 /// Endpoint agent type used by the safe Rust SDK.
@@ -45,6 +45,64 @@ impl AgentType {
             sys::YUNLINK_AGENT_TYPE_UGV => Self::Ugv,
             sys::YUNLINK_AGENT_TYPE_SWARM_CONTROLLER => Self::SwarmController,
             other => Self::Unknown(other),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EndpointRole {
+    Observer,
+    Controller,
+    Vehicle,
+    Relay,
+    Unknown(u8),
+}
+
+impl EndpointRole {
+    pub(crate) fn to_native(self) -> u8 {
+        match self {
+            Self::Observer => sys::YUNLINK_ROLE_OBSERVER,
+            Self::Controller => sys::YUNLINK_ROLE_CONTROLLER,
+            Self::Vehicle => sys::YUNLINK_ROLE_VEHICLE,
+            Self::Relay => 4,
+            Self::Unknown(value) => value,
+        }
+    }
+
+    pub(crate) fn from_native(value: u8) -> Self {
+        match value {
+            sys::YUNLINK_ROLE_OBSERVER => Self::Observer,
+            sys::YUNLINK_ROLE_CONTROLLER => Self::Controller,
+            sys::YUNLINK_ROLE_VEHICLE => Self::Vehicle,
+            4 => Self::Relay,
+            other => Self::Unknown(other),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EndpointIdentity {
+    pub agent_type: AgentType,
+    pub agent_id: u32,
+    pub role: EndpointRole,
+    pub group_ids: Vec<u32>,
+}
+
+impl EndpointIdentity {
+    pub fn uav(agent_id: u32) -> Self {
+        Self {
+            agent_type: AgentType::Uav,
+            agent_id,
+            role: EndpointRole::Vehicle,
+            group_ids: Vec::new(),
+        }
+    }
+
+    pub(crate) fn to_native(&self) -> sys::yunlink_identity_t {
+        sys::yunlink_identity_t {
+            agent_type: self.agent_type.to_native(),
+            agent_id: self.agent_id,
+            role: self.role.to_native(),
         }
     }
 }
@@ -162,6 +220,12 @@ pub struct RuntimeConfig {
     pub shared_secret: String,
     /// Multicast group copied into the C ABI fixed-size buffer.
     pub multicast_group: String,
+    /// Capability flags offered by this runtime.
+    pub capability_flags: u32,
+    /// Capability flags that must be offered by the remote endpoint.
+    pub required_peer_capability_flags: u32,
+    /// Additional logical entities hosted by this physical endpoint.
+    pub managed_identities: Vec<EndpointIdentity>,
 }
 
 impl RuntimeConfig {
@@ -181,6 +245,9 @@ impl RuntimeConfig {
             agent_id,
             shared_secret: "yunlink-secret".to_string(),
             multicast_group: "224.1.1.1".to_string(),
+            capability_flags: 0,
+            required_peer_capability_flags: 0,
+            managed_identities: Vec::new(),
         }
     }
 
@@ -194,6 +261,9 @@ impl RuntimeConfig {
             agent_id: 1000 + target_agent_id,
             shared_secret: "yunlink-default-secret".to_string(),
             multicast_group: "224.1.1.1".to_string(),
+            capability_flags: sys::YUNLINK_CAPABILITY_MANAGED_ENTITIES,
+            required_peer_capability_flags: 0,
+            managed_identities: Vec::new(),
         }
     }
 
@@ -206,6 +276,21 @@ impl RuntimeConfig {
     /// Override the multicast group used by the runtime.
     pub fn with_multicast_group(mut self, multicast_group: impl Into<String>) -> Self {
         self.multicast_group = multicast_group.into();
+        self
+    }
+
+    pub fn with_capability_flags(mut self, capability_flags: u32) -> Self {
+        self.capability_flags = capability_flags;
+        self
+    }
+
+    pub fn requiring_peer_capabilities(mut self, capability_flags: u32) -> Self {
+        self.required_peer_capability_flags = capability_flags;
+        self
+    }
+
+    pub fn with_managed_identities(mut self, identities: Vec<EndpointIdentity>) -> Self {
+        self.managed_identities = identities;
         self
     }
 }

@@ -52,6 +52,7 @@ constexpr uint32_t kCapabilityBulkChannel = 1u << 1;
 constexpr uint32_t kCapabilityPlanningBridge = 1u << 2;
 constexpr uint32_t kCapabilitySwarmGroup = 1u << 3;
 constexpr uint32_t kCapabilitySecurityTags = 1u << 4;
+constexpr uint32_t kCapabilityManagedEntities = 1u << 5;
 
 struct RuntimeConfig {
     uint16_t udp_bind_port = 9696;
@@ -67,7 +68,11 @@ struct RuntimeConfig {
         0,
         EndpointRole::kObserver,
     };
+    // Additional logical entities hosted by this physical endpoint. The primary
+    // self_identity is always treated as managed even when this list is empty.
+    std::vector<EndpointIdentity> managed_identities;
     uint32_t capability_flags = 0;
+    uint32_t required_peer_capability_flags = 0;
     std::string shared_secret = "yunlink-default-secret";
     CommandHandlingMode command_handling_mode = CommandHandlingMode::kAutoResult;
     RuntimeQosPolicy qos_policy;

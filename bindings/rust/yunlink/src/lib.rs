@@ -9,6 +9,7 @@ mod configuration;
 mod error;
 mod events;
 mod ffi_util;
+mod managed_entities;
 mod runtime;
 mod runtime_logs;
 mod runtime_system_service;
@@ -25,21 +26,30 @@ pub use error::{FfiErrorCode, Result, YunlinkError};
 pub use events::{
     AuthorityStatusEvent, CommandKind, CommandPhase, CommandResultEvent, ErrorEvent, Event,
     FeatureGetEvent, FeatureListEvent, FeatureStartEvent, HostSystemEvent, LinkEvent,
-    LocalOdomEvent, Px4StateEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
+    LocalOdomEvent, Px4StateEvent, TopicDescriptor, TopicListEvent, TopicSampleEvent,
+    TopicSubscriptionEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
+};
+pub use managed_entities::{
+    ManagedEntityAvailability, ManagedEntityDescriptor, ManagedEntityDirectory,
+    ManagedEntityDirectoryChanged, ManagedEntityEvent,
 };
 pub use runtime::Runtime;
 pub use runtime_logs::{
     RuntimeLogListResponse, RuntimeLogReadResponse, RuntimeLogResponse, RuntimeLogSummary,
 };
 pub use types::{
-    AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, GotoCommand,
-    LandCommand, LocalOdom, PeerConnection, ReturnCommand, RuntimeConfig, Session, SessionInfo,
-    SessionState, TakeoffCommand, TargetSelector, VehicleCoreState, VelocitySetpointCommand,
+    AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, EndpointIdentity,
+    EndpointRole, GotoCommand, LandCommand, LocalOdom, PeerConnection, ReturnCommand, RuntimeConfig,
+    Session, SessionInfo, SessionState, TakeoffCommand, TargetSelector, UavControlCommand,
+    VehicleCoreState, VelocitySetpointCommand,
 };
+
+/// Endpoint supports an authenticated managed-entity directory.
+pub const CAPABILITY_MANAGED_ENTITIES: u32 = yunlink_sys::YUNLINK_CAPABILITY_MANAGED_ENTITIES;
 
 #[cfg(test)]
 mod tests {
-    use super::{CommandKind, CommandPhase, Event, FfiErrorCode, Px4StateEvent};
+    use super::{AgentType, CommandKind, CommandPhase, Event, FfiErrorCode, Px4StateEvent};
     use crate::events;
     use yunlink_sys as sys;
 
@@ -49,6 +59,7 @@ mod tests {
             session_id: 1,
             message_id: 2,
             correlation_id: 3,
+            source_type: AgentType::Uav,
             source_id: 4,
             connected: true,
             armed: false,
@@ -147,6 +158,9 @@ mod tests {
                     session_id: 42,
                     message_id: 9001,
                     correlation_id: 7001,
+                    source_type: sys::YUNLINK_AGENT_TYPE_UAV,
+                    source_id: 6,
+                    source_role: sys::YUNLINK_ROLE_VEHICLE,
                     command_kind: sys::YUNLINK_COMMAND_KIND_GOTO,
                     phase: sys::YUNLINK_COMMAND_PHASE_FAILED,
                     result_code: sys::YUNLINK_RESULT_UNAUTHORIZED as u16,
@@ -166,6 +180,8 @@ mod tests {
             panic!("expected command result event");
         };
         assert_eq!(event.command_kind, CommandKind::Goto);
+        assert_eq!(event.source_type, AgentType::Uav);
+        assert_eq!(event.source_id, 6);
         assert_eq!(event.phase, CommandPhase::Failed);
         assert_eq!(event.result_code, sys::YUNLINK_RESULT_UNAUTHORIZED as u16);
         assert_eq!(event.detail, "no-authority");

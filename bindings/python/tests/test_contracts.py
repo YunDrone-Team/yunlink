@@ -170,6 +170,50 @@ class RuntimeContractTests(unittest.TestCase):
             yunlink.ConfigValue.string_list(["/opt/sunray/profile"]),
         )
 
+    def test_managed_entity_directory_owns_nested_values(self) -> None:
+        payload = {
+            "type": "managed_entity_directory",
+            "session_id": 4,
+            "message_id": 8,
+            "correlation_id": 7,
+            "success": True,
+            "message": "ok",
+            "endpoint_uid": "endpoint-owned",
+            "revision": "revision-owned",
+            "primary_identity": {
+                "agent_type": 2,
+                "agent_id": 1,
+                "role": 3,
+                "group_ids": [7],
+            },
+            "entities": [
+                {
+                    "entity_uid": "entity-owned",
+                    "identity": {
+                        "agent_type": 2,
+                        "agent_id": 2,
+                        "role": 3,
+                        "group_ids": [7, 9],
+                    },
+                    "display_name": "UAV owned",
+                    "hardware_id": "SIM-owned",
+                    "capabilities": ["telemetry.px4"],
+                    "availability": 1,
+                }
+            ],
+        }
+        event = yunlink._coerce_managed_entity_event(payload)
+        payload["endpoint_uid"] = "mutated"
+        payload["entities"][0]["entity_uid"] = "mutated"
+        payload["entities"][0]["capabilities"][0] = "mutated"
+        payload["entities"][0]["identity"]["group_ids"][0] = 99
+
+        self.assertIsInstance(event, yunlink.ManagedEntityDirectory)
+        self.assertEqual(event.endpoint_uid, "endpoint-owned")
+        self.assertEqual(event.entities[0].entity_uid, "entity-owned")
+        self.assertEqual(event.entities[0].capabilities, ("telemetry.px4",))
+        self.assertEqual(event.entities[0].identity.group_ids, (7, 9))
+
     def test_configuration_response_without_event_keeps_poll_thread_running(self) -> None:
         class ConfigurationOnlyCore:
             def __init__(self) -> None:

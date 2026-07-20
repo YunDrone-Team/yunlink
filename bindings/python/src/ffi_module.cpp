@@ -6,6 +6,7 @@
 #include "yunlink/c/yunlink_c.h"
 #include "configuration_bridge.hpp"
 #include "ffi_helpers.hpp"
+#include "managed_entity_bridge.hpp"
 
 namespace nb = nanobind;
 using namespace yunlink_python_ffi;
@@ -16,7 +17,10 @@ class RuntimeCore {
         throw_if_error(yunlink_runtime_create(&runtime_));
         try {
             configuration_.attach(runtime_);
+            managed_entities_.attach(runtime_);
         } catch (...) {
+            managed_entities_.detach(runtime_);
+            configuration_.detach(runtime_);
             yunlink_runtime_destroy(runtime_);
             runtime_ = nullptr;
             throw;
@@ -25,6 +29,7 @@ class RuntimeCore {
 
     ~RuntimeCore() {
         if (runtime_ != nullptr) {
+            managed_entities_.detach(runtime_);
             configuration_.detach(runtime_);
             (void)yunlink_runtime_stop(runtime_);
             yunlink_runtime_destroy(runtime_);
@@ -44,6 +49,27 @@ class RuntimeCore {
         native.self_identity.agent_type = nb::cast<uint8_t>(config["agent_type"]);
         native.self_identity.agent_id = nb::cast<uint32_t>(config["agent_id"]);
         native.self_identity.role = nb::cast<uint8_t>(config["role"]);
+        if (config.contains("capability_flags")) {
+            native.capability_flags = nb::cast<uint32_t>(config["capability_flags"]);
+        }
+        if (config.contains("required_peer_capability_flags")) {
+            native.required_peer_capability_flags =
+                nb::cast<uint32_t>(config["required_peer_capability_flags"]);
+        }
+        std::vector<yunlink_identity_t> managed_identities;
+        if (config.contains("managed_identities")) {
+            const auto values = nb::cast<nb::list>(config["managed_identities"]);
+            managed_identities.reserve(values.size());
+            for (const nb::handle value : values) {
+                const auto identity = nb::cast<nb::dict>(value);
+                managed_identities.push_back(
+                    {nb::cast<uint8_t>(identity["agent_type"]),
+                     nb::cast<uint32_t>(identity["agent_id"]),
+                     nb::cast<uint8_t>(identity["role"])});
+            }
+        }
+        native.managed_identities = managed_identities.data();
+        native.managed_identity_count = managed_identities.size();
         copy_string(native.shared_secret,
                     sizeof(native.shared_secret),
                     nb::cast<std::string>(config["shared_secret"]));
@@ -258,9 +284,20 @@ class RuntimeCore {
         return configuration_.poll();
     }
 
+    nb::dict request_managed_entity_list(const std::string& peer_id,
+                                         uint64_t session_id,
+                                         const nb::dict& target) {
+        return managed_entities_.request(runtime_, peer_id, session_id, target);
+    }
+
+    nb::object poll_managed_entity_event() {
+        return managed_entities_.poll();
+    }
+
   private:
     yunlink_runtime_t* runtime_ = nullptr;
     ConfigurationBridge configuration_;
+    ManagedEntityBridge managed_entities_;
 };
 
 NB_MODULE(_yunlink_native, m) {
@@ -284,5 +321,7 @@ NB_MODULE(_yunlink_native, m) {
         .def("configuration_get", &RuntimeCore::configuration_get)
         .def("configuration_patch", &RuntimeCore::configuration_patch)
         .def("configuration_apply", &RuntimeCore::configuration_apply)
-        .def("poll_configuration_response", &RuntimeCore::poll_configuration_response);
+        .def("poll_configuration_response", &RuntimeCore::poll_configuration_response)
+        .def("request_managed_entity_list", &RuntimeCore::request_managed_entity_list)
+        .def("poll_managed_entity_event", &RuntimeCore::poll_managed_entity_event);
 }

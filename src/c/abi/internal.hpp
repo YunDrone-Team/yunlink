@@ -33,6 +33,9 @@ struct yunlink_runtime {
     size_t tok_feature_list = 0;
     size_t tok_feature_get = 0;
     size_t tok_feature_start = 0;
+    size_t tok_topic_list = 0;
+    size_t tok_topic_subscription = 0;
+    size_t tok_topic_sample = 0;
     bool started = false;
 };
 
@@ -45,6 +48,7 @@ yunlink_target_selector_t to_c_target_selector(const yunlink::TargetSelector& ta
 void to_c_peer(const std::string& peer_id, yunlink_peer_t* out_peer);
 yunlink::RuntimeConfig to_runtime_config(const yunlink_runtime_config_t& cfg);
 yunlink_identity_t to_c_identity(const yunlink::EndpointIdentity& identity);
+yunlink::EndpointIdentity to_identity(const yunlink_identity_t& identity);
 
 void push_event(yunlink_runtime_t* runtime, const yunlink_runtime_event_t& event);
 void clear_queue(yunlink_runtime_t* runtime);

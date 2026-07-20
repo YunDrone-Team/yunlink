@@ -10,6 +10,7 @@ from .errors import YunlinkError, call_native
 from .events import ErrorEvent, coerce_event
 from .configuration import coerce_configuration_response
 from .configuration_runtime import ConfigurationRuntimeMixin
+from .managed_entities import coerce_managed_entity_event
 from .types import (
     AuthorityLease,
     CommandHandle,
@@ -32,6 +33,10 @@ class Runtime(ConfigurationRuntimeMixin):
         self._async_subscribers: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
         self._configuration_subscribers: list[queue.Queue] = []
         self._async_configuration_subscribers: list[
+            tuple[asyncio.AbstractEventLoop, asyncio.Queue]
+        ] = []
+        self._managed_entity_subscribers: list[queue.Queue] = []
+        self._async_managed_entity_subscribers: list[
             tuple[asyncio.AbstractEventLoop, asyncio.Queue]
         ] = []
         self._thread = threading.Thread(target=self._poll_loop, daemon=True)
@@ -71,6 +76,28 @@ class Runtime(ConfigurationRuntimeMixin):
         loop = asyncio.get_running_loop()
         self._async_configuration_subscribers.append((loop, q))
         return q
+
+    def subscribe_managed_entities(self) -> queue.Queue:
+        q: queue.Queue = queue.Queue()
+        self._managed_entity_subscribers.append(q)
+        return q
+
+    def subscribe_managed_entities_async(self) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        self._async_managed_entity_subscribers.append((loop, q))
+        return q
+
+    def request_managed_entity_list(
+        self, peer: PeerConnection, session: Session, target: TargetSelector
+    ) -> CommandHandle:
+        result = call_native(
+            self._core.request_managed_entity_list,
+            peer.id,
+            session.session_id,
+            target.to_native(),
+        )
+        return CommandHandle(**result)
 
     def last_poll_error(self) -> YunlinkError | None:
         return self._poll_error
@@ -240,6 +267,12 @@ class Runtime(ConfigurationRuntimeMixin):
                 )
                 if poll_configuration is not None:
                     configuration_payload = call_native(poll_configuration)
+                managed_entity_payload = None
+                poll_managed_entities = getattr(
+                    self._core, "poll_managed_entity_event", None
+                )
+                if poll_managed_entities is not None:
+                    managed_entity_payload = call_native(poll_managed_entities)
                 event = call_native(self._core.poll_event)
             except YunlinkError as exc:
                 self._poll_error = exc
@@ -252,7 +285,17 @@ class Runtime(ConfigurationRuntimeMixin):
                 )
                 if configuration_response is not None:
                     self._publish_configuration(configuration_response)
-            if event is None and configuration_payload is None:
+            if managed_entity_payload is not None:
+                managed_entity_event = coerce_managed_entity_event(
+                    managed_entity_payload
+                )
+                if managed_entity_event is not None:
+                    self._publish_managed_entity(managed_entity_event)
+            if (
+                event is None
+                and configuration_payload is None
+                and managed_entity_payload is None
+            ):
                 time.sleep(0.01)
                 continue
 
@@ -272,3 +315,9 @@ class Runtime(ConfigurationRuntimeMixin):
             subscriber.put(response)
         for loop, subscriber in list(self._async_configuration_subscribers):
             loop.call_soon_threadsafe(subscriber.put_nowait, response)
+
+    def _publish_managed_entity(self, event: object) -> None:
+        for subscriber in list(self._managed_entity_subscribers):
+            subscriber.put(event)
+        for loop, subscriber in list(self._async_managed_entity_subscribers):
+            loop.call_soon_threadsafe(subscriber.put_nowait, event)

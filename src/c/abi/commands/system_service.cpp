@@ -5,6 +5,8 @@
 
 #include "../internal.hpp"
 
+#include <cmath>
+
 using namespace yunlink_c_abi;
 
 extern "C" {
@@ -157,6 +159,105 @@ yunlink_system_service_request_runtime_log_read(yunlink_runtime_t* runtime,
     const auto result =
         to_result(runtime->runtime.system_service_publisher().publish_runtime_log_read_request(
             peer->id, session->session_id, to_target_selector(*target), request, &handle));
+    if (result != YUNLINK_RESULT_OK) {
+        return result;
+    }
+    if (out_handle != nullptr) {
+        out_handle->session_id = handle.session_id;
+        out_handle->message_id = handle.message_id;
+        out_handle->correlation_id = handle.correlation_id;
+        out_handle->target = to_c_target_selector(handle.target);
+    }
+    return YUNLINK_RESULT_OK;
+}
+
+yunlink_result_t yunlink_system_service_request_managed_entity_list(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target)) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::SystemServiceHandle handle{};
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_managed_entity_list_request(
+            peer->id,
+            session->session_id,
+            to_target_selector(*target),
+            {},
+            &handle));
+    if (result != YUNLINK_RESULT_OK) {
+        return result;
+    }
+    if (out_handle != nullptr) {
+        out_handle->session_id = handle.session_id;
+        out_handle->message_id = handle.message_id;
+        out_handle->correlation_id = handle.correlation_id;
+        out_handle->target = to_c_target_selector(handle.target);
+    }
+    return YUNLINK_RESULT_OK;
+}
+
+yunlink_result_t yunlink_system_service_request_topic_list(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target)) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::SystemServiceHandle handle{};
+    const auto result = to_result(runtime->runtime.system_service_publisher()
+                                      .publish_topic_list_request(peer->id,
+                                                                   session->session_id,
+                                                                   to_target_selector(*target),
+                                                                   {},
+                                                                   &handle));
+    if (result != YUNLINK_RESULT_OK) {
+        return result;
+    }
+    if (out_handle != nullptr) {
+        out_handle->session_id = handle.session_id;
+        out_handle->message_id = handle.message_id;
+        out_handle->correlation_id = handle.correlation_id;
+        out_handle->target = to_c_target_selector(handle.target);
+    }
+    return YUNLINK_RESULT_OK;
+}
+
+yunlink_result_t yunlink_system_service_request_topic_subscription(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    const char* topic_name,
+    uint8_t subscribe,
+    float max_rate_hz,
+    uint32_t max_payload_bytes,
+    yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target) || topic_name == nullptr || topic_name[0] == '\0' ||
+        !std::isfinite(max_rate_hz) || max_rate_hz < 0.0F ||
+        max_payload_bytes > YUNLINK_TOPIC_SAMPLE_DATA_CAPACITY) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::TopicSubscriptionRequest request{};
+    request.topic_name = topic_name;
+    request.subscribe = subscribe != 0;
+    request.max_rate_hz = max_rate_hz;
+    request.max_payload_bytes = max_payload_bytes;
+    yunlink::SystemServiceHandle handle{};
+    const auto result = to_result(runtime->runtime.system_service_publisher()
+                                      .publish_topic_subscription_request(peer->id,
+                                                                          session->session_id,
+                                                                          to_target_selector(*target),
+                                                                          request,
+                                                                          &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }

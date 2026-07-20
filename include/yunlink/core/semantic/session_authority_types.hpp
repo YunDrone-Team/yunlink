@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "yunlink/core/semantic/message_ids.hpp"
 #include "yunlink/core/types.hpp"
@@ -54,14 +55,17 @@ struct SessionDescriptor {
     // Active is a transport lifecycle state. Consumers that authorize privileged
     // operations must also require a completed shared-secret authentication.
     bool authenticated = false;
-    // Distinguish locally initiated handshakes from inbound legacy handshakes
-    // when Ready arrives before the capabilities acknowledgement.
+    // Runtime-only direction marker. It distinguishes a locally initiated
+    // handshake from an inbound legacy handshake when Ready arrives before
+    // the capabilities acknowledgement.
     bool initiated_locally = false;
     EndpointIdentity remote_identity;
     PeerInfo peer;
     PeerInfo udp_peer;
     uint32_t capability_flags = 0;
     std::string node_name;
+    // Populated only after an authenticated managed-entity directory response.
+    std::vector<EndpointIdentity> remote_managed_identities;
 };
 
 struct AuthorityLease {

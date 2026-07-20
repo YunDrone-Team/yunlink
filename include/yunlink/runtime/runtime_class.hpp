@@ -32,6 +32,7 @@ class Runtime {
 
     ErrorCode start(const RuntimeConfig& config);
     void stop();
+    ErrorCode set_managed_identities(const std::vector<EndpointIdentity>& identities);
 
     EventBus& event_bus() {
         return bus_;
@@ -161,6 +162,19 @@ class Runtime {
                                               const TargetSelector& target,
                                               const BulkChannelDescriptor& payload,
                                               uint64_t session_id = 0);
+    /** Publish a typed state/event using one explicitly registered local entity as source. */
+    template <typename T>
+    ErrorCode publish_state_from(const EndpointIdentity& source,
+                                 const std::string& peer_id,
+                                 const TargetSelector& target,
+                                 const T& payload,
+                                 uint64_t session_id = 0,
+                                 QosClass qos_class = QosClass::kReliableLatest) {
+        SecureEnvelope envelope =
+            make_typed_envelope(source, target, session_id, 0, qos_class, payload);
+        envelope.message_id = allocate_message_id();
+        return send_envelope_to_peer(peer_id, envelope);
+    }
     ErrorCode reply_command_result(const EnvelopeEvent& inbound,
                                    const CommandResult& payload,
                                    uint32_t ttl_ms = 1000);
@@ -189,6 +203,9 @@ class Runtime {
 
     uint64_t allocate_session_id();
     uint64_t allocate_message_id();
+    bool local_source_allowed(const EndpointIdentity& source) const;
+    bool matches_local_target(const TargetSelector& target) const;
+    EndpointIdentity source_for_target(const TargetSelector& target) const;
     ErrorCode send_session_payload(const std::string& peer_id,
                                    uint64_t session_id,
                                    uint64_t correlation_id,
@@ -282,6 +299,12 @@ class Runtime {
         SystemServiceSubscriber::TopicSubscriptionRequestHandler cb);
     size_t subscribe_topic_subscription_response_internal(
         SystemServiceSubscriber::TopicSubscriptionResponseHandler cb);
+    size_t subscribe_managed_entity_list_request_internal(
+        SystemServiceSubscriber::ManagedEntityListRequestHandler cb);
+    size_t subscribe_managed_entity_list_response_internal(
+        SystemServiceSubscriber::ManagedEntityListResponseHandler cb);
+    size_t subscribe_managed_entity_directory_changed_internal(
+        SystemServiceSubscriber::ManagedEntityDirectoryChangedHandler cb);
     size_t
     subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);

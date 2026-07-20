@@ -36,6 +36,9 @@ fn start_runtime_with_retry(agent_type: AgentType, agent_id: u32) -> (Runtime, u
             agent_id,
             shared_secret: "yunlink-default-secret".into(),
             multicast_group: "224.1.1.1".into(),
+            capability_flags: 0,
+            required_peer_capability_flags: 0,
+            managed_identities: Vec::new(),
         };
         match Runtime::start(config) {
             Ok(runtime) => return (runtime, tcp_port),

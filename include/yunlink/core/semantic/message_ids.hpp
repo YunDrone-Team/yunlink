@@ -75,6 +75,9 @@ enum class SystemServiceType : uint16_t {
     kTopicListResponse = 14,
     kTopicSubscriptionRequest = 15,
     kTopicSubscriptionResponse = 16,
+    kManagedEntityListRequest = 17,
+    kManagedEntityListResponse = 18,
+    kManagedEntityDirectoryChanged = 19,
 };
 
 enum class ConfigurationServiceType : uint16_t {

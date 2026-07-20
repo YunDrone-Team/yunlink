@@ -14,6 +14,7 @@ mod configuration;
 mod constants;
 mod events;
 mod functions;
+mod managed_entities;
 mod runtime_logs;
 mod types;
 
@@ -21,5 +22,6 @@ pub use configuration::*;
 pub use constants::*;
 pub use events::*;
 pub use functions::*;
+pub use managed_entities::*;
 pub use runtime_logs::*;
 pub use types::*;

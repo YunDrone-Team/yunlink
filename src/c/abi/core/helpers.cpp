@@ -124,10 +124,26 @@ yunlink::RuntimeConfig to_runtime_config(const yunlink_runtime_config_t& cfg) {
     out.qos_policy.bulk = to_transport(cfg.qos_bulk_transport, out.qos_policy.bulk);
     out.qos_policy.udp_fallback_to_tcp =
         cfg.qos_udp_fallback_to_tcp == 0 ? out.qos_policy.udp_fallback_to_tcp : true;
-    if (cfg.struct_size >= sizeof(yunlink_runtime_config_t)) {
+    constexpr size_t kSecurityFieldsSize =
+        offsetof(yunlink_runtime_config_t, security_tags_required) + sizeof(uint8_t);
+    if (cfg.struct_size >= kSecurityFieldsSize) {
         out.security_key_epoch = cfg.security_key_epoch == 0 ? 1 : cfg.security_key_epoch;
         out.security_tags_enabled = cfg.security_tags_enabled != 0;
         out.security_tags_required = cfg.security_tags_required != 0;
+    }
+    constexpr size_t kRequiredCapabilitiesSize =
+        offsetof(yunlink_runtime_config_t, required_peer_capability_flags) + sizeof(uint32_t);
+    if (cfg.struct_size >= kRequiredCapabilitiesSize) {
+        out.required_peer_capability_flags = cfg.required_peer_capability_flags;
+    }
+    constexpr size_t kManagedIdentitiesSize =
+        offsetof(yunlink_runtime_config_t, managed_identity_count) + sizeof(size_t);
+    if (cfg.struct_size >= kManagedIdentitiesSize && cfg.managed_identity_count > 0 &&
+        cfg.managed_identities != nullptr) {
+        out.managed_identities.reserve(cfg.managed_identity_count);
+        for (size_t index = 0; index < cfg.managed_identity_count; ++index) {
+            out.managed_identities.push_back(to_identity(cfg.managed_identities[index]));
+        }
     }
     return out;
 }
@@ -138,6 +154,13 @@ yunlink_identity_t to_c_identity(const yunlink::EndpointIdentity& identity) {
     out.agent_id = identity.agent_id;
     out.role = static_cast<uint8_t>(identity.role);
     return out;
+}
+
+yunlink::EndpointIdentity to_identity(const yunlink_identity_t& identity) {
+    return {static_cast<yunlink::AgentType>(identity.agent_type),
+            identity.agent_id,
+            static_cast<yunlink::EndpointRole>(identity.role),
+            {}};
 }
 
 bool validate_input_runtime(yunlink_runtime_t* runtime) {

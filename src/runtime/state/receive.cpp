@@ -8,7 +8,7 @@
 namespace yunlink {
 
 void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
-    if (!ev.envelope.target.matches(config_.self_identity)) {
+    if (!matches_local_target(ev.envelope.target)) {
         return;
     }
 
@@ -117,7 +117,7 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
 }
 
 void Runtime::handle_state_event_envelope(const EnvelopeEvent& ev) {
-    if (!ev.envelope.target.matches(config_.self_identity) ||
+    if (!matches_local_target(ev.envelope.target) ||
         ev.envelope.message_type != static_cast<uint16_t>(StateEventType::kVehicleEvent)) {
         return;
     }
@@ -142,7 +142,7 @@ void Runtime::handle_state_event_envelope(const EnvelopeEvent& ev) {
 }
 
 void Runtime::handle_command_result_envelope(const EnvelopeEvent& ev) {
-    if (!ev.envelope.target.matches(config_.self_identity)) {
+    if (!matches_local_target(ev.envelope.target)) {
         return;
     }
 
@@ -166,7 +166,7 @@ void Runtime::handle_command_result_envelope(const EnvelopeEvent& ev) {
 }
 
 void Runtime::handle_bulk_channel_descriptor_envelope(const EnvelopeEvent& ev) {
-    if (!ev.envelope.target.matches(config_.self_identity) ||
+    if (!matches_local_target(ev.envelope.target) ||
         ev.envelope.message_type != static_cast<uint16_t>(BulkDescriptorType::kDescriptor)) {
         return;
     }

@@ -51,6 +51,9 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
         return ErrorCode::kOk;
     }
     config_ = config;
+    std::atomic_store(&impl_->local_managed_identities,
+                      std::make_shared<const std::vector<EndpointIdentity>>(
+                          config.managed_identities));
     bus_.configure_packet_trace(runtime_packet_trace_config(config_));
 
     const ErrorCode ec_udp = udp_.start(config_, &bus_);
@@ -77,6 +80,53 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
         bus_.subscribe_link([this](const LinkEvent& ev) { handle_link_event(ev); });
     is_started_ = true;
     return ErrorCode::kOk;
+}
+
+ErrorCode Runtime::set_managed_identities(const std::vector<EndpointIdentity>& identities) {
+    std::vector<EndpointIdentity> normalized;
+    normalized.reserve(identities.size());
+    for (const auto& identity : identities) {
+        if (identity.agent_type == AgentType::kUnknown || identity.agent_id == 0) {
+            return ErrorCode::kInvalidArgument;
+        }
+        if (runtime_same_entity(config_.self_identity, identity)) {
+            continue;
+        }
+        if (std::any_of(normalized.begin(), normalized.end(), [&](const auto& existing) {
+                return runtime_same_entity(existing, identity);
+            })) {
+            return ErrorCode::kInvalidArgument;
+        }
+        normalized.push_back(identity);
+    }
+    const auto snapshot =
+        std::make_shared<const std::vector<EndpointIdentity>>(std::move(normalized));
+    std::atomic_store(&impl_->local_managed_identities, snapshot);
+
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    for (auto it = impl_->authorities.begin(); it != impl_->authorities.end();) {
+        if (!runtime_matches_local_target(config_.self_identity, *snapshot, it->second.target)) {
+            it = impl_->authorities.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return ErrorCode::kOk;
+}
+
+bool Runtime::local_source_allowed(const EndpointIdentity& source) const {
+    const auto snapshot = std::atomic_load(&impl_->local_managed_identities);
+    return runtime_local_source_allowed(config_.self_identity, *snapshot, source);
+}
+
+bool Runtime::matches_local_target(const TargetSelector& target) const {
+    const auto snapshot = std::atomic_load(&impl_->local_managed_identities);
+    return runtime_matches_local_target(config_.self_identity, *snapshot, target);
+}
+
+EndpointIdentity Runtime::source_for_target(const TargetSelector& target) const {
+    const auto snapshot = std::atomic_load(&impl_->local_managed_identities);
+    return runtime_source_for_target(config_.self_identity, *snapshot, target);
 }
 
 void Runtime::stop() {
@@ -119,6 +169,10 @@ ErrorCode Runtime::send_envelope_to_peer(const std::string& peer_id,
         return ErrorCode::kRuntimeStopped;
     }
     SecureEnvelope outbound = envelope;
+    if (outbound.message_family != MessageFamily::kSession &&
+        !local_source_allowed(outbound.source)) {
+        return ErrorCode::kUnauthorized;
+    }
     apply_runtime_security_tag(config_, &outbound);
     PeerInfo trace_peer;
     trace_peer.id = peer_id;

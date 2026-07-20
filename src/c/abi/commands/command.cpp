@@ -122,4 +122,42 @@ yunlink_command_publish_velocity_setpoint(yunlink_runtime_t* runtime,
     return result;
 }
 
+yunlink_result_t yunlink_command_publish_uav_control(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    const yunlink_uav_control_command_t* payload,
+    yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target) || payload == nullptr) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::UavControlCommand native{};
+    native.control_cmd = payload->control_cmd;
+    native.desired_position_m = {
+        payload->desired_position_x_m, payload->desired_position_y_m, payload->desired_position_z_m};
+    native.desired_velocity_mps = {
+        payload->desired_velocity_x_mps, payload->desired_velocity_y_mps, payload->desired_velocity_z_mps};
+    native.desired_acceleration_mps2 = {payload->desired_acceleration_x_mps2,
+                                        payload->desired_acceleration_y_mps2,
+                                        payload->desired_acceleration_z_mps2};
+    native.desired_body_xy_position_m = {payload->desired_body_xy_position_x_m,
+                                         payload->desired_body_xy_position_y_m};
+    native.desired_body_xy_velocity_mps = {payload->desired_body_xy_velocity_x_mps,
+                                           payload->desired_body_xy_velocity_y_mps};
+    native.fixed_height_m = payload->fixed_height_m;
+    native.yaw_mode = payload->yaw_mode;
+    native.desired_yaw_rad = payload->desired_yaw_rad;
+    native.desired_yaw_rate_radps = payload->desired_yaw_rate_radps;
+    native.controller_type = payload->controller_type;
+    yunlink::CommandHandle handle{};
+    const auto result = to_result(runtime->runtime.command_publisher().publish_uav_control(
+        peer->id, session->session_id, to_target_selector(*target), native, &handle));
+    if (result == YUNLINK_RESULT_OK) {
+        fill_command_handle(handle, out_handle);
+    }
+    return result;
+}
+
 }  // extern "C"

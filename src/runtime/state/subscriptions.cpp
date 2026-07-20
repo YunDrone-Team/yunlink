@@ -178,6 +178,22 @@ size_t SystemServiceSubscriber::subscribe_topic_subscription_responses(
     return runtime_ ? runtime_->subscribe_topic_subscription_response_internal(std::move(cb)) : 0;
 }
 
+size_t SystemServiceSubscriber::subscribe_managed_entity_list_requests(
+    ManagedEntityListRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_managed_entity_list_request_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_managed_entity_list_responses(
+    ManagedEntityListResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_managed_entity_list_response_internal(std::move(cb)) : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_managed_entity_directory_changed(
+    ManagedEntityDirectoryChangedHandler cb) {
+    return runtime_ ? runtime_->subscribe_managed_entity_directory_changed_internal(std::move(cb))
+                    : 0;
+}
+
 void SystemServiceSubscriber::unsubscribe(size_t token) {
     if (runtime_) {
         runtime_->unsubscribe_semantic(token);

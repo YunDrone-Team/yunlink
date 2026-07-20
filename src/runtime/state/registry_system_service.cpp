@@ -132,4 +132,28 @@ size_t Runtime::subscribe_topic_subscription_response_internal(
     return token;
 }
 
+size_t Runtime::subscribe_managed_entity_list_request_internal(
+    SystemServiceSubscriber::ManagedEntityListRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->managed_entity_list_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_managed_entity_list_response_internal(
+    SystemServiceSubscriber::ManagedEntityListResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->managed_entity_list_response_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_managed_entity_directory_changed_internal(
+    SystemServiceSubscriber::ManagedEntityDirectoryChangedHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->managed_entity_directory_changed_handlers[token] = std::move(cb);
+    return token;
+}
+
 }  // namespace yunlink

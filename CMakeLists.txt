@@ -83,6 +83,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/semantic_messages_session_authority.cpp
   src/core/semantic_messages_command.cpp
   src/core/semantic_messages_system_service.cpp
+  src/core/semantic_messages_managed_entities.cpp
   src/core/semantic_messages_topic.cpp
   src/core/configuration_service/codec.cpp
   src/core/state/semantic_messages_state_bulk_core.cpp
@@ -128,6 +129,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/c/abi/configuration/subscriptions.cpp
   src/c/abi/commands/system_service.cpp
   src/c/abi/system_service/runtime_logs.cpp
+  src/c/abi/system_service/managed_entities.cpp
   src/c/abi/core/helpers.cpp
   src/c/abi/core/result.cpp
   src/c/abi/runtime/event_queue.cpp
@@ -286,6 +288,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_topic_service_codec PRIVATE yunlink)
   add_test(NAME test_topic_service_codec COMMAND test_topic_service_codec)
 
+  add_executable(test_managed_entities_runtime tests/runtime/test_managed_entities_runtime.cpp)
+  target_link_libraries(test_managed_entities_runtime PRIVATE yunlink)
+  add_test(NAME test_managed_entities_runtime COMMAND test_managed_entities_runtime)
+
   add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
   target_link_libraries(test_capability_negotiation PRIVATE yunlink)
   add_test(NAME test_capability_negotiation COMMAND test_capability_negotiation)
@@ -412,6 +418,10 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_c_ffi_configuration tests/bindings/test_c_ffi_configuration.cpp)
   target_link_libraries(test_c_ffi_configuration PRIVATE yunlink)
   add_test(NAME test_c_ffi_configuration COMMAND test_c_ffi_configuration)
+
+  add_executable(test_c_ffi_managed_entities tests/bindings/test_c_ffi_managed_entities.cpp)
+  target_link_libraries(test_c_ffi_managed_entities PRIVATE yunlink)
+  add_test(NAME test_c_ffi_managed_entities COMMAND test_c_ffi_managed_entities)
 
   add_test(
     NAME test_c_ffi_loader

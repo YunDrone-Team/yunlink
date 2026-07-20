@@ -13,6 +13,10 @@ use crate::configuration::{
 use crate::error::{ensure, Result};
 use crate::events::{parse_event, Event, EVENT_CHANNEL_CAPACITY};
 use crate::ffi_util::write_c_buffer;
+use crate::managed_entities::{
+    register_callbacks as register_managed_entity_callbacks, ManagedEntityCallbackContext,
+    ManagedEntityEvent,
+};
 use crate::runtime_logs::{
     register_callbacks as register_runtime_log_callbacks, RuntimeLogCallbackContext,
     RuntimeLogResponse,
@@ -60,6 +64,9 @@ pub struct Runtime {
     runtime_log_sender: broadcast::Sender<RuntimeLogResponse>,
     runtime_log_callback_context: Box<RuntimeLogCallbackContext>,
     runtime_log_tokens: Vec<usize>,
+    managed_entity_sender: broadcast::Sender<ManagedEntityEvent>,
+    managed_entity_callback_context: Box<ManagedEntityCallbackContext>,
+    managed_entity_tokens: Vec<usize>,
     /// Background thread that polls `yunlink_runtime_poll_event`.
     poll_thread: Option<JoinHandle<()>>,
 }
@@ -73,6 +80,11 @@ impl Runtime {
         // Build the C ABI config struct explicitly. The `Default`
         // implementation supplies `struct_size` and zeroed fixed string
         // buffers; the helper below then fills those buffers safely.
+        let managed_identities = config
+            .managed_identities
+            .iter()
+            .map(|identity| identity.to_native())
+            .collect::<Vec<_>>();
         let mut native_cfg = sys::yunlink_runtime_config_t {
             udp_bind_port: config.udp_bind_port,
             udp_target_port: config.udp_target_port,
@@ -91,6 +103,10 @@ impl Runtime {
                 },
             },
             security_tags_enabled: 1,
+            capability_flags: config.capability_flags,
+            required_peer_capability_flags: config.required_peer_capability_flags,
+            managed_identities: managed_identities.as_ptr(),
+            managed_identity_count: managed_identities.len(),
             ..Default::default()
         };
         write_c_buffer(&mut native_cfg.shared_secret, &config.shared_secret);
@@ -101,6 +117,7 @@ impl Runtime {
         let (sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let (configuration_sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let (runtime_log_sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
+        let (managed_entity_sender, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
         let (configuration_callback_context, configuration_tokens) =
             match register_callbacks(raw_ptr, configuration_sender.clone()) {
                 Ok(registration) => registration,
@@ -112,6 +129,15 @@ impl Runtime {
             };
         let (runtime_log_callback_context, runtime_log_tokens) =
             match register_runtime_log_callbacks(raw_ptr, runtime_log_sender.clone()) {
+                Ok(registration) => registration,
+                Err(error) => {
+                    let _ = unsafe { sys::yunlink_runtime_stop(raw_ptr) };
+                    unsafe { sys::yunlink_runtime_destroy(raw_ptr) };
+                    return Err(error);
+                }
+            };
+        let (managed_entity_callback_context, managed_entity_tokens) =
+            match register_managed_entity_callbacks(raw_ptr, managed_entity_sender.clone()) {
                 Ok(registration) => registration,
                 Err(error) => {
                     let _ = unsafe { sys::yunlink_runtime_stop(raw_ptr) };
@@ -151,6 +177,9 @@ impl Runtime {
             runtime_log_sender,
             runtime_log_callback_context,
             runtime_log_tokens,
+            managed_entity_sender,
+            managed_entity_callback_context,
+            managed_entity_tokens,
             poll_thread: Some(poll_thread),
         })
     }
@@ -170,12 +199,22 @@ impl Runtime {
         self.runtime_log_sender.subscribe()
     }
 
+    /// Subscribe to owned managed-entity directory responses and change notices.
+    pub fn subscribe_managed_entities(&self) -> broadcast::Receiver<ManagedEntityEvent> {
+        self.managed_entity_sender.subscribe()
+    }
+
     /// Connect to a remote peer through the C ABI TCP client helper.
     pub async fn connect(&self, ip: &str, port: u16) -> Result<PeerConnection> {
         let ip = CString::new(ip)?;
         let mut peer = sys::yunlink_peer_t::default();
         ensure(unsafe { sys::yunlink_peer_connect(self.raw_ptr(), ip.as_ptr(), port, &mut peer) })?;
         Ok(PeerConnection::from_raw(peer))
+    }
+
+    /// Close an established peer transport without stopping the shared runtime.
+    pub fn disconnect(&self, peer: &PeerConnection) -> Result<()> {
+        ensure(unsafe { sys::yunlink_peer_disconnect(self.raw_ptr(), &peer.raw) })
     }
 
     /// Open an active session with a connected peer.
@@ -320,9 +359,13 @@ impl Drop for Runtime {
         for token in self.runtime_log_tokens.drain(..) {
             let _ = unsafe { sys::yunlink_system_service_unsubscribe(raw, token) };
         }
+        for token in self.managed_entity_tokens.drain(..) {
+            let _ = unsafe { sys::yunlink_system_service_unsubscribe(raw, token) };
+        }
         let _ = unsafe { sys::yunlink_runtime_stop(raw) };
         unsafe { sys::yunlink_runtime_destroy(raw) };
         let _ = &self.configuration_callback_context;
         let _ = &self.runtime_log_callback_context;
+        let _ = &self.managed_entity_callback_context;
     }
 }

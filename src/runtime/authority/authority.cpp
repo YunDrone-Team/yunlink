@@ -38,7 +38,7 @@ AuthorityStatus make_authority_status(AuthorityState state,
 
 void Runtime::handle_authority_envelope(const EnvelopeEvent& ev) {
     if (ev.envelope.message_type == static_cast<uint16_t>(AuthorityMessageType::kStatus)) {
-        if (!ev.envelope.target.matches(config_.self_identity)) {
+        if (!matches_local_target(ev.envelope.target)) {
             return;
         }
         AuthorityStatus payload{};
@@ -67,7 +67,7 @@ void Runtime::handle_authority_envelope(const EnvelopeEvent& ev) {
 
     const auto reply_to_requester = [&](const AuthorityStatus& status) {
         SecureEnvelope reply = make_typed_envelope(
-            config_.self_identity,
+            source_for_target(ev.envelope.target),
             TargetSelector::for_entity(ev.envelope.source.agent_type, ev.envelope.source.agent_id),
             ev.envelope.session_id,
             ev.envelope.message_id,
@@ -80,7 +80,7 @@ void Runtime::handle_authority_envelope(const EnvelopeEvent& ev) {
     };
 
     const auto send_to_peer = [&](const PendingAuthorityStatus& pending) {
-        SecureEnvelope envelope = make_typed_envelope(config_.self_identity,
+        SecureEnvelope envelope = make_typed_envelope(source_for_target(ev.envelope.target),
                                                       pending.target,
                                                       pending.session_id,
                                                       ev.envelope.message_id,

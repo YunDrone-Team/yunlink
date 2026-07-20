@@ -17,7 +17,7 @@ void Runtime::handle_configuration_service_envelope(const EnvelopeEvent& ev) {
         bus_.publish_error(error);
         return;
     }
-    if (!ev.envelope.target.matches(config_.self_identity)) {
+    if (!matches_local_target(ev.envelope.target)) {
         return;
     }
 

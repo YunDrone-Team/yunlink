@@ -68,7 +68,7 @@ ErrorCode Runtime::reply_configuration_service_payload(const EnvelopeEvent& inbo
                                                        const ByteBuffer& payload,
                                                        uint32_t ttl_ms) {
     SecureEnvelope envelope =
-        make_runtime_envelope(config_.self_identity,
+        make_runtime_envelope(source_for_target(inbound.envelope.target),
                               TargetSelector::for_entity(inbound.envelope.source.agent_type,
                                                          inbound.envelope.source.agent_id),
                               inbound.envelope.session_id,

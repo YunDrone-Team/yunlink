@@ -26,6 +26,7 @@ nanobind_add_module(
   src/configuration_bridge_callbacks.cpp
   src/configuration_bridge_conversion.cpp
   src/configuration_bridge_requests.cpp
+  src/managed_entity_bridge.cpp
 )
 target_link_libraries(_yunlink_native PRIVATE yunlink_ffi)
 target_include_directories(_yunlink_native PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../../include")

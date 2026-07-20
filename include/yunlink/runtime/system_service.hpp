@@ -89,6 +89,22 @@ class SystemServicePublisher {
     ErrorCode publish_topic_subscription_response(const EnvelopeEvent& inbound,
                                                   const TopicSubscriptionResponse& payload,
                                                   uint32_t ttl_ms = 3000);
+    ErrorCode publish_managed_entity_list_request(
+        const std::string& peer_id,
+        uint64_t session_id,
+        const TargetSelector& target,
+        const ManagedEntityListRequest& payload,
+        SystemServiceHandle* out_handle = nullptr);
+    ErrorCode publish_managed_entity_list_response(
+        const EnvelopeEvent& inbound,
+        const ManagedEntityListResponse& payload,
+        uint32_t ttl_ms = 3000);
+    ErrorCode publish_managed_entity_directory_changed(
+        const std::string& peer_id,
+        uint64_t session_id,
+        const TargetSelector& target,
+        const ManagedEntityDirectoryChanged& payload,
+        SystemServiceHandle* out_handle = nullptr);
     void bind(Runtime* runtime);
 
   private:
@@ -127,6 +143,12 @@ class SystemServiceSubscriber {
         std::function<void(const InboundSystemServiceRequestView<TopicSubscriptionRequest>&)>;
     using TopicSubscriptionResponseHandler =
         std::function<void(const TypedMessage<TopicSubscriptionResponse>&)>;
+    using ManagedEntityListRequestHandler =
+        std::function<void(const InboundSystemServiceRequestView<ManagedEntityListRequest>&)>;
+    using ManagedEntityListResponseHandler =
+        std::function<void(const TypedMessage<ManagedEntityListResponse>&)>;
+    using ManagedEntityDirectoryChangedHandler =
+        std::function<void(const TypedMessage<ManagedEntityDirectoryChanged>&)>;
 
     explicit SystemServiceSubscriber(Runtime* runtime = nullptr);
 
@@ -146,6 +168,9 @@ class SystemServiceSubscriber {
     size_t subscribe_topic_list_responses(TopicListResponseHandler cb);
     size_t subscribe_topic_subscription_requests(TopicSubscriptionRequestHandler cb);
     size_t subscribe_topic_subscription_responses(TopicSubscriptionResponseHandler cb);
+    size_t subscribe_managed_entity_list_requests(ManagedEntityListRequestHandler cb);
+    size_t subscribe_managed_entity_list_responses(ManagedEntityListResponseHandler cb);
+    size_t subscribe_managed_entity_directory_changed(ManagedEntityDirectoryChangedHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

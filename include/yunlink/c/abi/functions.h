@@ -26,6 +26,8 @@ YUNLINK_C_API yunlink_result_t yunlink_peer_connect(yunlink_runtime_t* runtime,
                                                     const char* ip,
                                                     uint16_t port,
                                                     yunlink_peer_t* out_peer);
+YUNLINK_C_API yunlink_result_t yunlink_peer_disconnect(yunlink_runtime_t* runtime,
+                                                       const yunlink_peer_t* peer);
 YUNLINK_C_API yunlink_result_t yunlink_session_open(yunlink_runtime_t* runtime,
                                                     const yunlink_peer_t* peer,
                                                     const char* node_name,
@@ -87,6 +89,13 @@ yunlink_command_publish_velocity_setpoint(yunlink_runtime_t* runtime,
                                           const yunlink_target_selector_t* target,
                                           const yunlink_velocity_setpoint_command_t* payload,
                                           yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_command_publish_uav_control(yunlink_runtime_t* runtime,
+                                    const yunlink_peer_t* peer,
+                                    const yunlink_session_t* session,
+                                    const yunlink_target_selector_t* target,
+                                    const yunlink_uav_control_command_t* payload,
+                                    yunlink_command_handle_t* out_handle);
 
 YUNLINK_C_API yunlink_result_t
 yunlink_publish_vehicle_core_state(yunlink_runtime_t* runtime,
@@ -94,12 +103,26 @@ yunlink_publish_vehicle_core_state(yunlink_runtime_t* runtime,
                                    const yunlink_target_selector_t* target,
                                    const yunlink_vehicle_core_state_t* payload,
                                    uint64_t session_id);
+YUNLINK_C_API yunlink_result_t
+yunlink_publish_vehicle_core_state_from(yunlink_runtime_t* runtime,
+                                        const yunlink_identity_t* source,
+                                        const yunlink_peer_t* peer,
+                                        const yunlink_target_selector_t* target,
+                                        const yunlink_vehicle_core_state_t* payload,
+                                        uint64_t session_id);
 
 YUNLINK_C_API yunlink_result_t yunlink_publish_local_odom(yunlink_runtime_t* runtime,
                                                           const yunlink_peer_t* peer,
                                                           const yunlink_target_selector_t* target,
                                                           const yunlink_local_odom_t* payload,
                                                           uint64_t session_id);
+YUNLINK_C_API yunlink_result_t yunlink_publish_local_odom_from(
+    yunlink_runtime_t* runtime,
+    const yunlink_identity_t* source,
+    const yunlink_peer_t* peer,
+    const yunlink_target_selector_t* target,
+    const yunlink_local_odom_t* payload,
+    uint64_t session_id);
 
 YUNLINK_C_API yunlink_result_t
 yunlink_system_service_request_feature_list(yunlink_runtime_t* runtime,
@@ -140,6 +163,28 @@ yunlink_system_service_request_runtime_log_read(yunlink_runtime_t* runtime,
                                                 uint64_t cursor,
                                                 uint32_t max_bytes,
                                                 yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_managed_entity_list(yunlink_runtime_t* runtime,
+                                                   const yunlink_peer_t* peer,
+                                                   const yunlink_session_t* session,
+                                                   const yunlink_target_selector_t* target,
+                                                   yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_request_topic_list(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_request_topic_subscription(
+    yunlink_runtime_t* runtime,
+    const yunlink_peer_t* peer,
+    const yunlink_session_t* session,
+    const yunlink_target_selector_t* target,
+    const char* topic_name,
+    uint8_t subscribe,
+    float max_rate_hz,
+    uint32_t max_payload_bytes,
+    yunlink_command_handle_t* out_handle);
 
 YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_list_responses(
     yunlink_runtime_t* runtime,
@@ -149,6 +194,16 @@ YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_list
 YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_read_responses(
     yunlink_runtime_t* runtime,
     yunlink_runtime_log_read_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_managed_entity_list_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_managed_entity_list_response_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_managed_entity_directory_changed(
+    yunlink_runtime_t* runtime,
+    yunlink_managed_entity_directory_changed_callback_t callback,
     void* user_data,
     size_t* out_token);
 YUNLINK_C_API yunlink_result_t yunlink_system_service_unsubscribe(yunlink_runtime_t* runtime,

@@ -140,6 +140,41 @@ struct TopicSubscriptionResponse {
     uint32_t max_payload_bytes = 0;
 };
 
+enum class ManagedEntityAvailability : uint8_t {
+    kUnknown = 0,
+    kOnline = 1,
+    kDegraded = 2,
+    kOffline = 3,
+};
+
+/** A logical entity hosted by one physical YunLink endpoint. */
+struct ManagedEntityDescriptor {
+    std::string entity_uid;
+    EndpointIdentity identity;
+    std::string display_name;
+    std::string hardware_id;
+    std::vector<std::string> capabilities;
+    ManagedEntityAvailability availability = ManagedEntityAvailability::kUnknown;
+};
+
+struct ManagedEntityListRequest {
+    uint8_t reserved = 0;
+};
+
+struct ManagedEntityListResponse {
+    bool success = false;
+    std::string message;
+    std::string endpoint_uid;
+    std::string revision;
+    EndpointIdentity primary_identity;
+    std::vector<ManagedEntityDescriptor> entities;
+};
+
+struct ManagedEntityDirectoryChanged {
+    std::string endpoint_uid;
+    std::string revision;
+};
+
 struct SystemServiceHandle {
     uint64_t session_id = 0;
     uint64_t message_id = 0;

@@ -13,12 +13,16 @@ use crate::events::yunlink_runtime_event_t;
 use crate::runtime_logs::{
     yunlink_runtime_log_list_response_callback_t, yunlink_runtime_log_read_response_callback_t,
 };
+use crate::managed_entities::{
+    yunlink_managed_entity_directory_changed_callback_t,
+    yunlink_managed_entity_list_response_callback_t,
+};
 use crate::types::{
     yunlink_authority_lease_t, yunlink_command_handle_t, yunlink_goto_command_t,
     yunlink_land_command_t, yunlink_local_odom_t, yunlink_peer_t, yunlink_return_command_t,
     yunlink_runtime_config_t, yunlink_runtime_t, yunlink_session_info_t, yunlink_session_t,
-    yunlink_takeoff_command_t, yunlink_target_selector_t, yunlink_vehicle_core_state_t,
-    yunlink_velocity_setpoint_command_t,
+    yunlink_takeoff_command_t, yunlink_target_selector_t, yunlink_uav_control_command_t,
+    yunlink_vehicle_core_state_t, yunlink_velocity_setpoint_command_t,
 };
 
 // Raw extern declarations for `libyunlink_ffi`.
@@ -51,6 +55,11 @@ unsafe extern "C" {
         ip: *const c_char,
         port: u16,
         out_peer: *mut yunlink_peer_t,
+    ) -> yunlink_result_t;
+    /// Close the TCP transport associated with a peer handle.
+    pub fn yunlink_peer_disconnect(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
     ) -> yunlink_result_t;
     /// Open a protocol session with an already connected peer.
     pub fn yunlink_session_open(
@@ -143,6 +152,14 @@ unsafe extern "C" {
         payload: *const yunlink_velocity_setpoint_command_t,
         out_handle: *mut yunlink_command_handle_t,
     ) -> yunlink_result_t;
+    pub fn yunlink_command_publish_uav_control(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        payload: *const yunlink_uav_control_command_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
 
     /// Publish a vehicle core state snapshot from a vehicle-like runtime.
     pub fn yunlink_publish_vehicle_core_state(
@@ -197,6 +214,31 @@ unsafe extern "C" {
         max_bytes: u32,
         out_handle: *mut yunlink_command_handle_t,
     ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_managed_entity_list(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_topic_list(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_topic_subscription(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        topic_name: *const c_char,
+        subscribe: u8,
+        max_rate_hz: f32,
+        max_payload_bytes: u32,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
     pub fn yunlink_system_service_subscribe_runtime_log_list_responses(
         runtime: *mut yunlink_runtime_t,
         callback: yunlink_runtime_log_list_response_callback_t,
@@ -206,6 +248,18 @@ unsafe extern "C" {
     pub fn yunlink_system_service_subscribe_runtime_log_read_responses(
         runtime: *mut yunlink_runtime_t,
         callback: yunlink_runtime_log_read_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_subscribe_managed_entity_list_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_managed_entity_list_response_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_subscribe_managed_entity_directory_changed(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_managed_entity_directory_changed_callback_t,
         user_data: *mut core::ffi::c_void,
         out_token: *mut usize,
     ) -> yunlink_result_t;

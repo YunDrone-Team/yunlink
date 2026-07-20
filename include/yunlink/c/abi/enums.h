@@ -95,6 +95,7 @@ typedef enum yunlink_command_kind {
     YUNLINK_COMMAND_KIND_VELOCITY_SETPOINT = 5,
     YUNLINK_COMMAND_KIND_TRAJECTORY_CHUNK = 6,
     YUNLINK_COMMAND_KIND_FORMATION_TASK = 7,
+    YUNLINK_COMMAND_KIND_UAV_CONTROL = 8,
 } yunlink_command_kind_t;
 
 typedef enum yunlink_session_state {
@@ -108,6 +109,22 @@ typedef enum yunlink_session_state {
     YUNLINK_SESSION_STATE_LOST = 8,
     YUNLINK_SESSION_STATE_INVALID = 9,
 } yunlink_session_state_t;
+
+typedef enum yunlink_managed_entity_availability {
+    YUNLINK_MANAGED_ENTITY_UNKNOWN = 0,
+    YUNLINK_MANAGED_ENTITY_ONLINE = 1,
+    YUNLINK_MANAGED_ENTITY_DEGRADED = 2,
+    YUNLINK_MANAGED_ENTITY_OFFLINE = 3,
+} yunlink_managed_entity_availability_t;
+
+typedef enum yunlink_capability_flag {
+    YUNLINK_CAPABILITY_EXTERNAL_EXECUTOR = 1u << 0,
+    YUNLINK_CAPABILITY_BULK_CHANNEL = 1u << 1,
+    YUNLINK_CAPABILITY_PLANNING_BRIDGE = 1u << 2,
+    YUNLINK_CAPABILITY_SWARM_GROUP = 1u << 3,
+    YUNLINK_CAPABILITY_SECURITY_TAGS = 1u << 4,
+    YUNLINK_CAPABILITY_MANAGED_ENTITIES = 1u << 5,
+} yunlink_capability_flag_t;
 
 typedef enum yunlink_vehicle_event_kind {
     YUNLINK_VEHICLE_EVENT_KIND_INFO = 1,
@@ -132,6 +149,9 @@ typedef enum yunlink_runtime_event_type {
     YUNLINK_RUNTIME_EVENT_HOST_SYSTEM = 10,
     YUNLINK_RUNTIME_EVENT_FEATURE_START = 11,
     YUNLINK_RUNTIME_EVENT_LOCAL_ODOM = 12,
+    YUNLINK_RUNTIME_EVENT_TOPIC_LIST = 13,
+    YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION = 14,
+    YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE = 15,
 } yunlink_runtime_event_type_t;
 
 typedef enum yunlink_config_value_type {

@@ -63,6 +63,9 @@ pub struct yunlink_runtime_config_t {
     pub security_key_epoch: u32,
     pub security_tags_enabled: u8,
     pub security_tags_required: u8,
+    pub required_peer_capability_flags: u32,
+    pub managed_identities: *const yunlink_identity_t,
+    pub managed_identity_count: usize,
 }
 
 impl Default for yunlink_runtime_config_t {
@@ -88,6 +91,9 @@ impl Default for yunlink_runtime_config_t {
             security_key_epoch: 1,
             security_tags_enabled: 0,
             security_tags_required: 0,
+            required_peer_capability_flags: 0,
+            managed_identities: std::ptr::null(),
+            managed_identity_count: 0,
         }
     }
 }
@@ -254,6 +260,31 @@ pub struct yunlink_velocity_setpoint_command_t {
     pub yaw_rate_radps: f32,
     /// Non-zero when velocities are expressed in the body frame.
     pub body_frame: u8,
+}
+
+/// Raw complete UAV control payload.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct yunlink_uav_control_command_t {
+    pub control_cmd: u8,
+    pub desired_position_x_m: f32,
+    pub desired_position_y_m: f32,
+    pub desired_position_z_m: f32,
+    pub desired_velocity_x_mps: f32,
+    pub desired_velocity_y_mps: f32,
+    pub desired_velocity_z_mps: f32,
+    pub desired_acceleration_x_mps2: f32,
+    pub desired_acceleration_y_mps2: f32,
+    pub desired_acceleration_z_mps2: f32,
+    pub desired_body_xy_position_x_m: f32,
+    pub desired_body_xy_position_y_m: f32,
+    pub desired_body_xy_velocity_x_mps: f32,
+    pub desired_body_xy_velocity_y_mps: f32,
+    pub fixed_height_m: f32,
+    pub yaw_mode: u8,
+    pub desired_yaw_rad: f32,
+    pub desired_yaw_rate_radps: f32,
+    pub controller_type: u8,
 }
 
 /// Raw vehicle core state snapshot payload.

@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstddef>
 #include <mutex>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -96,6 +97,12 @@ struct Runtime::Impl {
         topic_subscription_request_handlers;
     std::unordered_map<size_t, SystemServiceSubscriber::TopicSubscriptionResponseHandler>
         topic_subscription_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::ManagedEntityListRequestHandler>
+        managed_entity_list_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::ManagedEntityListResponseHandler>
+        managed_entity_list_response_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::ManagedEntityDirectoryChangedHandler>
+        managed_entity_directory_changed_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListRequestHandler>
         config_resource_list_request_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListResponseHandler>
@@ -123,6 +130,8 @@ struct Runtime::Impl {
     std::unordered_map<std::string, uint64_t> command_result_from_status_seen;
     std::unordered_map<std::string, RuntimeTrajectoryAccumulator> trajectory_accumulators;
     std::unordered_set<std::string> security_replay_keys;
+    std::shared_ptr<const std::vector<EndpointIdentity>> local_managed_identities{
+        std::make_shared<const std::vector<EndpointIdentity>>()};
 };
 
 inline PacketTraceStoreConfig runtime_packet_trace_config(const RuntimeConfig& config) {
@@ -161,6 +170,66 @@ inline std::string runtime_target_key(const TargetSelector& target) {
         key += ",";
     }
     return key;
+}
+
+inline bool runtime_same_entity(const EndpointIdentity& lhs, const EndpointIdentity& rhs) {
+    return lhs.agent_type == rhs.agent_type && lhs.agent_id == rhs.agent_id;
+}
+
+inline bool runtime_local_source_allowed(const EndpointIdentity& self_identity,
+                                         const std::vector<EndpointIdentity>& managed_identities,
+                                         const EndpointIdentity& source) {
+    if (runtime_same_entity(self_identity, source)) {
+        return true;
+    }
+    return std::any_of(managed_identities.begin(),
+                       managed_identities.end(),
+                       [&](const EndpointIdentity& identity) {
+                           return runtime_same_entity(identity, source);
+                       });
+}
+
+inline bool runtime_matches_local_target(const EndpointIdentity& self_identity,
+                                         const std::vector<EndpointIdentity>& managed_identities,
+                                         const TargetSelector& target) {
+    if (target.matches(self_identity)) {
+        return true;
+    }
+    return std::any_of(managed_identities.begin(),
+                       managed_identities.end(),
+                       [&](const EndpointIdentity& identity) { return target.matches(identity); });
+}
+
+inline EndpointIdentity runtime_source_for_target(const EndpointIdentity& self_identity,
+                                                  const std::vector<EndpointIdentity>& managed_identities,
+                                                  const TargetSelector& target) {
+    if (target.scope == TargetScope::kEntity && target.target_ids.size() == 1U) {
+        const auto match = [&](const EndpointIdentity& identity) {
+            return identity.agent_id == target.target_ids.front() &&
+                   (target.target_type == AgentType::kUnknown ||
+                    target.target_type == identity.agent_type);
+        };
+        if (match(self_identity)) {
+            return self_identity;
+        }
+        const auto it = std::find_if(managed_identities.begin(), managed_identities.end(), match);
+        if (it != managed_identities.end()) {
+            return *it;
+        }
+    }
+    return self_identity;
+}
+
+inline bool runtime_remote_source_allowed(const SessionDescriptor& session,
+                                          const EndpointIdentity& source) {
+    if (runtime_same_entity(session.remote_identity, source)) {
+        return true;
+    }
+    return std::any_of(session.remote_managed_identities.begin(),
+                       session.remote_managed_identities.end(),
+                       [&](const EndpointIdentity& identity) {
+                           return runtime_same_entity(identity, source);
+                       });
 }
 
 inline std::string runtime_trajectory_key(const EnvelopeEvent& ev) {

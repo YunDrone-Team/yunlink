@@ -113,7 +113,8 @@ void apply_runtime_security_tag(const RuntimeConfig& config, SecureEnvelope* env
 std::string runtime_security_replay_key(const SecureEnvelope& envelope) {
     return std::to_string(envelope.security.key_epoch) + ":" +
            std::to_string(static_cast<uint8_t>(envelope.source.agent_type)) + ":" +
-           std::to_string(envelope.source.agent_id) + ":" + std::to_string(envelope.message_id);
+           std::to_string(envelope.source.agent_id) + ":" + std::to_string(envelope.session_id) +
+           ":" + std::to_string(envelope.message_id);
 }
 
 }  // namespace yunlink

@@ -41,12 +41,12 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
 
     const auto reject_command_before_dispatch = [&](ErrorCode code, const std::string& detail) {
         if (ev.envelope.message_family != MessageFamily::kCommand ||
-            !ev.envelope.target.matches(config_.self_identity)) {
+            !matches_local_target(ev.envelope.target)) {
             return;
         }
 
         SecureEnvelope reply = make_typed_envelope(
-            config_.self_identity,
+            source_for_target(ev.envelope.target),
             TargetSelector::for_entity(ev.envelope.source.agent_type, ev.envelope.source.agent_id),
             ev.envelope.session_id,
             ev.envelope.message_id,
@@ -145,9 +145,9 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         bus_.publish_error(error);
 
         if (ev.envelope.message_family == MessageFamily::kCommand &&
-            ev.envelope.target.matches(config_.self_identity)) {
+            matches_local_target(ev.envelope.target)) {
             SecureEnvelope reply = make_typed_envelope(
-                config_.self_identity,
+                source_for_target(ev.envelope.target),
                 TargetSelector::for_entity(ev.envelope.source.agent_type,
                                            ev.envelope.source.agent_id),
                 ev.envelope.session_id,
@@ -165,7 +165,28 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         return;
     }
 
-    if (!ev.envelope.target.matches(config_.self_identity) &&
+    if (ev.envelope.message_family != MessageFamily::kSession) {
+        SessionDescriptor session{};
+        const bool has_session =
+            describe_session_internal(ev.peer.id, ev.envelope.session_id, &session) ||
+            describe_session_internal(ev.envelope.session_id, &session);
+        if (has_session &&
+            (session.state != SessionState::kActive || !session.authenticated ||
+             !runtime_remote_source_allowed(session, ev.envelope.source))) {
+            ErrorEvent error;
+            error.code = ErrorCode::kUnauthorized;
+            error.transport = ev.transport;
+            error.peer = ev.peer;
+            error.message = "session-source-not-authorized";
+            bus_.publish_error(error);
+            trace_dispatch(PacketTraceStage::kDispatchRejected,
+                           ErrorCode::kUnauthorized,
+                           "session-source-not-authorized");
+            return;
+        }
+    }
+
+    if (!matches_local_target(ev.envelope.target) &&
         ev.envelope.message_family != MessageFamily::kSession) {
         trace_dispatch(
             PacketTraceStage::kDispatchRejected, ErrorCode::kRejected, "target-mismatch");

@@ -117,6 +117,8 @@ uint16_t capability_mask(const std::vector<std::string>& capabilities) {
             mask |= 8U;
         } else if (capability == "topic-stream-v1") {
             mask |= 16U;
+        } else if (capability == "managed-entities") {
+            mask |= 32U;
         }
     }
     return mask;
@@ -134,6 +136,8 @@ std::vector<std::string> capabilities_from_mask(uint16_t mask) {
         result.push_back("config-resource-v1");
     if ((mask & 16U) != 0U)
         result.push_back("topic-stream-v1");
+    if ((mask & 32U) != 0U)
+        result.push_back("managed-entities");
     return result;
 }
 

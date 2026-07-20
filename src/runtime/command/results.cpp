@@ -16,7 +16,7 @@ ErrorCode Runtime::reply_command_result(const EnvelopeEvent& inbound,
     }
 
     SecureEnvelope envelope =
-        make_typed_envelope(config_.self_identity,
+        make_typed_envelope(source_for_target(inbound.envelope.target),
                             TargetSelector::for_entity(inbound.envelope.source.agent_type,
                                                        inbound.envelope.source.agent_id),
                             inbound.envelope.session_id,
@@ -48,7 +48,7 @@ void Runtime::publish_command_result_sequence(const EnvelopeEvent& inbound,
         result.detail = "runtime-auto-result";
 
         SecureEnvelope envelope = make_typed_envelope(
-            config_.self_identity,
+            source_for_target(cmd.target),
             TargetSelector::for_entity(cmd.source.agent_type, cmd.source.agent_id),
             cmd.session_id,
             cmd.message_id,

@@ -36,8 +36,15 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
                 ev, make_command_result(ev, ErrorCode::kOk, phase, progress_percent, detail));
         };
 
-    if (ev.envelope.target.scope == TargetScope::kBroadcast) {
+    const bool formation = static_cast<CommandType>(ev.envelope.message_type) ==
+                           CommandType::kFormationTask;
+    if (!formation && ev.envelope.target.scope == TargetScope::kBroadcast) {
         fail_command(ErrorCode::kRejected, "broadcast-command-disallowed");
+        return;
+    }
+    if (!formation && (ev.envelope.target.scope != TargetScope::kEntity ||
+                       ev.envelope.target.target_ids.size() != 1U)) {
+        fail_command(ErrorCode::kRejected, "command-requires-single-entity-target");
         return;
     }
 
@@ -46,7 +53,7 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
         return;
     }
 
-    if (!ev.envelope.target.matches(config_.self_identity)) {
+    if (!matches_local_target(ev.envelope.target)) {
         fail_command(ErrorCode::kRejected, "wrong-target");
         return;
     }
