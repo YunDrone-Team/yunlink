@@ -30,6 +30,7 @@ pub use events::{
     TopicSubscriptionEvent, VehicleCoreStateEvent, EVENT_CHANNEL_CAPACITY,
 };
 pub use managed_entities::{
+    ManagedEntityAttachmentAction, ManagedEntityAttachmentResponse, ManagedEntityAttachmentResult,
     ManagedEntityAvailability, ManagedEntityDescriptor, ManagedEntityDirectory,
     ManagedEntityDirectoryChanged, ManagedEntityEvent,
 };
@@ -39,9 +40,9 @@ pub use runtime_logs::{
 };
 pub use types::{
     AgentType, AuthorityLease, AuthorityState, CommandHandle, ControlSource, EndpointIdentity,
-    EndpointRole, GotoCommand, LandCommand, LocalOdom, PeerConnection, ReturnCommand, RuntimeConfig,
-    Session, SessionInfo, SessionState, TakeoffCommand, TargetSelector, UavControlCommand,
-    VehicleCoreState, VelocitySetpointCommand,
+    EndpointRole, GotoCommand, LandCommand, LocalOdom, PeerConnection, ReturnCommand,
+    RuntimeConfig, Session, SessionInfo, SessionState, TakeoffCommand, TargetSelector,
+    UavControlCommand, VehicleCoreState, VelocitySetpointCommand,
 };
 
 /// Endpoint supports an authenticated managed-entity directory.

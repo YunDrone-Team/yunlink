@@ -254,6 +254,8 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->managed_entity_list_request_handlers.erase(token);
     impl_->managed_entity_list_response_handlers.erase(token);
     impl_->managed_entity_directory_changed_handlers.erase(token);
+    impl_->managed_entity_attachment_request_handlers.erase(token);
+    impl_->managed_entity_attachment_response_handlers.erase(token);
     unsubscribe_configuration_semantic_locked(token);
     impl_->bulk_channel_descriptor_handlers.erase(token);
 }

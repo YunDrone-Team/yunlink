@@ -63,9 +63,35 @@ pub struct yunlink_managed_entity_directory_changed_view_t {
     pub revision: yunlink_string_view_t,
 }
 
-pub type yunlink_managed_entity_list_response_callback_t = Option<
-    unsafe extern "C" fn(*mut c_void, *const yunlink_managed_entity_list_response_view_t),
->;
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct yunlink_managed_entity_attachment_result_view_t {
+    pub entity_uid: yunlink_string_view_t,
+    pub accepted: u8,
+    pub message: yunlink_string_view_t,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct yunlink_managed_entity_attachment_response_view_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: u8,
+    pub message: yunlink_string_view_t,
+    pub endpoint_uid: yunlink_string_view_t,
+    pub directory_revision: yunlink_string_view_t,
+    pub results: *const yunlink_managed_entity_attachment_result_view_t,
+    pub result_count: usize,
+    pub attached_entity_uids: *const yunlink_string_view_t,
+    pub attached_entity_count: usize,
+}
+
+pub type yunlink_managed_entity_list_response_callback_t =
+    Option<unsafe extern "C" fn(*mut c_void, *const yunlink_managed_entity_list_response_view_t)>;
 pub type yunlink_managed_entity_directory_changed_callback_t = Option<
     unsafe extern "C" fn(*mut c_void, *const yunlink_managed_entity_directory_changed_view_t),
+>;
+pub type yunlink_managed_entity_attachment_response_callback_t = Option<
+    unsafe extern "C" fn(*mut c_void, *const yunlink_managed_entity_attachment_response_view_t),
 >;

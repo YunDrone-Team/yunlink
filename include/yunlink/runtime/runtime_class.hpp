@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "yunlink/core/event_bus.hpp"
 #include "yunlink/core/runtime_config.hpp"
@@ -33,6 +34,8 @@ class Runtime {
     ErrorCode start(const RuntimeConfig& config);
     void stop();
     ErrorCode set_managed_identities(const std::vector<EndpointIdentity>& identities);
+    /** Snapshot every active Session. Intended for provider-side session fan-out. */
+    std::vector<SessionDescriptor> active_sessions() const;
 
     EventBus& event_bus() {
         return bus_;
@@ -305,6 +308,10 @@ class Runtime {
         SystemServiceSubscriber::ManagedEntityListResponseHandler cb);
     size_t subscribe_managed_entity_directory_changed_internal(
         SystemServiceSubscriber::ManagedEntityDirectoryChangedHandler cb);
+    size_t subscribe_managed_entity_attachment_request_internal(
+        SystemServiceSubscriber::ManagedEntityAttachmentRequestHandler cb);
+    size_t subscribe_managed_entity_attachment_response_internal(
+        SystemServiceSubscriber::ManagedEntityAttachmentResponseHandler cb);
     size_t
     subscribe_bulk_channel_descriptor_internal(EventSubscriber::BulkChannelDescriptorHandler cb);
     void handle_session_envelope(const EnvelopeEvent& ev);

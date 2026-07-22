@@ -116,13 +116,13 @@ YUNLINK_C_API yunlink_result_t yunlink_publish_local_odom(yunlink_runtime_t* run
                                                           const yunlink_target_selector_t* target,
                                                           const yunlink_local_odom_t* payload,
                                                           uint64_t session_id);
-YUNLINK_C_API yunlink_result_t yunlink_publish_local_odom_from(
-    yunlink_runtime_t* runtime,
-    const yunlink_identity_t* source,
-    const yunlink_peer_t* peer,
-    const yunlink_target_selector_t* target,
-    const yunlink_local_odom_t* payload,
-    uint64_t session_id);
+YUNLINK_C_API yunlink_result_t
+yunlink_publish_local_odom_from(yunlink_runtime_t* runtime,
+                                const yunlink_identity_t* source,
+                                const yunlink_peer_t* peer,
+                                const yunlink_target_selector_t* target,
+                                const yunlink_local_odom_t* payload,
+                                uint64_t session_id);
 
 YUNLINK_C_API yunlink_result_t
 yunlink_system_service_request_feature_list(yunlink_runtime_t* runtime,
@@ -169,22 +169,33 @@ yunlink_system_service_request_managed_entity_list(yunlink_runtime_t* runtime,
                                                    const yunlink_session_t* session,
                                                    const yunlink_target_selector_t* target,
                                                    yunlink_command_handle_t* out_handle);
-YUNLINK_C_API yunlink_result_t yunlink_system_service_request_topic_list(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    yunlink_command_handle_t* out_handle);
-YUNLINK_C_API yunlink_result_t yunlink_system_service_request_topic_subscription(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    const char* topic_name,
-    uint8_t subscribe,
-    float max_rate_hz,
-    uint32_t max_payload_bytes,
-    yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_managed_entity_attachment(yunlink_runtime_t* runtime,
+                                                         const yunlink_peer_t* peer,
+                                                         const yunlink_session_t* session,
+                                                         const yunlink_target_selector_t* target,
+                                                         yunlink_string_view_t endpoint_uid,
+                                                         yunlink_string_view_t directory_revision,
+                                                         uint8_t action,
+                                                         const yunlink_string_view_t* entity_uids,
+                                                         size_t entity_uid_count,
+                                                         yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_topic_list(yunlink_runtime_t* runtime,
+                                          const yunlink_peer_t* peer,
+                                          const yunlink_session_t* session,
+                                          const yunlink_target_selector_t* target,
+                                          yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_topic_subscription(yunlink_runtime_t* runtime,
+                                                  const yunlink_peer_t* peer,
+                                                  const yunlink_session_t* session,
+                                                  const yunlink_target_selector_t* target,
+                                                  const char* topic_name,
+                                                  uint8_t subscribe,
+                                                  float max_rate_hz,
+                                                  uint32_t max_payload_bytes,
+                                                  yunlink_command_handle_t* out_handle);
 
 YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_runtime_log_list_responses(
     yunlink_runtime_t* runtime,
@@ -204,6 +215,11 @@ YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_managed_entity_l
 YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_managed_entity_directory_changed(
     yunlink_runtime_t* runtime,
     yunlink_managed_entity_directory_changed_callback_t callback,
+    void* user_data,
+    size_t* out_token);
+YUNLINK_C_API yunlink_result_t yunlink_system_service_subscribe_managed_entity_attachment_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_managed_entity_attachment_response_callback_t callback,
     void* user_data,
     size_t* out_token);
 YUNLINK_C_API yunlink_result_t yunlink_system_service_unsubscribe(yunlink_runtime_t* runtime,

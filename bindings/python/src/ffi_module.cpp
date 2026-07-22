@@ -62,10 +62,9 @@ class RuntimeCore {
             managed_identities.reserve(values.size());
             for (const nb::handle value : values) {
                 const auto identity = nb::cast<nb::dict>(value);
-                managed_identities.push_back(
-                    {nb::cast<uint8_t>(identity["agent_type"]),
-                     nb::cast<uint32_t>(identity["agent_id"]),
-                     nb::cast<uint8_t>(identity["role"])});
+                managed_identities.push_back({nb::cast<uint8_t>(identity["agent_type"]),
+                                              nb::cast<uint32_t>(identity["agent_id"]),
+                                              nb::cast<uint8_t>(identity["role"])});
             }
         }
         native.managed_identities = managed_identities.data();
@@ -290,6 +289,23 @@ class RuntimeCore {
         return managed_entities_.request(runtime_, peer_id, session_id, target);
     }
 
+    nb::dict request_managed_entity_attachment(const std::string& peer_id,
+                                               uint64_t session_id,
+                                               const nb::dict& target,
+                                               const std::string& endpoint_uid,
+                                               const std::string& directory_revision,
+                                               const std::string& action,
+                                               const nb::list& entity_uids) {
+        return managed_entities_.request_attachment(runtime_,
+                                                    peer_id,
+                                                    session_id,
+                                                    target,
+                                                    endpoint_uid,
+                                                    directory_revision,
+                                                    action,
+                                                    entity_uids);
+    }
+
     nb::object poll_managed_entity_event() {
         return managed_entities_.poll();
     }
@@ -323,5 +339,6 @@ NB_MODULE(_yunlink_native, m) {
         .def("configuration_apply", &RuntimeCore::configuration_apply)
         .def("poll_configuration_response", &RuntimeCore::poll_configuration_response)
         .def("request_managed_entity_list", &RuntimeCore::request_managed_entity_list)
+        .def("request_managed_entity_attachment", &RuntimeCore::request_managed_entity_attachment)
         .def("poll_managed_entity_event", &RuntimeCore::poll_managed_entity_event);
 }

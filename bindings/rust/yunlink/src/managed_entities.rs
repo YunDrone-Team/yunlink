@@ -45,10 +45,46 @@ pub struct ManagedEntityDirectoryChanged {
     pub revision: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ManagedEntityAttachmentAction {
+    Attach,
+    Detach,
+}
+
+impl ManagedEntityAttachmentAction {
+    pub(crate) const fn as_native(self) -> u8 {
+        match self {
+            Self::Attach => 1,
+            Self::Detach => 2,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ManagedEntityAttachmentResult {
+    pub entity_uid: String,
+    pub accepted: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ManagedEntityAttachmentResponse {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: bool,
+    pub message: String,
+    pub endpoint_uid: String,
+    pub directory_revision: String,
+    pub results: Vec<ManagedEntityAttachmentResult>,
+    pub attached_entity_uids: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManagedEntityEvent {
     Directory(ManagedEntityDirectory),
     Changed(ManagedEntityDirectoryChanged),
+    Attachment(ManagedEntityAttachmentResponse),
 }
 
 pub(crate) use callbacks::{register_callbacks, ManagedEntityCallbackContext};

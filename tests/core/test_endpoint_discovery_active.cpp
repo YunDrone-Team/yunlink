@@ -7,6 +7,18 @@
 
 int main() {
     const std::string secret = "discovery-test-secret";
+    if (yunlink::make_endpoint_display_name("SURY-uav", 1U, "a1b2c") != "SURY-uav1-a1b2c" ||
+        yunlink::make_endpoint_display_name("SURY#-uav", 1U, "a1b2c") != "SURY#-uav1-a1b2c") {
+        std::cerr << "SURY endpoint display-name convention failed\n";
+        return 16;
+    }
+    if (!yunlink::validate_endpoint_id("a1b2c") || !yunlink::validate_endpoint_id("a1b2c3d4e5f6") ||
+        yunlink::validate_endpoint_id("Alpha") || yunlink::validate_endpoint_id("ABCDEFGH") ||
+        yunlink::validate_endpoint_id("A1") || yunlink::validate_endpoint_id("abcdefghi") ||
+        yunlink::validate_endpoint_id("Alpha-") || yunlink::validate_endpoint_id("")) {
+        std::cerr << "endpoint UID validation did not preserve generated IDs only\n";
+        return 17;
+    }
     yunlink::EndpointDiscoveryQuery query{0x123456789abcdef0ULL, 800U};
     const auto encoded_query = yunlink::encode_endpoint_discovery_query(query, secret);
     yunlink::EndpointDiscoveryQuery decoded_query{};
@@ -46,6 +58,7 @@ int main() {
     if (!yunlink::decode_endpoint_discovery_reply(
             reply, secret, &reply_nonce, &decoded_reply, &error) ||
         reply_nonce != query.nonce || decoded_reply.endpoint_id != advertisement.endpoint_id ||
+        decoded_reply.display_name != "uav7-a1b2c" ||
         decoded_reply.agent_type != advertisement.agent_type ||
         decoded_reply.role != advertisement.role ||
         decoded_reply.tcp_listen_port != advertisement.tcp_listen_port ||
@@ -92,7 +105,8 @@ int main() {
     const auto v1 = yunlink::encode_endpoint_advertisement(advertisement);
     yunlink::EndpointAdvertisement decoded_v1{};
     if (!yunlink::decode_endpoint_advertisement(v1, &decoded_v1, &error) ||
-        decoded_v1.endpoint_id != advertisement.endpoint_id) {
+        decoded_v1.endpoint_id != advertisement.endpoint_id ||
+        decoded_v1.display_name != "uav7-a1b2c") {
         std::cerr << "V1 compatibility decode failed: " << error << '\n';
         return 7;
     }

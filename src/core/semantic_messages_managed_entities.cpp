@@ -11,6 +11,7 @@ namespace {
 constexpr uint16_t kMaxManagedEntities = 256;
 constexpr uint16_t kMaxEntityCapabilities = 128;
 constexpr uint16_t kMaxIdentityGroups = 128;
+constexpr uint16_t kMaxAttachmentEntities = 256;
 
 void write_identity(BufferWriter& writer, const EndpointIdentity& identity) {
     writer.write_u8(static_cast<uint8_t>(identity.agent_type));
@@ -93,12 +94,18 @@ bool read_entity(BufferReader& reader, ManagedEntityDescriptor* out) {
 }  // namespace
 
 ByteBuffer encode_payload(const ManagedEntityListRequest& payload) {
-    return build_payload([&](BufferWriter& writer) { writer.write_u8(payload.reserved); });
+    return build_payload(
+        [&](BufferWriter& writer) { writer.write_u8(payload.attachment_aware ? 1U : 0U); });
 }
 
 bool decode_payload(const ByteBuffer& bytes, ManagedEntityListRequest* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, ManagedEntityListRequest* out) {
-        return reader.read_u8(&out->reserved);
+        uint8_t raw = 0;
+        if (!reader.read_u8(&raw) || raw > 1U) {
+            return false;
+        }
+        out->attachment_aware = raw == 1U;
+        return true;
     });
 }
 
@@ -153,6 +160,109 @@ bool decode_payload(const ByteBuffer& bytes, ManagedEntityDirectoryChanged* payl
     return parse_payload(
         bytes, payload, [](BufferReader& reader, ManagedEntityDirectoryChanged* out) {
             return reader.read_string(&out->endpoint_uid) && reader.read_string(&out->revision);
+        });
+}
+
+ByteBuffer encode_payload(const ManagedEntityAttachmentRequest& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        if (payload.entity_uids.empty() || payload.entity_uids.size() > kMaxAttachmentEntities) {
+            writer.invalidate();
+            return;
+        }
+        writer.write_string(payload.endpoint_uid);
+        writer.write_string(payload.directory_revision);
+        writer.write_u8(static_cast<uint8_t>(payload.action));
+        writer.write_u16(static_cast<uint16_t>(payload.entity_uids.size()));
+        for (const std::string& entity_uid : payload.entity_uids) {
+            writer.write_string(entity_uid);
+        }
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, ManagedEntityAttachmentRequest* payload) {
+    return parse_payload(
+        bytes, payload, [](BufferReader& reader, ManagedEntityAttachmentRequest* out) {
+            uint8_t action = 0;
+            uint16_t count = 0;
+            if (!reader.read_string(&out->endpoint_uid) ||
+                !reader.read_string(&out->directory_revision) || !reader.read_u8(&action) ||
+                !reader.read_u16(&count) || count == 0 || count > kMaxAttachmentEntities ||
+                (action != static_cast<uint8_t>(ManagedEntityAttachmentAction::kAttach) &&
+                 action != static_cast<uint8_t>(ManagedEntityAttachmentAction::kDetach))) {
+                return false;
+            }
+            out->action = static_cast<ManagedEntityAttachmentAction>(action);
+            out->entity_uids.clear();
+            out->entity_uids.reserve(count);
+            for (uint16_t index = 0; index < count; ++index) {
+                std::string entity_uid;
+                if (!reader.read_string(&entity_uid) || entity_uid.empty()) {
+                    return false;
+                }
+                out->entity_uids.push_back(std::move(entity_uid));
+            }
+            return true;
+        });
+}
+
+ByteBuffer encode_payload(const ManagedEntityAttachmentResponse& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        if (payload.results.size() > kMaxAttachmentEntities ||
+            payload.attached_entity_uids.size() > kMaxAttachmentEntities) {
+            writer.invalidate();
+            return;
+        }
+        writer.write_bool(payload.success);
+        writer.write_string(payload.message);
+        writer.write_string(payload.endpoint_uid);
+        writer.write_string(payload.directory_revision);
+        writer.write_u16(static_cast<uint16_t>(payload.results.size()));
+        for (const ManagedEntityAttachmentResult& result : payload.results) {
+            writer.write_string(result.entity_uid);
+            writer.write_bool(result.accepted);
+            writer.write_string(result.message);
+        }
+        writer.write_u16(static_cast<uint16_t>(payload.attached_entity_uids.size()));
+        for (const std::string& entity_uid : payload.attached_entity_uids) {
+            writer.write_string(entity_uid);
+        }
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, ManagedEntityAttachmentResponse* payload) {
+    return parse_payload(
+        bytes, payload, [](BufferReader& reader, ManagedEntityAttachmentResponse* out) {
+            uint16_t result_count = 0;
+            uint16_t attached_count = 0;
+            if (!reader.read_bool(&out->success) || !reader.read_string(&out->message) ||
+                !reader.read_string(&out->endpoint_uid) ||
+                !reader.read_string(&out->directory_revision) || !reader.read_u16(&result_count) ||
+                result_count > kMaxAttachmentEntities) {
+                return false;
+            }
+            out->results.clear();
+            out->results.reserve(result_count);
+            for (uint16_t index = 0; index < result_count; ++index) {
+                ManagedEntityAttachmentResult result;
+                if (!reader.read_string(&result.entity_uid) ||
+                    !reader.read_bool(&result.accepted) || !reader.read_string(&result.message)) {
+                    return false;
+                }
+                out->results.push_back(std::move(result));
+            }
+            if (!reader.read_u16(&attached_count) || attached_count > kMaxAttachmentEntities) {
+                return false;
+            }
+            out->attached_entity_uids.clear();
+            out->attached_entity_uids.reserve(attached_count);
+            for (uint16_t index = 0; index < attached_count; ++index) {
+                std::string entity_uid;
+                if (!reader.read_string(&entity_uid)) {
+                    return false;
+                }
+                out->attached_entity_uids.push_back(std::move(entity_uid));
+            }
+            return true;
         });
 }
 

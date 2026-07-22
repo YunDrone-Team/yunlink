@@ -156,4 +156,20 @@ size_t Runtime::subscribe_managed_entity_directory_changed_internal(
     return token;
 }
 
+size_t Runtime::subscribe_managed_entity_attachment_request_internal(
+    SystemServiceSubscriber::ManagedEntityAttachmentRequestHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->managed_entity_attachment_request_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_managed_entity_attachment_response_internal(
+    SystemServiceSubscriber::ManagedEntityAttachmentResponseHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->managed_entity_attachment_response_handlers[token] = std::move(cb);
+    return token;
+}
+
 }  // namespace yunlink

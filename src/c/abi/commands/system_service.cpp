@@ -171,24 +171,93 @@ yunlink_system_service_request_runtime_log_read(yunlink_runtime_t* runtime,
     return YUNLINK_RESULT_OK;
 }
 
-yunlink_result_t yunlink_system_service_request_managed_entity_list(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    yunlink_command_handle_t* out_handle) {
+yunlink_result_t
+yunlink_system_service_request_managed_entity_list(yunlink_runtime_t* runtime,
+                                                   const yunlink_peer_t* peer,
+                                                   const yunlink_session_t* session,
+                                                   const yunlink_target_selector_t* target,
+                                                   yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target)) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::SystemServiceHandle handle{};
+    yunlink::ManagedEntityListRequest request{};
+    request.attachment_aware = true;
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_managed_entity_list_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
+    if (result != YUNLINK_RESULT_OK) {
+        return result;
+    }
+    if (out_handle != nullptr) {
+        out_handle->session_id = handle.session_id;
+        out_handle->message_id = handle.message_id;
+        out_handle->correlation_id = handle.correlation_id;
+        out_handle->target = to_c_target_selector(handle.target);
+    }
+    return YUNLINK_RESULT_OK;
+}
+
+yunlink_result_t
+yunlink_system_service_request_managed_entity_attachment(yunlink_runtime_t* runtime,
+                                                         const yunlink_peer_t* peer,
+                                                         const yunlink_session_t* session,
+                                                         const yunlink_target_selector_t* target,
+                                                         yunlink_string_view_t endpoint_uid,
+                                                         yunlink_string_view_t directory_revision,
+                                                         uint8_t action,
+                                                         const yunlink_string_view_t* entity_uids,
+                                                         size_t entity_uid_count,
+                                                         yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target) || endpoint_uid.data == nullptr ||
+        directory_revision.data == nullptr || entity_uids == nullptr || entity_uid_count == 0 ||
+        entity_uid_count > 256 ||
+        (action != static_cast<uint8_t>(yunlink::ManagedEntityAttachmentAction::kAttach) &&
+         action != static_cast<uint8_t>(yunlink::ManagedEntityAttachmentAction::kDetach))) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::ManagedEntityAttachmentRequest request;
+    request.endpoint_uid.assign(endpoint_uid.data, endpoint_uid.size);
+    request.directory_revision.assign(directory_revision.data, directory_revision.size);
+    request.action = static_cast<yunlink::ManagedEntityAttachmentAction>(action);
+    request.entity_uids.reserve(entity_uid_count);
+    for (size_t index = 0; index < entity_uid_count; ++index) {
+        if (entity_uids[index].data == nullptr || entity_uids[index].size == 0) {
+            return YUNLINK_RESULT_INVALID_ARGUMENT;
+        }
+        request.entity_uids.emplace_back(entity_uids[index].data, entity_uids[index].size);
+    }
+    yunlink::SystemServiceHandle handle{};
+    const auto result = to_result(
+        runtime->runtime.system_service_publisher().publish_managed_entity_attachment_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
+    if (result != YUNLINK_RESULT_OK) {
+        return result;
+    }
+    if (out_handle != nullptr) {
+        out_handle->session_id = handle.session_id;
+        out_handle->message_id = handle.message_id;
+        out_handle->correlation_id = handle.correlation_id;
+        out_handle->target = to_c_target_selector(handle.target);
+    }
+    return YUNLINK_RESULT_OK;
+}
+
+yunlink_result_t yunlink_system_service_request_topic_list(yunlink_runtime_t* runtime,
+                                                           const yunlink_peer_t* peer,
+                                                           const yunlink_session_t* session,
+                                                           const yunlink_target_selector_t* target,
+                                                           yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target)) {
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     yunlink::SystemServiceHandle handle{};
     const auto result =
-        to_result(runtime->runtime.system_service_publisher().publish_managed_entity_list_request(
-            peer->id,
-            session->session_id,
-            to_target_selector(*target),
-            {},
-            &handle));
+        to_result(runtime->runtime.system_service_publisher().publish_topic_list_request(
+            peer->id, session->session_id, to_target_selector(*target), {}, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }
@@ -201,45 +270,16 @@ yunlink_result_t yunlink_system_service_request_managed_entity_list(
     return YUNLINK_RESULT_OK;
 }
 
-yunlink_result_t yunlink_system_service_request_topic_list(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    yunlink_command_handle_t* out_handle) {
-    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
-        !validate_target(target)) {
-        return YUNLINK_RESULT_INVALID_ARGUMENT;
-    }
-    yunlink::SystemServiceHandle handle{};
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_topic_list_request(peer->id,
-                                                                   session->session_id,
-                                                                   to_target_selector(*target),
-                                                                   {},
-                                                                   &handle));
-    if (result != YUNLINK_RESULT_OK) {
-        return result;
-    }
-    if (out_handle != nullptr) {
-        out_handle->session_id = handle.session_id;
-        out_handle->message_id = handle.message_id;
-        out_handle->correlation_id = handle.correlation_id;
-        out_handle->target = to_c_target_selector(handle.target);
-    }
-    return YUNLINK_RESULT_OK;
-}
-
-yunlink_result_t yunlink_system_service_request_topic_subscription(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    const char* topic_name,
-    uint8_t subscribe,
-    float max_rate_hz,
-    uint32_t max_payload_bytes,
-    yunlink_command_handle_t* out_handle) {
+yunlink_result_t
+yunlink_system_service_request_topic_subscription(yunlink_runtime_t* runtime,
+                                                  const yunlink_peer_t* peer,
+                                                  const yunlink_session_t* session,
+                                                  const yunlink_target_selector_t* target,
+                                                  const char* topic_name,
+                                                  uint8_t subscribe,
+                                                  float max_rate_hz,
+                                                  uint32_t max_payload_bytes,
+                                                  yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target) || topic_name == nullptr || topic_name[0] == '\0' ||
         !std::isfinite(max_rate_hz) || max_rate_hz < 0.0F ||
@@ -252,12 +292,9 @@ yunlink_result_t yunlink_system_service_request_topic_subscription(
     request.max_rate_hz = max_rate_hz;
     request.max_payload_bytes = max_payload_bytes;
     yunlink::SystemServiceHandle handle{};
-    const auto result = to_result(runtime->runtime.system_service_publisher()
-                                      .publish_topic_subscription_request(peer->id,
-                                                                          session->session_id,
-                                                                          to_target_selector(*target),
-                                                                          request,
-                                                                          &handle));
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_topic_subscription_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
     if (result != YUNLINK_RESULT_OK) {
         return result;
     }

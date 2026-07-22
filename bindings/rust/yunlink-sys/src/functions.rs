@@ -10,12 +10,13 @@ use crate::configuration::{
 };
 use crate::constants::yunlink_result_t;
 use crate::events::yunlink_runtime_event_t;
-use crate::runtime_logs::{
-    yunlink_runtime_log_list_response_callback_t, yunlink_runtime_log_read_response_callback_t,
-};
 use crate::managed_entities::{
+    yunlink_managed_entity_attachment_response_callback_t,
     yunlink_managed_entity_directory_changed_callback_t,
     yunlink_managed_entity_list_response_callback_t,
+};
+use crate::runtime_logs::{
+    yunlink_runtime_log_list_response_callback_t, yunlink_runtime_log_read_response_callback_t,
 };
 use crate::types::{
     yunlink_authority_lease_t, yunlink_command_handle_t, yunlink_goto_command_t,
@@ -221,6 +222,18 @@ unsafe extern "C" {
         target: *const yunlink_target_selector_t,
         out_handle: *mut yunlink_command_handle_t,
     ) -> yunlink_result_t;
+    pub fn yunlink_system_service_request_managed_entity_attachment(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        endpoint_uid: yunlink_string_view_t,
+        directory_revision: yunlink_string_view_t,
+        action: u8,
+        entity_uids: *const yunlink_string_view_t,
+        entity_uid_count: usize,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
     pub fn yunlink_system_service_request_topic_list(
         runtime: *mut yunlink_runtime_t,
         peer: *const yunlink_peer_t,
@@ -260,6 +273,12 @@ unsafe extern "C" {
     pub fn yunlink_system_service_subscribe_managed_entity_directory_changed(
         runtime: *mut yunlink_runtime_t,
         callback: yunlink_managed_entity_directory_changed_callback_t,
+        user_data: *mut core::ffi::c_void,
+        out_token: *mut usize,
+    ) -> yunlink_result_t;
+    pub fn yunlink_system_service_subscribe_managed_entity_attachment_responses(
+        runtime: *mut yunlink_runtime_t,
+        callback: yunlink_managed_entity_attachment_response_callback_t,
         user_data: *mut core::ffi::c_void,
         out_token: *mut usize,
     ) -> yunlink_result_t;

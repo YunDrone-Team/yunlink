@@ -44,6 +44,26 @@ typedef struct yunlink_managed_entity_directory_changed_view {
     yunlink_string_view_t revision;
 } yunlink_managed_entity_directory_changed_view_t;
 
+typedef struct yunlink_managed_entity_attachment_result_view {
+    yunlink_string_view_t entity_uid;
+    uint8_t accepted;
+    yunlink_string_view_t message;
+} yunlink_managed_entity_attachment_result_view_t;
+
+typedef struct yunlink_managed_entity_attachment_response_view {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    yunlink_string_view_t message;
+    yunlink_string_view_t endpoint_uid;
+    yunlink_string_view_t directory_revision;
+    const yunlink_managed_entity_attachment_result_view_t* results;
+    size_t result_count;
+    const yunlink_string_view_t* attached_entity_uids;
+    size_t attached_entity_count;
+} yunlink_managed_entity_attachment_response_view_t;
+
 /** All nested pointers are read-only and valid only until the callback returns. */
 typedef void (*yunlink_managed_entity_list_response_callback_t)(
     void* user_data,
@@ -51,5 +71,8 @@ typedef void (*yunlink_managed_entity_list_response_callback_t)(
 typedef void (*yunlink_managed_entity_directory_changed_callback_t)(
     void* user_data,
     const yunlink_managed_entity_directory_changed_view_t* event);
+typedef void (*yunlink_managed_entity_attachment_response_callback_t)(
+    void* user_data,
+    const yunlink_managed_entity_attachment_response_view_t* response);
 
 #endif  // YUNLINK_C_ABI_MANAGED_ENTITIES_H

@@ -51,9 +51,9 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
         return ErrorCode::kOk;
     }
     config_ = config;
-    std::atomic_store(&impl_->local_managed_identities,
-                      std::make_shared<const std::vector<EndpointIdentity>>(
-                          config.managed_identities));
+    std::atomic_store(
+        &impl_->local_managed_identities,
+        std::make_shared<const std::vector<EndpointIdentity>>(config.managed_identities));
     bus_.configure_packet_trace(runtime_packet_trace_config(config_));
 
     const ErrorCode ec_udp = udp_.start(config_, &bus_);
@@ -112,6 +112,18 @@ ErrorCode Runtime::set_managed_identities(const std::vector<EndpointIdentity>& i
         }
     }
     return ErrorCode::kOk;
+}
+
+std::vector<SessionDescriptor> Runtime::active_sessions() const {
+    std::vector<SessionDescriptor> sessions;
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    sessions.reserve(impl_->sessions.size());
+    for (const auto& entry : impl_->sessions) {
+        if (entry.second.state == SessionState::kActive) {
+            sessions.push_back(entry.second);
+        }
+    }
+    return sessions;
 }
 
 bool Runtime::local_source_allowed(const EndpointIdentity& source) const {

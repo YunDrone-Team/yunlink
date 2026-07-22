@@ -194,6 +194,18 @@ size_t SystemServiceSubscriber::subscribe_managed_entity_directory_changed(
                     : 0;
 }
 
+size_t SystemServiceSubscriber::subscribe_managed_entity_attachment_requests(
+    ManagedEntityAttachmentRequestHandler cb) {
+    return runtime_ ? runtime_->subscribe_managed_entity_attachment_request_internal(std::move(cb))
+                    : 0;
+}
+
+size_t SystemServiceSubscriber::subscribe_managed_entity_attachment_responses(
+    ManagedEntityAttachmentResponseHandler cb) {
+    return runtime_ ? runtime_->subscribe_managed_entity_attachment_response_internal(std::move(cb))
+                    : 0;
+}
+
 void SystemServiceSubscriber::unsubscribe(size_t token) {
     if (runtime_) {
         runtime_->unsubscribe_semantic(token);

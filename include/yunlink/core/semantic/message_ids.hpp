@@ -78,6 +78,8 @@ enum class SystemServiceType : uint16_t {
     kManagedEntityListRequest = 17,
     kManagedEntityListResponse = 18,
     kManagedEntityDirectoryChanged = 19,
+    kManagedEntityAttachmentRequest = 20,
+    kManagedEntityAttachmentResponse = 21,
 };
 
 enum class ConfigurationServiceType : uint16_t {

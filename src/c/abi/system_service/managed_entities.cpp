@@ -120,4 +120,48 @@ yunlink_result_t yunlink_system_service_subscribe_managed_entity_directory_chang
     return YUNLINK_RESULT_OK;
 }
 
+yunlink_result_t yunlink_system_service_subscribe_managed_entity_attachment_responses(
+    yunlink_runtime_t* runtime,
+    yunlink_managed_entity_attachment_response_callback_t callback,
+    void* user_data,
+    size_t* out_token) {
+    if (!valid_subscription(runtime, reinterpret_cast<const void*>(callback), out_token)) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    const size_t token =
+        runtime->runtime.system_service_subscriber().subscribe_managed_entity_attachment_responses(
+            [callback, user_data](
+                const yunlink::TypedMessage<yunlink::ManagedEntityAttachmentResponse>& message) {
+                std::vector<yunlink_managed_entity_attachment_result_view_t> results;
+                results.reserve(message.payload.results.size());
+                for (const auto& result : message.payload.results) {
+                    results.push_back({view_of(result.entity_uid),
+                                       static_cast<uint8_t>(result.accepted),
+                                       view_of(result.message)});
+                }
+                std::vector<yunlink_string_view_t> attached;
+                attached.reserve(message.payload.attached_entity_uids.size());
+                for (const auto& entity_uid : message.payload.attached_entity_uids) {
+                    attached.push_back(view_of(entity_uid));
+                }
+                const auto& payload = message.payload;
+                const yunlink_managed_entity_attachment_response_view_t view{
+                    message.envelope.session_id,
+                    message.envelope.message_id,
+                    message.envelope.correlation_id,
+                    static_cast<uint8_t>(payload.success),
+                    view_of(payload.message),
+                    view_of(payload.endpoint_uid),
+                    view_of(payload.directory_revision),
+                    results.data(),
+                    results.size(),
+                    attached.data(),
+                    attached.size()};
+                invoke_callback(callback, user_data, view);
+            });
+    add_token(runtime, token);
+    *out_token = token;
+    return YUNLINK_RESULT_OK;
+}
+
 }  // extern "C"

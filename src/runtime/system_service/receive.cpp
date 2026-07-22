@@ -24,12 +24,13 @@ bool valid_managed_entity_directory(const ManagedEntityListResponse& response,
         if (entity.entity_uid.empty() || entity.identity.agent_type == AgentType::kUnknown ||
             entity.identity.agent_id == 0 || !entity_uids.insert(entity.entity_uid).second ||
             !identities
-                 .insert({static_cast<uint8_t>(entity.identity.agent_type), entity.identity.agent_id})
+                 .insert(
+                     {static_cast<uint8_t>(entity.identity.agent_type), entity.identity.agent_id})
                  .second) {
             return false;
         }
-        contains_primary = contains_primary ||
-                           runtime_same_entity(entity.identity, response.primary_identity);
+        contains_primary =
+            contains_primary || runtime_same_entity(entity.identity, response.primary_identity);
     }
     return contains_primary;
 }
@@ -172,37 +173,37 @@ void Runtime::handle_system_service_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
-    case SystemServiceType::kManagedEntityListResponse:
-        {
-            ManagedEntityListResponse response;
-            SessionDescriptor session;
-            if (!decode_payload(ev.envelope.payload, &response) ||
-                (!describe_session_internal(ev.peer.id, ev.envelope.session_id, &session) &&
-                 !describe_session_internal(ev.envelope.session_id, &session)) ||
-                !runtime_same_entity(ev.envelope.source, session.remote_identity) ||
-                !valid_managed_entity_directory(response, session)) {
-                ErrorEvent error;
-                error.code = ErrorCode::kUnauthorized;
-                error.transport = ev.transport;
-                error.peer = ev.peer;
-                error.message = "managed-entity-directory-invalid";
-                bus_.publish_error(error);
-                return;
-            }
-            std::lock_guard<std::mutex> lock(impl_->mu);
-            auto it = std::find_if(impl_->sessions.begin(), impl_->sessions.end(), [&](const auto& item) {
+    case SystemServiceType::kManagedEntityListResponse: {
+        ManagedEntityListResponse response;
+        SessionDescriptor session;
+        if (!decode_payload(ev.envelope.payload, &response) ||
+            (!describe_session_internal(ev.peer.id, ev.envelope.session_id, &session) &&
+             !describe_session_internal(ev.envelope.session_id, &session)) ||
+            !runtime_same_entity(ev.envelope.source, session.remote_identity) ||
+            !valid_managed_entity_directory(response, session)) {
+            ErrorEvent error;
+            error.code = ErrorCode::kUnauthorized;
+            error.transport = ev.transport;
+            error.peer = ev.peer;
+            error.message = "managed-entity-directory-invalid";
+            bus_.publish_error(error);
+            return;
+        }
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        auto it =
+            std::find_if(impl_->sessions.begin(), impl_->sessions.end(), [&](const auto& item) {
                 return item.second.session_id == ev.envelope.session_id;
             });
-            if (it == impl_->sessions.end()) {
-                return;
-            }
-            it->second.remote_managed_identities.clear();
-            for (const ManagedEntityDescriptor& entity : response.entities) {
-                if (!runtime_same_entity(entity.identity, response.primary_identity)) {
-                    it->second.remote_managed_identities.push_back(entity.identity);
-                }
+        if (it == impl_->sessions.end()) {
+            return;
+        }
+        it->second.remote_managed_identities.clear();
+        for (const ManagedEntityDescriptor& entity : response.entities) {
+            if (!runtime_same_entity(entity.identity, response.primary_identity)) {
+                it->second.remote_managed_identities.push_back(entity.identity);
             }
         }
+    }
         if (!runtime_fanout_snapshot<ManagedEntityListResponse>(
                 impl_->mu,
                 ev.envelope,
@@ -211,27 +212,45 @@ void Runtime::handle_system_service_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
-    case SystemServiceType::kManagedEntityDirectoryChanged:
-        {
-            SessionDescriptor session;
-            if ((!describe_session_internal(ev.peer.id, ev.envelope.session_id, &session) &&
-                 !describe_session_internal(ev.envelope.session_id, &session)) ||
-                !runtime_same_entity(ev.envelope.source, session.remote_identity)) {
-                return;
-            }
-            std::lock_guard<std::mutex> lock(impl_->mu);
-            auto it = std::find_if(impl_->sessions.begin(), impl_->sessions.end(), [&](const auto& item) {
+    case SystemServiceType::kManagedEntityDirectoryChanged: {
+        SessionDescriptor session;
+        if ((!describe_session_internal(ev.peer.id, ev.envelope.session_id, &session) &&
+             !describe_session_internal(ev.envelope.session_id, &session)) ||
+            !runtime_same_entity(ev.envelope.source, session.remote_identity)) {
+            return;
+        }
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        auto it =
+            std::find_if(impl_->sessions.begin(), impl_->sessions.end(), [&](const auto& item) {
                 return item.second.session_id == ev.envelope.session_id;
             });
-            if (it != impl_->sessions.end()) {
-                it->second.remote_managed_identities.clear();
-            }
+        if (it != impl_->sessions.end()) {
+            it->second.remote_managed_identities.clear();
         }
+    }
         if (!runtime_fanout_snapshot<ManagedEntityDirectoryChanged>(
                 impl_->mu,
                 ev.envelope,
                 ev.envelope.payload,
                 impl_->managed_entity_directory_changed_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kManagedEntityAttachmentRequest:
+        if (!runtime_fanout_inbound_request<ManagedEntityAttachmentRequest>(
+                impl_->mu,
+                ev,
+                ev.envelope.payload,
+                impl_->managed_entity_attachment_request_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case SystemServiceType::kManagedEntityAttachmentResponse:
+        if (!runtime_fanout_snapshot<ManagedEntityAttachmentResponse>(
+                impl_->mu,
+                ev.envelope,
+                ev.envelope.payload,
+                impl_->managed_entity_attachment_response_handlers)) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;

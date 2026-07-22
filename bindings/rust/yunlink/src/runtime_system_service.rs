@@ -80,6 +80,47 @@ impl Runtime {
         Ok(CommandHandle::from_raw(handle))
     }
 
+    /// Attach or detach logical entities without closing the physical endpoint session.
+    pub async fn request_managed_entity_attachment(
+        &self,
+        peer: &PeerConnection,
+        session: &Session,
+        target: &TargetSelector,
+        endpoint_uid: &str,
+        directory_revision: &str,
+        action: crate::ManagedEntityAttachmentAction,
+        entity_uids: &[String],
+    ) -> Result<CommandHandle> {
+        if entity_uids.is_empty() {
+            return Err(crate::YunlinkError::Ffi(
+                crate::FfiErrorCode::InvalidArgument,
+            ));
+        }
+        let session = session.to_native();
+        let endpoint_uid = string_view(endpoint_uid);
+        let directory_revision = string_view(directory_revision);
+        let entity_uid_views = entity_uids
+            .iter()
+            .map(|value| string_view(value))
+            .collect::<Vec<_>>();
+        let mut handle = sys::yunlink_command_handle_t::default();
+        ensure(unsafe {
+            sys::yunlink_system_service_request_managed_entity_attachment(
+                self.raw_ptr(),
+                &peer.raw,
+                &session,
+                &target.raw,
+                endpoint_uid,
+                directory_revision,
+                action.as_native(),
+                entity_uid_views.as_ptr(),
+                entity_uid_views.len(),
+                &mut handle,
+            )
+        })?;
+        Ok(CommandHandle::from_raw(handle))
+    }
+
     pub async fn request_feature_list(
         &self,
         peer: &PeerConnection,

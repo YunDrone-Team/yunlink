@@ -53,6 +53,10 @@ void ManagedEntityBridge::attach(yunlink_runtime_t* runtime) {
         throw_if_error(yunlink_system_service_subscribe_managed_entity_directory_changed(
             runtime, &onChanged, this, &token));
         tokens_.push_back(token);
+        token = 0;
+        throw_if_error(yunlink_system_service_subscribe_managed_entity_attachment_responses(
+            runtime, &onAttachment, this, &token));
+        tokens_.push_back(token);
     } catch (...) {
         detach(runtime);
         throw;
@@ -123,12 +127,45 @@ void ManagedEntityBridge::onChanged(
     }
     try {
         Event event;
-        event.changed = true;
+        event.kind = EventKind::kDirectoryChanged;
         event.session_id = source->session_id;
         event.message_id = source->message_id;
         event.correlation_id = source->correlation_id;
         event.endpoint_uid = copy_view(source->endpoint_uid);
         event.revision = copy_view(source->revision);
+        static_cast<ManagedEntityBridge*>(user_data)->push(std::move(event));
+    } catch (...) {
+    }
+}
+
+void ManagedEntityBridge::onAttachment(
+    void* user_data,
+    const yunlink_managed_entity_attachment_response_view_t* response) noexcept {
+    if (user_data == nullptr || response == nullptr) {
+        return;
+    }
+    try {
+        Event event;
+        event.kind = EventKind::kAttachment;
+        event.session_id = response->session_id;
+        event.message_id = response->message_id;
+        event.correlation_id = response->correlation_id;
+        event.success = response->success != 0;
+        event.message = copy_view(response->message);
+        event.endpoint_uid = copy_view(response->endpoint_uid);
+        event.revision = copy_view(response->directory_revision);
+        checked(response->results, response->result_count);
+        event.attachment_results.reserve(response->result_count);
+        for (size_t index = 0; index < response->result_count; ++index) {
+            const auto& source = response->results[index];
+            event.attachment_results.push_back(
+                {copy_view(source.entity_uid), source.accepted != 0, copy_view(source.message)});
+        }
+        checked(response->attached_entity_uids, response->attached_entity_count);
+        event.attached_entity_uids.reserve(response->attached_entity_count);
+        for (size_t index = 0; index < response->attached_entity_count; ++index) {
+            event.attached_entity_uids.push_back(copy_view(response->attached_entity_uids[index]));
+        }
         static_cast<ManagedEntityBridge*>(user_data)->push(std::move(event));
     } catch (...) {
     }
@@ -157,13 +194,15 @@ nb::object ManagedEntityBridge::poll() {
         return out;
     };
     nb::dict out;
-    out["type"] = event.changed ? "managed_entity_directory_changed" : "managed_entity_directory";
+    out["type"] = event.kind == EventKind::kDirectoryChanged ? "managed_entity_directory_changed"
+                  : event.kind == EventKind::kAttachment     ? "managed_entity_attachment"
+                                                             : "managed_entity_directory";
     out["session_id"] = event.session_id;
     out["message_id"] = event.message_id;
     out["correlation_id"] = event.correlation_id;
     out["endpoint_uid"] = event.endpoint_uid;
     out["revision"] = event.revision;
-    if (!event.changed) {
+    if (event.kind == EventKind::kDirectory) {
         out["success"] = event.success;
         out["message"] = event.message;
         out["primary_identity"] = identity_to_python(event.primary_identity);
@@ -183,8 +222,76 @@ nb::object ManagedEntityBridge::poll() {
             entities.append(std::move(value));
         }
         out["entities"] = std::move(entities);
+    } else if (event.kind == EventKind::kAttachment) {
+        out["success"] = event.success;
+        out["message"] = event.message;
+        out["directory_revision"] = event.revision;
+        nb::list results;
+        for (const auto& result : event.attachment_results) {
+            nb::dict value;
+            value["entity_uid"] = result.entity_uid;
+            value["accepted"] = result.accepted;
+            value["message"] = result.message;
+            results.append(std::move(value));
+        }
+        out["results"] = std::move(results);
+        nb::list attached;
+        for (const auto& entity_uid : event.attached_entity_uids) {
+            attached.append(entity_uid);
+        }
+        out["attached_entity_uids"] = std::move(attached);
     }
     return nb::cast(out);
+}
+
+nb::dict ManagedEntityBridge::request_attachment(yunlink_runtime_t* runtime,
+                                                 const std::string& peer_id,
+                                                 uint64_t session_id,
+                                                 const nb::dict& target,
+                                                 const std::string& endpoint_uid,
+                                                 const std::string& directory_revision,
+                                                 const std::string& action,
+                                                 const nb::list& entity_uids) {
+    const auto peer = peer_from_python(peer_id);
+    const yunlink_session_t session{session_id};
+    const auto native_target = target_from_dict(target);
+    const uint8_t native_action = action == "attach" ? 1U : action == "detach" ? 2U : 0U;
+    if (endpoint_uid.empty() || directory_revision.empty() || native_action == 0U ||
+        entity_uids.size() == 0U) {
+        throw std::invalid_argument("invalid managed entity attachment request");
+    }
+    std::vector<std::string> owned_entity_uids;
+    owned_entity_uids.reserve(entity_uids.size());
+    std::vector<yunlink_string_view_t> views;
+    views.reserve(entity_uids.size());
+    for (nb::handle value : entity_uids) {
+        const std::string entity_uid = nb::cast<std::string>(value);
+        if (entity_uid.empty()) {
+            throw std::invalid_argument("managed entity uid must not be empty");
+        }
+        owned_entity_uids.push_back(entity_uid);
+    }
+    for (const auto& entity_uid : owned_entity_uids) {
+        views.push_back({entity_uid.data(), entity_uid.size()});
+    }
+    const yunlink_string_view_t endpoint_view{endpoint_uid.data(), endpoint_uid.size()};
+    const yunlink_string_view_t revision_view{directory_revision.data(), directory_revision.size()};
+    yunlink_command_handle_t handle{};
+    throw_if_error(yunlink_system_service_request_managed_entity_attachment(runtime,
+                                                                            &peer,
+                                                                            &session,
+                                                                            &native_target,
+                                                                            endpoint_view,
+                                                                            revision_view,
+                                                                            native_action,
+                                                                            views.data(),
+                                                                            views.size(),
+                                                                            &handle));
+    nb::dict out;
+    out["session_id"] = handle.session_id;
+    out["message_id"] = handle.message_id;
+    out["correlation_id"] = handle.correlation_id;
+    return out;
 }
 
 nb::dict ManagedEntityBridge::request(yunlink_runtime_t* runtime,

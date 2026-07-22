@@ -214,6 +214,29 @@ class RuntimeContractTests(unittest.TestCase):
         self.assertEqual(event.entities[0].capabilities, ("telemetry.px4",))
         self.assertEqual(event.entities[0].identity.group_ids, (7, 9))
 
+    def test_managed_entity_attachment_owns_nested_values(self) -> None:
+        payload = {
+            "type": "managed_entity_attachment",
+            "session_id": 4,
+            "message_id": 8,
+            "correlation_id": 7,
+            "success": True,
+            "message": "ok",
+            "endpoint_uid": "endpoint-owned",
+            "directory_revision": "revision-owned",
+            "results": [
+                {"entity_uid": "entity-owned", "accepted": True, "message": "attached"}
+            ],
+            "attached_entity_uids": ["entity-owned"],
+        }
+        event = yunlink._coerce_managed_entity_event(payload)
+        payload["results"][0]["entity_uid"] = "mutated"
+        payload["attached_entity_uids"][0] = "mutated"
+
+        self.assertIsInstance(event, yunlink.ManagedEntityAttachmentResponse)
+        self.assertEqual(event.results[0].entity_uid, "entity-owned")
+        self.assertEqual(event.attached_entity_uids, ("entity-owned",))
+
     def test_configuration_response_without_event_keeps_poll_thread_running(self) -> None:
         class ConfigurationOnlyCore:
             def __init__(self) -> None:

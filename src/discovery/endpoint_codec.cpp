@@ -116,16 +116,23 @@ std::string make_endpoint_display_name(const std::string& prefix,
                                        const std::string& endpoint_id) {
     const std::string safe_prefix =
         prefix.empty() ? std::string(kDefaultEndpointNamePrefix) : prefix;
-    return safe_prefix + std::to_string(agent_id) + "_" + endpoint_id;
+    return safe_prefix + std::to_string(agent_id) + "-" + endpoint_id;
 }
 
 bool validate_endpoint_id(const std::string& endpoint_id) {
-    if (endpoint_id.size() != 5U) {
-        return false;
-    }
-    return std::all_of(endpoint_id.begin(), endpoint_id.end(), [](unsigned char ch) {
-        return std::isdigit(ch) != 0 || (ch >= 'a' && ch <= 'z');
-    });
+    // 新生成 UID 是 12 位小写十六进制；旧 5 位 hex / base36 UID 继续兼容。
+    // 用户可读名称属于 GCS 本地标签，绝不能作为远端 endpoint identity。
+    const bool legacy_base36 =
+        endpoint_id.size() == 5U &&
+        std::all_of(endpoint_id.begin(), endpoint_id.end(), [](unsigned char ch) {
+            return std::isdigit(ch) != 0 || (ch >= 'a' && ch <= 'z');
+        });
+    const bool generated_hex =
+        (endpoint_id.size() == 5U || endpoint_id.size() == 12U) &&
+        std::all_of(endpoint_id.begin(), endpoint_id.end(), [](unsigned char ch) {
+            return std::isdigit(ch) != 0 || (ch >= 'a' && ch <= 'f');
+        });
+    return legacy_base36 || generated_hex;
 }
 
 ByteBuffer encode_endpoint_advertisement(const EndpointAdvertisement& advertisement) {

@@ -48,6 +48,8 @@ ByteBuffer encode_payload(const TopicSubscriptionResponse& payload);
 ByteBuffer encode_payload(const ManagedEntityListRequest& payload);
 ByteBuffer encode_payload(const ManagedEntityListResponse& payload);
 ByteBuffer encode_payload(const ManagedEntityDirectoryChanged& payload);
+ByteBuffer encode_payload(const ManagedEntityAttachmentRequest& payload);
+ByteBuffer encode_payload(const ManagedEntityAttachmentResponse& payload);
 ByteBuffer encode_payload(const ConfigResourceListRequest& payload);
 ByteBuffer encode_payload(const ConfigResourceListResponse& payload);
 ByteBuffer encode_payload(const ConfigResourceDescribeRequest& payload);
@@ -110,6 +112,8 @@ bool decode_payload(const ByteBuffer& bytes, TopicSubscriptionResponse* payload)
 bool decode_payload(const ByteBuffer& bytes, ManagedEntityListRequest* payload);
 bool decode_payload(const ByteBuffer& bytes, ManagedEntityListResponse* payload);
 bool decode_payload(const ByteBuffer& bytes, ManagedEntityDirectoryChanged* payload);
+bool decode_payload(const ByteBuffer& bytes, ManagedEntityAttachmentRequest* payload);
+bool decode_payload(const ByteBuffer& bytes, ManagedEntityAttachmentResponse* payload);
 bool decode_payload(const ByteBuffer& bytes, ConfigResourceListRequest* payload);
 bool decode_payload(const ByteBuffer& bytes, ConfigResourceListResponse* payload);
 bool decode_payload(const ByteBuffer& bytes, ConfigResourceDescribeRequest* payload);

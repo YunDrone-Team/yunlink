@@ -53,6 +53,8 @@ YUNLINK_DEFINE_TRAITS(TopicSubscriptionResponse, MessageFamily::kSystemService, 
 YUNLINK_DEFINE_TRAITS(ManagedEntityListRequest, MessageFamily::kSystemService, 17);
 YUNLINK_DEFINE_TRAITS(ManagedEntityListResponse, MessageFamily::kSystemService, 18);
 YUNLINK_DEFINE_TRAITS(ManagedEntityDirectoryChanged, MessageFamily::kSystemService, 19);
+YUNLINK_DEFINE_TRAITS(ManagedEntityAttachmentRequest, MessageFamily::kSystemService, 20);
+YUNLINK_DEFINE_TRAITS(ManagedEntityAttachmentResponse, MessageFamily::kSystemService, 21);
 YUNLINK_DEFINE_TRAITS(ConfigResourceListRequest, MessageFamily::kConfigurationService, 1);
 YUNLINK_DEFINE_TRAITS(ConfigResourceListResponse, MessageFamily::kConfigurationService, 2);
 YUNLINK_DEFINE_TRAITS(ConfigResourceDescribeRequest, MessageFamily::kConfigurationService, 3);

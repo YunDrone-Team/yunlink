@@ -19,7 +19,7 @@ namespace yunlink {
 constexpr const char* kEndpointDiscoveryMagic = "YUNLINK_ENDPOINT_DISCOVERY_V1";
 constexpr const char* kEndpointDiscoveryQueryMagic = "YLQ1";
 constexpr const char* kEndpointDiscoveryReplyMagic = "YLR1";
-constexpr const char* kDefaultEndpointNamePrefix = "yundrone_uav";
+constexpr const char* kDefaultEndpointNamePrefix = "SURY-uav";
 constexpr uint16_t kDefaultEndpointDiscoveryPort = 9966;
 
 struct EndpointAdvertisement {

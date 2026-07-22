@@ -10,7 +10,7 @@ from .errors import YunlinkError, call_native
 from .events import ErrorEvent, coerce_event
 from .configuration import coerce_configuration_response
 from .configuration_runtime import ConfigurationRuntimeMixin
-from .managed_entities import coerce_managed_entity_event
+from .managed_entities import ManagedEntityAttachmentAction, coerce_managed_entity_event
 from .types import (
     AuthorityLease,
     CommandHandle,
@@ -98,6 +98,49 @@ class Runtime(ConfigurationRuntimeMixin):
             target.to_native(),
         )
         return CommandHandle(**result)
+
+    def request_managed_entity_attachment(
+        self,
+        peer: PeerConnection,
+        session: Session,
+        target: TargetSelector,
+        endpoint_uid: str,
+        directory_revision: str,
+        action: ManagedEntityAttachmentAction,
+        entity_uids: list[str] | tuple[str, ...],
+    ) -> CommandHandle:
+        result = call_native(
+            self._core.request_managed_entity_attachment,
+            peer.id,
+            session.session_id,
+            target.to_native(),
+            endpoint_uid,
+            directory_revision,
+            action.value,
+            list(entity_uids),
+        )
+        return CommandHandle(**result)
+
+    async def request_managed_entity_attachment_async(
+        self,
+        peer: PeerConnection,
+        session: Session,
+        target: TargetSelector,
+        endpoint_uid: str,
+        directory_revision: str,
+        action: ManagedEntityAttachmentAction,
+        entity_uids: list[str] | tuple[str, ...],
+    ) -> CommandHandle:
+        return await asyncio.to_thread(
+            self.request_managed_entity_attachment,
+            peer,
+            session,
+            target,
+            endpoint_uid,
+            directory_revision,
+            action,
+            entity_uids,
+        )
 
     def last_poll_error(self) -> YunlinkError | None:
         return self._poll_error

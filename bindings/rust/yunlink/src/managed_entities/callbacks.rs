@@ -7,8 +7,9 @@ use crate::error::{ensure, Result};
 use crate::types::{AgentType, EndpointIdentity, EndpointRole};
 
 use super::{
-    ManagedEntityAvailability, ManagedEntityDescriptor, ManagedEntityDirectory,
-    ManagedEntityDirectoryChanged, ManagedEntityEvent,
+    ManagedEntityAttachmentResponse, ManagedEntityAttachmentResult, ManagedEntityAvailability,
+    ManagedEntityDescriptor, ManagedEntityDirectory, ManagedEntityDirectoryChanged,
+    ManagedEntityEvent,
 };
 
 unsafe fn string_from_view(view: sys::yunlink_string_view_t) -> Option<String> {
@@ -74,12 +75,11 @@ unsafe extern "C" fn on_directory(
         let entities = unsafe { slice_from_raw(view.entities, view.entity_count) }?
             .iter()
             .map(|entity| {
-                let capabilities = unsafe {
-                    slice_from_raw(entity.capabilities, entity.capability_count)
-                }?
-                .iter()
-                .map(|value| unsafe { string_from_view(*value) })
-                .collect::<Option<Vec<_>>>()?;
+                let capabilities =
+                    unsafe { slice_from_raw(entity.capabilities, entity.capability_count) }?
+                        .iter()
+                        .map(|value| unsafe { string_from_view(*value) })
+                        .collect::<Option<Vec<_>>>()?;
                 Some(ManagedEntityDescriptor {
                     entity_uid: unsafe { string_from_view(entity.entity_uid) }?,
                     identity: unsafe { identity_from_view(entity.identity) }?,
@@ -129,6 +129,46 @@ unsafe extern "C" fn on_changed(
     });
 }
 
+unsafe extern "C" fn on_attachment(
+    user_data: *mut core::ffi::c_void,
+    response: *const sys::yunlink_managed_entity_attachment_response_view_t,
+) {
+    if response.is_null() {
+        return;
+    }
+    let view = unsafe { *response };
+    publish_from_callback(user_data, || {
+        let results = unsafe { slice_from_raw(view.results, view.result_count) }?
+            .iter()
+            .map(|result| {
+                Some(ManagedEntityAttachmentResult {
+                    entity_uid: unsafe { string_from_view(result.entity_uid) }?,
+                    accepted: result.accepted != 0,
+                    message: unsafe { string_from_view(result.message) }?,
+                })
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let attached_entity_uids =
+            unsafe { slice_from_raw(view.attached_entity_uids, view.attached_entity_count) }?
+                .iter()
+                .map(|value| unsafe { string_from_view(*value) })
+                .collect::<Option<Vec<_>>>()?;
+        Some(ManagedEntityEvent::Attachment(
+            ManagedEntityAttachmentResponse {
+                session_id: view.session_id,
+                message_id: view.message_id,
+                correlation_id: view.correlation_id,
+                success: view.success != 0,
+                message: unsafe { string_from_view(view.message) }?,
+                endpoint_uid: unsafe { string_from_view(view.endpoint_uid) }?,
+                directory_revision: unsafe { string_from_view(view.directory_revision) }?,
+                results,
+                attached_entity_uids,
+            },
+        ))
+    });
+}
+
 pub(crate) fn register_callbacks(
     runtime: *mut sys::yunlink_runtime_t,
     sender: broadcast::Sender<ManagedEntityEvent>,
@@ -156,6 +196,21 @@ pub(crate) fn register_callbacks(
         )
     }) {
         let _ = unsafe { sys::yunlink_system_service_unsubscribe(runtime, tokens[0]) };
+        return Err(error);
+    }
+    tokens.push(token);
+    token = 0;
+    if let Err(error) = ensure(unsafe {
+        sys::yunlink_system_service_subscribe_managed_entity_attachment_responses(
+            runtime,
+            Some(on_attachment),
+            user_data,
+            &mut token,
+        )
+    }) {
+        for token in tokens {
+            let _ = unsafe { sys::yunlink_system_service_unsubscribe(runtime, token) };
+        }
         return Err(error);
     }
     tokens.push(token);

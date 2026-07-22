@@ -18,6 +18,9 @@ from .events import (
 )
 from .runtime import Runtime
 from .managed_entities import (
+    ManagedEntityAttachmentAction,
+    ManagedEntityAttachmentResponse,
+    ManagedEntityAttachmentResult,
     ManagedEntityAvailability,
     ManagedEntityDescriptor,
     ManagedEntityDirectory,
@@ -91,6 +94,9 @@ __all__ = [
     "InvalidStateError",
     "LinkEvent",
     "ManagedEntityAvailability",
+    "ManagedEntityAttachmentAction",
+    "ManagedEntityAttachmentResponse",
+    "ManagedEntityAttachmentResult",
     "ManagedEntityDescriptor",
     "ManagedEntityDirectory",
     "ManagedEntityDirectoryChanged",

@@ -158,7 +158,9 @@ struct ManagedEntityDescriptor {
 };
 
 struct ManagedEntityListRequest {
-    uint8_t reserved = 0;
+    /** New clients set this after discovering `managed-entity-attachments-v1`.
+     * Old clients leave it false and retain all-entity streaming semantics. */
+    bool attachment_aware = false;
 };
 
 struct ManagedEntityListResponse {
@@ -173,6 +175,35 @@ struct ManagedEntityListResponse {
 struct ManagedEntityDirectoryChanged {
     std::string endpoint_uid;
     std::string revision;
+};
+
+/** Explicit per-session delivery state for a managed logical entity. */
+enum class ManagedEntityAttachmentAction : uint8_t {
+    kAttach = 1,
+    kDetach = 2,
+};
+
+struct ManagedEntityAttachmentRequest {
+    std::string endpoint_uid;
+    std::string directory_revision;
+    ManagedEntityAttachmentAction action = ManagedEntityAttachmentAction::kAttach;
+    std::vector<std::string> entity_uids;
+};
+
+/** One requested entity's outcome.  A response is intentionally partial-success capable. */
+struct ManagedEntityAttachmentResult {
+    std::string entity_uid;
+    bool accepted = false;
+    std::string message;
+};
+
+struct ManagedEntityAttachmentResponse {
+    bool success = false;
+    std::string message;
+    std::string endpoint_uid;
+    std::string directory_revision;
+    std::vector<ManagedEntityAttachmentResult> results;
+    std::vector<std::string> attached_entity_uids;
 };
 
 struct SystemServiceHandle {

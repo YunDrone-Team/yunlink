@@ -103,6 +103,10 @@ struct Runtime::Impl {
         managed_entity_list_response_handlers;
     std::unordered_map<size_t, SystemServiceSubscriber::ManagedEntityDirectoryChangedHandler>
         managed_entity_directory_changed_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::ManagedEntityAttachmentRequestHandler>
+        managed_entity_attachment_request_handlers;
+    std::unordered_map<size_t, SystemServiceSubscriber::ManagedEntityAttachmentResponseHandler>
+        managed_entity_attachment_response_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListRequestHandler>
         config_resource_list_request_handlers;
     std::unordered_map<size_t, ConfigurationServiceSubscriber::ResourceListResponseHandler>
@@ -182,11 +186,10 @@ inline bool runtime_local_source_allowed(const EndpointIdentity& self_identity,
     if (runtime_same_entity(self_identity, source)) {
         return true;
     }
-    return std::any_of(managed_identities.begin(),
-                       managed_identities.end(),
-                       [&](const EndpointIdentity& identity) {
-                           return runtime_same_entity(identity, source);
-                       });
+    return std::any_of(
+        managed_identities.begin(),
+        managed_identities.end(),
+        [&](const EndpointIdentity& identity) { return runtime_same_entity(identity, source); });
 }
 
 inline bool runtime_matches_local_target(const EndpointIdentity& self_identity,
@@ -200,9 +203,10 @@ inline bool runtime_matches_local_target(const EndpointIdentity& self_identity,
                        [&](const EndpointIdentity& identity) { return target.matches(identity); });
 }
 
-inline EndpointIdentity runtime_source_for_target(const EndpointIdentity& self_identity,
-                                                  const std::vector<EndpointIdentity>& managed_identities,
-                                                  const TargetSelector& target) {
+inline EndpointIdentity
+runtime_source_for_target(const EndpointIdentity& self_identity,
+                          const std::vector<EndpointIdentity>& managed_identities,
+                          const TargetSelector& target) {
     if (target.scope == TargetScope::kEntity && target.target_ids.size() == 1U) {
         const auto match = [&](const EndpointIdentity& identity) {
             return identity.agent_id == target.target_ids.front() &&
@@ -225,11 +229,10 @@ inline bool runtime_remote_source_allowed(const SessionDescriptor& session,
     if (runtime_same_entity(session.remote_identity, source)) {
         return true;
     }
-    return std::any_of(session.remote_managed_identities.begin(),
-                       session.remote_managed_identities.end(),
-                       [&](const EndpointIdentity& identity) {
-                           return runtime_same_entity(identity, source);
-                       });
+    return std::any_of(
+        session.remote_managed_identities.begin(),
+        session.remote_managed_identities.end(),
+        [&](const EndpointIdentity& identity) { return runtime_same_entity(identity, source); });
 }
 
 inline std::string runtime_trajectory_key(const EnvelopeEvent& ev) {
