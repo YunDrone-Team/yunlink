@@ -212,6 +212,8 @@ pub const YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION: u8 = 14;
 pub const YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE: u8 = 15;
 pub const YUNLINK_RUNTIME_EVENT_UGV_CONTROL_CMD: u8 = 16;
 pub const YUNLINK_RUNTIME_EVENT_UGV_CONTROL_STATE: u8 = 17;
+/// Response to a feature stop request.
+pub const YUNLINK_RUNTIME_EVENT_FEATURE_STOP: u8 = 18;
 
 /// Maximum encoded topic catalogue bytes carried by the C ABI event.
 pub const YUNLINK_TOPIC_LIST_BUFFER_CAPACITY: usize = 16_384;

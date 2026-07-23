@@ -112,6 +112,39 @@ yunlink_system_service_request_feature_start(yunlink_runtime_t* runtime,
 }
 
 yunlink_result_t
+yunlink_system_service_request_feature_stop(yunlink_runtime_t* runtime,
+                                            const yunlink_peer_t* peer,
+                                            const yunlink_session_t* session,
+                                            const yunlink_target_selector_t* target,
+                                            const char* feature_name,
+                                            uint8_t force,
+                                            yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target) || feature_name == nullptr || feature_name[0] == '\0') {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+
+    yunlink::FeatureStopRequest request{};
+    request.feature_name = feature_name;
+    request.force = force != 0;
+
+    yunlink::SystemServiceHandle handle{};
+    const auto result =
+        to_result(runtime->runtime.system_service_publisher().publish_feature_stop_request(
+            peer->id, session->session_id, to_target_selector(*target), request, &handle));
+    if (result != YUNLINK_RESULT_OK) {
+        return result;
+    }
+    if (out_handle != nullptr) {
+        out_handle->session_id = handle.session_id;
+        out_handle->message_id = handle.message_id;
+        out_handle->correlation_id = handle.correlation_id;
+        out_handle->target = to_c_target_selector(handle.target);
+    }
+    return YUNLINK_RESULT_OK;
+}
+
+yunlink_result_t
 yunlink_system_service_request_runtime_log_list(yunlink_runtime_t* runtime,
                                                 const yunlink_peer_t* peer,
                                                 const yunlink_session_t* session,

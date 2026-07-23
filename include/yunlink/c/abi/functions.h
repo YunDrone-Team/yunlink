@@ -156,6 +156,14 @@ yunlink_system_service_request_feature_start(yunlink_runtime_t* runtime,
                                              uint8_t start_with_terminal,
                                              yunlink_command_handle_t* out_handle);
 YUNLINK_C_API yunlink_result_t
+yunlink_system_service_request_feature_stop(yunlink_runtime_t* runtime,
+                                            const yunlink_peer_t* peer,
+                                            const yunlink_session_t* session,
+                                            const yunlink_target_selector_t* target,
+                                            const char* feature_name,
+                                            uint8_t force,
+                                            yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
 yunlink_system_service_request_runtime_log_list(yunlink_runtime_t* runtime,
                                                 const yunlink_peer_t* peer,
                                                 const yunlink_session_t* session,

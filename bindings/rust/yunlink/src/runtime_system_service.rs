@@ -202,6 +202,31 @@ impl Runtime {
         Ok(CommandHandle::from_raw(handle))
     }
 
+    pub async fn request_feature_stop(
+        &self,
+        peer: &PeerConnection,
+        session: &Session,
+        target: &TargetSelector,
+        feature_name: &str,
+        force: bool,
+    ) -> Result<CommandHandle> {
+        let session = session.to_native();
+        let feature_name = CString::new(feature_name)?;
+        let mut handle = sys::yunlink_command_handle_t::default();
+        ensure(unsafe {
+            sys::yunlink_system_service_request_feature_stop(
+                self.raw_ptr(),
+                &peer.raw,
+                &session,
+                &target.raw,
+                feature_name.as_ptr(),
+                u8::from(force),
+                &mut handle,
+            )
+        })?;
+        Ok(CommandHandle::from_raw(handle))
+    }
+
     /// Request the device-managed runtime log catalogue.
     pub async fn request_runtime_log_list(
         &self,

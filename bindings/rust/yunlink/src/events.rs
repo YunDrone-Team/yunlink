@@ -354,6 +354,16 @@ pub struct FeatureStartEvent {
     pub feature_name: String,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FeatureStopEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub success: bool,
+    pub message: String,
+    pub feature_name: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TopicDescriptor {
     pub name: String,
@@ -424,6 +434,7 @@ pub enum Event {
     FeatureList(FeatureListEvent),
     FeatureGet(FeatureGetEvent),
     FeatureStart(FeatureStartEvent),
+    FeatureStop(FeatureStopEvent),
     HostSystem(HostSystemEvent),
     TopicList(TopicListEvent),
     TopicSubscription(TopicSubscriptionEvent),
@@ -787,6 +798,17 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 feature_name: string_from_c_buf(&data.feature_name),
             }))
         }
+        sys::YUNLINK_RUNTIME_EVENT_FEATURE_STOP => {
+            let data = unsafe { event.data.feature_stop };
+            Some(Event::FeatureStop(FeatureStopEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                success: data.success != 0,
+                message: string_from_c_buf(&data.message),
+                feature_name: string_from_c_buf(&data.feature_name),
+            }))
+        }
         sys::YUNLINK_RUNTIME_EVENT_TOPIC_LIST => {
             let data = unsafe { event.data.topic_list };
             Some(Event::TopicList(TopicListEvent {
@@ -1085,7 +1107,10 @@ mod tests {
                 assert!(feature.check_feature_state);
                 assert_eq!(feature.runtime_state, 2);
                 assert_eq!(feature.depends_on, ["sunray_ugv_control"]);
-                assert_eq!(feature.start_preview_commands, ["roslaunch ugv_hold.launch"]);
+                assert_eq!(
+                    feature.start_preview_commands,
+                    ["roslaunch ugv_hold.launch"]
+                );
             }
             other => panic!("expected FeatureList event, got {other:?}"),
         }
@@ -1149,6 +1174,33 @@ mod tests {
                 assert_eq!(event.message, "started");
             }
             other => panic!("expected FeatureStart event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_feature_stop_response_from_c_abi_union() {
+        let mut data = sys::yunlink_feature_stop_event_t {
+            session_id: 51,
+            message_id: 52,
+            correlation_id: 53,
+            success: 1,
+            ..Default::default()
+        };
+        write_c_buf(&mut data.message, b"stopped");
+        write_c_buf(&mut data.feature_name, b"circle_velocity");
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_FEATURE_STOP,
+            data: sys::yunlink_runtime_event_union_t { feature_stop: data },
+        };
+
+        match parse_event(raw).expect("FeatureStop event should parse") {
+            Event::FeatureStop(event) => {
+                assert!(event.success);
+                assert_eq!(event.correlation_id, 53);
+                assert_eq!(event.feature_name, "circle_velocity");
+                assert_eq!(event.message, "stopped");
+            }
+            other => panic!("expected FeatureStop event, got {other:?}"),
         }
     }
 

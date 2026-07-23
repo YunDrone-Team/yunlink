@@ -155,6 +155,7 @@ typedef enum yunlink_runtime_event_type {
     YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE = 15,
     YUNLINK_RUNTIME_EVENT_UGV_CONTROL_CMD = 16,
     YUNLINK_RUNTIME_EVENT_UGV_CONTROL_STATE = 17,
+    YUNLINK_RUNTIME_EVENT_FEATURE_STOP = 18,
 } yunlink_runtime_event_type_t;
 
 typedef enum yunlink_config_value_type {

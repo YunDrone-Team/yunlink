@@ -234,6 +234,17 @@ int main() {
         yunlink_runtime_destroy(runtime);
         return 18;
     }
+    if (yunlink_system_service_request_feature_stop(runtime,
+                                                    &fake_peer,
+                                                    &stopped_session,
+                                                    &valid_target,
+                                                    "circle_velocity",
+                                                    0,
+                                                    nullptr) != YUNLINK_RESULT_RUNTIME_STOPPED) {
+        std::cerr << "feature stop request on stopped runtime mismatch\n";
+        yunlink_runtime_destroy(runtime);
+        return 19;
+    }
 
     yunlink_vehicle_core_state_t state{};
     state.armed = 1;
@@ -243,7 +254,7 @@ int main() {
         YUNLINK_RESULT_RUNTIME_STOPPED) {
         std::cerr << "state publish on stopped runtime mismatch\n";
         yunlink_runtime_destroy(runtime);
-        return 19;
+        return 20;
     }
 
     yunlink_runtime_event_t stopped_event{};
@@ -251,7 +262,7 @@ int main() {
         stopped_event.type != YUNLINK_RUNTIME_EVENT_NONE) {
         std::cerr << "stopped runtime empty poll mismatch\n";
         yunlink_runtime_destroy(runtime);
-        return 20;
+        return 21;
     }
 
     yunlink_runtime_destroy(runtime);

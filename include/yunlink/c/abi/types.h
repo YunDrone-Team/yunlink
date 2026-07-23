@@ -438,6 +438,15 @@ typedef struct yunlink_feature_start_event {
     char feature_name[128];
 } yunlink_feature_start_event_t;
 
+typedef struct yunlink_feature_stop_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t success;
+    char message[256];
+    char feature_name[128];
+} yunlink_feature_stop_event_t;
+
 typedef struct yunlink_topic_list_event {
     uint64_t session_id;
     uint64_t message_id;
@@ -496,6 +505,7 @@ typedef struct yunlink_runtime_event {
         yunlink_feature_list_event_t feature_list;
         yunlink_feature_get_event_t feature_get;
         yunlink_feature_start_event_t feature_start;
+        yunlink_feature_stop_event_t feature_stop;
         yunlink_host_system_event_t host_system;
         yunlink_topic_list_event_t topic_list;
         yunlink_topic_subscription_event_t topic_subscription;

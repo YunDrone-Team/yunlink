@@ -472,6 +472,24 @@ void subscribe_runtime_events(yunlink_runtime_t* runtime) {
                 push_event(runtime, out);
             });
 
+    runtime->tok_feature_stop =
+        runtime->runtime.system_service_subscriber().subscribe_feature_stop_responses(
+            [runtime](const yunlink::TypedMessage<yunlink::FeatureStopResponse>& msg) {
+                yunlink_runtime_event_t out{};
+                out.type = YUNLINK_RUNTIME_EVENT_FEATURE_STOP;
+                out.data.feature_stop.session_id = msg.envelope.session_id;
+                out.data.feature_stop.message_id = msg.envelope.message_id;
+                out.data.feature_stop.correlation_id = msg.envelope.correlation_id;
+                out.data.feature_stop.success = msg.payload.success ? 1 : 0;
+                safe_copy(out.data.feature_stop.message,
+                          sizeof(out.data.feature_stop.message),
+                          msg.payload.message);
+                safe_copy(out.data.feature_stop.feature_name,
+                          sizeof(out.data.feature_stop.feature_name),
+                          msg.payload.feature_name);
+                push_event(runtime, out);
+            });
+
     runtime->tok_topic_list =
         runtime->runtime.system_service_subscriber().subscribe_topic_list_responses(
             [runtime](const yunlink::TypedMessage<yunlink::TopicListResponse>& msg) {
@@ -613,6 +631,10 @@ void unsubscribe_runtime_events(yunlink_runtime_t* runtime) {
     if (runtime->tok_feature_start != 0) {
         runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_start);
         runtime->tok_feature_start = 0;
+    }
+    if (runtime->tok_feature_stop != 0) {
+        runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_feature_stop);
+        runtime->tok_feature_stop = 0;
     }
     if (runtime->tok_topic_list != 0) {
         runtime->runtime.system_service_subscriber().unsubscribe(runtime->tok_topic_list);
