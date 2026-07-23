@@ -287,6 +287,29 @@ pub struct yunlink_uav_control_command_t {
     pub controller_type: u8,
 }
 
+/// Raw complete UGV control payload.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct yunlink_ugv_control_command_t {
+    pub control_cmd: u8,
+    pub desired_position_x_m: f32,
+    pub desired_position_y_m: f32,
+    pub desired_position_z_m: f32,
+    pub desired_velocity_x_mps: f32,
+    pub desired_velocity_y_mps: f32,
+    pub desired_velocity_z_mps: f32,
+    pub body_linear_velocity_x_mps: f32,
+    pub body_linear_velocity_y_mps: f32,
+    pub body_linear_velocity_z_mps: f32,
+    pub body_angular_velocity_x_radps: f32,
+    pub body_angular_velocity_y_radps: f32,
+    pub body_angular_velocity_z_radps: f32,
+    pub desired_yaw_rad: f32,
+    pub desired_wgs84_latitude_deg: f64,
+    pub desired_wgs84_longitude_deg: f64,
+    pub desired_wgs84_altitude_m: f64,
+}
+
 /// Raw vehicle core state snapshot payload.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]

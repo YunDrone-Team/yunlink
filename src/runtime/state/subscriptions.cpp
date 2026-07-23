@@ -48,6 +48,14 @@ size_t StateSubscriber::subscribe_uav_control_state(UavControlStateHandler cb) {
     return runtime_ ? runtime_->subscribe_uav_control_state_internal(std::move(cb)) : 0;
 }
 
+size_t StateSubscriber::subscribe_ugv_control_cmd(UgvControlCmdHandler cb) {
+    return runtime_ ? runtime_->subscribe_ugv_control_cmd_internal(std::move(cb)) : 0;
+}
+
+size_t StateSubscriber::subscribe_ugv_control_state(UgvControlStateHandler cb) {
+    return runtime_ ? runtime_->subscribe_ugv_control_state_internal(std::move(cb)) : 0;
+}
+
 size_t StateSubscriber::subscribe_command_execution_status(CommandExecutionStatusHandler cb) {
     return runtime_ ? runtime_->subscribe_command_execution_status_internal(std::move(cb)) : 0;
 }
@@ -247,6 +255,10 @@ size_t CommandSubscriber::subscribe_formation_task(FormationTaskHandler cb) {
 
 size_t CommandSubscriber::subscribe_uav_control(UavControlHandler cb) {
     return runtime_ ? runtime_->subscribe_uav_control_internal(std::move(cb)) : 0;
+}
+
+size_t CommandSubscriber::subscribe_ugv_control(UgvControlHandler cb) {
+    return runtime_ ? runtime_->subscribe_ugv_control_internal(std::move(cb)) : 0;
 }
 
 void CommandSubscriber::unsubscribe(size_t token) {

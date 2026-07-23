@@ -120,6 +120,7 @@ pub const YUNLINK_COMMAND_KIND_TRAJECTORY_CHUNK: u16 = 6;
 pub const YUNLINK_COMMAND_KIND_FORMATION_TASK: u16 = 7;
 /// Unified UAV control command kind.
 pub const YUNLINK_COMMAND_KIND_UAV_CONTROL: u16 = 8;
+pub const YUNLINK_COMMAND_KIND_UGV_CONTROL: u16 = 9;
 
 /// Session was discovered but has not started a handshake.
 pub const YUNLINK_SESSION_STATE_DISCOVERED: u8 = 1;
@@ -209,6 +210,8 @@ pub const YUNLINK_RUNTIME_EVENT_TOPIC_LIST: u8 = 13;
 pub const YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION: u8 = 14;
 /// Explicitly subscribed topic sample event.
 pub const YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE: u8 = 15;
+pub const YUNLINK_RUNTIME_EVENT_UGV_CONTROL_CMD: u8 = 16;
+pub const YUNLINK_RUNTIME_EVENT_UGV_CONTROL_STATE: u8 = 17;
 
 /// Maximum encoded topic catalogue bytes carried by the C ABI event.
 pub const YUNLINK_TOPIC_LIST_BUFFER_CAPACITY: usize = 16_384;

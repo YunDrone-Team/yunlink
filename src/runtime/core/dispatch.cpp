@@ -170,9 +170,8 @@ void Runtime::handle_envelope(const EnvelopeEvent& ev) {
         const bool has_session =
             describe_session_internal(ev.peer.id, ev.envelope.session_id, &session) ||
             describe_session_internal(ev.envelope.session_id, &session);
-        if (has_session &&
-            (session.state != SessionState::kActive || !session.authenticated ||
-             !runtime_remote_source_allowed(session, ev.envelope.source))) {
+        if (has_session && (session.state != SessionState::kActive || !session.authenticated ||
+                            !runtime_remote_source_allowed(session, ev.envelope.source))) {
             ErrorEvent error;
             error.code = ErrorCode::kUnauthorized;
             error.transport = ev.transport;

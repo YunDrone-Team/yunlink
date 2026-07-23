@@ -38,4 +38,14 @@ bool decode_payload(const ByteBuffer& bytes, UavControlCmdSnapshot* payload) {
     });
 }
 
+ByteBuffer encode_payload(const UgvControlCmdSnapshot& payload) {
+    return build_payload([&](BufferWriter& writer) { write_ugv_control_cmd(writer, payload); });
+}
+
+bool decode_payload(const ByteBuffer& bytes, UgvControlCmdSnapshot* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, UgvControlCmdSnapshot* out) {
+        return read_ugv_control_cmd(reader, out);
+    });
+}
+
 }  // namespace yunlink

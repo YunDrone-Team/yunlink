@@ -173,11 +173,11 @@ void Runtime::handle_session_envelope(const EnvelopeEvent& ev) {
                 session.capability_flags = payload.capability_flags;
                 session.udp_peer = ev.peer;
                 session.udp_peer.port = payload.udp_bind_port;
-                session.state = satisfies_required_capabilities(
-                                    payload.capability_flags,
-                                    config_.required_peer_capability_flags)
-                                    ? SessionState::kHandshaking
-                                    : SessionState::kInvalid;
+                session.state =
+                    satisfies_required_capabilities(payload.capability_flags,
+                                                    config_.required_peer_capability_flags)
+                        ? SessionState::kHandshaking
+                        : SessionState::kInvalid;
             } else {
                 session.state = SessionState::kInvalid;
             }

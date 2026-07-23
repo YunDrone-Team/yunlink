@@ -97,6 +97,18 @@ struct UavControlCmdSnapshot {
     float desired_yaw_rate_radps = 0.0F;
 };
 
+struct UgvControlCmdSnapshot {
+    HeaderSnapshot header;
+    uint8_t cmd_source = 0;
+    uint8_t control_cmd = 0;
+    Vector3f desired_position_m;
+    Vector3f desired_velocity_mps;
+    Vector3f body_linear_velocity_mps;
+    Vector3f body_angular_velocity_radps;
+    float desired_yaw_rad = 0.0F;
+    GeoPointSnapshot desired_wgs84_position;
+};
+
 struct PositionTargetSnapshot {
     HeaderSnapshot header;
     uint8_t coordinate_frame = 0;
@@ -230,6 +242,28 @@ struct UavControlStateSnapshot {
     uint8_t controller_output_type = 0;
     PositionTargetSnapshot position_target;
     AttitudeTargetSnapshot attitude_target;
+};
+
+struct UgvControlStateSnapshot {
+    HeaderSnapshot header;
+    std::string agent_name;
+    uint32_t agent_id = 0;
+    uint8_t drive_type = 0;
+    bool control_cmd_valid = false;
+    bool inside_geo_fence = false;
+    uint8_t diagnostic_level = 0;
+    std::string diagnostic_message;
+    uint8_t fsm_state = 0;
+    UgvControlCmdSnapshot active_command;
+    OdometrySnapshot self_odom;
+    bool odom_valid = false;
+    bool target_valid = false;
+    Vector3f target_position_m;
+    float target_yaw_rad = 0.0F;
+    Vector3f controller_linear_velocity_mps;
+    Vector3f controller_angular_velocity_radps;
+    Vector3f geo_fence_min_m;
+    Vector3f geo_fence_max_m;
 };
 
 struct OdomStateSnapshot {

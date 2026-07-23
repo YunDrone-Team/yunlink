@@ -26,6 +26,7 @@ pub enum CommandKind {
     /// Formation task command.
     FormationTask,
     UavControl,
+    UgvControl,
     /// Unknown future or vendor-specific value.
     Other(u16),
 }
@@ -42,6 +43,7 @@ impl CommandKind {
             sys::YUNLINK_COMMAND_KIND_TRAJECTORY_CHUNK => Self::TrajectoryChunk,
             sys::YUNLINK_COMMAND_KIND_FORMATION_TASK => Self::FormationTask,
             sys::YUNLINK_COMMAND_KIND_UAV_CONTROL => Self::UavControl,
+            sys::YUNLINK_COMMAND_KIND_UGV_CONTROL => Self::UgvControl,
             other => Self::Other(other),
         }
     }
@@ -200,6 +202,55 @@ pub struct LocalOdomEvent {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct UgvControlCmdEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: crate::AgentType,
+    pub source_id: u32,
+    pub source_stamp_ns: u64,
+    pub frame_id: String,
+    pub cmd_source: u8,
+    pub control_cmd: u8,
+    pub desired_position: [f32; 3],
+    pub desired_velocity: [f32; 3],
+    pub body_linear_velocity: [f32; 3],
+    pub body_angular_velocity: [f32; 3],
+    pub desired_yaw_rad: f32,
+    pub desired_wgs84_position: [f64; 3],
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UgvControlStateEvent {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: crate::AgentType,
+    pub source_id: u32,
+    pub source_stamp_ns: u64,
+    pub frame_id: String,
+    pub agent_name: String,
+    pub agent_id: u32,
+    pub drive_type: u8,
+    pub control_cmd_valid: bool,
+    pub inside_geo_fence: bool,
+    pub diagnostic_level: u8,
+    pub diagnostic_message: String,
+    pub fsm_state: u8,
+    pub active_control_cmd: u8,
+    pub odom_valid: bool,
+    pub odom_position: [f32; 3],
+    pub odom_velocity: [f32; 3],
+    pub target_valid: bool,
+    pub target_position: [f32; 3],
+    pub target_yaw_rad: f32,
+    pub controller_linear_velocity: [f32; 3],
+    pub controller_angular_velocity: [f32; 3],
+    pub geo_fence_min: [f32; 3],
+    pub geo_fence_max: [f32; 3],
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct LinkEvent {
     /// Peer id copied from the fixed C buffer.
     pub peer_id: String,
@@ -253,6 +304,26 @@ pub struct FeatureListEvent {
     pub success: bool,
     pub message: String,
     pub feature_names: Vec<String>,
+    pub features: Vec<FeatureDescriptor>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FeatureDescriptor {
+    pub name: String,
+    pub display_name: String,
+    pub group_name: String,
+    pub group_display_name: String,
+    pub description: String,
+    pub core_feature: bool,
+    pub example_feature: bool,
+    pub basic_feature: bool,
+    pub auto_start: bool,
+    pub check_feature_state: bool,
+    pub runtime_state: u8,
+    pub runtime_error: String,
+    pub depends_on: Vec<String>,
+    pub start_preview_units: Vec<String>,
+    pub start_preview_commands: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -347,6 +418,8 @@ pub enum Event {
     VehicleCoreState(VehicleCoreStateEvent),
     Px4State(Px4StateEvent),
     LocalOdom(LocalOdomEvent),
+    UgvControlCmd(UgvControlCmdEvent),
+    UgvControlState(UgvControlStateEvent),
     AuthorityStatus(AuthorityStatusEvent),
     FeatureList(FeatureListEvent),
     FeatureGet(FeatureGetEvent),
@@ -365,6 +438,53 @@ fn csv_list(raw: String) -> Vec<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToString::to_string)
+        .collect()
+}
+
+fn percent_decode_feature_field(raw: &str) -> Option<String> {
+    let bytes = raw.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            let encoded = std::str::from_utf8(bytes.get(index + 1..index + 3)?).ok()?;
+            decoded.push(u8::from_str_radix(encoded, 16).ok()?);
+            index += 3;
+        } else {
+            decoded.push(bytes[index]);
+            index += 1;
+        }
+    }
+    String::from_utf8(decoded).ok()
+}
+
+fn feature_descriptors(raw: String) -> Vec<FeatureDescriptor> {
+    raw.split('\x1e')
+        .filter(|record| !record.is_empty())
+        .filter_map(|record| {
+            let fields = record
+                .split('\x1f')
+                .map(percent_decode_feature_field)
+                .collect::<Option<Vec<_>>>()?;
+            let fields: [String; 15] = fields.try_into().ok()?;
+            Some(FeatureDescriptor {
+                name: fields[0].clone(),
+                display_name: fields[1].clone(),
+                group_name: fields[2].clone(),
+                group_display_name: fields[3].clone(),
+                description: fields[4].clone(),
+                core_feature: fields[5] == "1",
+                example_feature: fields[6] == "1",
+                basic_feature: fields[7] == "1",
+                auto_start: fields[8] == "1",
+                check_feature_state: fields[9] == "1",
+                runtime_state: fields[10].parse().ok()?,
+                runtime_error: fields[11].clone(),
+                depends_on: line_list(fields[12].clone()),
+                start_preview_units: line_list(fields[13].clone()),
+                start_preview_commands: line_list(fields[14].clone()),
+            })
+        })
         .collect()
 }
 
@@ -510,6 +630,93 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 angular_z_radps: data.angular_z_radps,
             }))
         }
+        sys::YUNLINK_RUNTIME_EVENT_UGV_CONTROL_CMD => {
+            let data = unsafe { event.data.ugv_control_cmd };
+            Some(Event::UgvControlCmd(UgvControlCmdEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                source_type: crate::AgentType::from_native(data.source_type),
+                source_id: data.source_id,
+                source_stamp_ns: data.source_stamp_ns,
+                frame_id: string_from_c_buf(&data.frame_id),
+                cmd_source: data.cmd_source,
+                control_cmd: data.control_cmd,
+                desired_position: [
+                    data.desired_position_x_m,
+                    data.desired_position_y_m,
+                    data.desired_position_z_m,
+                ],
+                desired_velocity: [
+                    data.desired_velocity_x_mps,
+                    data.desired_velocity_y_mps,
+                    data.desired_velocity_z_mps,
+                ],
+                body_linear_velocity: [
+                    data.body_linear_velocity_x_mps,
+                    data.body_linear_velocity_y_mps,
+                    data.body_linear_velocity_z_mps,
+                ],
+                body_angular_velocity: [
+                    data.body_angular_velocity_x_radps,
+                    data.body_angular_velocity_y_radps,
+                    data.body_angular_velocity_z_radps,
+                ],
+                desired_yaw_rad: data.desired_yaw_rad,
+                desired_wgs84_position: [
+                    data.desired_wgs84_latitude_deg,
+                    data.desired_wgs84_longitude_deg,
+                    data.desired_wgs84_altitude_m,
+                ],
+            }))
+        }
+        sys::YUNLINK_RUNTIME_EVENT_UGV_CONTROL_STATE => {
+            let data = unsafe { event.data.ugv_control_state };
+            Some(Event::UgvControlState(UgvControlStateEvent {
+                session_id: data.session_id,
+                message_id: data.message_id,
+                correlation_id: data.correlation_id,
+                source_type: crate::AgentType::from_native(data.source_type),
+                source_id: data.source_id,
+                source_stamp_ns: data.source_stamp_ns,
+                frame_id: string_from_c_buf(&data.frame_id),
+                agent_name: string_from_c_buf(&data.agent_name),
+                agent_id: data.agent_id,
+                drive_type: data.drive_type,
+                control_cmd_valid: data.control_cmd_valid != 0,
+                inside_geo_fence: data.inside_geo_fence != 0,
+                diagnostic_level: data.diagnostic_level,
+                diagnostic_message: string_from_c_buf(&data.diagnostic_message),
+                fsm_state: data.fsm_state,
+                active_control_cmd: data.active_control_cmd,
+                odom_valid: data.odom_valid != 0,
+                odom_position: [data.odom_x_m, data.odom_y_m, data.odom_z_m],
+                odom_velocity: [data.odom_vx_mps, data.odom_vy_mps, data.odom_vz_mps],
+                target_valid: data.target_valid != 0,
+                target_position: [data.target_x_m, data.target_y_m, data.target_z_m],
+                target_yaw_rad: data.target_yaw_rad,
+                controller_linear_velocity: [
+                    data.controller_linear_x_mps,
+                    data.controller_linear_y_mps,
+                    data.controller_linear_z_mps,
+                ],
+                controller_angular_velocity: [
+                    data.controller_angular_x_radps,
+                    data.controller_angular_y_radps,
+                    data.controller_angular_z_radps,
+                ],
+                geo_fence_min: [
+                    data.geo_fence_min_x_m,
+                    data.geo_fence_min_y_m,
+                    data.geo_fence_min_z_m,
+                ],
+                geo_fence_max: [
+                    data.geo_fence_max_x_m,
+                    data.geo_fence_max_y_m,
+                    data.geo_fence_max_z_m,
+                ],
+            }))
+        }
         sys::YUNLINK_RUNTIME_EVENT_AUTHORITY_STATUS => {
             let data = unsafe { event.data.authority_status };
             Some(Event::AuthorityStatus(AuthorityStatusEvent {
@@ -547,6 +754,7 @@ pub(crate) fn parse_event(event: sys::yunlink_runtime_event_t) -> Option<Event> 
                 success: data.success != 0,
                 message: string_from_c_buf(&data.message),
                 feature_names: csv_list(string_from_c_buf(&data.feature_names)),
+                features: feature_descriptors(string_from_c_buf(&data.feature_descriptors)),
             }))
         }
         sys::YUNLINK_RUNTIME_EVENT_FEATURE_GET => {
@@ -848,6 +1056,42 @@ mod tests {
     }
 
     #[test]
+    fn parses_complete_feature_descriptor_from_c_abi_union() {
+        let mut data = sys::yunlink_feature_list_event_t {
+            session_id: 21,
+            message_id: 22,
+            correlation_id: 23,
+            success: 1,
+            ..Default::default()
+        };
+        write_c_buf(&mut data.message, b"ok");
+        write_c_buf(&mut data.feature_names, b"ugv_example_hold");
+        write_c_buf(
+            &mut data.feature_descriptors,
+            b"ugv_example_hold\x1fUGV Hold\x1fsunray_ugv_control_example\x1fUGV examples\x1fHold safely\x1f0\x1f1\x1f0\x1f0\x1f1\x1f2\x1f\x1fsunray_ugv_control\x1fUGV Hold\x1froslaunch ugv_hold.launch",
+        );
+        let raw = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_FEATURE_LIST,
+            data: sys::yunlink_runtime_event_union_t { feature_list: data },
+        };
+
+        match parse_event(raw).expect("FeatureList event should parse") {
+            Event::FeatureList(event) => {
+                assert_eq!(event.features.len(), 1);
+                let feature = &event.features[0];
+                assert_eq!(feature.name, "ugv_example_hold");
+                assert!(feature.example_feature);
+                assert!(!feature.basic_feature);
+                assert!(feature.check_feature_state);
+                assert_eq!(feature.runtime_state, 2);
+                assert_eq!(feature.depends_on, ["sunray_ugv_control"]);
+                assert_eq!(feature.start_preview_commands, ["roslaunch ugv_hold.launch"]);
+            }
+            other => panic!("expected FeatureList event, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn parses_feature_get_title_from_c_abi_union() {
         let mut data = sys::yunlink_feature_get_event_t {
             session_id: 31,
@@ -905,6 +1149,75 @@ mod tests {
                 assert_eq!(event.message, "started");
             }
             other => panic!("expected FeatureStart event, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_ugv_control_events_as_owned_values() {
+        let mut command = sys::yunlink_ugv_control_cmd_event_t {
+            session_id: 51,
+            source_type: sys::YUNLINK_AGENT_TYPE_UGV,
+            source_id: 3,
+            cmd_source: 1,
+            control_cmd: 5,
+            body_linear_velocity_x_mps: 1.25,
+            body_angular_velocity_z_radps: -0.5,
+            desired_wgs84_latitude_deg: 22.5401,
+            ..Default::default()
+        };
+        write_c_buf(&mut command.frame_id, b"base_link");
+        let raw_command = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_UGV_CONTROL_CMD,
+            data: sys::yunlink_runtime_event_union_t {
+                ugv_control_cmd: command,
+            },
+        };
+        match parse_event(raw_command).expect("UGV command event should parse") {
+            Event::UgvControlCmd(event) => {
+                assert_eq!(event.source_type, crate::AgentType::Ugv);
+                assert_eq!(event.source_id, 3);
+                assert_eq!(event.frame_id, "base_link");
+                assert_eq!(event.body_linear_velocity[0], 1.25);
+                assert_eq!(event.body_angular_velocity[2], -0.5);
+                assert_eq!(event.desired_wgs84_position[0], 22.5401);
+            }
+            other => panic!("expected UGV command event, got {other:?}"),
+        }
+
+        let mut state = sys::yunlink_ugv_control_state_event_t {
+            session_id: 52,
+            source_type: sys::YUNLINK_AGENT_TYPE_UGV,
+            source_id: 3,
+            agent_id: 3,
+            drive_type: 2,
+            control_cmd_valid: 1,
+            diagnostic_level: 1,
+            fsm_state: 3,
+            odom_valid: 1,
+            odom_x_m: 4.5,
+            target_valid: 1,
+            target_x_m: 8.0,
+            controller_angular_z_radps: 0.2,
+            ..Default::default()
+        };
+        write_c_buf(&mut state.agent_name, b"ugv");
+        write_c_buf(&mut state.diagnostic_message, b"lateral velocity ignored");
+        let raw_state = sys::yunlink_runtime_event_t {
+            type_: sys::YUNLINK_RUNTIME_EVENT_UGV_CONTROL_STATE,
+            data: sys::yunlink_runtime_event_union_t {
+                ugv_control_state: state,
+            },
+        };
+        match parse_event(raw_state).expect("UGV state event should parse") {
+            Event::UgvControlState(event) => {
+                assert_eq!(event.agent_name, "ugv");
+                assert!(event.control_cmd_valid);
+                assert_eq!(event.diagnostic_message, "lateral velocity ignored");
+                assert_eq!(event.odom_position[0], 4.5);
+                assert_eq!(event.target_position[0], 8.0);
+                assert_eq!(event.controller_angular_velocity[2], 0.2);
+            }
+            other => panic!("expected UGV state event, got {other:?}"),
         }
     }
 

@@ -83,6 +83,18 @@ void Runtime::handle_state_snapshot_envelope(const EnvelopeEvent& ev) {
             runtime_publish_semantic_decode_error(bus_, ev);
         }
         return;
+    case StateSnapshotType::kUgvControlCmd:
+        if (!runtime_fanout_snapshot<UgvControlCmdSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->ugv_control_cmd_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
+    case StateSnapshotType::kUgvControlState:
+        if (!runtime_fanout_snapshot<UgvControlStateSnapshot>(
+                impl_->mu, ev.envelope, ev.envelope.payload, impl_->ugv_control_state_handlers)) {
+            runtime_publish_semantic_decode_error(bus_, ev);
+        }
+        return;
     case StateSnapshotType::kCommandExecutionStatus:
         handle_command_execution_status_snapshot(ev);
         return;

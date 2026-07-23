@@ -113,6 +113,18 @@ impl Default for UavControlCommand {
     }
 }
 
+/// Complete ground-vehicle control payload accepted by a UGV Bridge entity.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct UgvControlCommand {
+    pub control_cmd: u8,
+    pub desired_position: [f32; 3],
+    pub desired_velocity: [f32; 3],
+    pub body_linear_velocity: [f32; 3],
+    pub body_angular_velocity: [f32; 3],
+    pub desired_yaw_rad: f32,
+    pub desired_wgs84_position: [f64; 3],
+}
+
 /// Safe vehicle core state payload.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VehicleCoreState {

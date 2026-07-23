@@ -31,6 +31,7 @@ enum class CommandType : uint16_t {
     kTrajectoryChunk = 6,
     kFormationTask = 7,
     kUavControl = 8,
+    kUgvControl = 9,
 };
 
 enum class StateSnapshotType : uint16_t {
@@ -48,6 +49,8 @@ enum class StateSnapshotType : uint16_t {
     kCommandExecutionStatus = 12,
     kHostSystem = 13,
     kTopicSample = 14,
+    kUgvControlCmd = 15,
+    kUgvControlState = 16,
 };
 
 enum class StateEventType : uint16_t {
@@ -105,6 +108,7 @@ enum class CommandKind : uint16_t {
     kTrajectoryChunk = 6,
     kFormationTask = 7,
     kUavControl = 8,
+    kUgvControl = 9,
 };
 
 enum class AuthorityAction : uint8_t {

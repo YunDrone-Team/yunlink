@@ -122,23 +122,24 @@ yunlink_command_publish_velocity_setpoint(yunlink_runtime_t* runtime,
     return result;
 }
 
-yunlink_result_t yunlink_command_publish_uav_control(
-    yunlink_runtime_t* runtime,
-    const yunlink_peer_t* peer,
-    const yunlink_session_t* session,
-    const yunlink_target_selector_t* target,
-    const yunlink_uav_control_command_t* payload,
-    yunlink_command_handle_t* out_handle) {
+yunlink_result_t yunlink_command_publish_uav_control(yunlink_runtime_t* runtime,
+                                                     const yunlink_peer_t* peer,
+                                                     const yunlink_session_t* session,
+                                                     const yunlink_target_selector_t* target,
+                                                     const yunlink_uav_control_command_t* payload,
+                                                     yunlink_command_handle_t* out_handle) {
     if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
         !validate_target(target) || payload == nullptr) {
         return YUNLINK_RESULT_INVALID_ARGUMENT;
     }
     yunlink::UavControlCommand native{};
     native.control_cmd = payload->control_cmd;
-    native.desired_position_m = {
-        payload->desired_position_x_m, payload->desired_position_y_m, payload->desired_position_z_m};
-    native.desired_velocity_mps = {
-        payload->desired_velocity_x_mps, payload->desired_velocity_y_mps, payload->desired_velocity_z_mps};
+    native.desired_position_m = {payload->desired_position_x_m,
+                                 payload->desired_position_y_m,
+                                 payload->desired_position_z_m};
+    native.desired_velocity_mps = {payload->desired_velocity_x_mps,
+                                   payload->desired_velocity_y_mps,
+                                   payload->desired_velocity_z_mps};
     native.desired_acceleration_mps2 = {payload->desired_acceleration_x_mps2,
                                         payload->desired_acceleration_y_mps2,
                                         payload->desired_acceleration_z_mps2};
@@ -153,6 +154,43 @@ yunlink_result_t yunlink_command_publish_uav_control(
     native.controller_type = payload->controller_type;
     yunlink::CommandHandle handle{};
     const auto result = to_result(runtime->runtime.command_publisher().publish_uav_control(
+        peer->id, session->session_id, to_target_selector(*target), native, &handle));
+    if (result == YUNLINK_RESULT_OK) {
+        fill_command_handle(handle, out_handle);
+    }
+    return result;
+}
+
+yunlink_result_t yunlink_command_publish_ugv_control(yunlink_runtime_t* runtime,
+                                                     const yunlink_peer_t* peer,
+                                                     const yunlink_session_t* session,
+                                                     const yunlink_target_selector_t* target,
+                                                     const yunlink_ugv_control_command_t* payload,
+                                                     yunlink_command_handle_t* out_handle) {
+    if (!validate_input_runtime(runtime) || !validate_peer(peer) || !validate_session(session) ||
+        !validate_target(target) || payload == nullptr) {
+        return YUNLINK_RESULT_INVALID_ARGUMENT;
+    }
+    yunlink::UgvControlCommand native{};
+    native.control_cmd = payload->control_cmd;
+    native.desired_position_m = {payload->desired_position_x_m,
+                                 payload->desired_position_y_m,
+                                 payload->desired_position_z_m};
+    native.desired_velocity_mps = {payload->desired_velocity_x_mps,
+                                   payload->desired_velocity_y_mps,
+                                   payload->desired_velocity_z_mps};
+    native.body_linear_velocity_mps = {payload->body_linear_velocity_x_mps,
+                                       payload->body_linear_velocity_y_mps,
+                                       payload->body_linear_velocity_z_mps};
+    native.body_angular_velocity_radps = {payload->body_angular_velocity_x_radps,
+                                          payload->body_angular_velocity_y_radps,
+                                          payload->body_angular_velocity_z_radps};
+    native.desired_yaw_rad = payload->desired_yaw_rad;
+    native.desired_wgs84_latitude_deg = payload->desired_wgs84_latitude_deg;
+    native.desired_wgs84_longitude_deg = payload->desired_wgs84_longitude_deg;
+    native.desired_wgs84_altitude_m = payload->desired_wgs84_altitude_m;
+    yunlink::CommandHandle handle{};
+    const auto result = to_result(runtime->runtime.command_publisher().publish_ugv_control(
         peer->id, session->session_id, to_target_selector(*target), native, &handle));
     if (result == YUNLINK_RESULT_OK) {
         fill_command_handle(handle, out_handle);

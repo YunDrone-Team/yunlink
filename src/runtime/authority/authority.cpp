@@ -216,4 +216,45 @@ void Runtime::handle_authority_envelope(const EnvelopeEvent& ev) {
     }
 }
 
+ErrorCode Runtime::revoke_authority_for_session(const std::string& peer_id,
+                                                uint64_t session_id,
+                                                const TargetSelector& target,
+                                                const std::string& detail) {
+    if (peer_id.empty() || session_id == 0U || detail.empty()) {
+        return ErrorCode::kInvalidArgument;
+    }
+    SessionDescriptor session{};
+    if (!describe_session_internal(peer_id, session_id, &session) ||
+        session.state != SessionState::kActive) {
+        return ErrorCode::kRejected;
+    }
+
+    AuthorityLease lease{};
+    {
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        const auto it = impl_->authorities.find(runtime_target_key(target));
+        if (it == impl_->authorities.end() || it->second.session_id != session_id ||
+            it->second.peer.id != peer_id) {
+            return ErrorCode::kRejected;
+        }
+        lease = it->second;
+        impl_->authorities.erase(it);
+    }
+
+    const AuthorityStatus status =
+        make_authority_status(AuthorityState::kRevoked, session_id, 0U, kAuthorityReasonOk, detail);
+    SecureEnvelope envelope =
+        make_typed_envelope(source_for_target(lease.target),
+                            TargetSelector::for_entity(session.remote_identity.agent_type,
+                                                       session.remote_identity.agent_id),
+                            session_id,
+                            session_id,
+                            QosClass::kReliableOrdered,
+                            status,
+                            1000);
+    envelope.message_id = allocate_message_id();
+    envelope.correlation_id = envelope.message_id;
+    return send_envelope_to_peer(peer_id, envelope);
+}
+
 }  // namespace yunlink

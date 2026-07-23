@@ -96,9 +96,10 @@ int main() {
     invalid_advertisement = advertisement;
     invalid_advertisement.node_name = std::string(63U, 'n');
     invalid_advertisement.display_name_prefix = std::string(32U, 'p');
-    if (!yunlink::encode_endpoint_discovery_reply(query.nonce, invalid_advertisement, secret)
-             .empty()) {
-        std::cerr << "active discovery emitted a reply beyond the packet budget\n";
+    const auto widest_base_reply =
+        yunlink::encode_endpoint_discovery_reply(query.nonce, invalid_advertisement, secret);
+    if (widest_base_reply.empty() || widest_base_reply.size() > 1024U) {
+        std::cerr << "active discovery rejected a valid bounded base reply\n";
         return 14;
     }
 
@@ -106,9 +107,76 @@ int main() {
     yunlink::EndpointAdvertisement decoded_v1{};
     if (!yunlink::decode_endpoint_advertisement(v1, &decoded_v1, &error) ||
         decoded_v1.endpoint_id != advertisement.endpoint_id ||
-        decoded_v1.display_name != "uav7-a1b2c") {
+        decoded_v1.display_name != "uav7-a1b2c" || decoded_v1.managed_entity_count_known) {
         std::cerr << "V1 compatibility decode failed: " << error << '\n';
         return 7;
+    }
+
+    auto summarized_advertisement = advertisement;
+    summarized_advertisement.managed_entity_count_known = true;
+    summarized_advertisement.managed_entity_count = 1U;
+    summarized_advertisement.managed_entities = {{
+        "e-a1b2c-1-7",
+        "uav",
+        7U,
+        "/uav7",
+        "uav",
+    }};
+    const auto summarized_reply =
+        yunlink::encode_endpoint_discovery_reply(query.nonce, summarized_advertisement, secret);
+    if (summarized_reply.empty() || summarized_reply.size() > 1024U ||
+        !yunlink::decode_endpoint_discovery_reply(
+            summarized_reply, secret, &reply_nonce, &decoded_reply, &error) ||
+        !decoded_reply.managed_entity_count_known || decoded_reply.managed_entity_count != 1U ||
+        decoded_reply.managed_entities.size() != 1U ||
+        decoded_reply.managed_entities.front().entity_uid != "e-a1b2c-1-7") {
+        std::cerr << "active discovery managed-entity summary round-trip failed: " << error << '\n';
+        return 18;
+    }
+    const auto summarized_beacon = yunlink::encode_endpoint_advertisement(summarized_advertisement);
+    if (!yunlink::decode_endpoint_advertisement(summarized_beacon, &decoded_v1, &error) ||
+        !decoded_v1.managed_entity_count_known || decoded_v1.managed_entity_count != 1U ||
+        decoded_v1.managed_entities.size() != 1U ||
+        decoded_v1.managed_entities.front().display_name != "/uav7") {
+        std::cerr << "beacon managed-entity summary round-trip failed: " << error << '\n';
+        return 19;
+    }
+    summarized_advertisement.managed_entity_count =
+        static_cast<uint16_t>(yunlink::kMaxDiscoveryManagedEntitySummaries + 1U);
+    summarized_advertisement.managed_entities.clear();
+    for (std::size_t index = 0; index < yunlink::kMaxDiscoveryManagedEntitySummaries + 1U;
+         ++index) {
+        summarized_advertisement.managed_entities.push_back({
+            "e-a1b2c-1-" + std::to_string(index + 1U),
+            "uav",
+            static_cast<uint32_t>(index + 1U),
+            "uav" + std::to_string(index + 1U),
+            "uav",
+        });
+    }
+    const auto truncated_summary_beacon =
+        yunlink::encode_endpoint_advertisement(summarized_advertisement);
+    if (!yunlink::decode_endpoint_advertisement(truncated_summary_beacon, &decoded_v1, &error) ||
+        decoded_v1.managed_entity_count != yunlink::kMaxDiscoveryManagedEntitySummaries + 1U ||
+        decoded_v1.managed_entities.size() != yunlink::kMaxDiscoveryManagedEntitySummaries) {
+        std::cerr << "managed-entity summary truncation failed: " << error << '\n';
+        return 20;
+    }
+    for (auto& summary : summarized_advertisement.managed_entities) {
+        summary.entity_uid = std::string(96U, 'e');
+        summary.display_name = std::string(96U, 'd');
+        summary.node_name = std::string(96U, 'n');
+    }
+    const auto truncated_summary_reply =
+        yunlink::encode_endpoint_discovery_reply(query.nonce, summarized_advertisement, secret);
+    if (truncated_summary_reply.empty() || truncated_summary_reply.size() > 1024U ||
+        !yunlink::decode_endpoint_discovery_reply(
+            truncated_summary_reply, secret, &reply_nonce, &decoded_reply, &error) ||
+        decoded_reply.managed_entity_count != summarized_advertisement.managed_entity_count ||
+        decoded_reply.managed_entities.empty() ||
+        decoded_reply.managed_entities.size() >= summarized_advertisement.managed_entities.size()) {
+        std::cerr << "active managed-entity summary budget truncation failed: " << error << '\n';
+        return 21;
     }
 
     const uint16_t discovery_port =
@@ -129,7 +197,17 @@ int main() {
         std::cerr << "same-host advertiser start failed: " << advertiser.last_error() << '\n';
         return 9;
     }
-    advertiser.set_advertisement(advertisement);
+    auto query_advertisement = advertisement;
+    query_advertisement.managed_entity_count_known = true;
+    query_advertisement.managed_entity_count = 1U;
+    query_advertisement.managed_entities = {{
+        "e-a1b2c-1-7",
+        "uav",
+        7U,
+        "/uav7",
+        "uav",
+    }};
+    advertiser.set_advertisement(query_advertisement);
 
     yunlink::EndpointListener listener;
     if (listener.start(same_host_config) != yunlink::ErrorCode::kOk) {
@@ -142,23 +220,28 @@ int main() {
     }
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-    bool found_same_host_reply = false;
-    while (std::chrono::steady_clock::now() < deadline && !found_same_host_reply) {
+    bool found_same_host_legacy_reply = false;
+    bool found_same_host_summary_reply = false;
+    while (std::chrono::steady_clock::now() < deadline &&
+           !(found_same_host_legacy_reply && found_same_host_summary_reply)) {
         std::vector<yunlink::EndpointAdvertisementPacket> packets;
         listener.drain(&packets);
         for (const auto& packet : packets) {
             if (packet.is_query_reply && packet.reply_nonce == query.nonce &&
                 packet.advertisement.endpoint_id == advertisement.endpoint_id) {
-                found_same_host_reply = true;
-                break;
+                if (packet.advertisement.managed_entity_count_known) {
+                    found_same_host_summary_reply = true;
+                } else {
+                    found_same_host_legacy_reply = true;
+                }
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     listener.stop();
     advertiser.stop();
-    if (!found_same_host_reply) {
-        std::cerr << "same-host active discovery reply was not delivered to the query socket\n";
+    if (!found_same_host_legacy_reply || !found_same_host_summary_reply) {
+        std::cerr << "same-host active discovery did not preserve legacy and summary replies\n";
         return 12;
     }
     return 0;

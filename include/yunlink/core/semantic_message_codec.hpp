@@ -28,6 +28,7 @@ ByteBuffer encode_payload(const VelocitySetpointCommand& payload);
 ByteBuffer encode_payload(const TrajectoryChunkCommand& payload);
 ByteBuffer encode_payload(const FormationTaskCommand& payload);
 ByteBuffer encode_payload(const UavControlCommand& payload);
+ByteBuffer encode_payload(const UgvControlCommand& payload);
 ByteBuffer encode_payload(const CommandResult& payload);
 ByteBuffer encode_payload(const FeatureListRequest& payload);
 ByteBuffer encode_payload(const FeatureListResponse& payload);
@@ -77,6 +78,8 @@ ByteBuffer encode_payload(const SunrayRuntimeDiagnosticSnapshot& payload);
 ByteBuffer encode_payload(const CommandExecutionStatusSnapshot& payload);
 ByteBuffer encode_payload(const HostSystemSnapshot& payload);
 ByteBuffer encode_payload(const TopicSample& payload);
+ByteBuffer encode_payload(const UgvControlCmdSnapshot& payload);
+ByteBuffer encode_payload(const UgvControlStateSnapshot& payload);
 
 bool decode_payload(const ByteBuffer& bytes, SessionHello* payload);
 bool decode_payload(const ByteBuffer& bytes, SessionAuthenticate* payload);
@@ -92,6 +95,7 @@ bool decode_payload(const ByteBuffer& bytes, VelocitySetpointCommand* payload);
 bool decode_payload(const ByteBuffer& bytes, TrajectoryChunkCommand* payload);
 bool decode_payload(const ByteBuffer& bytes, FormationTaskCommand* payload);
 bool decode_payload(const ByteBuffer& bytes, UavControlCommand* payload);
+bool decode_payload(const ByteBuffer& bytes, UgvControlCommand* payload);
 bool decode_payload(const ByteBuffer& bytes, CommandResult* payload);
 bool decode_payload(const ByteBuffer& bytes, FeatureListRequest* payload);
 bool decode_payload(const ByteBuffer& bytes, FeatureListResponse* payload);
@@ -140,6 +144,8 @@ bool decode_payload(const ByteBuffer& bytes, SunrayRuntimeDiagnosticSnapshot* pa
 bool decode_payload(const ByteBuffer& bytes, CommandExecutionStatusSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, HostSystemSnapshot* payload);
 bool decode_payload(const ByteBuffer& bytes, TopicSample* payload);
+bool decode_payload(const ByteBuffer& bytes, UgvControlCmdSnapshot* payload);
+bool decode_payload(const ByteBuffer& bytes, UgvControlStateSnapshot* payload);
 
 template <typename T> ByteBuffer encode_typed_payload(const T& payload) {
     return encode_payload(payload);

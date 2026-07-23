@@ -50,8 +50,7 @@ struct CallbackState {
     std::vector<uint32_t> group_ids;
 };
 
-void on_directory(void* user_data,
-                  const yunlink_managed_entity_list_response_view_t* response) {
+void on_directory(void* user_data, const yunlink_managed_entity_list_response_view_t* response) {
     auto* state = static_cast<CallbackState*>(user_data);
     if (state == nullptr || response == nullptr || response->entity_count != 2 ||
         response->entities == nullptr) {
@@ -103,8 +102,8 @@ int main() {
 
     const size_t request_token =
         server.system_service_subscriber().subscribe_managed_entity_list_requests(
-            [&](const yunlink::InboundSystemServiceRequestView<
-                yunlink::ManagedEntityListRequest>& request) {
+            [&](const yunlink::InboundSystemServiceRequestView<yunlink::ManagedEntityListRequest>&
+                    request) {
                 yunlink::ManagedEntityListResponse response;
                 response.success = true;
                 response.message = "ok";
@@ -140,9 +139,7 @@ int main() {
     config.self_identity.agent_type = YUNLINK_AGENT_TYPE_GROUND_STATION;
     config.self_identity.agent_id = 1001;
     config.self_identity.role = YUNLINK_ROLE_CONTROLLER;
-    std::strncpy(config.shared_secret,
-                 "ffi-managed-secret",
-                 sizeof(config.shared_secret) - 1);
+    std::strncpy(config.shared_secret, "ffi-managed-secret", sizeof(config.shared_secret) - 1);
     std::strncpy(config.multicast_group, "224.1.1.1", sizeof(config.multicast_group) - 1);
     if (yunlink_runtime_start(client, &config) != YUNLINK_RESULT_OK) {
         return 4;
@@ -152,7 +149,8 @@ int main() {
     yunlink_session_t session{};
     if (yunlink_peer_connect(client, "127.0.0.1", server_tcp, &peer) != YUNLINK_RESULT_OK ||
         yunlink_session_open(client, &peer, "ffi-managed", &session) != YUNLINK_RESULT_OK ||
-        !wait_until([&]() { return server.session_server().has_active_session(session.session_id); })) {
+        !wait_until(
+            [&]() { return server.session_server().has_active_session(session.session_id); })) {
         return 5;
     }
 
@@ -173,10 +171,9 @@ int main() {
         !wait_until([&]() { return state.called.load(); })) {
         return 7;
     }
-    if (state.correlation_id != handle.message_id ||
-        state.endpoint_uid != "endpoint-ffi-managed" || state.entity_uid != "opaque-uav-2" ||
-        state.display_name != "UAV 2" || state.capability != "telemetry.px4" ||
-        state.group_ids != std::vector<uint32_t>({7, 9})) {
+    if (state.correlation_id != handle.message_id || state.endpoint_uid != "endpoint-ffi-managed" ||
+        state.entity_uid != "opaque-uav-2" || state.display_name != "UAV 2" ||
+        state.capability != "telemetry.px4" || state.group_ids != std::vector<uint32_t>({7, 9})) {
         return 8;
     }
 

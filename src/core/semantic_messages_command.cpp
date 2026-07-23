@@ -10,7 +10,7 @@ namespace yunlink {
 namespace {
 
 bool valid_command_kind(uint16_t value) {
-    return value <= static_cast<uint16_t>(CommandKind::kUavControl);
+    return value <= static_cast<uint16_t>(CommandKind::kUgvControl);
 }
 
 bool valid_command_phase(uint8_t value) {
@@ -184,6 +184,49 @@ bool decode_payload(const ByteBuffer& bytes, UavControlCommand* payload) {
                reader.read_float(&out->desired_yaw_rad) &&
                reader.read_float(&out->desired_yaw_rate_radps) &&
                reader.read_u8(&out->controller_type);
+    });
+}
+
+ByteBuffer encode_payload(const UgvControlCommand& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_u8(payload.control_cmd);
+        writer.write_float(payload.desired_position_m.x);
+        writer.write_float(payload.desired_position_m.y);
+        writer.write_float(payload.desired_position_m.z);
+        writer.write_float(payload.desired_velocity_mps.x);
+        writer.write_float(payload.desired_velocity_mps.y);
+        writer.write_float(payload.desired_velocity_mps.z);
+        writer.write_float(payload.body_linear_velocity_mps.x);
+        writer.write_float(payload.body_linear_velocity_mps.y);
+        writer.write_float(payload.body_linear_velocity_mps.z);
+        writer.write_float(payload.body_angular_velocity_radps.x);
+        writer.write_float(payload.body_angular_velocity_radps.y);
+        writer.write_float(payload.body_angular_velocity_radps.z);
+        writer.write_float(payload.desired_yaw_rad);
+        writer.write_double(payload.desired_wgs84_latitude_deg);
+        writer.write_double(payload.desired_wgs84_longitude_deg);
+        writer.write_double(payload.desired_wgs84_altitude_m);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, UgvControlCommand* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, UgvControlCommand* out) {
+        return reader.read_u8(&out->control_cmd) && reader.read_float(&out->desired_position_m.x) &&
+               reader.read_float(&out->desired_position_m.y) &&
+               reader.read_float(&out->desired_position_m.z) &&
+               reader.read_float(&out->desired_velocity_mps.x) &&
+               reader.read_float(&out->desired_velocity_mps.y) &&
+               reader.read_float(&out->desired_velocity_mps.z) &&
+               reader.read_float(&out->body_linear_velocity_mps.x) &&
+               reader.read_float(&out->body_linear_velocity_mps.y) &&
+               reader.read_float(&out->body_linear_velocity_mps.z) &&
+               reader.read_float(&out->body_angular_velocity_radps.x) &&
+               reader.read_float(&out->body_angular_velocity_radps.y) &&
+               reader.read_float(&out->body_angular_velocity_radps.z) &&
+               reader.read_float(&out->desired_yaw_rad) &&
+               reader.read_double(&out->desired_wgs84_latitude_deg) &&
+               reader.read_double(&out->desired_wgs84_longitude_deg) &&
+               reader.read_double(&out->desired_wgs84_altitude_m);
     });
 }
 

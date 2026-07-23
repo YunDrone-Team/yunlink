@@ -174,6 +174,44 @@ int main() {
         return 11;
     }
 
+    if (client_a.request_authority(
+            peer_a, session_a, target, yunlink::ControlSource::kGroundStation, 2000) !=
+            yunlink::ErrorCode::kOk ||
+        !wait_until([&]() {
+            yunlink::AuthorityLease lease{};
+            return server.current_authority_for_target(target, &lease) &&
+                   lease.session_id == session_a;
+        })) {
+        std::cerr << "client_a could not reacquire authority before server revocation\n";
+        return 12;
+    }
+    yunlink::AuthorityLease lease_before_revoke{};
+    if (!server.current_authority_for_target(target, &lease_before_revoke)) {
+        std::cerr << "server could not inspect client_a lease before revocation\n";
+        return 13;
+    }
+    const auto revoke_error = server.revoke_authority_for_session(
+        lease_before_revoke.peer.id, session_a, target, "entity-detached");
+    if (revoke_error != yunlink::ErrorCode::kOk) {
+        std::cerr << "server-side authority revocation failed, ec="
+                  << static_cast<unsigned>(revoke_error) << " peer=" << lease_before_revoke.peer.id
+                  << '\n';
+        return 14;
+    }
+    if (!wait_until([&]() {
+            std::lock_guard<std::mutex> lock(mu);
+            return has_status(
+                statuses_a, yunlink::AuthorityState::kRevoked, session_a, "entity-detached");
+        })) {
+        std::cerr << "client_a did not receive server-side revocation status\n";
+        return 15;
+    }
+    yunlink::AuthorityLease remaining{};
+    if (server.current_authority_for_target(target, &remaining)) {
+        std::cerr << "server-side revocation retained the authority lease\n";
+        return 16;
+    }
+
     client_a.event_subscriber().unsubscribe(token_a);
     client_b.event_subscriber().unsubscribe(token_b);
     client_b.stop();

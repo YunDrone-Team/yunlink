@@ -3,12 +3,15 @@
  * @brief authority expiry / no-authority command / explicit recovery edge tests.
  */
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <functional>
 #include <iostream>
 #include <thread>
 #include <vector>
 
+#include "../bindings/test_socket_utils.hpp"
 #include "yunlink/core/semantic_messages.hpp"
 #include "yunlink/runtime/runtime.hpp"
 
@@ -24,25 +27,77 @@ bool wait_until(const std::function<bool()>& pred, int retries = 120, int sleep_
     return false;
 }
 
+struct RuntimePorts {
+    uint16_t air_udp_bind{0};
+    uint16_t ground_udp_bind{0};
+    uint16_t air_tcp_listen{0};
+    uint16_t ground_tcp_listen{0};
+};
+
+bool allocate_runtime_ports(RuntimePorts* ports) {
+    if (ports == nullptr) {
+        return false;
+    }
+
+    std::array<uint16_t, 4> used_ports{};
+    ports->air_udp_bind = yunlink::test_socket::find_unique_free_port(
+        yunlink::test_socket::SocketProtocol::kUdp, used_ports);
+    if (ports->air_udp_bind == 0) {
+        return false;
+    }
+    used_ports[0] = ports->air_udp_bind;
+
+    ports->ground_udp_bind = yunlink::test_socket::find_unique_free_port(
+        yunlink::test_socket::SocketProtocol::kUdp, used_ports);
+    if (ports->ground_udp_bind == 0) {
+        return false;
+    }
+    used_ports[1] = ports->ground_udp_bind;
+
+    ports->air_tcp_listen = yunlink::test_socket::find_unique_free_port(
+        yunlink::test_socket::SocketProtocol::kTcp, used_ports);
+    if (ports->air_tcp_listen == 0) {
+        return false;
+    }
+    used_ports[2] = ports->air_tcp_listen;
+
+    ports->ground_tcp_listen = yunlink::test_socket::find_unique_free_port(
+        yunlink::test_socket::SocketProtocol::kTcp, used_ports);
+    return ports->ground_tcp_listen != 0;
+}
+
+bool has_authenticated_active_session(const yunlink::Runtime& runtime, uint64_t session_id) {
+    const std::vector<yunlink::SessionDescriptor> sessions = runtime.active_sessions();
+    return std::any_of(sessions.begin(), sessions.end(), [session_id](const auto& session) {
+        return session.session_id == session_id && session.authenticated;
+    });
+}
+
 }  // namespace
 
 int main() {
     yunlink::Runtime air;
     yunlink::Runtime ground;
 
+    RuntimePorts ports{};
+    if (!allocate_runtime_ports(&ports)) {
+        std::cerr << "failed to allocate runtime ports\n";
+        return 1;
+    }
+
     yunlink::RuntimeConfig air_cfg;
-    air_cfg.udp_bind_port = 12350;
-    air_cfg.udp_target_port = 12350;
-    air_cfg.tcp_listen_port = 12450;
+    air_cfg.udp_bind_port = ports.air_udp_bind;
+    air_cfg.udp_target_port = ports.air_udp_bind;
+    air_cfg.tcp_listen_port = ports.air_tcp_listen;
     air_cfg.self_identity.agent_type = yunlink::AgentType::kUav;
     air_cfg.self_identity.agent_id = 1;
     air_cfg.self_identity.role = yunlink::EndpointRole::kVehicle;
     air_cfg.shared_secret = "yunlink-secret";
 
     yunlink::RuntimeConfig ground_cfg;
-    ground_cfg.udp_bind_port = 12351;
-    ground_cfg.udp_target_port = 12351;
-    ground_cfg.tcp_listen_port = 12451;
+    ground_cfg.udp_bind_port = ports.ground_udp_bind;
+    ground_cfg.udp_target_port = ports.ground_udp_bind;
+    ground_cfg.tcp_listen_port = ports.ground_tcp_listen;
     ground_cfg.self_identity.agent_type = yunlink::AgentType::kGroundStation;
     ground_cfg.self_identity.agent_id = 7;
     ground_cfg.self_identity.role = yunlink::EndpointRole::kController;
@@ -51,21 +106,23 @@ int main() {
     if (air.start(air_cfg) != yunlink::ErrorCode::kOk ||
         ground.start(ground_cfg) != yunlink::ErrorCode::kOk) {
         std::cerr << "runtime start failed\n";
-        return 1;
+        return 2;
     }
 
     std::string peer_id;
     if (ground.tcp_clients().connect_peer("127.0.0.1", air_cfg.tcp_listen_port, &peer_id) !=
         yunlink::ErrorCode::kOk) {
         std::cerr << "tcp connect failed\n";
-        return 2;
+        return 3;
     }
 
     const uint64_t session_id = ground.session_client().open_active_session(peer_id, "ground");
-    if (session_id == 0 ||
-        !wait_until([&]() { return air.session_server().has_active_session(session_id); })) {
+    if (session_id == 0 || !wait_until([&]() {
+            return has_authenticated_active_session(air, session_id) &&
+                   has_authenticated_active_session(ground, session_id);
+        })) {
         std::cerr << "session not active\n";
-        return 3;
+        return 4;
     }
 
     const auto target = yunlink::TargetSelector::for_entity(yunlink::AgentType::kUav, 1);
@@ -122,7 +179,7 @@ int main() {
     result_views.clear();
 
     if (ground.request_authority(
-            peer_id, session_id, target, yunlink::ControlSource::kGroundStation, 120) !=
+            peer_id, session_id, target, yunlink::ControlSource::kGroundStation, 800) !=
         yunlink::ErrorCode::kOk) {
         std::cerr << "authority request failed\n";
         return 9;
@@ -131,13 +188,13 @@ int main() {
     yunlink::AuthorityLease lease{};
     if (!wait_until([&]() {
             return air.current_authority(&lease) && lease.session_id == session_id &&
-                   lease.lease_ttl_ms == 120;
+                   lease.lease_ttl_ms == 800;
         })) {
         std::cerr << "authority was not granted\n";
         return 10;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(220));
+    std::this_thread::sleep_for(std::chrono::milliseconds(950));
     if (air.current_authority(&lease)) {
         std::cerr << "authority lease did not expire\n";
         return 11;

@@ -33,6 +33,61 @@ bool read_string_vector(BufferReader& reader, std::vector<std::string>* out) {
     return true;
 }
 
+void write_feature_descriptor(BufferWriter& writer, const FeatureDescriptor& value) {
+    writer.write_string(value.name);
+    writer.write_string(value.display_name);
+    writer.write_string(value.group_name);
+    writer.write_string(value.group_display_name);
+    writer.write_string(value.description);
+    writer.write_bool(value.core_feature);
+    writer.write_bool(value.example_feature);
+    writer.write_bool(value.basic_feature);
+    writer.write_bool(value.auto_start);
+    writer.write_bool(value.check_feature_state);
+    writer.write_u8(value.runtime_state);
+    writer.write_string(value.runtime_error);
+    write_string_vector(writer, value.depends_on);
+    write_string_vector(writer, value.start_preview_units);
+    write_string_vector(writer, value.start_preview_commands);
+}
+
+bool read_feature_descriptor(BufferReader& reader, FeatureDescriptor* out) {
+    return out != nullptr && reader.read_string(&out->name) &&
+           reader.read_string(&out->display_name) && reader.read_string(&out->group_name) &&
+           reader.read_string(&out->group_display_name) && reader.read_string(&out->description) &&
+           reader.read_bool(&out->core_feature) && reader.read_bool(&out->example_feature) &&
+           reader.read_bool(&out->basic_feature) && reader.read_bool(&out->auto_start) &&
+           reader.read_bool(&out->check_feature_state) && reader.read_u8(&out->runtime_state) &&
+           reader.read_string(&out->runtime_error) &&
+           read_string_vector(reader, &out->depends_on) &&
+           read_string_vector(reader, &out->start_preview_units) &&
+           read_string_vector(reader, &out->start_preview_commands);
+}
+
+void write_feature_descriptors(BufferWriter& writer, const std::vector<FeatureDescriptor>& values) {
+    writer.write_u16(static_cast<uint16_t>(values.size()));
+    for (const auto& value : values) {
+        write_feature_descriptor(writer, value);
+    }
+}
+
+bool read_feature_descriptors(BufferReader& reader, std::vector<FeatureDescriptor>* out) {
+    uint16_t count = 0;
+    if (out == nullptr || !reader.read_u16(&count)) {
+        return false;
+    }
+    out->clear();
+    out->reserve(count);
+    for (uint16_t index = 0; index < count; ++index) {
+        FeatureDescriptor value;
+        if (!read_feature_descriptor(reader, &value)) {
+            return false;
+        }
+        out->push_back(std::move(value));
+    }
+    return true;
+}
+
 void write_runtime_log_summary(BufferWriter& writer, const RuntimeLogSummary& value) {
     writer.write_string(value.runtime_id);
     writer.write_string(value.feature_name);
@@ -97,13 +152,15 @@ ByteBuffer encode_payload(const FeatureListResponse& payload) {
         writer.write_bool(payload.success);
         writer.write_string(payload.message);
         write_string_vector(writer, payload.feature_names);
+        write_feature_descriptors(writer, payload.features);
     });
 }
 
 bool decode_payload(const ByteBuffer& bytes, FeatureListResponse* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, FeatureListResponse* out) {
         return reader.read_bool(&out->success) && reader.read_string(&out->message) &&
-               read_string_vector(reader, &out->feature_names);
+               read_string_vector(reader, &out->feature_names) &&
+               read_feature_descriptors(reader, &out->features);
     });
 }
 

@@ -104,6 +104,28 @@ bool take_text(const ByteBuffer& bytes, std::size_t* offset, std::string* value)
     return true;
 }
 
+constexpr uint8_t kManagedEntitySummaryExtensionMarker = 0xe1U;
+constexpr std::size_t kMaxActiveDiscoveryReplySize = 1024U;
+
+bool append_managed_entity_summary(ByteBuffer* out, const EndpointManagedEntitySummary& summary) {
+    if (!append_text(out, summary.entity_uid, 96U) || !append_text(out, summary.agent_type, 15U)) {
+        return false;
+    }
+    append_u32(out, summary.agent_id);
+    return append_text(out, summary.display_name, 96U) && append_text(out, summary.node_name, 96U);
+}
+
+bool take_managed_entity_summary(const ByteBuffer& bytes,
+                                 std::size_t* offset,
+                                 EndpointManagedEntitySummary* summary) {
+    return take_text(bytes, offset, &summary->entity_uid) &&
+           take_text(bytes, offset, &summary->agent_type) &&
+           take_u32(bytes, offset, &summary->agent_id) &&
+           take_text(bytes, offset, &summary->display_name) &&
+           take_text(bytes, offset, &summary->node_name) && !summary->entity_uid.empty() &&
+           !summary->agent_type.empty() && summary->agent_id != 0U;
+}
+
 uint16_t capability_mask(const std::vector<std::string>& capabilities) {
     uint16_t mask = 0;
     for (const auto& capability : capabilities) {
@@ -210,7 +232,32 @@ ByteBuffer encode_endpoint_discovery_reply(uint64_t nonce,
     append_u16(&out, capability_mask(advertisement.capabilities));
     append_u64(&out, advertisement.sequence);
     append_u32(&out, advertisement.discovery_period_ms);
-    if (out.size() + 8U > 128U) {
+    if (advertisement.managed_entity_count_known) {
+        // Keep active discovery replies within their datagram budget even when a
+        // Bridge has long display names. The total stays authoritative while the
+        // optional preview is shortened to what safely fits in this reply.
+        ByteBuffer extension;
+        extension.push_back(kManagedEntitySummaryExtensionMarker);
+        append_u16(&extension, advertisement.managed_entity_count);
+        extension.push_back(0U);
+        std::size_t summary_count = 0U;
+        const std::size_t summary_limit =
+            std::min(advertisement.managed_entities.size(), kMaxDiscoveryManagedEntitySummaries);
+        for (std::size_t index = 0; index < summary_limit; ++index) {
+            ByteBuffer candidate = extension;
+            if (!append_managed_entity_summary(&candidate, advertisement.managed_entities[index])) {
+                return {};
+            }
+            if (out.size() + candidate.size() + 8U > kMaxActiveDiscoveryReplySize) {
+                break;
+            }
+            extension = std::move(candidate);
+            ++summary_count;
+        }
+        extension[3] = static_cast<uint8_t>(summary_count);
+        out.insert(out.end(), extension.begin(), extension.end());
+    }
+    if (out.size() + 8U > kMaxActiveDiscoveryReplySize) {
         return {};
     }
     append_tag(&out, shared_secret);
@@ -222,7 +269,8 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
                                      uint64_t* nonce,
                                      EndpointAdvertisement* out,
                                      std::string* error) {
-    if (nonce == nullptr || out == nullptr || bytes.size() < 47U || bytes.size() > 128U ||
+    if (nonce == nullptr || out == nullptr || bytes.size() < 47U ||
+        bytes.size() > kMaxActiveDiscoveryReplySize ||
         !std::equal(bytes.begin(), bytes.begin() + 4, kEndpointDiscoveryReplyMagic) ||
         !verify_tag(bytes, shared_secret)) {
         set_error(error, "invalid discovery reply");
@@ -241,7 +289,7 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
         !take_u16(bytes, &offset, &decoded.udp_bind_port) ||
         !take_u16(bytes, &offset, &capability_bits) ||
         !take_u64(bytes, &offset, &decoded.sequence) ||
-        !take_u32(bytes, &offset, &decoded.discovery_period_ms) || offset + 8U != bytes.size() ||
+        !take_u32(bytes, &offset, &decoded.discovery_period_ms) || offset > bytes.size() - 8U ||
         *nonce == 0 || !validate_endpoint_id(decoded.endpoint_id) || decoded.agent_type.empty() ||
         decoded.agent_type.size() > 15U || decoded.role.empty() || decoded.role.size() > 15U) {
         set_error(error, "invalid discovery reply fields");
@@ -249,6 +297,38 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
     }
     decoded.protocol_version = "0.1.0";
     decoded.capabilities = capabilities_from_mask(capability_bits);
+    const std::size_t signed_end = bytes.size() - 8U;
+    if (offset < signed_end) {
+        if (bytes[offset++] != kManagedEntitySummaryExtensionMarker) {
+            set_error(error, "unknown discovery reply extension");
+            return false;
+        }
+        uint16_t entity_count = 0;
+        if (!take_u16(bytes, &offset, &entity_count) || offset >= signed_end) {
+            set_error(error, "invalid managed entity extension");
+            return false;
+        }
+        const std::size_t summary_count = bytes[offset++];
+        if (summary_count > kMaxDiscoveryManagedEntitySummaries || summary_count > entity_count) {
+            set_error(error, "invalid managed entity summary count");
+            return false;
+        }
+        decoded.managed_entity_count_known = true;
+        decoded.managed_entity_count = entity_count;
+        decoded.managed_entities.reserve(summary_count);
+        for (std::size_t index = 0; index < summary_count; ++index) {
+            EndpointManagedEntitySummary summary{};
+            if (!take_managed_entity_summary(bytes, &offset, &summary)) {
+                set_error(error, "invalid managed entity summary");
+                return false;
+            }
+            decoded.managed_entities.push_back(std::move(summary));
+        }
+    }
+    if (offset != signed_end) {
+        set_error(error, "trailing discovery reply bytes");
+        return false;
+    }
     decoded.display_name = make_endpoint_display_name(
         decoded.display_name_prefix, decoded.agent_id, decoded.endpoint_id);
     *out = std::move(decoded);

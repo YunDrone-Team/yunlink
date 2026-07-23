@@ -111,10 +111,10 @@ int main() {
     yunlink::SessionDescriptor client_desc{};
     yunlink::SessionDescriptor server_desc{};
     if (!wait_until([&]() {
-            return compatible_client.session_server().describe_session(
-                       compatible_session_id, &client_desc) &&
-                   compatible_server.session_server().describe_session(
-                       compatible_session_id, &server_desc) &&
+            return compatible_client.session_server().describe_session(compatible_session_id,
+                                                                       &client_desc) &&
+                   compatible_server.session_server().describe_session(compatible_session_id,
+                                                                       &server_desc) &&
                    client_desc.state == yunlink::SessionState::kActive &&
                    server_desc.state == yunlink::SessionState::kActive;
         })) {

@@ -43,6 +43,7 @@ struct Runtime::Impl {
     std::unordered_map<size_t, CommandSubscriber::TrajectoryChunkHandler> trajectory_chunk_handlers;
     std::unordered_map<size_t, CommandSubscriber::FormationTaskHandler> formation_task_handlers;
     std::unordered_map<size_t, CommandSubscriber::UavControlHandler> uav_control_handlers;
+    std::unordered_map<size_t, CommandSubscriber::UgvControlHandler> ugv_control_handlers;
     std::unordered_map<size_t, StateSubscriber::VehicleCoreHandler> vehicle_core_handlers;
     std::unordered_map<size_t, StateSubscriber::Px4StateHandler> px4_state_handlers;
     std::unordered_map<size_t, StateSubscriber::OdomStatusHandler> odom_status_handlers;
@@ -54,6 +55,8 @@ struct Runtime::Impl {
     std::unordered_map<size_t, StateSubscriber::LocalOdomHandler> local_odom_handlers;
     std::unordered_map<size_t, StateSubscriber::UavControlCmdHandler> uav_control_cmd_handlers;
     std::unordered_map<size_t, StateSubscriber::UavControlStateHandler> uav_control_state_handlers;
+    std::unordered_map<size_t, StateSubscriber::UgvControlCmdHandler> ugv_control_cmd_handlers;
+    std::unordered_map<size_t, StateSubscriber::UgvControlStateHandler> ugv_control_state_handlers;
     std::unordered_map<size_t, StateSubscriber::CommandExecutionStatusHandler>
         command_execution_status_handlers;
     std::unordered_map<size_t, StateSubscriber::OdomStateHandler> odom_state_handlers;

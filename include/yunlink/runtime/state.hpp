@@ -29,6 +29,9 @@ class StateSubscriber {
     using UavControlCmdHandler = std::function<void(const TypedMessage<UavControlCmdSnapshot>&)>;
     using UavControlStateHandler =
         std::function<void(const TypedMessage<UavControlStateSnapshot>&)>;
+    using UgvControlCmdHandler = std::function<void(const TypedMessage<UgvControlCmdSnapshot>&)>;
+    using UgvControlStateHandler =
+        std::function<void(const TypedMessage<UgvControlStateSnapshot>&)>;
     using OdomStateHandler = std::function<void(const TypedMessage<OdomStateSnapshot>&)>;
     using SunrayRuntimeDiagnosticHandler =
         std::function<void(const TypedMessage<SunrayRuntimeDiagnosticSnapshot>&)>;
@@ -48,6 +51,8 @@ class StateSubscriber {
     size_t subscribe_local_odom(LocalOdomHandler cb);
     size_t subscribe_uav_control_cmd(UavControlCmdHandler cb);
     size_t subscribe_uav_control_state(UavControlStateHandler cb);
+    size_t subscribe_ugv_control_cmd(UgvControlCmdHandler cb);
+    size_t subscribe_ugv_control_state(UgvControlStateHandler cb);
     size_t subscribe_odom_state(OdomStateHandler cb);
     size_t subscribe_sunray_runtime_diagnostic(SunrayRuntimeDiagnosticHandler cb);
     size_t subscribe_command_execution_status(CommandExecutionStatusHandler cb);

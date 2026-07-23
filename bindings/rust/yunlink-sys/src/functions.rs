@@ -23,7 +23,8 @@ use crate::types::{
     yunlink_land_command_t, yunlink_local_odom_t, yunlink_peer_t, yunlink_return_command_t,
     yunlink_runtime_config_t, yunlink_runtime_t, yunlink_session_info_t, yunlink_session_t,
     yunlink_takeoff_command_t, yunlink_target_selector_t, yunlink_uav_control_command_t,
-    yunlink_vehicle_core_state_t, yunlink_velocity_setpoint_command_t,
+    yunlink_ugv_control_command_t, yunlink_vehicle_core_state_t,
+    yunlink_velocity_setpoint_command_t,
 };
 
 // Raw extern declarations for `libyunlink_ffi`.
@@ -159,6 +160,14 @@ unsafe extern "C" {
         session: *const yunlink_session_t,
         target: *const yunlink_target_selector_t,
         payload: *const yunlink_uav_control_command_t,
+        out_handle: *mut yunlink_command_handle_t,
+    ) -> yunlink_result_t;
+    pub fn yunlink_command_publish_ugv_control(
+        runtime: *mut yunlink_runtime_t,
+        peer: *const yunlink_peer_t,
+        session: *const yunlink_session_t,
+        target: *const yunlink_target_selector_t,
+        payload: *const yunlink_ugv_control_command_t,
         out_handle: *mut yunlink_command_handle_t,
     ) -> yunlink_result_t;
 

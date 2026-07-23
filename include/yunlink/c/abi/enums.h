@@ -96,6 +96,7 @@ typedef enum yunlink_command_kind {
     YUNLINK_COMMAND_KIND_TRAJECTORY_CHUNK = 6,
     YUNLINK_COMMAND_KIND_FORMATION_TASK = 7,
     YUNLINK_COMMAND_KIND_UAV_CONTROL = 8,
+    YUNLINK_COMMAND_KIND_UGV_CONTROL = 9,
 } yunlink_command_kind_t;
 
 typedef enum yunlink_session_state {
@@ -152,6 +153,8 @@ typedef enum yunlink_runtime_event_type {
     YUNLINK_RUNTIME_EVENT_TOPIC_LIST = 13,
     YUNLINK_RUNTIME_EVENT_TOPIC_SUBSCRIPTION = 14,
     YUNLINK_RUNTIME_EVENT_TOPIC_SAMPLE = 15,
+    YUNLINK_RUNTIME_EVENT_UGV_CONTROL_CMD = 16,
+    YUNLINK_RUNTIME_EVENT_UGV_CONTROL_STATE = 17,
 } yunlink_runtime_event_type_t;
 
 typedef enum yunlink_config_value_type {

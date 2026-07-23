@@ -97,6 +97,26 @@ ErrorCode Runtime::publish_uav_control_state(const std::string& peer_id,
     return send_envelope_to_peer(peer_id, envelope);
 }
 
+ErrorCode Runtime::publish_ugv_control_cmd(const std::string& peer_id,
+                                           const TargetSelector& target,
+                                           const UgvControlCmdSnapshot& payload,
+                                           uint64_t session_id) {
+    SecureEnvelope envelope = make_typed_envelope(
+        config_.self_identity, target, session_id, 0, QosClass::kReliableLatest, payload);
+    envelope.message_id = allocate_message_id();
+    return send_envelope_to_peer(peer_id, envelope);
+}
+
+ErrorCode Runtime::publish_ugv_control_state(const std::string& peer_id,
+                                             const TargetSelector& target,
+                                             const UgvControlStateSnapshot& payload,
+                                             uint64_t session_id) {
+    SecureEnvelope envelope = make_typed_envelope(
+        config_.self_identity, target, session_id, 0, QosClass::kReliableLatest, payload);
+    envelope.message_id = allocate_message_id();
+    return send_envelope_to_peer(peer_id, envelope);
+}
+
 ErrorCode Runtime::publish_command_execution_status(const std::string& peer_id,
                                                     const TargetSelector& target,
                                                     const CommandExecutionStatusSnapshot& payload,

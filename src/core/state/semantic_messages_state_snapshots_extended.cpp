@@ -56,6 +56,47 @@ bool decode_payload(const ByteBuffer& bytes, UavControlStateSnapshot* payload) {
     });
 }
 
+ByteBuffer encode_payload(const UgvControlStateSnapshot& payload) {
+    return build_payload([&](BufferWriter& writer) {
+        write_header(writer, payload.header);
+        writer.write_string(payload.agent_name);
+        writer.write_u32(payload.agent_id);
+        writer.write_u8(payload.drive_type);
+        writer.write_bool(payload.control_cmd_valid);
+        writer.write_bool(payload.inside_geo_fence);
+        writer.write_u8(payload.diagnostic_level);
+        writer.write_string(payload.diagnostic_message);
+        writer.write_u8(payload.fsm_state);
+        write_ugv_control_cmd(writer, payload.active_command);
+        write_odometry(writer, payload.self_odom);
+        writer.write_bool(payload.odom_valid);
+        writer.write_bool(payload.target_valid);
+        write_vec3(writer, payload.target_position_m);
+        writer.write_float(payload.target_yaw_rad);
+        write_vec3(writer, payload.controller_linear_velocity_mps);
+        write_vec3(writer, payload.controller_angular_velocity_radps);
+        write_vec3(writer, payload.geo_fence_min_m);
+        write_vec3(writer, payload.geo_fence_max_m);
+    });
+}
+
+bool decode_payload(const ByteBuffer& bytes, UgvControlStateSnapshot* payload) {
+    return parse_payload(bytes, payload, [](BufferReader& reader, UgvControlStateSnapshot* out) {
+        return read_header(reader, &out->header) && reader.read_string(&out->agent_name) &&
+               reader.read_u32(&out->agent_id) && reader.read_u8(&out->drive_type) &&
+               reader.read_bool(&out->control_cmd_valid) &&
+               reader.read_bool(&out->inside_geo_fence) && reader.read_u8(&out->diagnostic_level) &&
+               reader.read_string(&out->diagnostic_message) && reader.read_u8(&out->fsm_state) &&
+               read_ugv_control_cmd(reader, &out->active_command) &&
+               read_odometry(reader, &out->self_odom) && reader.read_bool(&out->odom_valid) &&
+               reader.read_bool(&out->target_valid) && read_vec3(reader, &out->target_position_m) &&
+               reader.read_float(&out->target_yaw_rad) &&
+               read_vec3(reader, &out->controller_linear_velocity_mps) &&
+               read_vec3(reader, &out->controller_angular_velocity_radps) &&
+               read_vec3(reader, &out->geo_fence_min_m) && read_vec3(reader, &out->geo_fence_max_m);
+    });
+}
+
 ByteBuffer encode_payload(const OdomStateSnapshot& payload) {
     return build_payload([&](BufferWriter& writer) {
         write_header(writer, payload.header);

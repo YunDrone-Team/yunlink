@@ -292,6 +292,10 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_managed_entities_runtime PRIVATE yunlink)
   add_test(NAME test_managed_entities_runtime COMMAND test_managed_entities_runtime)
 
+  add_executable(test_ugv_protocol_runtime tests/runtime/test_ugv_protocol_runtime.cpp)
+  target_link_libraries(test_ugv_protocol_runtime PRIVATE yunlink)
+  add_test(NAME test_ugv_protocol_runtime COMMAND test_ugv_protocol_runtime)
+
   add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
   target_link_libraries(test_capability_negotiation PRIVATE yunlink)
   add_test(NAME test_capability_negotiation COMMAND test_capability_negotiation)

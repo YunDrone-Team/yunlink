@@ -6,7 +6,8 @@ mod commands;
 
 pub use commands::{
     CommandHandle, GotoCommand, LandCommand, LocalOdom, ReturnCommand, TakeoffCommand,
-    TargetSelector, UavControlCommand, VehicleCoreState, VelocitySetpointCommand,
+    TargetSelector, UavControlCommand, UgvControlCommand, VehicleCoreState,
+    VelocitySetpointCommand,
 };
 
 /// Endpoint agent type used by the safe Rust SDK.

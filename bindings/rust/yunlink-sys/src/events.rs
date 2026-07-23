@@ -237,6 +237,95 @@ impl Default for yunlink_local_odom_event_t {
     }
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_ugv_control_cmd_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: u8,
+    pub source_id: u32,
+    pub source_role: u8,
+    pub source_stamp_ns: u64,
+    pub frame_id: [c_char; 64],
+    pub cmd_source: u8,
+    pub control_cmd: u8,
+    pub desired_position_x_m: f32,
+    pub desired_position_y_m: f32,
+    pub desired_position_z_m: f32,
+    pub desired_velocity_x_mps: f32,
+    pub desired_velocity_y_mps: f32,
+    pub desired_velocity_z_mps: f32,
+    pub body_linear_velocity_x_mps: f32,
+    pub body_linear_velocity_y_mps: f32,
+    pub body_linear_velocity_z_mps: f32,
+    pub body_angular_velocity_x_radps: f32,
+    pub body_angular_velocity_y_radps: f32,
+    pub body_angular_velocity_z_radps: f32,
+    pub desired_yaw_rad: f32,
+    pub desired_wgs84_latitude_deg: f64,
+    pub desired_wgs84_longitude_deg: f64,
+    pub desired_wgs84_altitude_m: f64,
+}
+
+impl Default for yunlink_ugv_control_cmd_event_t {
+    fn default() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct yunlink_ugv_control_state_event_t {
+    pub session_id: u64,
+    pub message_id: u64,
+    pub correlation_id: u64,
+    pub source_type: u8,
+    pub source_id: u32,
+    pub source_role: u8,
+    pub source_stamp_ns: u64,
+    pub frame_id: [c_char; 64],
+    pub agent_name: [c_char; 64],
+    pub agent_id: u32,
+    pub drive_type: u8,
+    pub control_cmd_valid: u8,
+    pub inside_geo_fence: u8,
+    pub diagnostic_level: u8,
+    pub diagnostic_message: [c_char; 256],
+    pub fsm_state: u8,
+    pub active_control_cmd: u8,
+    pub odom_valid: u8,
+    pub odom_x_m: f32,
+    pub odom_y_m: f32,
+    pub odom_z_m: f32,
+    pub odom_vx_mps: f32,
+    pub odom_vy_mps: f32,
+    pub odom_vz_mps: f32,
+    pub target_valid: u8,
+    pub target_x_m: f32,
+    pub target_y_m: f32,
+    pub target_z_m: f32,
+    pub target_yaw_rad: f32,
+    pub controller_linear_x_mps: f32,
+    pub controller_linear_y_mps: f32,
+    pub controller_linear_z_mps: f32,
+    pub controller_angular_x_radps: f32,
+    pub controller_angular_y_radps: f32,
+    pub controller_angular_z_radps: f32,
+    pub geo_fence_min_x_m: f32,
+    pub geo_fence_min_y_m: f32,
+    pub geo_fence_min_z_m: f32,
+    pub geo_fence_max_x_m: f32,
+    pub geo_fence_max_y_m: f32,
+    pub geo_fence_max_z_m: f32,
+}
+
+impl Default for yunlink_ugv_control_state_event_t {
+    fn default() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
 /// Raw authority lease status event payload.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -348,6 +437,7 @@ pub struct yunlink_feature_list_event_t {
     pub success: u8,
     pub message: [c_char; 256],
     pub feature_names: [c_char; 2048],
+    pub feature_descriptors: [c_char; 32768],
 }
 
 impl Default for yunlink_feature_list_event_t {
@@ -359,6 +449,7 @@ impl Default for yunlink_feature_list_event_t {
             success: 0,
             message: [0; 256],
             feature_names: [0; 2048],
+            feature_descriptors: [0; 32768],
         }
     }
 }
@@ -558,6 +649,8 @@ pub union yunlink_runtime_event_union_t {
     pub topic_list: yunlink_topic_list_event_t,
     pub topic_subscription: yunlink_topic_subscription_event_t,
     pub topic_sample: yunlink_topic_sample_event_t,
+    pub ugv_control_cmd: yunlink_ugv_control_cmd_event_t,
+    pub ugv_control_state: yunlink_ugv_control_state_event_t,
 }
 
 impl Default for yunlink_runtime_event_union_t {

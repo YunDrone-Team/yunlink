@@ -36,8 +36,8 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
                 ev, make_command_result(ev, ErrorCode::kOk, phase, progress_percent, detail));
         };
 
-    const bool formation = static_cast<CommandType>(ev.envelope.message_type) ==
-                           CommandType::kFormationTask;
+    const bool formation =
+        static_cast<CommandType>(ev.envelope.message_type) == CommandType::kFormationTask;
     if (!formation && ev.envelope.target.scope == TargetScope::kBroadcast) {
         fail_command(ErrorCode::kRejected, "broadcast-command-disallowed");
         return;
@@ -207,6 +207,9 @@ void Runtime::handle_command_envelope(const EnvelopeEvent& ev) {
         case CommandType::kUavControl:
             return runtime_fanout_command<UavControlCommand>(
                 impl_->mu, ev, ev.envelope.payload, impl_->uav_control_handlers);
+        case CommandType::kUgvControl:
+            return runtime_fanout_command<UgvControlCommand>(
+                impl_->mu, ev, ev.envelope.payload, impl_->ugv_control_handlers);
         }
         return false;
     };

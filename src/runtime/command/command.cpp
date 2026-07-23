@@ -193,4 +193,20 @@ ErrorCode CommandPublisher::publish_uav_control(const std::string& peer_id,
                                                    1000);
 }
 
+ErrorCode CommandPublisher::publish_ugv_control(const std::string& peer_id,
+                                                uint64_t session_id,
+                                                const TargetSelector& target,
+                                                const UgvControlCommand& payload,
+                                                CommandHandle* out_handle) {
+    return runtime_ == nullptr
+               ? ErrorCode::kInvalidArgument
+               : runtime_->publish_command_payload(peer_id,
+                                                   session_id,
+                                                   target,
+                                                   MessageTraits<UgvControlCommand>::kMessageType,
+                                                   encode_payload(payload),
+                                                   out_handle,
+                                                   1000);
+}
+
 }  // namespace yunlink

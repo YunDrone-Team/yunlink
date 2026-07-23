@@ -162,11 +162,29 @@ int main() {
     feature_list.success = true;
     feature_list.message = "ok";
     feature_list.feature_names = {"single_uav_basic", "mapping"};
+    yunlink::FeatureDescriptor feature_descriptor{};
+    feature_descriptor.name = "ugv_example_hold";
+    feature_descriptor.display_name = "UGV Hold";
+    feature_descriptor.group_name = "sunray_ugv_control_example";
+    feature_descriptor.group_display_name = "UGV examples";
+    feature_descriptor.description = "Hold a UGV safely";
+    feature_descriptor.example_feature = true;
+    feature_descriptor.auto_start = false;
+    feature_descriptor.check_feature_state = true;
+    feature_descriptor.runtime_state = 2;
+    feature_descriptor.depends_on = {"sunray_ugv_control"};
+    feature_descriptor.start_preview_units = {"UGV examples | UGV Hold"};
+    feature_descriptor.start_preview_commands = {"roslaunch example ugv_hold.launch"};
+    feature_list.features.push_back(feature_descriptor);
     const auto feature_list_bytes = yunlink::encode_payload(feature_list);
     yunlink::FeatureListResponse feature_list_decoded{};
     if (!yunlink::decode_typed_payload(feature_list_bytes, &feature_list_decoded) ||
         !feature_list_decoded.success || feature_list_decoded.feature_names.size() != 2 ||
-        feature_list_decoded.feature_names[1] != "mapping") {
+        feature_list_decoded.feature_names[1] != "mapping" ||
+        feature_list_decoded.features.size() != 1 ||
+        !feature_list_decoded.features.front().example_feature ||
+        feature_list_decoded.features.front().basic_feature ||
+        feature_list_decoded.features.front().depends_on != feature_descriptor.depends_on) {
         std::cerr << "feature list roundtrip failed\n";
         return 12;
     }

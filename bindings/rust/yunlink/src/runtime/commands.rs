@@ -4,7 +4,8 @@ use super::Runtime;
 use crate::error::{ensure, Result};
 use crate::types::{
     CommandHandle, GotoCommand, LandCommand, LocalOdom, PeerConnection, ReturnCommand, Session,
-    TakeoffCommand, TargetSelector, UavControlCommand, VehicleCoreState, VelocitySetpointCommand,
+    TakeoffCommand, TargetSelector, UavControlCommand, UgvControlCommand, VehicleCoreState,
+    VelocitySetpointCommand,
 };
 
 impl Runtime {
@@ -172,6 +173,48 @@ impl Runtime {
         let mut handle = sys::yunlink_command_handle_t::default();
         ensure(unsafe {
             sys::yunlink_command_publish_uav_control(
+                self.raw_ptr(),
+                &peer.raw,
+                &session,
+                &target.raw,
+                &payload,
+                &mut handle,
+            )
+        })?;
+        Ok(Self::command_handle_from_native(handle))
+    }
+
+    /// Publish the complete UGV control payload.
+    pub async fn publish_ugv_control(
+        &self,
+        peer: &PeerConnection,
+        session: &Session,
+        target: &TargetSelector,
+        command: &UgvControlCommand,
+    ) -> Result<CommandHandle> {
+        let session = session.to_native();
+        let payload = sys::yunlink_ugv_control_command_t {
+            control_cmd: command.control_cmd,
+            desired_position_x_m: command.desired_position[0],
+            desired_position_y_m: command.desired_position[1],
+            desired_position_z_m: command.desired_position[2],
+            desired_velocity_x_mps: command.desired_velocity[0],
+            desired_velocity_y_mps: command.desired_velocity[1],
+            desired_velocity_z_mps: command.desired_velocity[2],
+            body_linear_velocity_x_mps: command.body_linear_velocity[0],
+            body_linear_velocity_y_mps: command.body_linear_velocity[1],
+            body_linear_velocity_z_mps: command.body_linear_velocity[2],
+            body_angular_velocity_x_radps: command.body_angular_velocity[0],
+            body_angular_velocity_y_radps: command.body_angular_velocity[1],
+            body_angular_velocity_z_radps: command.body_angular_velocity[2],
+            desired_yaw_rad: command.desired_yaw_rad,
+            desired_wgs84_latitude_deg: command.desired_wgs84_position[0],
+            desired_wgs84_longitude_deg: command.desired_wgs84_position[1],
+            desired_wgs84_altitude_m: command.desired_wgs84_position[2],
+        };
+        let mut handle = sys::yunlink_command_handle_t::default();
+        ensure(unsafe {
+            sys::yunlink_command_publish_ugv_control(
                 self.raw_ptr(),
                 &peer.raw,
                 &session,

@@ -126,6 +126,27 @@ typedef struct yunlink_uav_control_command {
     uint8_t controller_type;
 } yunlink_uav_control_command_t;
 
+/** Complete UGV control payload used by schema 1. */
+typedef struct yunlink_ugv_control_command {
+    uint8_t control_cmd;
+    float desired_position_x_m;
+    float desired_position_y_m;
+    float desired_position_z_m;
+    float desired_velocity_x_mps;
+    float desired_velocity_y_mps;
+    float desired_velocity_z_mps;
+    float body_linear_velocity_x_mps;
+    float body_linear_velocity_y_mps;
+    float body_linear_velocity_z_mps;
+    float body_angular_velocity_x_radps;
+    float body_angular_velocity_y_radps;
+    float body_angular_velocity_z_radps;
+    float desired_yaw_rad;
+    double desired_wgs84_latitude_deg;
+    double desired_wgs84_longitude_deg;
+    double desired_wgs84_altitude_m;
+} yunlink_ugv_control_command_t;
+
 typedef struct yunlink_vehicle_core_state {
     uint8_t armed;
     uint8_t nav_mode;
@@ -274,6 +295,79 @@ typedef struct yunlink_local_odom_event {
     float angular_z_radps;
 } yunlink_local_odom_event_t;
 
+typedef struct yunlink_ugv_control_cmd_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t source_type;
+    uint32_t source_id;
+    uint8_t source_role;
+    uint64_t source_stamp_ns;
+    char frame_id[64];
+    uint8_t cmd_source;
+    uint8_t control_cmd;
+    float desired_position_x_m;
+    float desired_position_y_m;
+    float desired_position_z_m;
+    float desired_velocity_x_mps;
+    float desired_velocity_y_mps;
+    float desired_velocity_z_mps;
+    float body_linear_velocity_x_mps;
+    float body_linear_velocity_y_mps;
+    float body_linear_velocity_z_mps;
+    float body_angular_velocity_x_radps;
+    float body_angular_velocity_y_radps;
+    float body_angular_velocity_z_radps;
+    float desired_yaw_rad;
+    double desired_wgs84_latitude_deg;
+    double desired_wgs84_longitude_deg;
+    double desired_wgs84_altitude_m;
+} yunlink_ugv_control_cmd_event_t;
+
+typedef struct yunlink_ugv_control_state_event {
+    uint64_t session_id;
+    uint64_t message_id;
+    uint64_t correlation_id;
+    uint8_t source_type;
+    uint32_t source_id;
+    uint8_t source_role;
+    uint64_t source_stamp_ns;
+    char frame_id[64];
+    char agent_name[64];
+    uint32_t agent_id;
+    uint8_t drive_type;
+    uint8_t control_cmd_valid;
+    uint8_t inside_geo_fence;
+    uint8_t diagnostic_level;
+    char diagnostic_message[256];
+    uint8_t fsm_state;
+    uint8_t active_control_cmd;
+    uint8_t odom_valid;
+    float odom_x_m;
+    float odom_y_m;
+    float odom_z_m;
+    float odom_vx_mps;
+    float odom_vy_mps;
+    float odom_vz_mps;
+    uint8_t target_valid;
+    float target_x_m;
+    float target_y_m;
+    float target_z_m;
+    float target_yaw_rad;
+    float controller_linear_x_mps;
+    float controller_linear_y_mps;
+    float controller_linear_z_mps;
+    float controller_angular_x_radps;
+    float controller_angular_y_radps;
+    float controller_angular_z_radps;
+    float geo_fence_min_x_m;
+    float geo_fence_min_y_m;
+    float geo_fence_min_z_m;
+    float geo_fence_max_x_m;
+    float geo_fence_max_y_m;
+    float geo_fence_max_z_m;
+} yunlink_ugv_control_state_event_t;
+
 typedef struct yunlink_authority_status_event {
     uint8_t state;
     uint64_t session_id;
@@ -314,6 +408,8 @@ typedef struct yunlink_feature_list_event {
     uint8_t success;
     char message[256];
     char feature_names[2048];
+    /* Percent-escaped records: one per feature, fields separated by US (0x1f). */
+    char feature_descriptors[32768];
 } yunlink_feature_list_event_t;
 
 typedef struct yunlink_feature_get_event {
@@ -404,6 +500,8 @@ typedef struct yunlink_runtime_event {
         yunlink_topic_list_event_t topic_list;
         yunlink_topic_subscription_event_t topic_subscription;
         yunlink_topic_sample_event_t topic_sample;
+        yunlink_ugv_control_cmd_event_t ugv_control_cmd;
+        yunlink_ugv_control_state_event_t ugv_control_state;
     } data;
 } yunlink_runtime_event_t;
 

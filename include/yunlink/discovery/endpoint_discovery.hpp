@@ -21,6 +21,17 @@ constexpr const char* kEndpointDiscoveryQueryMagic = "YLQ1";
 constexpr const char* kEndpointDiscoveryReplyMagic = "YLR1";
 constexpr const char* kDefaultEndpointNamePrefix = "SURY-uav";
 constexpr uint16_t kDefaultEndpointDiscoveryPort = 9966;
+constexpr std::size_t kMaxDiscoveryManagedEntitySummaries = 8U;
+
+/// A bounded, display-safe summary of one entity managed by a discovered endpoint.
+/// It is discovery metadata only: an authenticated session remains authoritative.
+struct EndpointManagedEntitySummary {
+    std::string entity_uid;
+    std::string agent_type{"uav"};
+    uint32_t agent_id{0};
+    std::string display_name;
+    std::string node_name;
+};
 
 struct EndpointAdvertisement {
     std::string endpoint_id;
@@ -37,6 +48,11 @@ struct EndpointAdvertisement {
     uint64_t started_at_ms{0};
     uint64_t sequence{0};
     uint32_t discovery_period_ms{1000};
+    /// False for legacy endpoint announcements that do not publish an entity directory summary.
+    bool managed_entity_count_known{false};
+    uint16_t managed_entity_count{0};
+    /// May be truncated to kMaxDiscoveryManagedEntitySummaries while count retains the real total.
+    std::vector<EndpointManagedEntitySummary> managed_entities;
 };
 
 struct EndpointAdvertisementPacket {

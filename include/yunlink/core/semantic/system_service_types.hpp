@@ -18,10 +18,31 @@ struct FeatureListRequest {
     uint8_t reserved = 0;
 };
 
+/** Complete, display-ready description of one managed Sunray feature. */
+struct FeatureDescriptor {
+    std::string name;
+    std::string display_name;
+    std::string group_name;
+    std::string group_display_name;
+    std::string description;
+    bool core_feature = false;
+    bool example_feature = false;
+    bool basic_feature = false;
+    bool auto_start = false;
+    bool check_feature_state = false;
+    uint8_t runtime_state = 0;
+    std::string runtime_error;
+    std::vector<std::string> depends_on;
+    std::vector<std::string> start_preview_units;
+    std::vector<std::string> start_preview_commands;
+};
+
 struct FeatureListResponse {
     bool success = false;
     std::string message;
+    /** Retained for lightweight non-GCS consumers. `features` is authoritative. */
     std::vector<std::string> feature_names;
+    std::vector<FeatureDescriptor> features;
 };
 
 struct FeatureGetRequest {

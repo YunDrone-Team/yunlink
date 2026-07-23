@@ -98,6 +98,11 @@ class Runtime {
     ErrorCode release_authority(const std::string& peer_id,
                                 uint64_t session_id,
                                 const TargetSelector& target);
+    /** Revoke a lease owned by a remote session from the authority-serving endpoint. */
+    ErrorCode revoke_authority_for_session(const std::string& peer_id,
+                                           uint64_t session_id,
+                                           const TargetSelector& target,
+                                           const std::string& detail = "authority-revoked");
     bool current_authority(AuthorityLease* out) const;
     bool current_authority_for_target(const TargetSelector& target, AuthorityLease* out) const;
 
@@ -136,6 +141,14 @@ class Runtime {
     ErrorCode publish_uav_control_state(const std::string& peer_id,
                                         const TargetSelector& target,
                                         const UavControlStateSnapshot& payload,
+                                        uint64_t session_id = 0);
+    ErrorCode publish_ugv_control_cmd(const std::string& peer_id,
+                                      const TargetSelector& target,
+                                      const UgvControlCmdSnapshot& payload,
+                                      uint64_t session_id = 0);
+    ErrorCode publish_ugv_control_state(const std::string& peer_id,
+                                        const TargetSelector& target,
+                                        const UgvControlStateSnapshot& payload,
                                         uint64_t session_id = 0);
     ErrorCode publish_command_execution_status(const std::string& peer_id,
                                                const TargetSelector& target,
@@ -250,6 +263,7 @@ class Runtime {
     size_t subscribe_trajectory_chunk_internal(CommandSubscriber::TrajectoryChunkHandler cb);
     size_t subscribe_formation_task_internal(CommandSubscriber::FormationTaskHandler cb);
     size_t subscribe_uav_control_internal(CommandSubscriber::UavControlHandler cb);
+    size_t subscribe_ugv_control_internal(CommandSubscriber::UgvControlHandler cb);
     size_t subscribe_vehicle_core_internal(StateSubscriber::VehicleCoreHandler cb);
     size_t subscribe_px4_state_internal(StateSubscriber::Px4StateHandler cb);
     size_t subscribe_odom_status_internal(StateSubscriber::OdomStatusHandler cb);
@@ -263,6 +277,8 @@ class Runtime {
     size_t subscribe_local_odom_internal(StateSubscriber::LocalOdomHandler cb);
     size_t subscribe_uav_control_cmd_internal(StateSubscriber::UavControlCmdHandler cb);
     size_t subscribe_uav_control_state_internal(StateSubscriber::UavControlStateHandler cb);
+    size_t subscribe_ugv_control_cmd_internal(StateSubscriber::UgvControlCmdHandler cb);
+    size_t subscribe_ugv_control_state_internal(StateSubscriber::UgvControlStateHandler cb);
     size_t
     subscribe_command_execution_status_internal(StateSubscriber::CommandExecutionStatusHandler cb);
     size_t subscribe_host_system_internal(StateSubscriber::HostSystemHandler cb);

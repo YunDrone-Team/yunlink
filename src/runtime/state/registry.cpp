@@ -64,6 +64,13 @@ size_t Runtime::subscribe_uav_control_internal(CommandSubscriber::UavControlHand
     return token;
 }
 
+size_t Runtime::subscribe_ugv_control_internal(CommandSubscriber::UgvControlHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->ugv_control_handlers[token] = std::move(cb);
+    return token;
+}
+
 size_t Runtime::subscribe_vehicle_core_internal(StateSubscriber::VehicleCoreHandler cb) {
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
@@ -126,6 +133,20 @@ size_t Runtime::subscribe_uav_control_state_internal(StateSubscriber::UavControl
     std::lock_guard<std::mutex> lock(impl_->mu);
     const size_t token = impl_->next_token++;
     impl_->uav_control_state_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_ugv_control_cmd_internal(StateSubscriber::UgvControlCmdHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->ugv_control_cmd_handlers[token] = std::move(cb);
+    return token;
+}
+
+size_t Runtime::subscribe_ugv_control_state_internal(StateSubscriber::UgvControlStateHandler cb) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    const size_t token = impl_->next_token++;
+    impl_->ugv_control_state_handlers[token] = std::move(cb);
     return token;
 }
 
@@ -213,6 +234,7 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->trajectory_chunk_handlers.erase(token);
     impl_->formation_task_handlers.erase(token);
     impl_->uav_control_handlers.erase(token);
+    impl_->ugv_control_handlers.erase(token);
     impl_->vehicle_core_handlers.erase(token);
     impl_->px4_state_handlers.erase(token);
     impl_->odom_status_handlers.erase(token);
@@ -222,6 +244,8 @@ void Runtime::unsubscribe_semantic(size_t token) {
     impl_->local_odom_handlers.erase(token);
     impl_->uav_control_cmd_handlers.erase(token);
     impl_->uav_control_state_handlers.erase(token);
+    impl_->ugv_control_cmd_handlers.erase(token);
+    impl_->ugv_control_state_handlers.erase(token);
     impl_->command_execution_status_handlers.erase(token);
     impl_->odom_state_handlers.erase(token);
     impl_->sunray_runtime_diagnostic_handlers.erase(token);

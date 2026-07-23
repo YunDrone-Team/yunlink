@@ -246,16 +246,39 @@ void EndpointAdvertiser::recv_loop() {
         const uint16_t delay_ms = static_cast<uint16_t>(mix % std::max<uint16_t>(window, 50U));
         std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
         advertisement.sequence += 1U;
-        const ByteBuffer reply = encode_endpoint_discovery_reply(
-            query.nonce, advertisement, impl_->config.shared_secret);
-        if (reply.empty()) {
+        // Preserve schema-1 active discovery for older listeners, then send a
+        // second, optional reply carrying the bounded entity directory. Legacy
+        // listeners accept the first packet; newer listeners replace it with
+        // the same-endpoint summary packet when it arrives.
+        auto legacy_advertisement = advertisement;
+        legacy_advertisement.managed_entity_count_known = false;
+        legacy_advertisement.managed_entity_count = 0U;
+        legacy_advertisement.managed_entities.clear();
+        const ByteBuffer legacy_reply = encode_endpoint_discovery_reply(
+            query.nonce, legacy_advertisement, impl_->config.shared_secret);
+        if (legacy_reply.empty()) {
             set_last_error("discovery reply encoding failed");
             continue;
         }
+        const ByteBuffer summary_reply =
+            advertisement.managed_entity_count_known
+                ? encode_endpoint_discovery_reply(
+                      query.nonce, advertisement, impl_->config.shared_secret)
+                : ByteBuffer{};
+        if (advertisement.managed_entity_count_known && summary_reply.empty()) {
+            set_last_error("discovery managed-entity reply encoding failed");
+        }
         std::lock_guard<std::mutex> lock(impl_->send_mu);
-        impl_->socket->send_to(asio::buffer(reply), source, 0, ec);
+        impl_->socket->send_to(asio::buffer(legacy_reply), source, 0, ec);
         if (ec && !socket_closed(ec)) {
             set_last_error("discovery reply failed: " + ec.message());
+            continue;
+        }
+        if (!summary_reply.empty()) {
+            impl_->socket->send_to(asio::buffer(summary_reply), source, 0, ec);
+            if (ec && !socket_closed(ec)) {
+                set_last_error("discovery managed-entity reply failed: " + ec.message());
+            }
         }
     }
 }

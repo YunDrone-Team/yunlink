@@ -62,6 +62,11 @@ class CommandPublisher {
                                   const TargetSelector& target,
                                   const UavControlCommand& payload,
                                   CommandHandle* out_handle = nullptr);
+    ErrorCode publish_ugv_control(const std::string& peer_id,
+                                  uint64_t session_id,
+                                  const TargetSelector& target,
+                                  const UgvControlCommand& payload,
+                                  CommandHandle* out_handle = nullptr);
     void bind(Runtime* runtime);
 
   private:
@@ -86,6 +91,7 @@ class CommandSubscriber {
     using FormationTaskHandler =
         std::function<void(const InboundCommandView<FormationTaskCommand>&)>;
     using UavControlHandler = std::function<void(const InboundCommandView<UavControlCommand>&)>;
+    using UgvControlHandler = std::function<void(const InboundCommandView<UgvControlCommand>&)>;
 
     explicit CommandSubscriber(Runtime* runtime = nullptr);
 
@@ -97,6 +103,7 @@ class CommandSubscriber {
     size_t subscribe_trajectory_chunk(TrajectoryChunkHandler cb);
     size_t subscribe_formation_task(FormationTaskHandler cb);
     size_t subscribe_uav_control(UavControlHandler cb);
+    size_t subscribe_ugv_control(UgvControlHandler cb);
     void unsubscribe(size_t token);
     void bind(Runtime* runtime);
 

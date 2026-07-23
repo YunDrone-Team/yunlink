@@ -33,6 +33,7 @@ YUNLINK_DEFINE_TRAITS(VelocitySetpointCommand, MessageFamily::kCommand, 5);
 YUNLINK_DEFINE_TRAITS(TrajectoryChunkCommand, MessageFamily::kCommand, 6);
 YUNLINK_DEFINE_TRAITS(FormationTaskCommand, MessageFamily::kCommand, 7);
 YUNLINK_DEFINE_TRAITS(UavControlCommand, MessageFamily::kCommand, 8);
+YUNLINK_DEFINE_TRAITS(UgvControlCommand, MessageFamily::kCommand, 9);
 YUNLINK_DEFINE_TRAITS(CommandResult, MessageFamily::kCommandResult, 1);
 YUNLINK_DEFINE_TRAITS(FeatureListRequest, MessageFamily::kSystemService, 1);
 YUNLINK_DEFINE_TRAITS(FeatureListResponse, MessageFamily::kSystemService, 2);
@@ -79,6 +80,8 @@ YUNLINK_DEFINE_TRAITS(SunrayRuntimeDiagnosticSnapshot, MessageFamily::kStateSnap
 YUNLINK_DEFINE_TRAITS(CommandExecutionStatusSnapshot, MessageFamily::kStateSnapshot, 12);
 YUNLINK_DEFINE_TRAITS(HostSystemSnapshot, MessageFamily::kStateSnapshot, 13);
 YUNLINK_DEFINE_TRAITS(TopicSample, MessageFamily::kStateSnapshot, 14);
+YUNLINK_DEFINE_TRAITS(UgvControlCmdSnapshot, MessageFamily::kStateSnapshot, 15);
+YUNLINK_DEFINE_TRAITS(UgvControlStateSnapshot, MessageFamily::kStateSnapshot, 16);
 YUNLINK_DEFINE_TRAITS(VehicleEvent, MessageFamily::kStateEvent, 1);
 YUNLINK_DEFINE_TRAITS(BulkChannelDescriptor, MessageFamily::kBulkChannelDescriptor, 1);
 

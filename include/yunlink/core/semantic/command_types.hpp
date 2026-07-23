@@ -57,6 +57,19 @@ struct UavControlCommand {
     uint8_t controller_type = 0;
 };
 
+/** Complete ground-vehicle control command independent of vehicle-side middleware. */
+struct UgvControlCommand {
+    uint8_t control_cmd = 0;
+    Vector3f desired_position_m;
+    Vector3f desired_velocity_mps;
+    Vector3f body_linear_velocity_mps;
+    Vector3f body_angular_velocity_radps;
+    float desired_yaw_rad = 0.0F;
+    double desired_wgs84_latitude_deg = 0.0;
+    double desired_wgs84_longitude_deg = 0.0;
+    double desired_wgs84_altitude_m = 0.0;
+};
+
 struct TrajectoryPoint {
     float x_m = 0.0F;
     float y_m = 0.0F;

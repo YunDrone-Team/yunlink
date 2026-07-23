@@ -196,6 +196,28 @@ inline bool read_uav_control_cmd(BufferReader& reader, UavControlCmdSnapshot* ou
            reader.read_float(&out->desired_yaw_rate_radps);
 }
 
+inline void write_ugv_control_cmd(BufferWriter& writer, const UgvControlCmdSnapshot& value) {
+    write_header(writer, value.header);
+    writer.write_u8(value.cmd_source);
+    writer.write_u8(value.control_cmd);
+    write_vec3(writer, value.desired_position_m);
+    write_vec3(writer, value.desired_velocity_mps);
+    write_vec3(writer, value.body_linear_velocity_mps);
+    write_vec3(writer, value.body_angular_velocity_radps);
+    writer.write_float(value.desired_yaw_rad);
+    write_geo(writer, value.desired_wgs84_position);
+}
+
+inline bool read_ugv_control_cmd(BufferReader& reader, UgvControlCmdSnapshot* out) {
+    return read_header(reader, &out->header) && reader.read_u8(&out->cmd_source) &&
+           reader.read_u8(&out->control_cmd) && read_vec3(reader, &out->desired_position_m) &&
+           read_vec3(reader, &out->desired_velocity_mps) &&
+           read_vec3(reader, &out->body_linear_velocity_mps) &&
+           read_vec3(reader, &out->body_angular_velocity_radps) &&
+           reader.read_float(&out->desired_yaw_rad) &&
+           read_geo(reader, &out->desired_wgs84_position);
+}
+
 inline void write_position_target(BufferWriter& writer, const PositionTargetSnapshot& value) {
     write_header(writer, value.header);
     writer.write_u8(value.coordinate_frame);
@@ -234,7 +256,7 @@ inline bool read_attitude_target(BufferReader& reader, AttitudeTargetSnapshot* o
 }
 
 inline bool valid_command_kind(uint16_t value) {
-    return value <= static_cast<uint16_t>(CommandKind::kUavControl);
+    return value <= static_cast<uint16_t>(CommandKind::kUgvControl);
 }
 
 inline bool valid_command_execution_state(uint8_t value) {

@@ -96,6 +96,13 @@ yunlink_command_publish_uav_control(yunlink_runtime_t* runtime,
                                     const yunlink_target_selector_t* target,
                                     const yunlink_uav_control_command_t* payload,
                                     yunlink_command_handle_t* out_handle);
+YUNLINK_C_API yunlink_result_t
+yunlink_command_publish_ugv_control(yunlink_runtime_t* runtime,
+                                    const yunlink_peer_t* peer,
+                                    const yunlink_session_t* session,
+                                    const yunlink_target_selector_t* target,
+                                    const yunlink_ugv_control_command_t* payload,
+                                    yunlink_command_handle_t* out_handle);
 
 YUNLINK_C_API yunlink_result_t
 yunlink_publish_vehicle_core_state(yunlink_runtime_t* runtime,

@@ -88,6 +88,92 @@ bool parse_u64(const std::string& value, uint64_t* out) {
     }
 }
 
+bool is_unreserved(unsigned char byte) {
+    return std::isalnum(byte) != 0 || byte == '-' || byte == '_' || byte == '.' || byte == '~';
+}
+
+std::string percent_encode(const std::string& value) {
+    static constexpr char kHex[] = "0123456789ABCDEF";
+    std::string encoded;
+    encoded.reserve(value.size());
+    for (const unsigned char byte : value) {
+        if (is_unreserved(byte)) {
+            encoded.push_back(static_cast<char>(byte));
+            continue;
+        }
+        encoded.push_back('%');
+        encoded.push_back(kHex[(byte >> 4U) & 0x0fU]);
+        encoded.push_back(kHex[byte & 0x0fU]);
+    }
+    return encoded;
+}
+
+int hex_value(unsigned char byte) {
+    if (byte >= '0' && byte <= '9') {
+        return byte - '0';
+    }
+    if (byte >= 'A' && byte <= 'F') {
+        return byte - 'A' + 10;
+    }
+    if (byte >= 'a' && byte <= 'f') {
+        return byte - 'a' + 10;
+    }
+    return -1;
+}
+
+bool percent_decode(const std::string& value, std::string* out) {
+    if (out == nullptr) {
+        return false;
+    }
+    std::string decoded;
+    decoded.reserve(value.size());
+    for (std::size_t index = 0; index < value.size(); ++index) {
+        if (value[index] != '%') {
+            decoded.push_back(value[index]);
+            continue;
+        }
+        if (index + 2U >= value.size()) {
+            return false;
+        }
+        const int high = hex_value(static_cast<unsigned char>(value[index + 1U]));
+        const int low = hex_value(static_cast<unsigned char>(value[index + 2U]));
+        if (high < 0 || low < 0) {
+            return false;
+        }
+        decoded.push_back(static_cast<char>((high << 4U) | low));
+        index += 2U;
+    }
+    *out = std::move(decoded);
+    return true;
+}
+
+std::string encode_managed_entity_summary(const EndpointManagedEntitySummary& summary) {
+    return percent_encode(summary.entity_uid) + "|" + percent_encode(summary.agent_type) + "|" +
+           std::to_string(summary.agent_id) + "|" + percent_encode(summary.display_name) + "|" +
+           percent_encode(summary.node_name);
+}
+
+bool decode_managed_entity_summary(const std::string& value, EndpointManagedEntitySummary* out) {
+    if (out == nullptr) {
+        return false;
+    }
+    std::vector<std::string> parts;
+    std::stringstream stream(value);
+    std::string item;
+    while (std::getline(stream, item, '|')) {
+        parts.push_back(item);
+    }
+    if (parts.size() != 5U || !parse_u32(parts[2], &out->agent_id) || out->agent_id == 0U ||
+        !percent_decode(parts[0], &out->entity_uid) ||
+        !percent_decode(parts[1], &out->agent_type) ||
+        !percent_decode(parts[3], &out->display_name) ||
+        !percent_decode(parts[4], &out->node_name) || out->entity_uid.empty() ||
+        out->agent_type.empty()) {
+        return false;
+    }
+    return true;
+}
+
 void set_error(std::string* error, const std::string& value) {
     if (error != nullptr) {
         *error = value;
@@ -159,6 +245,15 @@ ByteBuffer encode_endpoint_advertisement(const EndpointAdvertisement& advertisem
     oss << "started_at_ms=" << normalized.started_at_ms << '\n';
     oss << "sequence=" << normalized.sequence << '\n';
     oss << "discovery_period_ms=" << normalized.discovery_period_ms << '\n';
+    if (normalized.managed_entity_count_known) {
+        oss << "managed_entity_count=" << normalized.managed_entity_count << '\n';
+        const std::size_t summary_count =
+            std::min(normalized.managed_entities.size(), kMaxDiscoveryManagedEntitySummaries);
+        for (std::size_t index = 0; index < summary_count; ++index) {
+            oss << "managed_entity_" << index << "="
+                << encode_managed_entity_summary(normalized.managed_entities[index]) << '\n';
+        }
+    }
 
     const std::string text = oss.str();
     return ByteBuffer(text.begin(), text.end());
@@ -252,6 +347,28 @@ bool decode_endpoint_advertisement_text(const std::string& text,
         !parse_u32(fields["discovery_period_ms"], &decoded.discovery_period_ms)) {
         set_error(error, "invalid discovery_period_ms");
         return false;
+    }
+    if (fields.count("managed_entity_count") != 0U) {
+        if (!parse_u16(fields["managed_entity_count"], &decoded.managed_entity_count)) {
+            set_error(error, "invalid managed_entity_count");
+            return false;
+        }
+        decoded.managed_entity_count_known = true;
+        const std::size_t summary_limit = std::min<std::size_t>(
+            decoded.managed_entity_count, kMaxDiscoveryManagedEntitySummaries);
+        decoded.managed_entities.reserve(summary_limit);
+        for (std::size_t index = 0; index < summary_limit; ++index) {
+            const auto it = fields.find("managed_entity_" + std::to_string(index));
+            if (it == fields.end()) {
+                continue;
+            }
+            EndpointManagedEntitySummary summary{};
+            if (!decode_managed_entity_summary(it->second, &summary)) {
+                set_error(error, "invalid managed entity summary");
+                return false;
+            }
+            decoded.managed_entities.push_back(std::move(summary));
+        }
     }
 
     decoded.display_name = make_endpoint_display_name(

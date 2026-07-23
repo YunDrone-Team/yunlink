@@ -1,5 +1,6 @@
 /** @file @brief Managed entity directory, source binding, and multi-entity state test. */
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <functional>

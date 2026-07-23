@@ -6,7 +6,10 @@ VENV_DIR="${ROOT_DIR}/.venv-bindings-wheel"
 WHEEL_DIR="${ROOT_DIR}/output/python-wheel"
 
 mkdir -p "${WHEEL_DIR}"
-python3 -m venv "${VENV_DIR}"
+# CI runners start clean, but developer workspaces can retain a virtualenv
+# whose interpreter was removed or upgraded. Recreate its standard-library
+# links before building so the wheel check remains deterministic.
+python3 -m venv --clear "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
 python -m pip install -q --upgrade pip
 python -m pip wheel "${ROOT_DIR}/bindings/python" -w "${WHEEL_DIR}"
