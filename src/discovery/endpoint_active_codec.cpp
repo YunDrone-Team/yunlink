@@ -329,8 +329,8 @@ bool decode_endpoint_discovery_reply(const ByteBuffer& bytes,
         set_error(error, "trailing discovery reply bytes");
         return false;
     }
-    decoded.display_name = make_endpoint_display_name(
-        decoded.display_name_prefix, decoded.agent_id, decoded.endpoint_id);
+    decoded.display_name =
+        make_endpoint_display_name(decoded.display_name_prefix, decoded.endpoint_id);
     *out = std::move(decoded);
     return true;
 }

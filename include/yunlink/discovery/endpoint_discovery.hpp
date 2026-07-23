@@ -78,8 +78,9 @@ struct EndpointDiscoveryQuery {
     uint16_t response_window_ms{1000};
 };
 
+/// Human-readable name of one physical Endpoint. Logical Agent identities
+/// belong to the managed-entity directory and are intentionally not included.
 std::string make_endpoint_display_name(const std::string& prefix,
-                                       uint32_t agent_id,
                                        const std::string& endpoint_id);
 bool validate_endpoint_id(const std::string& endpoint_id);
 ByteBuffer encode_endpoint_advertisement(const EndpointAdvertisement& advertisement);

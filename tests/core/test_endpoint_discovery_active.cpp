@@ -7,8 +7,8 @@
 
 int main() {
     const std::string secret = "discovery-test-secret";
-    if (yunlink::make_endpoint_display_name("SURY-uav", 1U, "a1b2c") != "SURY-uav1-a1b2c" ||
-        yunlink::make_endpoint_display_name("SURY#-uav", 1U, "a1b2c") != "SURY#-uav1-a1b2c") {
+    if (yunlink::make_endpoint_display_name("SURY", "a1b2c") != "SURY-a1b2c" ||
+        yunlink::make_endpoint_display_name("SURY#", "a1b2c") != "SURY#-a1b2c") {
         std::cerr << "SURY endpoint display-name convention failed\n";
         return 16;
     }
@@ -58,7 +58,7 @@ int main() {
     if (!yunlink::decode_endpoint_discovery_reply(
             reply, secret, &reply_nonce, &decoded_reply, &error) ||
         reply_nonce != query.nonce || decoded_reply.endpoint_id != advertisement.endpoint_id ||
-        decoded_reply.display_name != "uav7-a1b2c" ||
+        decoded_reply.display_name != "uav-a1b2c" ||
         decoded_reply.agent_type != advertisement.agent_type ||
         decoded_reply.role != advertisement.role ||
         decoded_reply.tcp_listen_port != advertisement.tcp_listen_port ||
@@ -107,7 +107,7 @@ int main() {
     yunlink::EndpointAdvertisement decoded_v1{};
     if (!yunlink::decode_endpoint_advertisement(v1, &decoded_v1, &error) ||
         decoded_v1.endpoint_id != advertisement.endpoint_id ||
-        decoded_v1.display_name != "uav7-a1b2c" || decoded_v1.managed_entity_count_known) {
+        decoded_v1.display_name != "uav-a1b2c" || decoded_v1.managed_entity_count_known) {
         std::cerr << "V1 compatibility decode failed: " << error << '\n';
         return 7;
     }

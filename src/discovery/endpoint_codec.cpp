@@ -198,11 +198,10 @@ bool require_field(const std::unordered_map<std::string, std::string>& fields,
 }  // namespace
 
 std::string make_endpoint_display_name(const std::string& prefix,
-                                       uint32_t agent_id,
                                        const std::string& endpoint_id) {
     const std::string safe_prefix =
         prefix.empty() ? std::string(kDefaultEndpointNamePrefix) : prefix;
-    return safe_prefix + std::to_string(agent_id) + "-" + endpoint_id;
+    return safe_prefix + "-" + endpoint_id;
 }
 
 bool validate_endpoint_id(const std::string& endpoint_id) {
@@ -226,8 +225,8 @@ ByteBuffer encode_endpoint_advertisement(const EndpointAdvertisement& advertisem
     if (normalized.display_name_prefix.empty()) {
         normalized.display_name_prefix = kDefaultEndpointNamePrefix;
     }
-    normalized.display_name = make_endpoint_display_name(
-        normalized.display_name_prefix, normalized.agent_id, normalized.endpoint_id);
+    normalized.display_name =
+        make_endpoint_display_name(normalized.display_name_prefix, normalized.endpoint_id);
 
     std::ostringstream oss;
     oss << kEndpointDiscoveryMagic << '\n';
@@ -371,8 +370,8 @@ bool decode_endpoint_advertisement_text(const std::string& text,
         }
     }
 
-    decoded.display_name = make_endpoint_display_name(
-        decoded.display_name_prefix, decoded.agent_id, decoded.endpoint_id);
+    decoded.display_name =
+        make_endpoint_display_name(decoded.display_name_prefix, decoded.endpoint_id);
     *out = decoded;
     return true;
 }
