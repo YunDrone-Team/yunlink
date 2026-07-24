@@ -33,6 +33,7 @@ __pycache__/
 .venv/
 .venv-bindings-wheel/
 .ruff_cache/
+bindings/python/uv.lock
 
 # Local caches / logs
 .cache/
