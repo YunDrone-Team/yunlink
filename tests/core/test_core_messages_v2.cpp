@@ -37,5 +37,42 @@ int main() {
     StreamCatalog decoded_catalog;
     assert(decode(encode(catalog), &decoded_catalog));
     assert(decoded_catalog.streams.front().type.type_name == "Odometry");
+
+    yunlink::ConfigResourceGetResponse configuration;
+    configuration.status = yunlink::ConfigServiceStatus::kOk;
+    configuration.message = "ok";
+    configuration.snapshot.resource_id = "bridge.runtime";
+    configuration.snapshot.revision = "7";
+    configuration.snapshot.values = {
+        {"endpoint_uid", yunlink::ConfigValue::from_string("endpoint.bridge")},
+        {"tcp_listen_port", yunlink::ConfigValue::from_int64(9696)},
+    };
+    yunlink::ConfigResourceGetResponse decoded_configuration;
+    assert(decode(encode(configuration), &decoded_configuration));
+    assert(decoded_configuration.snapshot.values.size() == 2);
+    assert(decoded_configuration.snapshot.values.front().value.string_value == "endpoint.bridge");
+
+    LogListResponse logs;
+    logs.success = true;
+    logs.message = "ok";
+    logs.logs.push_back({"bridge.runtime",
+                         "endpoint.bridge",
+                         "Bridge Runtime",
+                         "running",
+                         1,
+                         0,
+                         false,
+                         0,
+                         {{"component", "bridge"}},
+                         "active"});
+    LogListResponse decoded_logs;
+    assert(decode(encode(logs), &decoded_logs));
+    assert(decoded_logs.logs.size() == 1);
+    assert(decoded_logs.logs.front().owner_uid == "endpoint.bridge");
+
+    LogReadResponse log_read{true, "ok", "bridge.runtime", "line\n", 5, false, true};
+    LogReadResponse decoded_log_read;
+    assert(decode(encode(log_read), &decoded_log_read));
+    assert(decoded_log_read.chunk == "line\n");
     return 0;
 }

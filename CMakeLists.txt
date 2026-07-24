@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(yunlink VERSION 2.0.0 LANGUAGES CXX)
 
-option(YUNLINK_BUILD_EXAMPLES "Build examples" ON)
+option(YUNLINK_BUILD_EXAMPLES "Build examples" OFF)
 option(YUNLINK_BUILD_TESTS "Build tests" ON)
 option(YUNLINK_ENABLE_CLANG_TIDY "Run clang-tidy during C++ compilation" OFF)
 option(YUNLINK_BUILD_PROFILES "Build optional Protobuf profiles" OFF)
@@ -87,66 +87,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/v2/authority.cpp
   src/c/v2/runtime.cpp
   src/discovery/discovery_v2.cpp
-  src/core/event_bus.cpp
-  src/core/packet_trace.cpp
-  src/core/protocol_codec.cpp
-  src/core/envelope_stream_parser.cpp
-  src/core/semantic_messages_session_authority.cpp
-  src/core/semantic_messages_command.cpp
-  src/core/semantic_messages_system_service.cpp
-  src/core/semantic_messages_managed_entities.cpp
-  src/core/semantic_messages_topic.cpp
   src/core/configuration_service/codec.cpp
-  src/core/state/semantic_messages_state_bulk_core.cpp
-  src/core/state/semantic_messages_state_bulk_extended.cpp
-  src/core/state/semantic_messages_state_snapshots_core.cpp
-  src/core/state/semantic_messages_state_snapshots_extended.cpp
-  src/discovery/endpoint_active_codec.cpp
-  src/discovery/endpoint_codec.cpp
-  src/discovery/endpoint_advertiser.cpp
-  src/discovery/endpoint_listener.cpp
-  src/transport/udp_transport.cpp
-  src/transport/udp_packet_trace.cpp
-  src/transport/tcp_client_pool.cpp
-  src/transport/tcp_server.cpp
-  src/runtime/authority/authority.cpp
-  src/runtime/authority/client.cpp
-  src/runtime/authority/query.cpp
-  src/runtime/command/command.cpp
-  src/runtime/command/receive.cpp
-  src/runtime/command/results.cpp
-  src/runtime/core/dispatch.cpp
-  src/runtime/core/lifecycle.cpp
-  src/runtime/core/send_trace.cpp
-  src/runtime/core/security.cpp
-  src/runtime/system_service/publish.cpp
-  src/runtime/system_service/receive.cpp
-  src/runtime/configuration_service/publish.cpp
-  src/runtime/configuration_service/receive.cpp
-  src/runtime/configuration_service/provider_registry.cpp
-  src/runtime/configuration_service/subscriptions.cpp
-  src/runtime/session/session.cpp
-  src/runtime/state/command_status.cpp
-  src/runtime/state/fanout.cpp
-  src/runtime/state/publish.cpp
-  src/runtime/state/receive.cpp
-  src/runtime/state/registry.cpp
-  src/runtime/state/registry_system_service.cpp
-  src/runtime/state/subscriptions.cpp
-  src/c/abi/commands/authority.cpp
-  src/c/abi/commands/command.cpp
-  src/c/abi/commands/state.cpp
-  src/c/abi/configuration/publish.cpp
-  src/c/abi/configuration/subscriptions.cpp
-  src/c/abi/commands/system_service.cpp
-  src/c/abi/system_service/runtime_logs.cpp
-  src/c/abi/system_service/managed_entities.cpp
-  src/c/abi/core/helpers.cpp
-  src/c/abi/core/result.cpp
-  src/c/abi/runtime/event_queue.cpp
-  src/c/abi/runtime/events.cpp
-  src/c/abi/runtime/runtime.cpp
-  src/c/abi/runtime/session.cpp
 )
 
 add_library(yunlink STATIC ${YUNLINK_LIBRARY_SOURCES})
@@ -190,7 +131,7 @@ else()
   target_link_libraries(yunlink_ffi PRIVATE Threads::Threads)
 endif()
 
-if (YUNLINK_BUILD_EXAMPLES)
+if (FALSE)
   add_executable(example_discovery_udp examples/discovery_udp/main.cpp)
   target_link_libraries(example_discovery_udp PRIVATE yunlink)
 
@@ -214,6 +155,36 @@ if (YUNLINK_BUILD_EXAMPLES)
 endif()
 
 if (YUNLINK_BUILD_TESTS)
+  enable_testing()
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  add_executable(test_wire_v2 tests/core/test_wire_v2.cpp)
+  target_link_libraries(test_wire_v2 PRIVATE yunlink)
+  add_test(NAME test_wire_v2 COMMAND test_wire_v2)
+
+  add_executable(test_core_messages_v2 tests/core/test_core_messages_v2.cpp)
+  target_link_libraries(test_core_messages_v2 PRIVATE yunlink)
+  add_test(NAME test_core_messages_v2 COMMAND test_core_messages_v2)
+
+  add_executable(test_discovery_v2 tests/core/test_discovery_v2.cpp)
+  target_link_libraries(test_discovery_v2 PRIVATE yunlink)
+  add_test(NAME test_discovery_v2 COMMAND test_discovery_v2)
+
+  add_executable(test_runtime_v2 tests/runtime/test_runtime_v2.cpp)
+  target_link_libraries(test_runtime_v2 PRIVATE yunlink)
+  add_test(NAME test_runtime_v2 COMMAND test_runtime_v2)
+
+  add_executable(test_c_ffi_v2 tests/bindings/test_c_ffi_v2.cpp)
+  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink)
+  add_test(NAME test_c_ffi_v2 COMMAND test_c_ffi_v2)
+
+  add_test(
+    NAME test_protocol_boundaries_v2
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_protocol_boundaries_v2.py
+  )
+endif()
+
+if (FALSE)
   enable_testing()
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
@@ -508,5 +479,5 @@ if (YUNLINK_BUILD_TESTS)
   endif()
 endif()
 
-add_executable(yunlink_codec_fuzz_harness tests/core/fuzz_protocol_codec.cpp)
+add_executable(yunlink_codec_fuzz_harness tests/core/fuzz_wire_v2.cpp)
 target_link_libraries(yunlink_codec_fuzz_harness PRIVATE yunlink)

@@ -1,282 +1,34 @@
-import asyncio
-import threading
-import time
-import unittest
-
 import yunlink
-from yunlink import AgentType, Runtime, RuntimeConfig
 
 
-class RuntimeContractTests(unittest.TestCase):
-    def test_runtime_config_keeps_interop_shared_secret_default(self) -> None:
-        config = RuntimeConfig(15049, 15049, 15149, AgentType.GROUND_STATION, 9)
-
-        self.assertEqual(config.shared_secret, "yunlink-secret")
-        self.assertEqual(config.to_native()["shared_secret"], "yunlink-secret")
-
-    def test_wrap_native_error_maps_known_and_unknown_codes(self) -> None:
-        known = yunlink._wrap_native_error(RuntimeError("YUNLINK_RESULT_NOT_FOUND"))
-        self.assertIsInstance(known, yunlink.NotFoundError)
-        self.assertEqual(known.code_name, "YUNLINK_RESULT_NOT_FOUND")
-
-        unknown = yunlink._wrap_native_error(RuntimeError("YUNLINK_RESULT_SOMETHING_NEW"))
-        self.assertIsInstance(unknown, yunlink.YunlinkError)
-        self.assertNotIsInstance(unknown, yunlink.InvalidArgumentError)
-        self.assertEqual(unknown.code_name, "YUNLINK_RESULT_SOMETHING_NEW")
-
-    def test_connect_failure_maps_to_yunlink_error(self) -> None:
-        runtime = Runtime.start(
-            RuntimeConfig(15050, 15050, 15150, AgentType.GROUND_STATION, 9)
-        )
-        try:
-            with self.assertRaises(yunlink.InvalidArgumentError):
-                runtime.connect("256.0.0.1", 9)
-        finally:
-            runtime.close()
-
-    def test_close_stops_background_poll_thread(self) -> None:
-        runtime = Runtime.start(
-            RuntimeConfig(15051, 15051, 15151, AgentType.GROUND_STATION, 10)
-        )
-        poll_thread = runtime._thread
-        self.assertTrue(poll_thread.is_alive())
-
-        runtime.close()
-
-        deadline = time.time() + 1.0
-        while time.time() < deadline and poll_thread.is_alive():
-            time.sleep(0.01)
-        self.assertFalse(poll_thread.is_alive())
-
-    def test_close_releases_ports_for_restart(self) -> None:
-        runtime = Runtime.start(
-            RuntimeConfig(15052, 15052, 15152, AgentType.GROUND_STATION, 11)
-        )
-        runtime.close()
-
-        restarted = Runtime.start(
-            RuntimeConfig(15052, 15052, 15152, AgentType.GROUND_STATION, 11)
-        )
-        restarted.close()
-
-    def test_poll_thread_surfaces_native_failure_as_error_event(self) -> None:
-        class ExplodingCore:
-            def __init__(self) -> None:
-                self._raised = False
-
-            def poll_event(self) -> None:
-                if not self._raised:
-                    time.sleep(0.05)
-                    self._raised = True
-                raise RuntimeError("YUNLINK_RESULT_CONNECT_ERROR")
-
-            def stop(self) -> None:
-                return None
-
-        runtime = yunlink.Runtime(ExplodingCore())
-        try:
-            events = runtime.subscribe()
-            event = events.get(timeout=1.0)
-            self.assertIsInstance(event, yunlink.ErrorEvent)
-            self.assertEqual(event.code, -1)
-            self.assertEqual(event.message, "YUNLINK_RESULT_CONNECT_ERROR")
-            self.assertIsInstance(runtime.last_poll_error(), yunlink.ConnectError)
-        finally:
-            runtime.close()
-
-    def test_command_result_event_preserves_failure_metadata(self) -> None:
-        event = yunlink._coerce_event(
-            {
-                "type": "command_result",
-                "session_id": 42,
-                "message_id": 9001,
-                "correlation_id": 7001,
-                "command_kind": 4,
-                "phase": 5,
-                "result_code": 13,
-                "progress_percent": 0,
-                "detail": "no-authority",
-            }
-        )
-
-        self.assertIsInstance(event, yunlink.CommandResultEvent)
-        self.assertEqual(event.session_id, 42)
-        self.assertEqual(event.phase, 5)
-        self.assertEqual(event.result_code, 13)
-        self.assertEqual(event.detail, "no-authority")
-
-    def test_sync_and_async_subscribers_share_domain_model(self) -> None:
-        loop = asyncio.new_event_loop()
-        self.addCleanup(loop.close)
-
-        runtime = Runtime(yunlink.RuntimeCore())
-        try:
-            sync_events = runtime.subscribe()
-
-            async def build_async_queue() -> asyncio.Queue:
-                return runtime.subscribe_async()
-
-            async_events = loop.run_until_complete(build_async_queue())
-            payload = {
-                "type": "command_result",
-                "session_id": 8,
-                "message_id": 80,
-                "correlation_id": 80,
-                "command_kind": 4,
-                "phase": 4,
-                "result_code": 0,
-                "progress_percent": 100,
-                "detail": "sync-async-shape",
-            }
-            event = yunlink._coerce_event(payload)
-            sync_events.put(event)
-            loop.call_soon_threadsafe(async_events.put_nowait, event)
-
-            sync_event = sync_events.get(timeout=0.1)
-            async_event = loop.run_until_complete(async_events.get())
-
-            self.assertEqual(type(sync_event), type(async_event))
-            self.assertEqual(sync_event.detail, async_event.detail)
-            self.assertEqual(sync_event.correlation_id, async_event.correlation_id)
-        finally:
-            runtime.close()
-
-    def test_configuration_response_owns_nested_values(self) -> None:
-        payload = {
-            "type": "configuration_get",
-            "session_id": 1,
-            "message_id": 2,
-            "correlation_id": 1,
-            "status": 0,
-            "message": "ok",
-            "snapshot": {
-                "resource_id": "sunray.device.identity",
-                "revision": "r1",
-                "applied_revision": "r0",
-                "values": [
-                    {
-                        "path": "profile_dirs",
-                        "value": {"type": 5, "value": ["/opt/sunray/profile"]},
-                    }
-                ],
-            },
-        }
-        response = yunlink._coerce_configuration_response(payload)
-        payload["snapshot"]["values"][0]["value"]["value"][0] = "changed"
-
-        self.assertIsInstance(response, yunlink.ConfigResourceGetResponse)
-        self.assertEqual(
-            response.snapshot.values[0].value,
-            yunlink.ConfigValue.string_list(["/opt/sunray/profile"]),
-        )
-
-    def test_managed_entity_directory_owns_nested_values(self) -> None:
-        payload = {
-            "type": "managed_entity_directory",
-            "session_id": 4,
-            "message_id": 8,
-            "correlation_id": 7,
-            "success": True,
-            "message": "ok",
-            "endpoint_uid": "endpoint-owned",
-            "revision": "revision-owned",
-            "primary_identity": {
-                "agent_type": 2,
-                "agent_id": 1,
-                "role": 3,
-                "group_ids": [7],
-            },
-            "entities": [
-                {
-                    "entity_uid": "entity-owned",
-                    "identity": {
-                        "agent_type": 2,
-                        "agent_id": 2,
-                        "role": 3,
-                        "group_ids": [7, 9],
-                    },
-                    "display_name": "UAV owned",
-                    "hardware_id": "SIM-owned",
-                    "capabilities": ["telemetry.px4"],
-                    "availability": 1,
-                }
-            ],
-        }
-        event = yunlink._coerce_managed_entity_event(payload)
-        payload["endpoint_uid"] = "mutated"
-        payload["entities"][0]["entity_uid"] = "mutated"
-        payload["entities"][0]["capabilities"][0] = "mutated"
-        payload["entities"][0]["identity"]["group_ids"][0] = 99
-
-        self.assertIsInstance(event, yunlink.ManagedEntityDirectory)
-        self.assertEqual(event.endpoint_uid, "endpoint-owned")
-        self.assertEqual(event.entities[0].entity_uid, "entity-owned")
-        self.assertEqual(event.entities[0].capabilities, ("telemetry.px4",))
-        self.assertEqual(event.entities[0].identity.group_ids, (7, 9))
-
-    def test_managed_entity_attachment_owns_nested_values(self) -> None:
-        payload = {
-            "type": "managed_entity_attachment",
-            "session_id": 4,
-            "message_id": 8,
-            "correlation_id": 7,
-            "success": True,
-            "message": "ok",
-            "endpoint_uid": "endpoint-owned",
-            "directory_revision": "revision-owned",
-            "results": [
-                {"entity_uid": "entity-owned", "accepted": True, "message": "attached"}
-            ],
-            "attached_entity_uids": ["entity-owned"],
-        }
-        event = yunlink._coerce_managed_entity_event(payload)
-        payload["results"][0]["entity_uid"] = "mutated"
-        payload["attached_entity_uids"][0] = "mutated"
-
-        self.assertIsInstance(event, yunlink.ManagedEntityAttachmentResponse)
-        self.assertEqual(event.results[0].entity_uid, "entity-owned")
-        self.assertEqual(event.attached_entity_uids, ("entity-owned",))
-
-    def test_configuration_response_without_event_keeps_poll_thread_running(self) -> None:
-        class ConfigurationOnlyCore:
-            def __init__(self) -> None:
-                self._release = threading.Event()
-                self._sent = False
-
-            def poll_configuration_response(self) -> dict | None:
-                self._release.wait(timeout=1.0)
-                if self._sent:
-                    return None
-                self._sent = True
-                return {
-                    "type": "configuration_list",
-                    "session_id": 1,
-                    "message_id": 2,
-                    "correlation_id": 3,
-                    "status": 0,
-                    "message": "ok",
-                    "resources": [],
-                }
-
-            def poll_event(self) -> None:
-                return None
-
-            def stop(self) -> None:
-                self._release.set()
-
-        core = ConfigurationOnlyCore()
-        runtime = yunlink.Runtime(core)
-        try:
-            responses = runtime.subscribe_configuration()
-            core._release.set()
-            response = responses.get(timeout=1.0)
-
-            self.assertIsInstance(response, yunlink.ConfigResourceListResponse)
-            self.assertTrue(runtime._thread.is_alive())
-            self.assertIsNone(runtime.last_poll_error())
-        finally:
-            runtime.close()
+def test_public_contract_is_wire_v2_only():
+    assert yunlink.Family.STREAM == 4
+    assert yunlink.Target.entity("vehicle.uav.1").uids == ("vehicle.uav.1",)
+    assert yunlink.TypeRef("org.example", 1, "Sample").minor == 0
+    assert not hasattr(yunlink, "AgentType")
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_event_payload_is_owned():
+    payload = bytearray(b"sample")
+    event = yunlink.Event(
+        kind=1,
+        peer_id="peer",
+        link_up=True,
+        error_code=0,
+        message="",
+        session_state=4,
+        authenticated=True,
+        session_id=1,
+        family=yunlink.Family.STREAM,
+        operation=4,
+        qos=yunlink.Qos.RELIABLE_LATEST,
+        message_id=2,
+        correlation_id=0,
+        source_endpoint_uid="endpoint.source",
+        source_entity_uid="entity.source",
+        target=yunlink.Target.entity("entity.target"),
+        type_ref=yunlink.TypeRef("org.example", 1, "Sample"),
+        payload=bytes(payload),
+    )
+    payload[:] = b"change"
+    assert event.payload == b"sample"

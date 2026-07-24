@@ -1,4 +1,5 @@
 #include "yunlink/core/core_messages_v2.hpp"
+#include "yunlink/core/configuration_codec.hpp"
 
 #include <cstring>
 #include <limits>
@@ -204,6 +205,32 @@ bool read_entity(Reader& reader, EntityDescriptor* entity) {
            (entity->availability = static_cast<Availability>(availability), true);
 }
 
+void write_log_summary(Writer& writer, const LogSummary& value) {
+    writer.text(value.log_uid);
+    writer.text(value.owner_uid);
+    writer.text(value.title);
+    writer.text(value.state);
+    writer.u64(value.started_at_ns);
+    writer.u64(value.finished_at_ns);
+    writer.u8(value.has_exit_code ? 1 : 0);
+    writer.u32(static_cast<uint32_t>(value.exit_code));
+    writer.map(value.labels);
+    writer.text(value.message);
+}
+
+bool read_log_summary(Reader& reader, LogSummary* value) {
+    uint8_t has_exit_code = 0;
+    uint32_t exit_code = 0;
+    return value != nullptr && reader.text(&value->log_uid) && valid_uid(value->log_uid) &&
+           reader.text(&value->owner_uid) && valid_uid(value->owner_uid) &&
+           reader.text(&value->title) && reader.text(&value->state) &&
+           reader.u64(&value->started_at_ns) && reader.u64(&value->finished_at_ns) &&
+           reader.u8(&has_exit_code) && has_exit_code <= 1 &&
+           (value->has_exit_code = has_exit_code != 0, true) && reader.u32(&exit_code) &&
+           (value->exit_code = static_cast<int32_t>(exit_code), true) &&
+           reader.string_map(&value->labels) && reader.text(&value->message);
+}
+
 template <typename T, typename Callback> bool decode_all(const Bytes& bytes, T* out, Callback cb) {
     if (out == nullptr) {
         return false;
@@ -301,6 +328,65 @@ Bytes encode(const BulkDescriptor& value) {
     return writer.take();
 }
 
+Bytes encode(const ConfigResourceListRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceListResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceDescribeRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceDescribeResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceGetRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceGetResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourcePatchRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourcePatchResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceApplyRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceApplyResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+
+Bytes encode(const LogListResponse& value) {
+    Writer writer;
+    writer.u8(value.success ? 1 : 0);
+    writer.text(value.message);
+    writer.list<LogSummary>(value.logs, [&](const auto& log) { write_log_summary(writer, log); });
+    return writer.take();
+}
+
+Bytes encode(const LogReadRequest& value) {
+    Writer writer;
+    writer.text(value.log_uid);
+    writer.u64(value.cursor);
+    writer.u32(value.max_bytes);
+    return writer.take();
+}
+
+Bytes encode(const LogReadResponse& value) {
+    Writer writer;
+    writer.u8(value.success ? 1 : 0);
+    writer.text(value.message);
+    writer.text(value.log_uid);
+    writer.text(value.chunk);
+    writer.u64(value.next_cursor);
+    writer.u8(value.truncated ? 1 : 0);
+    writer.u8(value.eof ? 1 : 0);
+    return writer.take();
+}
+
 bool decode(const Bytes& bytes, EntityDirectory* value) {
     return decode_all(bytes, value, [](Reader& reader, auto* out) {
         return reader.text(&out->endpoint_uid) && valid_uid(out->endpoint_uid) &&
@@ -380,6 +466,68 @@ bool decode(const Bytes& bytes, BulkDescriptor* value) {
     return decode_all(bytes, value, [](Reader& reader, auto* out) {
         return reader.text(&out->media_type) && reader.text(&out->encoding) &&
                reader.string_map(&out->metadata) && reader.u64(&out->total_bytes);
+    });
+}
+
+bool decode(const Bytes& bytes, ConfigResourceListRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceListResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceDescribeRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceDescribeResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceGetRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceGetResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourcePatchRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourcePatchResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceApplyRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceApplyResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+
+bool decode(const Bytes& bytes, LogListResponse* value) {
+    return decode_all(bytes, value, [](Reader& reader, auto* out) {
+        uint8_t success = 0;
+        return reader.u8(&success) && success <= 1 && (out->success = success != 0, true) &&
+               reader.text(&out->message) &&
+               reader.list<LogSummary>(&out->logs,
+                                       [&](auto* log) { return read_log_summary(reader, log); });
+    });
+}
+
+bool decode(const Bytes& bytes, LogReadRequest* value) {
+    return decode_all(bytes, value, [](Reader& reader, auto* out) {
+        return reader.text(&out->log_uid) && valid_uid(out->log_uid) &&
+               reader.u64(&out->cursor) && reader.u32(&out->max_bytes) && out->max_bytes > 0;
+    });
+}
+
+bool decode(const Bytes& bytes, LogReadResponse* value) {
+    return decode_all(bytes, value, [](Reader& reader, auto* out) {
+        uint8_t success = 0;
+        uint8_t truncated = 0;
+        uint8_t eof = 0;
+        return reader.u8(&success) && success <= 1 && (out->success = success != 0, true) &&
+               reader.text(&out->message) && reader.text(&out->log_uid) &&
+               valid_uid(out->log_uid) && reader.text(&out->chunk) &&
+               reader.u64(&out->next_cursor) && reader.u8(&truncated) && truncated <= 1 &&
+               (out->truncated = truncated != 0, true) && reader.u8(&eof) && eof <= 1 &&
+               (out->eof = eof != 0, true);
     });
 }
 

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "yunlink/core/wire_v2.hpp"
+#include "yunlink/core/semantic/configuration/service_types.hpp"
 
 namespace yunlink::v2 {
 
@@ -79,6 +80,41 @@ struct BulkDescriptor {
     uint64_t total_bytes = 0;
 };
 
+struct LogSummary {
+    std::string log_uid;
+    std::string owner_uid;
+    std::string title;
+    std::string state;
+    uint64_t started_at_ns = 0;
+    uint64_t finished_at_ns = 0;
+    bool has_exit_code = false;
+    int32_t exit_code = 0;
+    std::map<std::string, std::string> labels;
+    std::string message;
+};
+
+struct LogListResponse {
+    bool success = false;
+    std::string message;
+    std::vector<LogSummary> logs;
+};
+
+struct LogReadRequest {
+    std::string log_uid;
+    uint64_t cursor = 0;
+    uint32_t max_bytes = 0;
+};
+
+struct LogReadResponse {
+    bool success = false;
+    std::string message;
+    std::string log_uid;
+    std::string chunk;
+    uint64_t next_cursor = 0;
+    bool truncated = false;
+    bool eof = false;
+};
+
 Bytes encode(const EntityDirectory& value);
 Bytes encode(const AttachmentRequest& value);
 Bytes encode(const AttachmentResponse& value);
@@ -88,6 +124,19 @@ Bytes encode(const StreamCatalog& value);
 Bytes encode(const StreamSubscription& value);
 Bytes encode(const ActionUpdate& value);
 Bytes encode(const BulkDescriptor& value);
+Bytes encode(const ConfigResourceListRequest& value);
+Bytes encode(const ConfigResourceListResponse& value);
+Bytes encode(const ConfigResourceDescribeRequest& value);
+Bytes encode(const ConfigResourceDescribeResponse& value);
+Bytes encode(const ConfigResourceGetRequest& value);
+Bytes encode(const ConfigResourceGetResponse& value);
+Bytes encode(const ConfigResourcePatchRequest& value);
+Bytes encode(const ConfigResourcePatchResponse& value);
+Bytes encode(const ConfigResourceApplyRequest& value);
+Bytes encode(const ConfigResourceApplyResponse& value);
+Bytes encode(const LogListResponse& value);
+Bytes encode(const LogReadRequest& value);
+Bytes encode(const LogReadResponse& value);
 
 bool decode(const Bytes& bytes, EntityDirectory* value);
 bool decode(const Bytes& bytes, AttachmentRequest* value);
@@ -98,6 +147,19 @@ bool decode(const Bytes& bytes, StreamCatalog* value);
 bool decode(const Bytes& bytes, StreamSubscription* value);
 bool decode(const Bytes& bytes, ActionUpdate* value);
 bool decode(const Bytes& bytes, BulkDescriptor* value);
+bool decode(const Bytes& bytes, ConfigResourceListRequest* value);
+bool decode(const Bytes& bytes, ConfigResourceListResponse* value);
+bool decode(const Bytes& bytes, ConfigResourceDescribeRequest* value);
+bool decode(const Bytes& bytes, ConfigResourceDescribeResponse* value);
+bool decode(const Bytes& bytes, ConfigResourceGetRequest* value);
+bool decode(const Bytes& bytes, ConfigResourceGetResponse* value);
+bool decode(const Bytes& bytes, ConfigResourcePatchRequest* value);
+bool decode(const Bytes& bytes, ConfigResourcePatchResponse* value);
+bool decode(const Bytes& bytes, ConfigResourceApplyRequest* value);
+bool decode(const Bytes& bytes, ConfigResourceApplyResponse* value);
+bool decode(const Bytes& bytes, LogListResponse* value);
+bool decode(const Bytes& bytes, LogReadRequest* value);
+bool decode(const Bytes& bytes, LogReadResponse* value);
 
 }  // namespace yunlink::v2
 

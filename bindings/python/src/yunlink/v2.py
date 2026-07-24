@@ -288,6 +288,9 @@ class Runtime:
         lib = self._lib
         lib.yunlink_v2_runtime_create.restype = ctypes.c_void_p
         lib.yunlink_v2_runtime_destroy.argtypes = [ctypes.c_void_p]
+        lib.yunlink_v2_runtime_destroy.restype = None
+        lib.yunlink_v2_runtime_stop.argtypes = [ctypes.c_void_p]
+        lib.yunlink_v2_runtime_stop.restype = None
         lib.yunlink_v2_runtime_start.argtypes = [ctypes.c_void_p, ctypes.POINTER(_RuntimeConfig)]
         lib.yunlink_v2_runtime_start.restype = ctypes.c_uint16
         lib.yunlink_v2_runtime_connect.argtypes = [
@@ -299,8 +302,20 @@ class Runtime:
         lib.yunlink_v2_runtime_connect.restype = ctypes.c_uint16
         lib.yunlink_v2_runtime_open_session.argtypes = [ctypes.c_void_p, _StringView]
         lib.yunlink_v2_runtime_open_session.restype = ctypes.c_uint64
+        lib.yunlink_v2_runtime_close_peer.argtypes = [ctypes.c_void_p, _StringView]
+        lib.yunlink_v2_runtime_close_peer.restype = None
+        lib.yunlink_v2_runtime_session_has_profile.argtypes = [
+            ctypes.c_void_p,
+            _StringView,
+            ctypes.c_uint64,
+            _StringView,
+            ctypes.c_uint16,
+        ]
+        lib.yunlink_v2_runtime_session_has_profile.restype = ctypes.c_uint8
         lib.yunlink_v2_runtime_subscribe.argtypes = [ctypes.c_void_p, _Callback, ctypes.c_void_p]
         lib.yunlink_v2_runtime_subscribe.restype = ctypes.c_uint64
+        lib.yunlink_v2_runtime_unsubscribe.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
+        lib.yunlink_v2_runtime_unsubscribe.restype = None
         lib.yunlink_v2_runtime_publish.argtypes = [
             ctypes.c_void_p,
             _StringView,
@@ -339,15 +354,17 @@ class Runtime:
 
         offered = profiles(config.profiles)
         required = profiles(config.required_profiles)
+        offered_view = offered if len(offered) else ctypes.POINTER(_ProfileView)()
+        required_view = required if len(required) else ctypes.POINTER(_ProfileView)()
         native = _RuntimeConfig(
             ctypes.sizeof(_RuntimeConfig),
             _view(strings[0]),
             _view(strings[1]),
             _view(strings[2]),
             config.tcp_listen_port,
-            offered,
+            offered_view,
             len(offered),
-            required,
+            required_view,
             len(required),
         )
         code = self._lib.yunlink_v2_runtime_start(self._runtime, ctypes.byref(native))
@@ -376,6 +393,21 @@ class Runtime:
         if not session_id:
             raise Error(8)
         return session_id
+
+    def close_peer(self, peer: Peer) -> None:
+        peer_id = _encoded(peer.peer_id)
+        self._lib.yunlink_v2_runtime_close_peer(self._runtime, _view(peer_id))
+
+    def session_has_profile(
+        self, peer: Peer, session_id: int, profile_id: str, major: int
+    ) -> bool:
+        peer_id = _encoded(peer.peer_id)
+        profile = _encoded(profile_id)
+        return bool(
+            self._lib.yunlink_v2_runtime_session_has_profile(
+                self._runtime, _view(peer_id), session_id, _view(profile), major
+            )
+        )
 
     def publish(
         self,
@@ -427,6 +459,7 @@ class Runtime:
             return
         if getattr(self, "_token", 0):
             self._lib.yunlink_v2_runtime_unsubscribe(self._runtime, self._token)
+            self._token = 0
         self._lib.yunlink_v2_runtime_stop(self._runtime)
         self._lib.yunlink_v2_runtime_destroy(self._runtime)
         self._runtime = None
