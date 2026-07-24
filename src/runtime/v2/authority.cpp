@@ -22,6 +22,9 @@ void send_status(Runtime::Impl* impl,
     response.message_id = impl->next_message_id.fetch_add(1);
     response.correlation_id = request.message_id;
     response.source.endpoint_uid = impl->config.endpoint_uid;
+    if (request.target.scope == TargetScope::kEntity && request.target.uids.size() == 1) {
+        response.source.entity_uid = request.target.uids.front();
+    }
     response.target = TargetSelector::endpoint(request.source.endpoint_uid);
     response.type = authority_status_type();
     response.created_at_ms = runtime_now_ms();

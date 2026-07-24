@@ -128,6 +128,13 @@ uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime,
     return result(code);
 }
 
+void yunlink_v2_runtime_close_peer(yunlink_v2_runtime_t* runtime,
+                                   yunlink_v2_string_view_t peer_id) {
+    if (runtime != nullptr) {
+        runtime->runtime.close_peer(copy(peer_id));
+    }
+}
+
 uint64_t yunlink_v2_runtime_open_session(yunlink_v2_runtime_t* runtime,
                                          yunlink_v2_string_view_t peer_id) {
     return runtime == nullptr ? 0 : runtime->runtime.open_session(copy(peer_id));

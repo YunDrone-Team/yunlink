@@ -395,6 +395,10 @@ impl Runtime {
             .ok_or(Error { code: 8 })
     }
 
+    pub fn close_peer(&self, peer: &Peer) {
+        unsafe { sys::yunlink_v2_runtime_close_peer(self.raw(), string_view(&peer.id)) };
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn publish(
         &self,

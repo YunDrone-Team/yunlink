@@ -114,6 +114,8 @@ YUNLINK_V2_API uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime
                                                   yunlink_v2_string_view_t ip,
                                                   uint16_t port,
                                                   yunlink_v2_peer_t* out_peer);
+YUNLINK_V2_API void yunlink_v2_runtime_close_peer(yunlink_v2_runtime_t* runtime,
+                                                  yunlink_v2_string_view_t peer_id);
 YUNLINK_V2_API uint64_t yunlink_v2_runtime_open_session(yunlink_v2_runtime_t* runtime,
                                                        yunlink_v2_string_view_t peer_id);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_publish(

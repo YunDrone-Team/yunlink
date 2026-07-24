@@ -127,6 +127,10 @@ extern "C" {
         port: u16,
         out_peer: *mut yunlink_v2_peer_t,
     ) -> u16;
+    pub fn yunlink_v2_runtime_close_peer(
+        runtime: *mut yunlink_v2_runtime_t,
+        peer_id: yunlink_v2_string_view_t,
+    );
     pub fn yunlink_v2_runtime_open_session(
         runtime: *mut yunlink_v2_runtime_t,
         peer_id: yunlink_v2_string_view_t,
