@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package com.yundrone.sunray.v1;
+
+import "org.yunlink.mobility/v1/mobility.proto";
+
+message VehicleCore {
+  bool armed = 1;
+  uint32 navigation_mode = 2;
+  org.yunlink.mobility.v1.Pose pose = 3;
+  org.yunlink.mobility.v1.Twist twist = 4;
+  float battery_percent = 5;
+}
+
+message Px4State {
+  bool connected = 1;
+  bool armed = 2;
+  string flight_mode = 3;
+  uint32 system_status = 4;
+  uint32 landed_state = 5;
+  float battery_voltage_v = 6;
+  float battery_current_a = 7;
+  float battery_percentage = 8;
+  org.yunlink.mobility.v1.Pose local_pose = 9;
+  org.yunlink.mobility.v1.Twist local_twist = 10;
+  org.yunlink.mobility.v1.Pose target_pose = 11;
+  bool target_valid = 12;
+}
+
+message OdomStatus {
+  uint64 source_stamp_ns = 1;
+  bool valid = 2;
+  uint32 source = 3;
+  uint32 quality = 4;
+  string message = 5;
+}
+
+message OdomState {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  bool valid = 3;
+  org.yunlink.mobility.v1.Odometry odometry = 4;
+  uint32 source = 5;
+}
+
+message UavControlFsmState {
+  uint64 source_stamp_ns = 1;
+  uint32 state = 2;
+  uint32 last_state = 3;
+  string detail = 4;
+}
+
+message UavControllerState {
+  uint64 source_stamp_ns = 1;
+  string controller_name = 2;
+  bool active = 3;
+  org.yunlink.mobility.v1.Vector3 position_error = 4;
+  org.yunlink.mobility.v1.Vector3 velocity_error = 5;
+  org.yunlink.mobility.v1.Vector3 output = 6;
+}
+
+message UavControl {
+  uint32 control_cmd = 1;
+  org.yunlink.mobility.v1.Vector3 desired_position_m = 2;
+  org.yunlink.mobility.v1.Vector3 desired_velocity_mps = 3;
+  org.yunlink.mobility.v1.Vector3 desired_acceleration_mps2 = 4;
+  double desired_yaw_rad = 5;
+  double desired_yaw_rate_radps = 6;
+  uint32 yaw_mode = 7;
+  uint32 controller_type = 8;
+}
+
+message UavControlState {
+  uint64 source_stamp_ns = 1;
+  bool command_valid = 2;
+  UavControl active_command = 3;
+  uint32 fsm_state = 4;
+  string diagnostic = 5;
+}
+
+message UgvControl {
+  uint32 control_cmd = 1;
+  org.yunlink.mobility.v1.Vector3 desired_position_m = 2;
+  org.yunlink.mobility.v1.Vector3 desired_velocity_mps = 3;
+  org.yunlink.mobility.v1.Twist body_twist = 4;
+  double desired_yaw_rad = 5;
+  double desired_wgs84_latitude_deg = 6;
+  double desired_wgs84_longitude_deg = 7;
+  double desired_wgs84_altitude_m = 8;
+}
+
+message UgvControlState {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string agent_name = 3;
+  uint32 agent_id = 4;
+  uint32 drive_type = 5;
+  bool command_valid = 6;
+  bool inside_geo_fence = 7;
+  uint32 diagnostic_level = 8;
+  string diagnostic_message = 9;
+  uint32 fsm_state = 10;
+  UgvControl active_command = 11;
+  org.yunlink.mobility.v1.Odometry odometry = 12;
+  org.yunlink.mobility.v1.Pose target_pose = 13;
+  org.yunlink.mobility.v1.Twist controller_output = 14;
+}
+
+message GimbalParams {
+  uint64 source_stamp_ns = 1;
+  double roll_rad = 2;
+  double pitch_rad = 3;
+  double yaw_rad = 4;
+  double zoom = 5;
+  uint32 mode = 6;
+}
+
+message RuntimeDiagnostic {
+  uint64 source_stamp_ns = 1;
+  uint32 level = 2;
+  string component = 3;
+  string message = 4;
+  map<string, string> values = 5;
+}
+
+message VehicleEvent {
+  uint64 source_stamp_ns = 1;
+  string kind = 2;
+  uint32 code = 3;
+  string message = 4;
+  map<string, string> attributes = 5;
+}
+
+message EmptyGoal {}
+
+message FormationTaskGoal {
+  string group_uid = 1;
+  uint32 formation_shape = 2;
+  double spacing_m = 3;
+  string label = 4;
+}
+
+message FeatureDescriptor {
+  string name = 1;
+  string display_name = 2;
+  string group_name = 3;
+  string group_display_name = 4;
+  string description = 5;
+  bool core_feature = 6;
+  bool example_feature = 7;
+  bool basic_feature = 8;
+  bool auto_start = 9;
+  bool check_feature_state = 10;
+  uint32 runtime_state = 11;
+  string runtime_error = 12;
+  repeated string depends_on = 13;
+  repeated string start_preview_units = 14;
+  repeated string start_preview_commands = 15;
+}
+
+message FeatureListRequest {}
+message FeatureListResponse {
+  bool success = 1;
+  string message = 2;
+  repeated FeatureDescriptor features = 3;
+}
+message FeatureGetRequest { string name = 1; }
+message FeatureGetResponse {
+  bool success = 1;
+  string message = 2;
+  FeatureDescriptor feature = 3;
+  bool running = 4;
+}
+message FeatureStartRequest { string name = 1; }
+message FeatureStartResponse {
+  bool success = 1;
+  string message = 2;
+  string name = 3;
+}
+message FeatureStopRequest { string name = 1; }
+message FeatureStopResponse {
+  bool success = 1;
+  string message = 2;
+  string name = 3;
+}

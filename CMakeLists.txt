@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
-project(yunlink VERSION 0.1.0 LANGUAGES CXX)
+project(yunlink VERSION 2.0.0 LANGUAGES CXX)
 
 option(YUNLINK_BUILD_EXAMPLES "Build examples" ON)
 option(YUNLINK_BUILD_TESTS "Build tests" ON)
 option(YUNLINK_ENABLE_CLANG_TIDY "Run clang-tidy during C++ compilation" OFF)
+option(YUNLINK_BUILD_PROFILES "Build optional Protobuf profiles" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -76,6 +77,16 @@ if (NOT EXISTS ${YUNLINK_ASIO_INCLUDE_DIR}/asio.hpp)
 endif()
 
 set(YUNLINK_LIBRARY_SOURCES
+  src/core/wire_v2.cpp
+  src/core/wire_v2_codec.cpp
+  src/core/core_messages_v2.cpp
+  src/runtime/v2/runtime.cpp
+  src/runtime/v2/runtime_common.cpp
+  src/runtime/v2/runtime_network.cpp
+  src/runtime/v2/session.cpp
+  src/runtime/v2/authority.cpp
+  src/c/v2/runtime.cpp
+  src/discovery/discovery_v2.cpp
   src/core/event_bus.cpp
   src/core/packet_trace.cpp
   src/core/protocol_codec.cpp
@@ -163,8 +174,12 @@ target_compile_definitions(yunlink_ffi PRIVATE YUNLINK_FFI_SHARED_BUILD=1)
 set_target_properties(yunlink_ffi PROPERTIES
   OUTPUT_NAME yunlink_ffi
   VERSION ${PROJECT_VERSION}
-  SOVERSION 1
+  SOVERSION 2
 )
+
+if (YUNLINK_BUILD_PROFILES)
+  add_subdirectory(profiles)
+endif()
 
 if (WIN32)
   target_link_libraries(yunlink PRIVATE ws2_32)
@@ -205,6 +220,26 @@ if (YUNLINK_BUILD_TESTS)
   add_executable(test_protocol tests/test_protocol.cpp)
   target_link_libraries(test_protocol PRIVATE yunlink)
   add_test(NAME test_protocol COMMAND test_protocol)
+
+  add_executable(test_wire_v2 tests/core/test_wire_v2.cpp)
+  target_link_libraries(test_wire_v2 PRIVATE yunlink)
+  add_test(NAME test_wire_v2 COMMAND test_wire_v2)
+
+  add_executable(test_core_messages_v2 tests/core/test_core_messages_v2.cpp)
+  target_link_libraries(test_core_messages_v2 PRIVATE yunlink)
+  add_test(NAME test_core_messages_v2 COMMAND test_core_messages_v2)
+
+  add_executable(test_discovery_v2 tests/core/test_discovery_v2.cpp)
+  target_link_libraries(test_discovery_v2 PRIVATE yunlink)
+  add_test(NAME test_discovery_v2 COMMAND test_discovery_v2)
+
+  add_executable(test_runtime_v2 tests/runtime/test_runtime_v2.cpp)
+  target_link_libraries(test_runtime_v2 PRIVATE yunlink)
+  add_test(NAME test_runtime_v2 COMMAND test_runtime_v2)
+
+  add_executable(test_c_ffi_v2 tests/bindings/test_c_ffi_v2.cpp)
+  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink)
+  add_test(NAME test_c_ffi_v2 COMMAND test_c_ffi_v2)
 
   add_executable(test_parser tests/test_parser.cpp)
   target_link_libraries(test_parser PRIVATE yunlink)

@@ -14,6 +14,7 @@ mod runtime;
 mod runtime_logs;
 mod runtime_system_service;
 mod types;
+pub mod v2;
 
 pub use configuration::{
     ConfigApplyOutcome, ConfigApplyRequirement, ConfigChoice, ConfigEffects, ConfigFieldError,

@@ -13,6 +13,7 @@ Thumbs.db
 build/
 build-clang-tidy/
 build_*/
+build-*/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt

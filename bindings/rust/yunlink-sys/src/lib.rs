@@ -17,6 +17,7 @@ mod functions;
 mod managed_entities;
 mod runtime_logs;
 mod types;
+pub mod v2;
 
 pub use configuration::*;
 pub use constants::*;

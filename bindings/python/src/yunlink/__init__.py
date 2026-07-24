@@ -61,6 +61,7 @@ from .types import (
     TargetSelector,
     VehicleCoreState,
 )
+from . import v2
 
 __all__ = [
     "AgentType",
@@ -110,4 +111,5 @@ __all__ = [
     "VehicleCoreState",
     "VehicleCoreStateEvent",
     "YunlinkError",
+    "v2",
 ]
