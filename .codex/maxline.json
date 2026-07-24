@@ -2,27 +2,12 @@
   "max_lines": 300,
   "max_files_per_dir": 12,
   "max_lines_overrides": {
-    "bindings/rust/yunlink/src/events.rs": 1400,
-    "bindings/rust/yunlink-sys/src/events.rs": 720,
-    "src/c/abi/runtime/event_queue.cpp": 700,
-    "bindings/rust/yunlink-sys/src/types.rs": 400,
-    "include/yunlink/c/abi/types.h": 550,
-    "bindings/rust/yunlink/src/runtime.rs": 400,
-    "include/yunlink/runtime/runtime_class.hpp": 400,
-    "bindings/rust/yunlink-sys/src/functions.rs": 400,
-    "src/runtime/system_service/publish.cpp": 400,
-    "src/discovery/endpoint_codec.cpp": 400,
-    "src/discovery/endpoint_active_codec.cpp": 360,
-    "src/core/semantic_messages_system_service.cpp": 350,
-    "include/yunlink/core/semantic/state_types.hpp": 340,
-    "include/yunlink/c/abi/functions.h": 340,
-    "src/runtime/core/internal.hpp": 340,
-    "src/runtime/core/lifecycle.cpp": 370,
-    "bindings/rust/yunlink/src/types.rs": 400,
-    "bindings/python/src/yunlink/runtime.py": 400,
-    "bindings/python/src/ffi_module.cpp": 380,
-    "bindings/python/src/managed_entity_bridge.cpp": 340,
-    "src/c/abi/commands/system_service.cpp": 340
+    "src/core/core_messages_v2.cpp": 600,
+    "bindings/rust/yunlink/src/v2.rs": 560,
+    "bindings/python/src/yunlink/v2.py": 520,
+    "src/discovery/discovery_v2.cpp": 440,
+    "src/runtime/v2/runtime.cpp": 340,
+    "src/core/wire_v2_codec.cpp": 340
   },
   "include_exts": ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "py", "rs"],
   "scan_roots": [
@@ -48,7 +33,5 @@
     "dist",
     "thirdparty"
   ],
-  "exclude_globs": [
-    "tools/sunray_yunlink_compare_ui/build/**"
-  ]
+  "exclude_globs": []
 }

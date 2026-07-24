@@ -3,7 +3,7 @@
 #ifndef YUNLINK_CORE_CONFIGURATION_SERVICE_CODEC_IO_HPP
 #define YUNLINK_CORE_CONFIGURATION_SERVICE_CODEC_IO_HPP
 
-#include "../semantic_codec_io.hpp"
+#include "../binary_codec_io.hpp"
 
 #include <utility>
 

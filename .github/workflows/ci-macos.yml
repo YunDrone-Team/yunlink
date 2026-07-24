@@ -19,6 +19,9 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install Protobuf
+        run: brew install protobuf
+
       - name: Configure
         run: cmake --preset ci-ninja
 
@@ -27,6 +30,15 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build/ci-ninja --output-on-failure
+
+      - name: Configure Profiles
+        run: cmake --preset ci-ninja-profiles
+
+      - name: Build Profiles
+        run: python3 tools/build_fast.py --preset ci-ninja-profiles
+
+      - name: Test Profiles
+        run: ctest --test-dir build/ci-ninja-profiles --output-on-failure
 
   bindings:
     runs-on: macos-latest
@@ -56,7 +68,7 @@ jobs:
 
       - name: Test Rust Bindings
         run: |
-          cargo test -p yunlink --manifest-path bindings/rust/Cargo.toml
+          cargo test --workspace --manifest-path bindings/rust/Cargo.toml
 
       - name: Test Python Bindings
         shell: bash

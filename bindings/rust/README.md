@@ -1,12 +1,12 @@
-# Rust Bindings Workspace
+# Rust Workspace
 
-本 workspace 拆分为两层：
+- `yunlink-sys`: ABI 2 declarations and native build/link integration.
+- `yunlink`: owned safe facade with generic family events.
+- `yunlink-profiles`: generated Mobility and Sunray Protobuf messages.
 
-- `yunlink-sys`
-  手写的 FFI declarations + CMake build/link 探测。
-- `yunlink`
-  Tokio-first 的高层 Rust API。
+The safe facade copies every callback-lifetime view and payload. Test all three
+crates with:
 
-面向使用者的说明见 [Rust SDK 指南](../../docs/bindings/rust-sdk.md)。
-
-面向维护者的路线见 [Rust 绑定开发路线](../../docs/developer/rust-bindings-development.md)。如果你还不熟悉 C ABI 和 `yunlink-sys` 的关系，建议先读 [开发者文档入口](../../docs/developer/README.md)。
+```bash
+cargo test --workspace --manifest-path bindings/rust/Cargo.toml
+```

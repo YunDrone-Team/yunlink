@@ -10,8 +10,8 @@ namespace yunlink {
 
 using ByteBuffer = std::vector<uint8_t>;
 
-#define YUNLINK_CONFIG_CODEC(Type)                  \
-    ByteBuffer encode_payload(const Type& value);   \
+#define YUNLINK_CONFIG_CODEC(Type)                                                                 \
+    ByteBuffer encode_payload(const Type& value);                                                  \
     bool decode_payload(const ByteBuffer& bytes, Type* value)
 
 YUNLINK_CONFIG_CODEC(ConfigResourceListRequest);

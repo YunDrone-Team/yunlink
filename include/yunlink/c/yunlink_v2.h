@@ -108,45 +108,43 @@ YUNLINK_V2_API uint32_t yunlink_v2_abi_version(void);
 YUNLINK_V2_API yunlink_v2_runtime_t* yunlink_v2_runtime_create(void);
 YUNLINK_V2_API void yunlink_v2_runtime_destroy(yunlink_v2_runtime_t* runtime);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_start(yunlink_v2_runtime_t* runtime,
-                                                const yunlink_v2_runtime_config_t* config);
+                                                 const yunlink_v2_runtime_config_t* config);
 YUNLINK_V2_API void yunlink_v2_runtime_stop(yunlink_v2_runtime_t* runtime);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime,
-                                                  yunlink_v2_string_view_t ip,
-                                                  uint16_t port,
-                                                  yunlink_v2_peer_t* out_peer);
+                                                   yunlink_v2_string_view_t ip,
+                                                   uint16_t port,
+                                                   yunlink_v2_peer_t* out_peer);
 YUNLINK_V2_API void yunlink_v2_runtime_close_peer(yunlink_v2_runtime_t* runtime,
                                                   yunlink_v2_string_view_t peer_id);
 YUNLINK_V2_API uint64_t yunlink_v2_runtime_open_session(yunlink_v2_runtime_t* runtime,
-                                                       yunlink_v2_string_view_t peer_id);
+                                                        yunlink_v2_string_view_t peer_id);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_session_endpoint_uid(const yunlink_v2_runtime_t* runtime,
                                                                 yunlink_v2_string_view_t peer_id,
                                                                 uint64_t session_id,
                                                                 char* out_uid,
                                                                 size_t out_uid_capacity);
-YUNLINK_V2_API uint16_t yunlink_v2_runtime_publish(
-    yunlink_v2_runtime_t* runtime,
-    yunlink_v2_string_view_t peer_id,
-    uint64_t session_id,
-    uint8_t family,
-    uint8_t operation,
-    yunlink_v2_target_view_t target,
-    yunlink_v2_type_ref_view_t type_ref,
-    yunlink_v2_bytes_view_t payload,
-    uint64_t correlation_id,
-    uint32_t ttl_ms,
-    uint8_t qos_class,
-    yunlink_v2_string_view_t source_entity_uid,
-    yunlink_v2_message_handle_t* out_handle);
+YUNLINK_V2_API uint16_t yunlink_v2_runtime_publish(yunlink_v2_runtime_t* runtime,
+                                                   yunlink_v2_string_view_t peer_id,
+                                                   uint64_t session_id,
+                                                   uint8_t family,
+                                                   uint8_t operation,
+                                                   yunlink_v2_target_view_t target,
+                                                   yunlink_v2_type_ref_view_t type_ref,
+                                                   yunlink_v2_bytes_view_t payload,
+                                                   uint64_t correlation_id,
+                                                   uint32_t ttl_ms,
+                                                   uint8_t qos_class,
+                                                   yunlink_v2_string_view_t source_entity_uid,
+                                                   yunlink_v2_message_handle_t* out_handle);
 YUNLINK_V2_API uint64_t yunlink_v2_runtime_subscribe(yunlink_v2_runtime_t* runtime,
-                                                    yunlink_v2_event_callback_t callback,
-                                                    void* user_data);
+                                                     yunlink_v2_event_callback_t callback,
+                                                     void* user_data);
 YUNLINK_V2_API void yunlink_v2_runtime_unsubscribe(yunlink_v2_runtime_t* runtime, uint64_t token);
-YUNLINK_V2_API uint8_t yunlink_v2_runtime_session_has_profile(
-    const yunlink_v2_runtime_t* runtime,
-    yunlink_v2_string_view_t peer_id,
-    uint64_t session_id,
-    yunlink_v2_string_view_t profile_id,
-    uint16_t major);
+YUNLINK_V2_API uint8_t yunlink_v2_runtime_session_has_profile(const yunlink_v2_runtime_t* runtime,
+                                                              yunlink_v2_string_view_t peer_id,
+                                                              uint64_t session_id,
+                                                              yunlink_v2_string_view_t profile_id,
+                                                              uint16_t major);
 
 #ifdef __cplusplus
 }

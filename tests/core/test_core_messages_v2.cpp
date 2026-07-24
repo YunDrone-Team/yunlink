@@ -40,8 +40,8 @@ int main() {
 
     StreamSample sample;
     sample.stream_uid = "entity.stream.raw";
-    sample.encoding = "ros1";
-    sample.metadata = {{"ros.type", "sensor_msgs/PointCloud2"}, {"ros.md5", "abcd"}};
+    sample.encoding = "application/json";
+    sample.metadata = {{"schema.name", "example/PointCloud"}, {"schema.digest", "abcd"}};
     sample.source_timestamp_ns = 123456789;
     sample.sequence = 42;
     sample.data = {0, 1, 2, 255};

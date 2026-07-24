@@ -543,16 +543,16 @@ bool decode(const Bytes& bytes, LogListResponse* value) {
     return decode_all(bytes, value, [](Reader& reader, auto* out) {
         uint8_t success = 0;
         return reader.u8(&success) && success <= 1 && (out->success = success != 0, true) &&
-               reader.text(&out->message) &&
-               reader.list<LogSummary>(&out->logs,
-                                       [&](auto* log) { return read_log_summary(reader, log); });
+               reader.text(&out->message) && reader.list<LogSummary>(&out->logs, [&](auto* log) {
+                   return read_log_summary(reader, log);
+               });
     });
 }
 
 bool decode(const Bytes& bytes, LogReadRequest* value) {
     return decode_all(bytes, value, [](Reader& reader, auto* out) {
-        return reader.text(&out->log_uid) && valid_uid(out->log_uid) &&
-               reader.u64(&out->cursor) && reader.u32(&out->max_bytes) && out->max_bytes > 0;
+        return reader.text(&out->log_uid) && valid_uid(out->log_uid) && reader.u64(&out->cursor) &&
+               reader.u32(&out->max_bytes) && out->max_bytes > 0;
     });
 }
 

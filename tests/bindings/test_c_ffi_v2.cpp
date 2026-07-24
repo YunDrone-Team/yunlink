@@ -39,8 +39,8 @@ int main() {
     assert(yunlink_v2_runtime_start(client, &client_config) == 0);
 
     char endpoint_uid[129]{};
-    assert(yunlink_v2_runtime_session_endpoint_uid(client, text("missing"), 1, endpoint_uid,
-                                                   sizeof(endpoint_uid)) != 0);
+    assert(yunlink_v2_runtime_session_endpoint_uid(
+               client, text("missing"), 1, endpoint_uid, sizeof(endpoint_uid)) != 0);
     yunlink_v2_peer_t peer{};
     assert(yunlink_v2_runtime_connect(client, text("127.0.0.1"), 19701, &peer) == 0);
     const auto session_id = yunlink_v2_runtime_open_session(client, text(peer.id));
@@ -54,8 +54,8 @@ int main() {
     assert(endpoint_result == 0);
     assert(std::strcmp(endpoint_uid, "ffi.server") == 0);
     char short_uid[2]{};
-    assert(yunlink_v2_runtime_session_endpoint_uid(client, text(peer.id), session_id, short_uid,
-                                                   sizeof(short_uid)) != 0);
+    assert(yunlink_v2_runtime_session_endpoint_uid(
+               client, text(peer.id), session_id, short_uid, sizeof(short_uid)) != 0);
 
     yunlink_v2_runtime_stop(client);
     yunlink_v2_runtime_stop(server);

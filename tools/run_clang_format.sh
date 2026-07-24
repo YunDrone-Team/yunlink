@@ -33,14 +33,14 @@ list_cpp_files() {
   if command -v rg >/dev/null 2>&1; then
     (
       cd "${ROOT_DIR}"
-      rg --files include src examples tests | rg '\.(hpp|h|cpp)$'
+      rg --files include src tests | rg '\.(hpp|h|cpp)$'
     )
     return 0
   fi
 
   (
     cd "${ROOT_DIR}"
-    find include src examples tests -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.cpp' \) |
+    find include src tests -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.cpp' \) |
       LC_ALL=C sort
   )
 }
@@ -51,7 +51,7 @@ while IFS= read -r file; do
 done < <(list_cpp_files)
 
 if [[ ${#CPP_FILES[@]} -eq 0 ]]; then
-  echo "no C++ files found under include/src/examples/tests" >&2
+  echo "no C++ files found under include/src/tests" >&2
   exit 1
 fi
 

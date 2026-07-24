@@ -54,8 +54,8 @@ fn main() {
         .arg("-G")
         .arg(&generator)
         .arg(format!("-DCMAKE_BUILD_TYPE={build_type}"))
-        .arg("-DYUNLINK_BUILD_EXAMPLES=OFF")
-        .arg("-DYUNLINK_BUILD_TESTS=OFF"));
+        .arg("-DYUNLINK_BUILD_TESTS=OFF")
+        .arg("-DYUNLINK_BUILD_PROFILES=OFF"));
 
     run(Command::new("cmake")
         .arg("--build")

@@ -1,4 +1,21 @@
-find_package(Protobuf 3.6 REQUIRED)
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_program(YUNLINK_PROTOC_EXECUTABLE protoc)
+set(YUNLINK_PROTOBUF_HINTS)
+if (YUNLINK_PROTOC_EXECUTABLE)
+  get_filename_component(YUNLINK_PROTOC_BIN_DIR "${YUNLINK_PROTOC_EXECUTABLE}" DIRECTORY)
+  get_filename_component(YUNLINK_PROTOC_PREFIX "${YUNLINK_PROTOC_BIN_DIR}" DIRECTORY)
+  list(APPEND YUNLINK_PROTOBUF_HINTS
+    "${YUNLINK_PROTOC_PREFIX}/lib/cmake/protobuf"
+    "${YUNLINK_PROTOC_PREFIX}/lib64/cmake/protobuf"
+  )
+endif()
+find_package(Protobuf CONFIG QUIET NAMES protobuf HINTS ${YUNLINK_PROTOBUF_HINTS})
+if (Protobuf_FOUND AND Protobuf_VERSION VERSION_LESS 3.6)
+  message(FATAL_ERROR "Protobuf 3.6 or newer is required")
+endif()
+if (NOT Protobuf_FOUND)
+  find_package(Protobuf 3.6 REQUIRED)
+endif()
 
 set(YUNLINK_PROFILE_PROTO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(PROTOBUF_IMPORT_DIRS ${YUNLINK_PROFILE_PROTO_ROOT})
