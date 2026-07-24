@@ -25,6 +25,7 @@ def test_runtime_v2_stream_roundtrip():
         ):
             time.sleep(0.02)
         assert sink.session_has_profile(peer, session_id, PROFILE.profile_id, PROFILE.major)
+        assert sink.session_endpoint_uid(peer, session_id) == "endpoint.source"
 
         handle = sink.publish(
             peer,

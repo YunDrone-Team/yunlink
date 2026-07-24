@@ -472,6 +472,20 @@ impl Runtime {
             ) != 0
         }
     }
+
+    pub fn session_endpoint_uid(&self, peer: &Peer, session_id: u64) -> Result<String> {
+        let mut uid = [0_i8; 129];
+        ensure(unsafe {
+            sys::yunlink_v2_runtime_session_endpoint_uid(
+                self.raw(),
+                string_view(&peer.id),
+                session_id,
+                uid.as_mut_ptr(),
+                uid.len(),
+            )
+        })?;
+        Ok(c_buffer(&uid))
+    }
 }
 
 impl Drop for Runtime {

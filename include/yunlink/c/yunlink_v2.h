@@ -118,6 +118,11 @@ YUNLINK_V2_API void yunlink_v2_runtime_close_peer(yunlink_v2_runtime_t* runtime,
                                                   yunlink_v2_string_view_t peer_id);
 YUNLINK_V2_API uint64_t yunlink_v2_runtime_open_session(yunlink_v2_runtime_t* runtime,
                                                        yunlink_v2_string_view_t peer_id);
+YUNLINK_V2_API uint16_t yunlink_v2_runtime_session_endpoint_uid(const yunlink_v2_runtime_t* runtime,
+                                                                yunlink_v2_string_view_t peer_id,
+                                                                uint64_t session_id,
+                                                                char* out_uid,
+                                                                size_t out_uid_capacity);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_publish(
     yunlink_v2_runtime_t* runtime,
     yunlink_v2_string_view_t peer_id,

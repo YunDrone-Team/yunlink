@@ -140,6 +140,27 @@ uint64_t yunlink_v2_runtime_open_session(yunlink_v2_runtime_t* runtime,
     return runtime == nullptr ? 0 : runtime->runtime.open_session(copy(peer_id));
 }
 
+uint16_t yunlink_v2_runtime_session_endpoint_uid(const yunlink_v2_runtime_t* runtime,
+                                                 yunlink_v2_string_view_t peer_id,
+                                                 uint64_t session_id,
+                                                 char* out_uid,
+                                                 size_t out_uid_capacity) {
+    if (runtime == nullptr || out_uid == nullptr || out_uid_capacity == 0) {
+        return result(yunlink::v2::ErrorCode::kInvalidArgument);
+    }
+    yunlink::v2::SessionInfo session;
+    if (!runtime->runtime.session(copy(peer_id), session_id, &session) ||
+        session.remote_endpoint_uid.empty()) {
+        return result(yunlink::v2::ErrorCode::kNotFound);
+    }
+    if (session.remote_endpoint_uid.size() + 1 > out_uid_capacity) {
+        return result(yunlink::v2::ErrorCode::kInvalidArgument);
+    }
+    std::memcpy(out_uid, session.remote_endpoint_uid.data(), session.remote_endpoint_uid.size());
+    out_uid[session.remote_endpoint_uid.size()] = '\0';
+    return result(yunlink::v2::ErrorCode::kOk);
+}
+
 uint16_t yunlink_v2_runtime_publish(yunlink_v2_runtime_t* runtime,
                                     yunlink_v2_string_view_t peer_id,
                                     uint64_t session_id,

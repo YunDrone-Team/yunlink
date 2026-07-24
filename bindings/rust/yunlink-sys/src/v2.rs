@@ -135,6 +135,13 @@ extern "C" {
         runtime: *mut yunlink_v2_runtime_t,
         peer_id: yunlink_v2_string_view_t,
     ) -> u64;
+    pub fn yunlink_v2_runtime_session_endpoint_uid(
+        runtime: *const yunlink_v2_runtime_t,
+        peer_id: yunlink_v2_string_view_t,
+        session_id: u64,
+        out_uid: *mut c_char,
+        out_uid_capacity: usize,
+    ) -> u16;
     pub fn yunlink_v2_runtime_publish(
         runtime: *mut yunlink_v2_runtime_t,
         peer_id: yunlink_v2_string_view_t,

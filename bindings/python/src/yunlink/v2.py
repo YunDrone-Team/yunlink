@@ -302,6 +302,14 @@ class Runtime:
         lib.yunlink_v2_runtime_connect.restype = ctypes.c_uint16
         lib.yunlink_v2_runtime_open_session.argtypes = [ctypes.c_void_p, _StringView]
         lib.yunlink_v2_runtime_open_session.restype = ctypes.c_uint64
+        lib.yunlink_v2_runtime_session_endpoint_uid.argtypes = [
+            ctypes.c_void_p,
+            _StringView,
+            ctypes.c_uint64,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+        ]
+        lib.yunlink_v2_runtime_session_endpoint_uid.restype = ctypes.c_uint16
         lib.yunlink_v2_runtime_close_peer.argtypes = [ctypes.c_void_p, _StringView]
         lib.yunlink_v2_runtime_close_peer.restype = None
         lib.yunlink_v2_runtime_session_has_profile.argtypes = [
@@ -397,6 +405,16 @@ class Runtime:
     def close_peer(self, peer: Peer) -> None:
         peer_id = _encoded(peer.peer_id)
         self._lib.yunlink_v2_runtime_close_peer(self._runtime, _view(peer_id))
+
+    def session_endpoint_uid(self, peer: Peer, session_id: int) -> str:
+        peer_id = _encoded(peer.peer_id)
+        uid = ctypes.create_string_buffer(129)
+        code = self._lib.yunlink_v2_runtime_session_endpoint_uid(
+            self._runtime, _view(peer_id), session_id, uid, len(uid)
+        )
+        if code:
+            raise Error(code)
+        return uid.value.decode("ascii")
 
     def session_has_profile(
         self, peer: Peer, session_id: int, profile_id: str, major: int
