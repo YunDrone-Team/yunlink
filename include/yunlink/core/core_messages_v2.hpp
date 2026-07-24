@@ -66,6 +66,15 @@ struct StreamSubscription {
     uint32_t max_payload_bytes = 0;
 };
 
+struct StreamSample {
+    std::string stream_uid;
+    std::string encoding;
+    std::map<std::string, std::string> metadata;
+    uint64_t source_timestamp_ns = 0;
+    uint64_t sequence = 0;
+    Bytes data;
+};
+
 struct ActionUpdate {
     ActionPhase phase = ActionPhase::kReceived;
     uint16_t result_code = 0;
@@ -122,6 +131,7 @@ Bytes encode(const AuthorityRequest& value);
 Bytes encode(const AuthorityStatus& value);
 Bytes encode(const StreamCatalog& value);
 Bytes encode(const StreamSubscription& value);
+Bytes encode(const StreamSample& value);
 Bytes encode(const ActionUpdate& value);
 Bytes encode(const BulkDescriptor& value);
 Bytes encode(const ConfigResourceListRequest& value);
@@ -145,6 +155,7 @@ bool decode(const Bytes& bytes, AuthorityRequest* value);
 bool decode(const Bytes& bytes, AuthorityStatus* value);
 bool decode(const Bytes& bytes, StreamCatalog* value);
 bool decode(const Bytes& bytes, StreamSubscription* value);
+bool decode(const Bytes& bytes, StreamSample* value);
 bool decode(const Bytes& bytes, ActionUpdate* value);
 bool decode(const Bytes& bytes, BulkDescriptor* value);
 bool decode(const Bytes& bytes, ConfigResourceListRequest* value);

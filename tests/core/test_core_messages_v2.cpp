@@ -38,6 +38,23 @@ int main() {
     assert(decode(encode(catalog), &decoded_catalog));
     assert(decoded_catalog.streams.front().type.type_name == "Odometry");
 
+    StreamSample sample;
+    sample.stream_uid = "entity.stream.raw";
+    sample.encoding = "ros1";
+    sample.metadata = {{"ros.type", "sensor_msgs/PointCloud2"}, {"ros.md5", "abcd"}};
+    sample.source_timestamp_ns = 123456789;
+    sample.sequence = 42;
+    sample.data = {0, 1, 2, 255};
+    StreamSample decoded_sample;
+    const Bytes encoded_sample = encode(sample);
+    assert(decode(encoded_sample, &decoded_sample));
+    assert(decoded_sample.stream_uid == sample.stream_uid);
+    assert(decoded_sample.metadata == sample.metadata);
+    assert(decoded_sample.data == sample.data);
+    Bytes truncated_sample = encoded_sample;
+    truncated_sample.pop_back();
+    assert(!decode(truncated_sample, &decoded_sample));
+
     yunlink::ConfigResourceGetResponse configuration;
     configuration.status = yunlink::ConfigServiceStatus::kOk;
     configuration.message = "ok";

@@ -65,6 +65,15 @@ class Writer {
         }
         return valid_;
     }
+    bool bytes(const Bytes& value) {
+        if (value.size() > UINT32_MAX) {
+            valid_ = false;
+            return false;
+        }
+        u32(static_cast<uint32_t>(value.size()));
+        data_.insert(data_.end(), value.begin(), value.end());
+        return true;
+    }
     Bytes take() {
         return valid_ ? std::move(data_) : Bytes{};
     }
@@ -159,6 +168,16 @@ class Reader {
                 return false;
             }
         }
+        return true;
+    }
+    bool bytes(Bytes* value) {
+        uint32_t size = 0;
+        if (value == nullptr || !u32(&size) || cursor_ + size > bytes_.size()) {
+            return false;
+        }
+        value->assign(bytes_.begin() + static_cast<std::ptrdiff_t>(cursor_),
+                      bytes_.begin() + static_cast<std::ptrdiff_t>(cursor_ + size));
+        cursor_ += size;
         return true;
     }
     bool done() const {
@@ -310,6 +329,17 @@ Bytes encode(const StreamSubscription& value) {
     return writer.take();
 }
 
+Bytes encode(const StreamSample& value) {
+    Writer writer;
+    writer.text(value.stream_uid);
+    writer.text(value.encoding);
+    writer.map(value.metadata);
+    writer.u64(value.source_timestamp_ns);
+    writer.u64(value.sequence);
+    writer.bytes(value.data);
+    return writer.take();
+}
+
 Bytes encode(const ActionUpdate& value) {
     Writer writer;
     writer.u8(static_cast<uint8_t>(value.phase));
@@ -448,6 +478,15 @@ bool decode(const Bytes& bytes, StreamSubscription* value) {
     return decode_all(bytes, value, [](Reader& reader, auto* out) {
         return reader.text(&out->stream_uid) && valid_uid(out->stream_uid) &&
                reader.f32(&out->max_rate_hz) && reader.u32(&out->max_payload_bytes);
+    });
+}
+
+bool decode(const Bytes& bytes, StreamSample* value) {
+    return decode_all(bytes, value, [](Reader& reader, auto* out) {
+        return reader.text(&out->stream_uid) && valid_uid(out->stream_uid) &&
+               reader.text(&out->encoding) && reader.string_map(&out->metadata) &&
+               reader.u64(&out->source_timestamp_ns) && reader.u64(&out->sequence) &&
+               reader.bytes(&out->data);
     });
 }
 
