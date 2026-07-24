@@ -28,7 +28,13 @@ int main() {
     std::condition_variable changed;
     SessionInfo active;
     bool action_received = false;
+    bool link_down = false;
     client.subscribe([&](const RuntimeEvent& event) {
+        if (event.kind == RuntimeEventKind::kLink && !event.link_up) {
+            std::lock_guard<std::mutex> lock(mutex);
+            link_down = true;
+            changed.notify_all();
+        }
         if (event.kind == RuntimeEventKind::kSession &&
             event.session.state == SessionState::kActive) {
             std::lock_guard<std::mutex> lock(mutex);
@@ -81,6 +87,26 @@ int main() {
     {
         std::unique_lock<std::mutex> lock(mutex);
         assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() { return action_received; }));
+    }
+
+    server.stop();
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() { return link_down; }));
+        active = {};
+    }
+    assert(server.start(server_config) == ErrorCode::kOk);
+    Peer reconnected_peer;
+    assert(client.connect_peer("127.0.0.1", server_config.tcp_listen_port, &reconnected_peer) ==
+           ErrorCode::kOk);
+    assert(reconnected_peer.id == peer.id);
+    const uint64_t reconnected_session_id = client.open_session(reconnected_peer.id);
+    assert(reconnected_session_id != 0);
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() {
+            return active.session_id == reconnected_session_id;
+        }));
     }
 
     client.stop();

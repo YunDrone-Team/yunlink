@@ -173,15 +173,23 @@ ErrorCode Runtime::connect_peer(const std::string& ip, uint16_t port, Peer* out)
         return ErrorCode::kInvalidArgument;
     }
     const std::string peer_id = runtime_peer_id(ip, port);
+    std::shared_ptr<RuntimeConnection> stale_connection;
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
         const auto existing = impl_->connections.find(peer_id);
-        if (existing != impl_->connections.end() && existing->second->running.load()) {
-            if (out != nullptr) {
-                *out = existing->second->peer;
+        if (existing != impl_->connections.end()) {
+            if (existing->second->running.load()) {
+                if (out != nullptr) {
+                    *out = existing->second->peer;
+                }
+                return ErrorCode::kOk;
             }
-            return ErrorCode::kOk;
+            stale_connection = existing->second;
+            impl_->connections.erase(existing);
         }
+    }
+    if (stale_connection) {
+        close_connection(stale_connection);
     }
     auto connection = std::make_shared<RuntimeConnection>();
     connection->socket = std::make_shared<asio::ip::tcp::socket>(connection->io);
