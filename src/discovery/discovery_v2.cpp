@@ -15,7 +15,7 @@ namespace {
 constexpr std::array<uint8_t, 4> kQueryMagic{{'Y', 'L', 'Q', '2'}};
 constexpr std::array<uint8_t, 4> kReplyMagic{{'Y', 'L', 'R', '2'}};
 constexpr size_t kMaxDiscoveryBytes = 8192;
-constexpr uint64_t kFnvOffset = 1469598103934665603ULL;
+constexpr uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
 uint64_t now_ms() {

@@ -9,6 +9,10 @@ int main() {
     const std::string secret = "test-secret";
     const DiscoveryQuery query{42, 250};
     const Bytes encoded_query = encode_discovery_query(query, secret);
+    const Bytes expected_query{0x59, 0x4c, 0x51, 0x32, 0x00, 0x00, 0x00, 0x00,
+                               0x00, 0x00, 0x00, 0x2a, 0x00, 0xfa, 0x3b, 0x90,
+                               0xce, 0xfe, 0x7c, 0x41, 0x5a, 0x06};
+    assert(encoded_query == expected_query);
     assert(encoded_query.size() == 22);
     DiscoveryQuery decoded_query;
     assert(decode_discovery_query(encoded_query, secret, &decoded_query));
