@@ -54,6 +54,7 @@ int main() {
     assert(client.connect_peer("127.0.0.1", server_config.tcp_listen_port, &peer) ==
            ErrorCode::kOk);
     const uint64_t session_id = client.open_session(peer.id);
+    static_cast<void>(session_id);
     assert(session_id != 0);
     {
         std::unique_lock<std::mutex> lock(mutex);
@@ -101,6 +102,7 @@ int main() {
            ErrorCode::kOk);
     assert(reconnected_peer.id == peer.id);
     const uint64_t reconnected_session_id = client.open_session(reconnected_peer.id);
+    static_cast<void>(reconnected_session_id);
     assert(reconnected_session_id != 0);
     {
         std::unique_lock<std::mutex> lock(mutex);
