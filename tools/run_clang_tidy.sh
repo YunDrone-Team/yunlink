@@ -84,18 +84,32 @@ PY
 configure_darwin_tidy_build
 
 list_translation_units() {
-  if command -v rg >/dev/null 2>&1; then
-    (
-      cd "${ROOT_DIR}"
-      rg --files src tests | rg '\.cpp$'
-    )
-    return 0
-  fi
+  python3 - "${BUILD_DIR}/compile_commands.json" "${ROOT_DIR}" <<'PY'
+import json
+from pathlib import Path
+import sys
 
-  (
-    cd "${ROOT_DIR}"
-    find src tests -type f -name '*.cpp' | LC_ALL=C sort
-  )
+database = Path(sys.argv[1])
+root = Path(sys.argv[2]).resolve()
+with database.open(encoding="utf-8") as handle:
+    commands = json.load(handle)
+
+files = set()
+for command in commands:
+    path = Path(command["file"])
+    if not path.is_absolute():
+        path = Path(command["directory"]) / path
+    path = path.resolve()
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        continue
+    if relative.suffix == ".cpp" and relative.parts[0] in {"src", "tests"}:
+        files.add(relative.as_posix())
+
+for path in sorted(files):
+    print(path)
+PY
 }
 
 CPP_FILES=()

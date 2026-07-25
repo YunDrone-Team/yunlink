@@ -22,7 +22,7 @@ constexpr uint16_t kSchemaVersion = 2;
 constexpr size_t kMaxUidBytes = 128;
 constexpr size_t kMaxTypeNameBytes = 256;
 constexpr size_t kMaxProfileIdBytes = 128;
-constexpr size_t kMaxPayloadBytes = 16U * 1024U * 1024U;
+constexpr size_t kMaxPayloadBytes = static_cast<size_t>(16) * 1024U * 1024U;
 
 enum class ErrorCode : uint16_t {
     kOk = 0,

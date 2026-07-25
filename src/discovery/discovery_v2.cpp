@@ -79,7 +79,7 @@ class Reader {
     Reader(const Bytes& value, size_t payload_size) : value_(value), payload_size_(payload_size) {}
     bool magic(const std::array<uint8_t, 4>& expected) {
         if (cursor_ + expected.size() > payload_size_ ||
-            !std::equal(expected.begin(), expected.end(), value_.begin() + cursor_)) {
+            !std::equal(expected.begin(), expected.end(), value_.data() + cursor_)) {
             return false;
         }
         cursor_ += expected.size();

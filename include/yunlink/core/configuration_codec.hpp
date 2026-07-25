@@ -10,22 +10,27 @@ namespace yunlink {
 
 using ByteBuffer = std::vector<uint8_t>;
 
-#define YUNLINK_CONFIG_CODEC(Type)                                                                 \
-    ByteBuffer encode_payload(const Type& value);                                                  \
-    bool decode_payload(const ByteBuffer& bytes, Type* value)
+ByteBuffer encode_payload(const ConfigResourceListRequest& value);
+ByteBuffer encode_payload(const ConfigResourceListResponse& value);
+ByteBuffer encode_payload(const ConfigResourceDescribeRequest& value);
+ByteBuffer encode_payload(const ConfigResourceDescribeResponse& value);
+ByteBuffer encode_payload(const ConfigResourceGetRequest& value);
+ByteBuffer encode_payload(const ConfigResourceGetResponse& value);
+ByteBuffer encode_payload(const ConfigResourcePatchRequest& value);
+ByteBuffer encode_payload(const ConfigResourcePatchResponse& value);
+ByteBuffer encode_payload(const ConfigResourceApplyRequest& value);
+ByteBuffer encode_payload(const ConfigResourceApplyResponse& value);
 
-YUNLINK_CONFIG_CODEC(ConfigResourceListRequest);
-YUNLINK_CONFIG_CODEC(ConfigResourceListResponse);
-YUNLINK_CONFIG_CODEC(ConfigResourceDescribeRequest);
-YUNLINK_CONFIG_CODEC(ConfigResourceDescribeResponse);
-YUNLINK_CONFIG_CODEC(ConfigResourceGetRequest);
-YUNLINK_CONFIG_CODEC(ConfigResourceGetResponse);
-YUNLINK_CONFIG_CODEC(ConfigResourcePatchRequest);
-YUNLINK_CONFIG_CODEC(ConfigResourcePatchResponse);
-YUNLINK_CONFIG_CODEC(ConfigResourceApplyRequest);
-YUNLINK_CONFIG_CODEC(ConfigResourceApplyResponse);
-
-#undef YUNLINK_CONFIG_CODEC
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceListRequest* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceListResponse* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceDescribeRequest* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceDescribeResponse* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceGetRequest* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceGetResponse* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourcePatchRequest* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourcePatchResponse* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceApplyRequest* value);
+bool decode_payload(const ByteBuffer& bytes, ConfigResourceApplyResponse* value);
 
 }  // namespace yunlink
 

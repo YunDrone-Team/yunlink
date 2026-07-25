@@ -112,6 +112,7 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
             if (it != impl->sessions.end() && it->second.state == SessionState::kActive &&
                 it->second.remote_endpoint_uid == envelope.source.endpoint_uid) {
                 std::vector<std::string> entity_uids;
+                entity_uids.reserve(impl->config.entities.size());
                 for (const auto& entity : impl->config.entities) {
                     entity_uids.push_back(entity.entity_uid);
                 }
