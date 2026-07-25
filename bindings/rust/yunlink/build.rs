@@ -7,7 +7,6 @@ fn main() {
 
     if cfg!(target_os = "macos") || cfg!(target_os = "linux") {
         // The final example/test executables need their own runtime search path.
-        println!("cargo:rustc-link-arg-examples=-Wl,-rpath,{}", build_dir);
-        println!("cargo:rustc-link-arg-tests=-Wl,-rpath,{}", build_dir);
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", build_dir);
     }
 }

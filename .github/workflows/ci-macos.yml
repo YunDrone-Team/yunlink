@@ -19,6 +19,9 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install Protobuf
+        run: brew install protobuf
+
       - name: Configure
         run: cmake --preset ci-ninja
 
@@ -27,6 +30,15 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build/ci-ninja --output-on-failure
+
+      - name: Configure Profiles
+        run: cmake --preset ci-ninja-profiles
+
+      - name: Build Profiles
+        run: python3 tools/build_fast.py --preset ci-ninja-profiles
+
+      - name: Test Profiles
+        run: ctest --test-dir build/ci-ninja-profiles --output-on-failure
 
   bindings:
     runs-on: macos-latest
@@ -49,15 +61,14 @@ jobs:
         run: cmake --preset ci-ninja
 
       - name: Build Core Bindings Targets
-        run: cmake --build --preset ci-ninja --target yunlink_ffi example_cxx_air_roundtrip test_c_ffi_v1 test_c_ffi_contract
+        run: cmake --build --preset ci-ninja --target yunlink_ffi test_c_ffi_v2
 
       - name: Test FFI Contracts
-        run: ctest --test-dir build/ci-ninja -R "test_c_ffi_(v1|contract|loader)" --output-on-failure
+        run: ctest --test-dir build/ci-ninja -R "test_c_ffi_v2" --output-on-failure
 
       - name: Test Rust Bindings
         run: |
-          cargo test -p yunlink --manifest-path bindings/rust/Cargo.toml
-          cargo build --examples -p yunlink --manifest-path bindings/rust/Cargo.toml
+          cargo test --workspace --manifest-path bindings/rust/Cargo.toml
 
       - name: Test Python Bindings
         shell: bash
@@ -65,8 +76,8 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install -q --upgrade pip
-          python -m pip install -q -e bindings/python
-          python -m unittest discover -s bindings/python/tests
+          python -m pip install -q pytest -e bindings/python
+          python -m pytest -q bindings/python/tests
 
       - name: Wheel Smoke
         shell: bash

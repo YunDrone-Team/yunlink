@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-project(yunlink VERSION 0.1.0 LANGUAGES CXX)
+project(yunlink VERSION 2.0.0 LANGUAGES CXX)
 
-option(YUNLINK_BUILD_EXAMPLES "Build examples" ON)
 option(YUNLINK_BUILD_TESTS "Build tests" ON)
 option(YUNLINK_ENABLE_CLANG_TIDY "Run clang-tidy during C++ compilation" OFF)
+option(YUNLINK_BUILD_PROFILES "Build optional Protobuf profiles" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,7 +40,7 @@ add_custom_target(clang-format-check
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_clang_format.sh
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   USES_TERMINAL
-  COMMENT "Checking C++ formatting with clang-format"
+  COMMENT "Checking C++ formatting"
 )
 
 add_custom_target(clang-tidy
@@ -76,66 +76,17 @@ if (NOT EXISTS ${YUNLINK_ASIO_INCLUDE_DIR}/asio.hpp)
 endif()
 
 set(YUNLINK_LIBRARY_SOURCES
-  src/core/event_bus.cpp
-  src/core/packet_trace.cpp
-  src/core/protocol_codec.cpp
-  src/core/envelope_stream_parser.cpp
-  src/core/semantic_messages_session_authority.cpp
-  src/core/semantic_messages_command.cpp
-  src/core/semantic_messages_system_service.cpp
-  src/core/semantic_messages_managed_entities.cpp
-  src/core/semantic_messages_topic.cpp
+  src/core/wire_v2.cpp
+  src/core/wire_v2_codec.cpp
+  src/core/core_messages_v2.cpp
+  src/runtime/v2/runtime.cpp
+  src/runtime/v2/runtime_common.cpp
+  src/runtime/v2/runtime_network.cpp
+  src/runtime/v2/session.cpp
+  src/runtime/v2/authority.cpp
+  src/c/v2/runtime.cpp
+  src/discovery/discovery_v2.cpp
   src/core/configuration_service/codec.cpp
-  src/core/state/semantic_messages_state_bulk_core.cpp
-  src/core/state/semantic_messages_state_bulk_extended.cpp
-  src/core/state/semantic_messages_state_snapshots_core.cpp
-  src/core/state/semantic_messages_state_snapshots_extended.cpp
-  src/discovery/endpoint_active_codec.cpp
-  src/discovery/endpoint_codec.cpp
-  src/discovery/endpoint_advertiser.cpp
-  src/discovery/endpoint_listener.cpp
-  src/transport/udp_transport.cpp
-  src/transport/udp_packet_trace.cpp
-  src/transport/tcp_client_pool.cpp
-  src/transport/tcp_server.cpp
-  src/runtime/authority/authority.cpp
-  src/runtime/authority/client.cpp
-  src/runtime/authority/query.cpp
-  src/runtime/command/command.cpp
-  src/runtime/command/receive.cpp
-  src/runtime/command/results.cpp
-  src/runtime/core/dispatch.cpp
-  src/runtime/core/lifecycle.cpp
-  src/runtime/core/send_trace.cpp
-  src/runtime/core/security.cpp
-  src/runtime/system_service/publish.cpp
-  src/runtime/system_service/receive.cpp
-  src/runtime/configuration_service/publish.cpp
-  src/runtime/configuration_service/receive.cpp
-  src/runtime/configuration_service/provider_registry.cpp
-  src/runtime/configuration_service/subscriptions.cpp
-  src/runtime/session/session.cpp
-  src/runtime/state/command_status.cpp
-  src/runtime/state/fanout.cpp
-  src/runtime/state/publish.cpp
-  src/runtime/state/receive.cpp
-  src/runtime/state/registry.cpp
-  src/runtime/state/registry_system_service.cpp
-  src/runtime/state/subscriptions.cpp
-  src/c/abi/commands/authority.cpp
-  src/c/abi/commands/command.cpp
-  src/c/abi/commands/state.cpp
-  src/c/abi/configuration/publish.cpp
-  src/c/abi/configuration/subscriptions.cpp
-  src/c/abi/commands/system_service.cpp
-  src/c/abi/system_service/runtime_logs.cpp
-  src/c/abi/system_service/managed_entities.cpp
-  src/c/abi/core/helpers.cpp
-  src/c/abi/core/result.cpp
-  src/c/abi/runtime/event_queue.cpp
-  src/c/abi/runtime/events.cpp
-  src/c/abi/runtime/runtime.cpp
-  src/c/abi/runtime/session.cpp
 )
 
 add_library(yunlink STATIC ${YUNLINK_LIBRARY_SOURCES})
@@ -145,26 +96,20 @@ add_library(yunlink_asio INTERFACE)
 target_include_directories(yunlink_asio INTERFACE ${YUNLINK_ASIO_INCLUDE_DIR})
 target_compile_definitions(yunlink_asio INTERFACE ASIO_STANDALONE)
 
-target_include_directories(yunlink
-  PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/transport
-)
-target_include_directories(yunlink_ffi
-  PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/transport
-)
+target_include_directories(yunlink PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(yunlink_ffi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(yunlink PRIVATE yunlink_asio)
 target_link_libraries(yunlink_ffi PRIVATE yunlink_asio)
 target_compile_definitions(yunlink_ffi PRIVATE YUNLINK_FFI_SHARED_BUILD=1)
 set_target_properties(yunlink_ffi PROPERTIES
   OUTPUT_NAME yunlink_ffi
   VERSION ${PROJECT_VERSION}
-  SOVERSION 1
+  SOVERSION 2
 )
+
+if (YUNLINK_BUILD_PROFILES)
+  add_subdirectory(profiles)
+endif()
 
 if (WIN32)
   target_link_libraries(yunlink PRIVATE ws2_32)
@@ -175,303 +120,41 @@ else()
   target_link_libraries(yunlink_ffi PRIVATE Threads::Threads)
 endif()
 
-if (YUNLINK_BUILD_EXAMPLES)
-  add_executable(example_discovery_udp examples/discovery_udp/main.cpp)
-  target_link_libraries(example_discovery_udp PRIVATE yunlink)
-
-  add_executable(example_telemetry_receiver examples/telemetry_receiver/main.cpp)
-  target_link_libraries(example_telemetry_receiver PRIVATE yunlink)
-
-  add_executable(example_tcp_command_client examples/tcp_command_client/main.cpp)
-  target_link_libraries(example_tcp_command_client PRIVATE yunlink)
-
-  add_executable(example_udp_tcp_bridge examples/udp_tcp_bridge/main.cpp)
-  target_link_libraries(example_udp_tcp_bridge PRIVATE yunlink)
-
-  add_executable(example_cxx_air_roundtrip examples/cxx_air_roundtrip/main.cpp)
-  target_link_libraries(example_cxx_air_roundtrip PRIVATE yunlink)
-
-  add_executable(
-    example_cxx_ground_peer_recovery
-    examples/cxx_ground_peer_recovery/main.cpp
-  )
-  target_link_libraries(example_cxx_ground_peer_recovery PRIVATE yunlink)
-endif()
-
 if (YUNLINK_BUILD_TESTS)
   enable_testing()
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
-  add_executable(test_protocol tests/test_protocol.cpp)
-  target_link_libraries(test_protocol PRIVATE yunlink)
-  add_test(NAME test_protocol COMMAND test_protocol)
+  add_executable(test_wire_v2 tests/core/test_wire_v2.cpp)
+  target_link_libraries(test_wire_v2 PRIVATE yunlink)
+  add_test(NAME test_wire_v2 COMMAND test_wire_v2)
 
-  add_executable(test_parser tests/test_parser.cpp)
-  target_link_libraries(test_parser PRIVATE yunlink)
-  add_test(NAME test_parser COMMAND test_parser)
+  add_executable(test_core_messages_v2 tests/core/test_core_messages_v2.cpp)
+  target_link_libraries(test_core_messages_v2 PRIVATE yunlink)
+  add_test(NAME test_core_messages_v2 COMMAND test_core_messages_v2)
 
-  add_executable(test_parser_resilience tests/core/test_parser_resilience.cpp)
-  target_link_libraries(test_parser_resilience PRIVATE yunlink)
-  add_test(NAME test_parser_resilience COMMAND test_parser_resilience)
+  add_executable(test_discovery_v2 tests/core/test_discovery_v2.cpp)
+  target_link_libraries(test_discovery_v2 PRIVATE yunlink)
+  add_test(NAME test_discovery_v2 COMMAND test_discovery_v2)
 
-  add_executable(test_target_selector tests/core/test_target_selector.cpp)
-  target_link_libraries(test_target_selector PRIVATE yunlink)
-  add_test(NAME test_target_selector COMMAND test_target_selector)
+  add_executable(test_runtime_v2 tests/runtime/test_runtime_v2.cpp)
+  target_link_libraries(test_runtime_v2 PRIVATE yunlink)
+  add_test(NAME test_runtime_v2 COMMAND test_runtime_v2)
 
-  add_executable(test_protocol_corruption tests/core/test_protocol_corruption.cpp)
-  target_link_libraries(test_protocol_corruption PRIVATE yunlink)
-  add_test(NAME test_protocol_corruption COMMAND test_protocol_corruption)
-
-  add_executable(test_endpoint_discovery_active tests/core/test_endpoint_discovery_active.cpp)
-  target_link_libraries(test_endpoint_discovery_active PRIVATE yunlink)
-  add_test(NAME test_endpoint_discovery_active COMMAND test_endpoint_discovery_active)
-
-  add_executable(test_compat_roundtrip tests/test_compat_roundtrip.cpp)
-  target_link_libraries(test_compat_roundtrip PRIVATE yunlink)
-  add_test(NAME test_compat_roundtrip COMMAND test_compat_roundtrip)
-
-  add_executable(test_transport_loop tests/test_transport_loop.cpp)
-  target_link_libraries(test_transport_loop PRIVATE yunlink)
-  add_test(NAME test_transport_loop COMMAND test_transport_loop)
-
-  add_executable(test_udp_source_isolation tests/test_udp_source_isolation.cpp)
-  target_link_libraries(test_udp_source_isolation PRIVATE yunlink yunlink_asio)
-  add_test(NAME test_udp_source_isolation COMMAND test_udp_source_isolation)
-
-  add_executable(test_runtime_control_paths tests/test_runtime_control_paths.cpp)
-  target_link_libraries(test_runtime_control_paths PRIVATE yunlink)
-  add_test(NAME test_runtime_control_paths COMMAND test_runtime_control_paths)
-
-  add_executable(test_uav_state_snapshots tests/test_uav_state_snapshots.cpp)
-  target_link_libraries(test_uav_state_snapshots PRIVATE yunlink)
-  add_test(NAME test_uav_state_snapshots COMMAND test_uav_state_snapshots)
-
-  add_executable(test_authority_edges tests/runtime/test_authority_edges.cpp)
-  target_link_libraries(test_authority_edges PRIVATE yunlink)
-  add_test(NAME test_authority_edges COMMAND test_authority_edges)
-
-  add_executable(test_authority_target_partition tests/runtime/test_authority_target_partition.cpp)
-  target_link_libraries(test_authority_target_partition PRIVATE yunlink)
-  add_test(NAME test_authority_target_partition COMMAND test_authority_target_partition)
-
-  add_executable(test_authority_status tests/runtime/test_authority_status.cpp)
-  target_link_libraries(test_authority_status PRIVATE yunlink)
-  add_test(NAME test_authority_status COMMAND test_authority_status)
-
-  add_executable(test_runtime_restart tests/runtime/test_runtime_restart.cpp)
-  target_link_libraries(test_runtime_restart PRIVATE yunlink)
-  add_test(NAME test_runtime_restart COMMAND test_runtime_restart)
-
-  add_executable(test_session_lifecycle tests/runtime/test_session_lifecycle.cpp)
-  target_link_libraries(test_session_lifecycle PRIVATE yunlink)
-  add_test(NAME test_session_lifecycle COMMAND test_session_lifecycle)
-
-  add_executable(test_state_plane_semantics tests/runtime/test_state_plane_semantics.cpp)
-  target_link_libraries(test_state_plane_semantics PRIVATE yunlink)
-  add_test(NAME test_state_plane_semantics COMMAND test_state_plane_semantics)
-
-  add_executable(
-    test_host_system_snapshot_codec
-    tests/core/test_host_system_snapshot_codec.cpp
-  )
-  target_link_libraries(test_host_system_snapshot_codec PRIVATE yunlink)
-  add_test(NAME test_host_system_snapshot_codec COMMAND test_host_system_snapshot_codec)
-
-  add_executable(
-    test_uav_control_command_codec
-    tests/core/test_uav_control_command_codec.cpp
-  )
-  target_link_libraries(test_uav_control_command_codec PRIVATE yunlink)
-  add_test(NAME test_uav_control_command_codec COMMAND test_uav_control_command_codec)
-
-  add_executable(test_topic_service_codec tests/core/test_topic_service_codec.cpp)
-  target_link_libraries(test_topic_service_codec PRIVATE yunlink)
-  add_test(NAME test_topic_service_codec COMMAND test_topic_service_codec)
-
-  add_executable(test_managed_entities_runtime tests/runtime/test_managed_entities_runtime.cpp)
-  target_link_libraries(test_managed_entities_runtime PRIVATE yunlink)
-  add_test(NAME test_managed_entities_runtime COMMAND test_managed_entities_runtime)
-
-  add_executable(test_ugv_protocol_runtime tests/runtime/test_ugv_protocol_runtime.cpp)
-  target_link_libraries(test_ugv_protocol_runtime PRIVATE yunlink)
-  add_test(NAME test_ugv_protocol_runtime COMMAND test_ugv_protocol_runtime)
-
-  add_executable(test_capability_negotiation tests/runtime/test_capability_negotiation.cpp)
-  target_link_libraries(test_capability_negotiation PRIVATE yunlink)
-  add_test(NAME test_capability_negotiation COMMAND test_capability_negotiation)
-
-  add_executable(test_broadcast_policy tests/runtime/test_broadcast_policy.cpp)
-  target_link_libraries(test_broadcast_policy PRIVATE yunlink)
-  add_test(NAME test_broadcast_policy COMMAND test_broadcast_policy)
-
-  add_executable(test_remote_reconnect tests/runtime/test_remote_reconnect.cpp)
-  target_link_libraries(test_remote_reconnect PRIVATE yunlink)
-  add_test(NAME test_remote_reconnect COMMAND test_remote_reconnect)
-
-  add_executable(test_external_command_handling tests/runtime/test_external_command_handling.cpp)
-  target_link_libraries(test_external_command_handling PRIVATE yunlink)
-  add_test(NAME test_external_command_handling COMMAND test_external_command_handling)
-
-  add_executable(test_system_service_runtime tests/runtime/test_system_service_runtime.cpp)
-  target_link_libraries(test_system_service_runtime PRIVATE yunlink)
-  add_test(NAME test_system_service_runtime COMMAND test_system_service_runtime)
-
-  add_executable(test_topic_service_runtime tests/runtime/test_topic_service_runtime.cpp)
-  target_link_libraries(test_topic_service_runtime PRIVATE yunlink)
-  add_test(NAME test_topic_service_runtime COMMAND test_topic_service_runtime)
-
-  add_executable(
-    test_configuration_service_codec
-    tests/core/test_configuration_service_codec.cpp
-  )
-  target_link_libraries(test_configuration_service_codec PRIVATE yunlink)
-  add_test(NAME test_configuration_service_codec COMMAND test_configuration_service_codec)
-
-  add_executable(
-    test_configuration_service_runtime
-    tests/runtime/test_configuration_service_runtime.cpp
-  )
-  target_link_libraries(test_configuration_service_runtime PRIVATE yunlink)
-  add_test(NAME test_configuration_service_runtime COMMAND test_configuration_service_runtime)
-
-  add_executable(
-    test_configuration_provider_registry
-    tests/runtime/test_configuration_provider_registry.cpp
-  )
-  target_link_libraries(test_configuration_provider_registry PRIVATE yunlink)
-  add_test(NAME test_configuration_provider_registry COMMAND test_configuration_provider_registry)
-
-  add_executable(test_command_result_edges tests/runtime/test_command_result_edges.cpp)
-  target_link_libraries(test_command_result_edges PRIVATE yunlink)
-  add_test(NAME test_command_result_edges COMMAND test_command_result_edges)
-
-  add_executable(test_command_result_from_status tests/runtime/test_command_result_from_status.cpp)
-  target_link_libraries(test_command_result_from_status PRIVATE yunlink)
-  add_test(NAME test_command_result_from_status COMMAND test_command_result_from_status)
-
-  add_executable(test_runtime_ttl_freshness tests/runtime/test_runtime_ttl_freshness.cpp)
-  target_link_libraries(test_runtime_ttl_freshness PRIVATE yunlink)
-  add_test(NAME test_runtime_ttl_freshness COMMAND test_runtime_ttl_freshness)
-
-  add_executable(test_trajectory_chunk_runtime tests/runtime/test_trajectory_chunk_runtime.cpp)
-  target_link_libraries(test_trajectory_chunk_runtime PRIVATE yunlink)
-  add_test(NAME test_trajectory_chunk_runtime COMMAND test_trajectory_chunk_runtime)
-
-  add_executable(test_formation_task_runtime tests/runtime/test_formation_task_runtime.cpp)
-  target_link_libraries(test_formation_task_runtime PRIVATE yunlink)
-  add_test(NAME test_formation_task_runtime COMMAND test_formation_task_runtime)
-
-  add_executable(test_bulk_channel_runtime tests/runtime/test_bulk_channel_runtime.cpp)
-  target_link_libraries(test_bulk_channel_runtime PRIVATE yunlink)
-  add_test(NAME test_bulk_channel_runtime COMMAND test_bulk_channel_runtime)
-
-  add_executable(test_qos_runtime tests/runtime/test_qos_runtime.cpp)
-  target_link_libraries(test_qos_runtime PRIVATE yunlink)
-  add_test(NAME test_qos_runtime COMMAND test_qos_runtime)
-
-  add_executable(test_packet_trace_store tests/runtime/test_packet_trace_store.cpp)
-  target_link_libraries(test_packet_trace_store PRIVATE yunlink)
-  add_test(NAME test_packet_trace_store COMMAND test_packet_trace_store)
-
-  add_executable(test_runtime_version_rejection tests/runtime/test_runtime_version_rejection.cpp)
-  target_link_libraries(test_runtime_version_rejection PRIVATE yunlink)
-  add_test(NAME test_runtime_version_rejection COMMAND test_runtime_version_rejection)
-
-  add_executable(test_semantic_payload_policy tests/runtime/test_semantic_payload_policy.cpp)
-  target_link_libraries(test_semantic_payload_policy PRIVATE yunlink)
-  add_test(NAME test_semantic_payload_policy COMMAND test_semantic_payload_policy)
-
-  add_executable(test_runtime_stopped_errors tests/runtime/test_runtime_stopped_errors.cpp)
-  target_link_libraries(test_runtime_stopped_errors PRIVATE yunlink)
-  add_test(NAME test_runtime_stopped_errors COMMAND test_runtime_stopped_errors)
-
-  add_executable(test_session_security tests/security/test_session_security.cpp)
-  target_link_libraries(test_session_security PRIVATE yunlink)
-  add_test(NAME test_session_security COMMAND test_session_security)
-
-  add_executable(test_security_tags tests/security/test_security_tags.cpp)
-  target_link_libraries(test_security_tags PRIVATE yunlink)
-  add_test(NAME test_security_tags COMMAND test_security_tags)
-
-  add_executable(test_optional_security_tags tests/security/test_optional_security_tags.cpp)
-  target_link_libraries(test_optional_security_tags PRIVATE yunlink)
-  add_test(NAME test_optional_security_tags COMMAND test_optional_security_tags)
-
-  add_executable(
-    test_routing_and_source_validation
-    tests/security/test_routing_and_source_validation.cpp
-  )
-  target_link_libraries(test_routing_and_source_validation PRIVATE yunlink)
-  add_test(
-    NAME test_routing_and_source_validation
-    COMMAND test_routing_and_source_validation
-  )
-
-  add_executable(test_tcp_resilience tests/transport/test_tcp_resilience.cpp)
-  target_link_libraries(test_tcp_resilience PRIVATE yunlink)
-  add_test(NAME test_tcp_resilience COMMAND test_tcp_resilience)
-
-  add_executable(test_c_ffi_v1 tests/bindings/test_c_ffi_v1.cpp)
-  target_link_libraries(test_c_ffi_v1 PRIVATE yunlink)
-  add_test(NAME test_c_ffi_v1 COMMAND test_c_ffi_v1)
-
-  add_executable(test_c_ffi_contract tests/bindings/test_c_ffi_contract.cpp)
-  target_link_libraries(test_c_ffi_contract PRIVATE yunlink)
-  add_test(NAME test_c_ffi_contract COMMAND test_c_ffi_contract)
-
-  add_executable(test_c_ffi_configuration tests/bindings/test_c_ffi_configuration.cpp)
-  target_link_libraries(test_c_ffi_configuration PRIVATE yunlink)
-  add_test(NAME test_c_ffi_configuration COMMAND test_c_ffi_configuration)
-
-  add_executable(test_c_ffi_managed_entities tests/bindings/test_c_ffi_managed_entities.cpp)
-  target_link_libraries(test_c_ffi_managed_entities PRIVATE yunlink)
-  add_test(NAME test_c_ffi_managed_entities COMMAND test_c_ffi_managed_entities)
+  add_executable(test_c_ffi_v2 tests/bindings/test_c_ffi_v2.cpp)
+  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink_ffi)
+  add_test(NAME test_c_ffi_v2 COMMAND test_c_ffi_v2)
 
   add_test(
-    NAME test_c_ffi_loader
-    COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests/ffi/test_c_ffi_loader.py
-            ${CMAKE_CURRENT_BINARY_DIR}
-  )
-  if (WIN32)
-    set_tests_properties(
-      test_c_ffi_loader
-      PROPERTIES
-        ENVIRONMENT_MODIFICATION
-          "PATH=path_list_prepend:$<TARGET_FILE_DIR:yunlink_ffi>"
-    )
-  endif()
-
-  add_test(
-    NAME test_dev_tooling_config
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/test_dev_tooling_config.cmake
+    NAME test_protocol_boundaries_v2
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_protocol_boundaries_v2.py
   )
 
-  add_test(
-    NAME test_ci_regressions
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ci_regressions.py
-  )
-
-  add_test(
-    NAME test_testing_tooling
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_testing_tooling.py
-  )
-
-  add_test(
-    NAME test_docs_consistency
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_docs_consistency.py
-  )
-
-  if (YUNLINK_BUILD_EXAMPLES)
-    add_test(
-      NAME smoke_examples_local
-      COMMAND ${Python3_EXECUTABLE}
-              ${CMAKE_CURRENT_SOURCE_DIR}/examples/smoke_local/run_smoke_local.py
-              --bin-dir ${CMAKE_CURRENT_BINARY_DIR}
-    )
-    set_tests_properties(smoke_examples_local PROPERTIES TIMEOUT 30 LABELS "smoke")
+  if (YUNLINK_BUILD_PROFILES)
+    add_executable(test_profile_golden tests/profiles/test_profile_golden.cpp)
+    target_link_libraries(test_profile_golden PRIVATE yunlink_profile_sunray)
+    add_test(NAME test_profile_golden COMMAND test_profile_golden)
   endif()
 endif()
 
-add_executable(yunlink_codec_fuzz_harness tests/core/fuzz_protocol_codec.cpp)
+add_executable(yunlink_codec_fuzz_harness tests/core/fuzz_wire_v2.cpp)
 target_link_libraries(yunlink_codec_fuzz_harness PRIVATE yunlink)

@@ -1,115 +1,85 @@
-# yunlink
+# YunLink
 
-[![Linux CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-linux.yml?branch=main&style=for-the-badge&label=Linux%20CI&logo=linux)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-linux.yml)
-[![macOS CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-macos.yml?branch=main&style=for-the-badge&label=macOS%20CI&logo=apple)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-macos.yml)
-[![Windows CI](https://img.shields.io/github/actions/workflow/status/YunDrone-Team/yunlink/ci-windows.yml?branch=main&style=for-the-badge&label=Windows%20CI&logo=windows)](https://github.com/YunDrone-Team/yunlink/actions/workflows/ci-windows.yml)
-![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B)
-![Build](https://img.shields.io/badge/CMake%20%2B%20Ninja-Ready-064F8C?style=for-the-badge&logo=cmake)
-![Bindings](https://img.shields.io/badge/Bindings-Rust%20%7C%20Python-F28C28?style=for-the-badge)
+YunLink 2.0 is a provider-neutral communication runtime. It supplies discovery,
+sessions, UID routing, authority, typed streams, actions, RPC, configuration,
+logs, and bulk-transfer coordination without depending on a robotics framework
+or a product data model.
 
-`yunlink` 是面向无人机、无人车、地面站与集群系统的统一通信协议与基础通信库。这个仓库聚焦同一套 `yunlink` 协议核心，提供 `SecureEnvelope` 线包、语义消息模型、统一 `Runtime`、类型化 C++ SDK，以及可供 Rust、Python 复用的最小 C ABI。
+## Architecture
 
-## 命名统一
+YunLink is split into three boundaries:
 
-仓库内与对外暴露的核心标识统一使用 `yunlink`：
+1. **Core** owns the Wire v2 envelope, transport, session negotiation, routing,
+   authority, and generic message families. Core is C++17 and does not depend on
+   Protobuf or any product Profile.
+2. **Profiles** define optional typed payloads. This repository currently ships
+   `org.yunlink.mobility@1.0` and `com.yundrone.sunray@1.0`. Profiles are built
+   only with `YUNLINK_BUILD_PROFILES=ON`.
+3. **Adapters** live in the integrating product. They translate external
+   framework data into Profile payloads or framework-neutral Stream samples.
 
-- GitHub 仓库：`YunDrone-Team/yunlink`
-- CMake 项目与主库 target：`yunlink`
-- C++ 命名空间：`yunlink`
-- 头文件根目录：`include/yunlink/`
-- C ABI 前缀：`yunlink_*`
-- 协议主规范：`docs/protocol/yunlink-protocol-spec.md`
+Core treats Profile payloads as `TypeRef + bytes`. A Profile may describe a
+domain, but it must not make Core depend on that domain or on its source
+middleware.
 
-## 核心能力
+See [docs/architecture.md](docs/architecture.md) for the dependency rules.
 
-- `SecureEnvelope` 编解码与流式拆包
-  由 `ProtocolCodec` 和 `EnvelopeStreamParser` 负责定长头、payload、magic 重同步与帧级校验。
-- 语义消息与 typed payload
-  覆盖 `Session`、`Authority`、`Command`、`CommandResult`、`StateSnapshot`、`StateEvent`、`BulkChannelDescriptor` 等核心消息族。
-- 统一 runtime
-  通过 `Runtime`、`SessionClient`、`SessionServer`、`CommandPublisher`、`StateSubscriber`、`EventSubscriber` 组织会话、控制权、命令与状态流。
-- 传输与事件分发
-  提供 `UdpTransport`、`TcpClientPool`、`TcpServer` 与 `EventBus`，支撑本地联调与集成验证。
-- 最小 C ABI
-  位于 `include/yunlink/c/yunlink_c.h`，作为多语言绑定的稳定基础层。
+## Wire v2
 
-## 仓库结构
+Wire v2 is intentionally incompatible with Wire v1:
 
-- `include/yunlink/`
-  对外头文件入口，包含 core、runtime、transport 与 C ABI。
-- `src/`
-  协议编解码、runtime 语义实现、TCP/UDP 传输实现。
-- `tests/`
-  协议、传输、runtime、快照上行与兼容路径的回归测试。
-- `examples/`
-  本地 smoke、UDP 发现、TCP 命令客户端、遥测接收与桥接样例。
-- `docs/`
-  协议规范、实现状态、接入说明、场景 walkthrough 与图示资源。
-- `tools/`
-  快速构建、质量检查、图示渲染等研发脚本。
+- `protocol_major=2`, `header_version=2`, `schema_version=2`
+- UID source and target routing, with endpoint, entity, group, and broadcast
+- Profile negotiation by `profile_id`, major, minor, and schema digest
+- nine generic families: Session, Authority, EntityDirectory, Stream, Action,
+  RPC, Configuration, Log, and Bulk
+- typed payloads identified by `TypeRef`; Core never interprets Profile bytes
+- action lifecycle: received, accepted, running, succeeded, failed, cancelled,
+  expired
 
-## 快速开始
+The public C++ entrypoint is `include/yunlink/yunlink.hpp`. The stable ABI 2
+entrypoint is `include/yunlink/c/yunlink_c.h`.
+
+## Build
+
+Core only:
 
 ```bash
-git clone https://github.com/YunDrone-Team/yunlink.git
-cd yunlink
 git submodule update --init --recursive
-cmake --preset ninja-debug
-python3 tools/build_fast.py --preset ninja-debug
-ctest --test-dir build/ninja-debug --output-on-failure
+cmake -S . -B build/core -DYUNLINK_BUILD_PROFILES=OFF -DYUNLINK_BUILD_TESTS=ON
+cmake --build build/core -j
+ctest --test-dir build/core --output-on-failure
 ```
 
-推荐工作流使用 `CMake 3.25+` 与 `Ninja`。如果采用传统 `cmake -S . -B ...` 配置方式，顶层 `CMakeLists.txt` 当前仍兼容 `CMake 3.16+`。
-
-## 常用命令
+Core plus the optional Protobuf Profiles:
 
 ```bash
-cmake --preset ninja-debug
-python3 tools/build_fast.py --preset ninja-debug
-python3 tools/build_fast.py --preset ninja-debug --target lint
-ctest --test-dir build/ninja-debug -R smoke_examples_local --output-on-failure
-python3 examples/smoke_local/run_smoke_local.py --bin-dir build/ninja-debug
-./tools/render_protocol_diagrams.sh
-doxygen docs/Doxyfile
+cmake -S . -B build/profiles -DYUNLINK_BUILD_PROFILES=ON -DYUNLINK_BUILD_TESTS=ON
+cmake --build build/profiles -j
+ctest --test-dir build/profiles --output-on-failure
 ```
 
-## 文档入口
+Bindings:
 
-- 总导航：`docs/README.md`
-- 协议导航：`docs/protocol/README.md`
-- 协议主规范：`docs/protocol/yunlink-protocol-spec.md`
-- 实现状态：`docs/protocol/implementation-status.md`
-- 接入指南：`docs/protocol/integration-guide.md`
-- 场景 walkthrough：`docs/protocol/scenario-walkthroughs.md`
-- 迁移说明：`docs/protocol/migration-notes.md`
-- 本地 API 文档：`build/doxygen/html/index.html`
+```bash
+cargo test --workspace --manifest-path bindings/rust/Cargo.toml
+tools/bindings/run_all.sh
+```
 
-## 多语言接口方向
+## Repository Map
 
-`yunlink` 的演进方向保持“单协议核心，多语言薄封装”：
+- `include/yunlink/core/`: Wire v2 types and deterministic Core payload codecs
+- `include/yunlink/runtime/`: provider-neutral runtime facade
+- `include/yunlink/c/`: ABI 2 callback/view contract
+- `src/`: Core, runtime, discovery, and ABI implementation
+- `profiles/`: optional Protobuf schemas and C++ generated targets
+- `bindings/rust/`: raw ABI, owned Rust facade, and generated Profiles
+- `bindings/python/`: owned Python facade and generated Profiles
+- `tests/`: Wire v2, runtime, ABI, discovery, and architecture boundaries
+- `docs/`: maintained v2 architecture and integration documents
 
-1. 稳定 `yunlink` 的 C++ 核心与 C ABI。
-2. 让 Rust、Python 通过 FFI 或绑定层共享同一套协议语义。
-3. 在需要的语言侧逐步补齐高层 typed SDK 与更贴近业务的开发体验。
+## Compatibility
 
-## 当前边界
-
-- 当前最小会话路径已经覆盖 ready ack、显式 `reconnect -> reopen -> reacquire` 恢复与旧 session 失效收敛；但仓库仍不提供隐藏式自动重连、自动重建 session 或自动续租。
-- `Authority` 已按 normalized target 分片，并会主动发送 `AuthorityStatus`；真正的多业务控制策略、调度器和外部执行器仍属于集成层。
-- `TargetScope::kGroup` 已支持精确 `group_id` 匹配与 `FormationTaskCommand.group_id` 一致性校验；真实 swarm coordinator / group executor 仍未随仓库提供。
-- `BulkChannelDescriptor` 已有 runtime typed publish/subscribe 与 active descriptor registry；真实 bulk sidecar/data plane 仍需业务层接入。
-- 真实 Sunray/PX4/SITL/HIL、弱网矩阵和长稳 soak 仍是仓外或外部环境门禁项。
-
-覆盖矩阵与限制细节见 `docs/protocol/implementation-status.md`。
-
-## 质量护栏
-
-- `.clang-format`
-- `.clang-tidy`
-- `.codex/maxline.json`：生产源码单文件不超过 300 行，单目录源码扇出不超过 8 个文件
-- `tools/check_core_maxline.sh`
-- GitHub Actions 构建与测试流程
-
-## 仓库地址
-
-[https://github.com/YunDrone-Team/yunlink](https://github.com/YunDrone-Team/yunlink)
+Version 2.0.0 is a hard major-version cut. Wire v1, numeric vehicle routing,
+fixed vehicle command/state unions, and the old C/Rust/Python APIs are not part
+of the v2 public contract. Applications must migrate both endpoints together.

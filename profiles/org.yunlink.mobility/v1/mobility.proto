@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package org.yunlink.mobility.v1;
+
+message Vector3 {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Quaternion {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  double w = 4;
+}
+
+message Pose {
+  Vector3 position = 1;
+  Quaternion orientation = 2;
+}
+
+message Twist {
+  Vector3 linear = 1;
+  Vector3 angular = 2;
+}
+
+message Odometry {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string child_frame_id = 3;
+  Pose pose = 4;
+  Twist twist = 5;
+  repeated double pose_covariance = 6;
+  repeated double twist_covariance = 7;
+}
+
+message GotoGoal {
+  string frame_id = 1;
+  Vector3 position = 2;
+  double yaw_rad = 3;
+}
+
+message VelocityGoal {
+  string frame_id = 1;
+  Vector3 linear_mps = 2;
+  Vector3 angular_radps = 3;
+}
+
+message TrajectoryPoint {
+  uint32 dt_ms = 1;
+  Pose pose = 2;
+  Twist twist = 3;
+}
+
+message TrajectoryGoal {
+  string frame_id = 1;
+  repeated TrajectoryPoint points = 2;
+}

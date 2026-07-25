@@ -77,25 +77,39 @@ PY
   echo "[clang-tidy] detected AppleClang compile database, configuring ${BUILD_DIR}" >&2
   cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" \
     -DCMAKE_CXX_COMPILER="${llvm_clangxx}" \
-    -DYUNLINK_BUILD_EXAMPLES=ON \
-    -DYUNLINK_BUILD_TESTS=ON >/dev/null
+    -DYUNLINK_BUILD_TESTS=ON \
+    -DYUNLINK_BUILD_PROFILES=OFF >/dev/null
 }
 
 configure_darwin_tidy_build
 
 list_translation_units() {
-  if command -v rg >/dev/null 2>&1; then
-    (
-      cd "${ROOT_DIR}"
-      rg --files src examples tests | rg '\.cpp$'
-    )
-    return 0
-  fi
+  python3 - "${BUILD_DIR}/compile_commands.json" "${ROOT_DIR}" <<'PY'
+import json
+from pathlib import Path
+import sys
 
-  (
-    cd "${ROOT_DIR}"
-    find src examples tests -type f -name '*.cpp' | LC_ALL=C sort
-  )
+database = Path(sys.argv[1])
+root = Path(sys.argv[2]).resolve()
+with database.open(encoding="utf-8") as handle:
+    commands = json.load(handle)
+
+files = set()
+for command in commands:
+    path = Path(command["file"])
+    if not path.is_absolute():
+        path = Path(command["directory"]) / path
+    path = path.resolve()
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        continue
+    if relative.suffix == ".cpp" and relative.parts[0] in {"src", "tests"}:
+        files.add(relative.as_posix())
+
+for path in sorted(files):
+    print(path)
+PY
 }
 
 CPP_FILES=()
@@ -104,7 +118,7 @@ while IFS= read -r file; do
 done < <(list_translation_units)
 
 if [[ ${#CPP_FILES[@]} -eq 0 ]]; then
-  echo "no translation units found under src/examples/tests" >&2
+  echo "no translation units found under src/tests" >&2
   exit 1
 fi
 

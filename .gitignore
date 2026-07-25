@@ -13,6 +13,7 @@ Thumbs.db
 build/
 build-clang-tidy/
 build_*/
+build-*/
 cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
@@ -32,6 +33,7 @@ __pycache__/
 .venv/
 .venv-bindings-wheel/
 .ruff_cache/
+bindings/python/uv.lock
 
 # Local caches / logs
 .cache/

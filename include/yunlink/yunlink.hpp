@@ -1,23 +1,14 @@
-/**
- * @file include/yunlink/yunlink.hpp
- * @brief yunlink C++ 统一入口头文件。
- */
+/** @file @brief YunLink Wire v2 generic C++ facade. */
 
 #ifndef YUNLINK_YUNLINK_HPP
 #define YUNLINK_YUNLINK_HPP
 
-#include "yunlink/core/envelope_stream_parser.hpp"
-#include "yunlink/core/event_bus.hpp"
-#include "yunlink/diagnostics/packet_trace.hpp"
-#include "yunlink/core/protocol_codec.hpp"
-#include "yunlink/core/runtime_config.hpp"
-#include "yunlink/core/semantic_messages.hpp"
-#include "yunlink/core/types.hpp"
-#include "yunlink/discovery/endpoint_discovery.hpp"
-#include "yunlink/runtime/runtime.hpp"
-#include "yunlink/transport/tcp_client_pool.hpp"
-#include "yunlink/transport/tcp_server.hpp"
-#include "yunlink/transport/udp_transport.hpp"
+#include "yunlink/core/configuration_codec.hpp"
+#include "yunlink/core/core_messages_v2.hpp"
+#include "yunlink/core/wire_v2.hpp"
+#include "yunlink/core/wire_v2_codec.hpp"
+#include "yunlink/discovery/discovery_v2.hpp"
+#include "yunlink/runtime/runtime_v2.hpp"
 
 namespace yunlink {}
 

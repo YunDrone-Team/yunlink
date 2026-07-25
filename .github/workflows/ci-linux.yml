@@ -44,6 +44,9 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Install Protobuf
+        run: sudo apt-get update && sudo apt-get install -y libprotobuf-dev protobuf-compiler
+
       - name: Configure
         run: cmake --preset ci-ninja
 
@@ -52,6 +55,15 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build/ci-ninja --output-on-failure
+
+      - name: Configure Profiles
+        run: cmake --preset ci-ninja-profiles
+
+      - name: Build Profiles
+        run: python3 tools/build_fast.py --preset ci-ninja-profiles
+
+      - name: Test Profiles
+        run: ctest --test-dir build/ci-ninja-profiles --output-on-failure
 
   bindings:
     runs-on: ubuntu-latest
