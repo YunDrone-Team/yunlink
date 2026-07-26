@@ -44,6 +44,24 @@ void close_connection(const std::shared_ptr<RuntimeConnection>& connection) {
     }
 }
 
+void reap_closed_connections(Runtime::Impl* impl) {
+    std::vector<std::shared_ptr<RuntimeConnection>> stale;
+    {
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        for (auto connection = impl->connections.begin(); connection != impl->connections.end();) {
+            if (!connection->second->running.load()) {
+                stale.push_back(connection->second);
+                connection = impl->connections.erase(connection);
+            } else {
+                ++connection;
+            }
+        }
+    }
+    for (const auto& connection : stale) {
+        close_connection(connection);
+    }
+}
+
 }  // namespace
 
 Runtime::Runtime() : impl_(std::make_unique<Impl>()) {}
@@ -92,6 +110,7 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
     impl_->running.store(true);
     impl_->accept_thread = std::thread([this]() {
         while (impl_->running.load()) {
+            reap_closed_connections(impl_.get());
             auto socket = std::make_shared<asio::ip::tcp::socket>(impl_->accept_io);
             std::error_code error;
             impl_->acceptor->accept(*socket, error);
@@ -231,6 +250,17 @@ void Runtime::close_peer(const std::string& peer_id) {
         impl_->connections.erase(it);
     }
     close_connection(connection);
+}
+
+ErrorCode Runtime::set_entities(std::vector<EntityDescriptor> entities) {
+    for (const auto& entity : entities) {
+        if (!valid_uid(entity.entity_uid)) {
+            return ErrorCode::kInvalidArgument;
+        }
+    }
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    impl_->config.entities = std::move(entities);
+    return ErrorCode::kOk;
 }
 
 ErrorCode Runtime::send(const std::string& peer_id, const Envelope& envelope) {

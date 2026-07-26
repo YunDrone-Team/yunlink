@@ -124,6 +124,11 @@ void runtime_receive_loop(Runtime::Impl* impl,
         }
     }
     connection->running.store(false);
+    if (connection->socket) {
+        std::error_code ignored;
+        connection->socket->shutdown(asio::ip::tcp::socket::shutdown_both, ignored);
+        connection->socket->close(ignored);
+    }
     runtime_drop_peer_state(impl, connection->peer);
     runtime_emit(impl,
                  {RuntimeEventKind::kLink, connection->peer, {}, {}, ErrorCode::kOk, {}, false});

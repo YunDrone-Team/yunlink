@@ -179,6 +179,7 @@ class Runtime {
     ErrorCode connect_peer(const std::string& ip, uint16_t port, Peer* out = nullptr);
     void close_peer(const std::string& peer_id);
     uint64_t open_session(const std::string& peer_id);
+    ErrorCode set_entities(std::vector<EntityDescriptor> entities);
 
     ErrorCode publish(const std::string& peer_id,
                       uint64_t session_id,

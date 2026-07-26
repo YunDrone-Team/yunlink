@@ -13,7 +13,6 @@ int main() {
     RuntimeConfig server_config;
     server_config.endpoint_uid = "endpoint.server";
     server_config.tcp_listen_port = 19696;
-    server_config.entities = {{"entity.alpha", "robot", "Alpha"}};
     server_config.profiles = {{"org.yunlink.mobility", 1, 0, "mobility-digest"},
                               {"com.example.server", 1, 0, "server-digest"}};
     RuntimeConfig client_config;
@@ -67,6 +66,7 @@ int main() {
     assert(active.rejected_profiles.size() == 1);
     assert(active.rejected_profiles.front() == "com.example.server");
 
+    assert(server.set_entities({{"entity.alpha", "robot", "Alpha"}}) == ErrorCode::kOk);
     const auto target = TargetSelector::entity("entity.alpha");
     MessageHandle handle;
     assert(client.publish(peer.id,
@@ -112,6 +112,32 @@ int main() {
     }
 
     client.stop();
+
+    Runtime fresh_client;
+    assert(fresh_client.start(client_config) == ErrorCode::kOk);
+    SessionInfo fresh_active;
+    std::mutex fresh_mutex;
+    std::condition_variable fresh_changed;
+    fresh_client.subscribe([&](const RuntimeEvent& event) {
+        if (event.kind == RuntimeEventKind::kSession &&
+            event.session.state == SessionState::kActive) {
+            std::lock_guard<std::mutex> lock(fresh_mutex);
+            fresh_active = event.session;
+            fresh_changed.notify_all();
+        }
+    });
+    Peer fresh_peer;
+    assert(fresh_client.connect_peer("127.0.0.1", server_config.tcp_listen_port, &fresh_peer) ==
+           ErrorCode::kOk);
+    const uint64_t fresh_session_id = fresh_client.open_session(fresh_peer.id);
+    assert(fresh_session_id != 0);
+    {
+        std::unique_lock<std::mutex> lock(fresh_mutex);
+        assert(fresh_changed.wait_for(lock, std::chrono::seconds(3), [&]() {
+            return fresh_active.session_id == fresh_session_id;
+        }));
+    }
+    fresh_client.stop();
     server.stop();
     return 0;
 }
