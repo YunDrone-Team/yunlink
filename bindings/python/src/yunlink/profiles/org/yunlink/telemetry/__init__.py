@@ -1,0 +1,1 @@
+"""YunLink generic telemetry profiles."""

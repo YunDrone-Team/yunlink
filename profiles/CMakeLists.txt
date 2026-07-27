@@ -35,6 +35,23 @@ target_link_libraries(yunlink_profile_mobility PUBLIC protobuf::libprotobuf)
 add_library(yunlink::profile_mobility ALIAS yunlink_profile_mobility)
 
 protobuf_generate_cpp(
+  YUNLINK_TELEMETRY_PROTO_SRCS
+  YUNLINK_TELEMETRY_PROTO_HDRS
+  ${YUNLINK_PROFILE_PROTO_ROOT}/org.yunlink.telemetry/v1/telemetry.proto
+)
+add_library(yunlink_profile_telemetry STATIC
+  ${YUNLINK_TELEMETRY_PROTO_SRCS}
+  ${YUNLINK_TELEMETRY_PROTO_HDRS}
+  ${YUNLINK_PROFILE_PROTO_ROOT}/org.yunlink.telemetry/v1/summary_validation.cpp
+)
+target_include_directories(yunlink_profile_telemetry PUBLIC
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${YUNLINK_PROFILE_PROTO_ROOT}
+)
+target_link_libraries(yunlink_profile_telemetry PUBLIC protobuf::libprotobuf)
+add_library(yunlink::profile_telemetry ALIAS yunlink_profile_telemetry)
+
+protobuf_generate_cpp(
   YUNLINK_SUNRAY_PROTO_SRCS
   YUNLINK_SUNRAY_PROTO_HDRS
   ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v1/sunray.proto

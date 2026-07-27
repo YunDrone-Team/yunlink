@@ -80,6 +80,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/wire_v2_codec.cpp
   src/core/core_messages_v2.cpp
   src/runtime/v2/runtime.cpp
+  src/runtime/v2/runtime_api.cpp
   src/runtime/v2/runtime_common.cpp
   src/runtime/v2/runtime_network.cpp
   src/runtime/v2/session.cpp
@@ -151,7 +152,10 @@ if (YUNLINK_BUILD_TESTS)
 
   if (YUNLINK_BUILD_PROFILES)
     add_executable(test_profile_golden tests/profiles/test_profile_golden.cpp)
-    target_link_libraries(test_profile_golden PRIVATE yunlink_profile_sunray)
+    target_link_libraries(test_profile_golden PRIVATE
+      yunlink_profile_sunray
+      yunlink_profile_telemetry
+    )
     add_test(NAME test_profile_golden COMMAND test_profile_golden)
   endif()
 endif()

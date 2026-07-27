@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package org.yunlink.telemetry.v1;
+
+enum MetricQuality {
+  METRIC_QUALITY_UNSPECIFIED = 0;
+  METRIC_VALID = 1;
+  METRIC_STALE = 2;
+  METRIC_INVALID = 3;
+  METRIC_UNAVAILABLE = 4;
+}
+
+message MetricValue {
+  oneof value {
+    bool bool_value = 1;
+    sint64 int_value = 2;
+    double double_value = 3;
+    string enum_token = 4;
+    string text_value = 5;
+  }
+}
+
+message Metric {
+  string key = 1;
+  MetricValue value = 2;
+  string unit = 3;
+  MetricQuality quality = 4;
+  uint64 source_timestamp_ns = 5;
+}
+
+message SummarySnapshot {
+  uint64 generated_at_ns = 1;
+  repeated Metric metrics = 2;
+}
