@@ -14,6 +14,8 @@ constexpr int kMaxWaypointCount = 256;
 
 bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal,
                                       std::string* error = nullptr);
+bool validate_emergency_kill_goal(const EmergencyKillGoal& goal,
+                                  std::string* error = nullptr);
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error = nullptr);
 

@@ -135,6 +135,10 @@ message UavDirectControlGoal {
   uint32 lease_ms = 8;
 }
 
+message EmergencyKillGoal {
+  bool confirmed = 1;
+}
+
 message UavWaypoint {
   org.yunlink.mobility.v1.Vector3 position_m = 1;
   double yaw_rad = 2;

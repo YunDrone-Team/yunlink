@@ -78,6 +78,14 @@ int main() {
     assert(validation_error == "invalid metric key");
 
     using namespace com::yundrone::sunray::v1;
+    EmergencyKillGoal emergency_kill;
+    assert(!validate_emergency_kill_goal(emergency_kill, &validation_error));
+    assert(validation_error == "emergency kill requires explicit confirmation");
+    emergency_kill.set_confirmed(true);
+    assert(validate_emergency_kill_goal(emergency_kill, &validation_error));
+    assert_round_trip(emergency_kill);
+    assert(hex(emergency_kill.SerializeAsString()) == "0801");
+
     UavDirectControlGoal world_position;
     valid_yaw(&world_position);
     world_position.mutable_world_position()->set_frame_id("map");

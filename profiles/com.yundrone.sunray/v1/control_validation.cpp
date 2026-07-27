@@ -101,6 +101,10 @@ bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal, std::str
     return fail(error, "direct control target is invalid");
 }
 
+bool validate_emergency_kill_goal(const EmergencyKillGoal& goal, std::string* error) {
+    return goal.confirmed() || fail(error, "emergency kill requires explicit confirmation");
+}
+
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error) {
     if (goal.frame_id().empty()) {

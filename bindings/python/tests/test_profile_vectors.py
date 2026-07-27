@@ -6,6 +6,7 @@ from yunlink.profiles import (
     sunray,
     telemetry,
     validate_summary_snapshot,
+    validate_emergency_kill_goal,
     validate_uav_direct_control_goal,
     validate_uav_waypoint_mission_goal,
 )
@@ -84,6 +85,16 @@ def _valid_direct_goal(target: str) -> sunray.UavDirectControlGoal:
         goal.body_velocity.fixed_height_m = 2.0
         goal.lease_ms = 2000
     return goal
+
+
+def test_emergency_kill_requires_confirmation_and_matches_golden_vector():
+    goal = sunray.EmergencyKillGoal()
+    with pytest.raises(ValueError, match="emergency kill requires explicit confirmation"):
+        validate_emergency_kill_goal(goal)
+    goal.confirmed = True
+    validate_emergency_kill_goal(goal)
+    assert goal.SerializeToString(deterministic=True) == b"\x08\x01"
+    assert sunray.EmergencyKillGoal.FromString(b"\x08\x01") == goal
 
 
 @pytest.mark.parametrize(

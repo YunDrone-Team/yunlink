@@ -190,6 +190,14 @@ pub fn validate_uav_direct_control_goal(
     }
 }
 
+pub fn validate_emergency_kill_goal(goal: &sunray::EmergencyKillGoal) -> Result<(), &'static str> {
+    if goal.confirmed {
+        Ok(())
+    } else {
+        Err("emergency kill requires explicit confirmation")
+    }
+}
+
 pub fn validate_uav_waypoint_mission_goal(
     goal: &sunray::UavWaypointMissionGoal,
 ) -> Result<(), &'static str> {

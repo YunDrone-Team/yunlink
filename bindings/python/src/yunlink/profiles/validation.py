@@ -129,6 +129,11 @@ def validate_uav_direct_control_goal(goal: sunray.UavDirectControlGoal) -> None:
         raise ValueError(f"{target.replace('_', ' ')} target is invalid")
 
 
+def validate_emergency_kill_goal(goal: sunray.EmergencyKillGoal) -> None:
+    if not goal.confirmed:
+        raise ValueError("emergency kill requires explicit confirmation")
+
+
 def validate_uav_waypoint_mission_goal(goal: sunray.UavWaypointMissionGoal) -> None:
     if not goal.frame_id:
         raise ValueError("waypoint frame is missing")

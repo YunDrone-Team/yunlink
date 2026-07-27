@@ -1,6 +1,7 @@
 use prost::Message;
 use yunlink_profiles::{
-    mobility, sunray, validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
+    mobility, sunray, validate_emergency_kill_goal, validate_uav_direct_control_goal,
+    validate_uav_waypoint_mission_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[
@@ -30,6 +31,22 @@ fn base_goal(
         controller: 0,
         lease_ms,
     }
+}
+
+#[test]
+fn emergency_kill_requires_confirmation_and_matches_golden_vector() {
+    let mut goal = sunray::EmergencyKillGoal { confirmed: false };
+    assert_eq!(
+        validate_emergency_kill_goal(&goal),
+        Err("emergency kill requires explicit confirmation")
+    );
+    goal.confirmed = true;
+    validate_emergency_kill_goal(&goal).unwrap();
+    assert_eq!(goal.encode_to_vec(), [0x08, 0x01]);
+    assert_eq!(
+        sunray::EmergencyKillGoal::decode(goal.encode_to_vec().as_slice()).unwrap(),
+        goal
+    );
 }
 
 #[test]
