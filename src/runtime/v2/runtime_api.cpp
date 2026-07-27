@@ -1,5 +1,7 @@
 #include "runtime_internal.hpp"
 
+#include <set>
+
 namespace yunlink::v2 {
 
 ErrorCode Runtime::set_entities(std::vector<EntityDescriptor> entities) {
@@ -9,6 +11,18 @@ ErrorCode Runtime::set_entities(std::vector<EntityDescriptor> entities) {
         }
     }
     std::lock_guard<std::mutex> lock(impl_->mutex);
+    std::set<std::string> entity_uids;
+    for (const auto& entity : entities) {
+        entity_uids.insert(entity.entity_uid);
+    }
+    for (auto lease = impl_->authority_leases.begin();
+         lease != impl_->authority_leases.end();) {
+        if (entity_uids.count(lease->first.first) == 0U) {
+            lease = impl_->authority_leases.erase(lease);
+        } else {
+            ++lease;
+        }
+    }
     impl_->config.entities = std::move(entities);
     return ErrorCode::kOk;
 }

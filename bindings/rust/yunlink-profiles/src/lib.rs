@@ -33,6 +33,9 @@ pub const SUNRAY_PROFILE_ID: &str = "com.yundrone.sunray";
 
 pub const SUMMARY_MAX_METRICS: usize = 64;
 pub const SUMMARY_MAX_PAYLOAD_BYTES: usize = 16 * 1024;
+pub const MIN_DIRECT_CONTROL_LEASE_MS: u32 = 250;
+pub const MAX_DIRECT_CONTROL_LEASE_MS: u32 = 2000;
+pub const MAX_WAYPOINT_COUNT: usize = 256;
 
 pub fn valid_metric_key(key: &str) -> bool {
     if key.is_empty() || key.len() > 128 {
@@ -100,6 +103,109 @@ pub fn validate_summary_snapshot(
             }
             _ => {}
         }
+    }
+    Ok(())
+}
+
+fn finite_vector2(value: &mobility::Vector2) -> bool {
+    value.x.is_finite() && value.y.is_finite()
+}
+
+fn finite_vector3(value: &mobility::Vector3) -> bool {
+    value.x.is_finite() && value.y.is_finite() && value.z.is_finite()
+}
+
+pub fn validate_uav_direct_control_goal(
+    goal: &sunray::UavDirectControlGoal,
+) -> Result<(), &'static str> {
+    use sunray::uav_direct_control_goal::Target;
+
+    let yaw = goal
+        .yaw
+        .as_ref()
+        .ok_or("yaw target is missing or invalid")?;
+    if !(0..=2).contains(&yaw.mode) || !yaw.value.is_finite() {
+        return Err("yaw target is missing or invalid");
+    }
+    if !(0..=2).contains(&goal.controller) {
+        return Err("controller is invalid");
+    }
+    let continuous_lease =
+        || (MIN_DIRECT_CONTROL_LEASE_MS..=MAX_DIRECT_CONTROL_LEASE_MS).contains(&goal.lease_ms);
+    match goal.target.as_ref() {
+        Some(Target::WorldPosition(value))
+            if goal.lease_ms == 0
+                && !value.frame_id.is_empty()
+                && value.position_m.as_ref().is_some_and(finite_vector3) =>
+        {
+            Ok(())
+        }
+        Some(Target::WorldPosition(_)) => Err("world position target is invalid"),
+        Some(Target::BodyPosition(value))
+            if goal.lease_ms == 0
+                && value
+                    .body_xy_position_m
+                    .as_ref()
+                    .is_some_and(finite_vector2)
+                && value.fixed_height_m.is_finite()
+                && value.fixed_height_m > 0.0 =>
+        {
+            Ok(())
+        }
+        Some(Target::BodyPosition(_)) => Err("body position target is invalid"),
+        Some(Target::TrajectorySetpoint(value))
+            if continuous_lease()
+                && !value.frame_id.is_empty()
+                && value.position_m.as_ref().is_some_and(finite_vector3)
+                && value.velocity_mps.as_ref().is_some_and(finite_vector3)
+                && value.acceleration_mps2.as_ref().is_some_and(finite_vector3) =>
+        {
+            Ok(())
+        }
+        Some(Target::TrajectorySetpoint(_)) => Err("trajectory setpoint target is invalid"),
+        Some(Target::WorldVelocity(value))
+            if continuous_lease()
+                && !value.frame_id.is_empty()
+                && value.velocity_mps.as_ref().is_some_and(finite_vector3)
+                && value.height_lock.as_ref().map_or(true, |lock| {
+                    lock.height_m.is_finite() && lock.height_m > 0.0
+                }) =>
+        {
+            Ok(())
+        }
+        Some(Target::WorldVelocity(_)) => Err("world velocity target is invalid"),
+        Some(Target::BodyVelocity(value))
+            if continuous_lease()
+                && value
+                    .body_xy_velocity_mps
+                    .as_ref()
+                    .is_some_and(finite_vector2)
+                && value.fixed_height_m.is_finite()
+                && value.fixed_height_m > 0.0 =>
+        {
+            Ok(())
+        }
+        Some(Target::BodyVelocity(_)) => Err("body velocity target is invalid"),
+        None => Err("direct control target is missing"),
+    }
+}
+
+pub fn validate_uav_waypoint_mission_goal(
+    goal: &sunray::UavWaypointMissionGoal,
+) -> Result<(), &'static str> {
+    if goal.frame_id.is_empty() {
+        return Err("waypoint frame is missing");
+    }
+    if goal.waypoints.is_empty() || goal.waypoints.len() > MAX_WAYPOINT_COUNT {
+        return Err("waypoint count is invalid");
+    }
+    if goal.waypoints.iter().any(|waypoint| {
+        !waypoint.position_m.as_ref().is_some_and(finite_vector3)
+            || !waypoint.yaw_rad.is_finite()
+            || !waypoint.hold_time_s.is_finite()
+            || waypoint.hold_time_s < 0.0
+    }) {
+        return Err("waypoint is invalid");
     }
     Ok(())
 }

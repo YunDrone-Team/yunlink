@@ -1,5 +1,6 @@
 import math
 
+from .com.yundrone.sunray.v1 import sunray_pb2 as sunray
 from .org.yunlink.telemetry.v1 import telemetry_pb2 as telemetry
 
 
@@ -47,3 +48,98 @@ def validate_summary_snapshot(snapshot: telemetry.SummarySnapshot) -> None:
             raise ValueError("metric enum token exceeds limit")
         if value_kind == "text_value" and len(metric.value.text_value.encode()) > 256:
             raise ValueError("metric text exceeds limit")
+
+
+def _finite_vector(value) -> bool:
+    components = [value.x, value.y]
+    if hasattr(value, "z"):
+        components.append(value.z)
+    return all(math.isfinite(component) for component in components)
+
+
+def validate_uav_direct_control_goal(goal: sunray.UavDirectControlGoal) -> None:
+    valid_yaw = (
+        goal.HasField("yaw")
+        and goal.yaw.mode
+        in {sunray.UAV_YAW_KEEP, sunray.UAV_YAW_SET_ANGLE, sunray.UAV_YAW_SET_RATE}
+        and math.isfinite(goal.yaw.value)
+    )
+    if not valid_yaw:
+        raise ValueError("yaw target is missing or invalid")
+    if goal.controller not in {
+        sunray.UAV_CONTROLLER_DEFAULT,
+        sunray.UAV_CONTROLLER_POSITION,
+        sunray.UAV_CONTROLLER_ATTITUDE,
+    }:
+        raise ValueError("controller is invalid")
+
+    target = goal.WhichOneof("target")
+    if target == "world_position":
+        valid = (
+            goal.lease_ms == 0
+            and bool(goal.world_position.frame_id)
+            and goal.world_position.HasField("position_m")
+            and _finite_vector(goal.world_position.position_m)
+        )
+    elif target == "body_position":
+        value = goal.body_position
+        valid = (
+            goal.lease_ms == 0
+            and value.HasField("body_xy_position_m")
+            and _finite_vector(value.body_xy_position_m)
+            and math.isfinite(value.fixed_height_m)
+            and value.fixed_height_m > 0
+        )
+    elif target == "trajectory_setpoint":
+        value = goal.trajectory_setpoint
+        valid = (
+            250 <= goal.lease_ms <= 2000
+            and bool(value.frame_id)
+            and value.HasField("position_m")
+            and value.HasField("velocity_mps")
+            and value.HasField("acceleration_mps2")
+            and _finite_vector(value.position_m)
+            and _finite_vector(value.velocity_mps)
+            and _finite_vector(value.acceleration_mps2)
+        )
+    elif target == "world_velocity":
+        value = goal.world_velocity
+        valid = (
+            250 <= goal.lease_ms <= 2000
+            and bool(value.frame_id)
+            and value.HasField("velocity_mps")
+            and _finite_vector(value.velocity_mps)
+            and (
+                not value.HasField("height_lock")
+                or (math.isfinite(value.height_lock.height_m) and value.height_lock.height_m > 0)
+            )
+        )
+    elif target == "body_velocity":
+        value = goal.body_velocity
+        valid = (
+            250 <= goal.lease_ms <= 2000
+            and value.HasField("body_xy_velocity_mps")
+            and _finite_vector(value.body_xy_velocity_mps)
+            and math.isfinite(value.fixed_height_m)
+            and value.fixed_height_m > 0
+        )
+    else:
+        raise ValueError("direct control target is missing")
+    if not valid:
+        raise ValueError(f"{target.replace('_', ' ')} target is invalid")
+
+
+def validate_uav_waypoint_mission_goal(goal: sunray.UavWaypointMissionGoal) -> None:
+    if not goal.frame_id:
+        raise ValueError("waypoint frame is missing")
+    if not 1 <= len(goal.waypoints) <= 256:
+        raise ValueError("waypoint count is invalid")
+    for waypoint in goal.waypoints:
+        if (
+            not waypoint.HasField("position_m")
+            or not _finite_vector(waypoint.position_m)
+            or not math.isfinite(waypoint.yaw_rad)
+            or not math.isfinite(waypoint.hold_time_s)
+            or waypoint.hold_time_s < 0
+        ):
+            raise ValueError("waypoint is invalid")

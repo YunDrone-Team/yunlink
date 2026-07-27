@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package org.yunlink.mobility.v1;
 
+message Vector2 {
+  double x = 1;
+  double y = 2;
+}
+
 message Vector3 {
   double x = 1;
   double y = 2;

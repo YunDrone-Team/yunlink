@@ -159,4 +159,22 @@ void runtime_revoke_authority(Runtime::Impl* impl,
     }
 }
 
+bool Runtime::has_authority(const std::string& peer_id,
+                            uint64_t session_id,
+                            const std::string& entity_uid,
+                            const std::string& authority_scope) const {
+    const auto key = std::make_pair(entity_uid, authority_scope);
+    const uint64_t now = runtime_now_ms();
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    const auto lease = impl_->authority_leases.find(key);
+    return lease != impl_->authority_leases.end() && lease->second.peer_id == peer_id &&
+           lease->second.session_id == session_id && lease->second.expires_at_ms > now;
+}
+
+void Runtime::revoke_authority(const std::string& peer_id,
+                               uint64_t session_id,
+                               const std::vector<std::string>& entity_uids) {
+    runtime_revoke_authority(impl_.get(), peer_id, session_id, entity_uids);
+}
+
 }  // namespace yunlink::v2

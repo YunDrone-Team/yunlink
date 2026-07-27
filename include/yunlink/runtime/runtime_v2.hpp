@@ -199,6 +199,13 @@ class Runtime {
     void unsubscribe(size_t token);
     std::vector<SessionInfo> sessions() const;
     bool session(const std::string& peer_id, uint64_t session_id, SessionInfo* out) const;
+    bool has_authority(const std::string& peer_id,
+                       uint64_t session_id,
+                       const std::string& entity_uid,
+                       const std::string& authority_scope) const;
+    void revoke_authority(const std::string& peer_id,
+                          uint64_t session_id,
+                          const std::vector<std::string>& entity_uids = {});
 
   private:
     std::unique_ptr<Impl> impl_;

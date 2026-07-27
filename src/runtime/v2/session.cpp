@@ -133,13 +133,6 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
         if (runtime_handle_authority(impl, peer, envelope)) {
             return;
         }
-        if (envelope.family == MessageFamily::kEntityDirectory &&
-            envelope.operation == static_cast<uint8_t>(DirectoryOperation::kDetachRequest)) {
-            AttachmentRequest request;
-            if (decode(envelope.payload, &request)) {
-                runtime_revoke_authority(impl, peer.id, envelope.session_id, request.entity_uids);
-            }
-        }
         std::string authority_error;
         if (!runtime_action_authorized(impl, peer, envelope, &authority_error)) {
             runtime_emit(impl,

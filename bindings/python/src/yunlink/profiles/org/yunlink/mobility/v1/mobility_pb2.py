@@ -24,29 +24,31 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&org.yunlink.mobility/v1/mobility.proto\x12\x17org.yunlink.mobility.v1\"*\n\x07Vector3\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"8\n\nQuaternion\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\x12\t\n\x01w\x18\x04 \x01(\x01\"t\n\x04Pose\x12\x32\n\x08position\x18\x01 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x38\n\x0borientation\x18\x02 \x01(\x0b\x32#.org.yunlink.mobility.v1.Quaternion\"l\n\x05Twist\x12\x30\n\x06linear\x18\x01 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x31\n\x07\x61ngular\x18\x02 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\"\xdc\x01\n\x08Odometry\x12\x17\n\x0fsource_stamp_ns\x18\x01 \x01(\x04\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\t\x12\x16\n\x0e\x63hild_frame_id\x18\x03 \x01(\t\x12+\n\x04pose\x18\x04 \x01(\x0b\x32\x1d.org.yunlink.mobility.v1.Pose\x12-\n\x05twist\x18\x05 \x01(\x0b\x32\x1e.org.yunlink.mobility.v1.Twist\x12\x17\n\x0fpose_covariance\x18\x06 \x03(\x01\x12\x18\n\x10twist_covariance\x18\x07 \x03(\x01\"a\n\x08GotoGoal\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x32\n\x08position\x18\x02 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x0f\n\x07yaw_rad\x18\x03 \x01(\x01\"\x8f\x01\n\x0cVelocityGoal\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x34\n\nlinear_mps\x18\x02 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x37\n\rangular_radps\x18\x03 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\"|\n\x0fTrajectoryPoint\x12\r\n\x05\x64t_ms\x18\x01 \x01(\r\x12+\n\x04pose\x18\x02 \x01(\x0b\x32\x1d.org.yunlink.mobility.v1.Pose\x12-\n\x05twist\x18\x03 \x01(\x0b\x32\x1e.org.yunlink.mobility.v1.Twist\"\\\n\x0eTrajectoryGoal\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x38\n\x06points\x18\x02 \x03(\x0b\x32(.org.yunlink.mobility.v1.TrajectoryPointb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&org.yunlink.mobility/v1/mobility.proto\x12\x17org.yunlink.mobility.v1\"\x1f\n\x07Vector2\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\"*\n\x07Vector3\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\"8\n\nQuaternion\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\t\n\x01z\x18\x03 \x01(\x01\x12\t\n\x01w\x18\x04 \x01(\x01\"t\n\x04Pose\x12\x32\n\x08position\x18\x01 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x38\n\x0borientation\x18\x02 \x01(\x0b\x32#.org.yunlink.mobility.v1.Quaternion\"l\n\x05Twist\x12\x30\n\x06linear\x18\x01 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x31\n\x07\x61ngular\x18\x02 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\"\xdc\x01\n\x08Odometry\x12\x17\n\x0fsource_stamp_ns\x18\x01 \x01(\x04\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\t\x12\x16\n\x0e\x63hild_frame_id\x18\x03 \x01(\t\x12+\n\x04pose\x18\x04 \x01(\x0b\x32\x1d.org.yunlink.mobility.v1.Pose\x12-\n\x05twist\x18\x05 \x01(\x0b\x32\x1e.org.yunlink.mobility.v1.Twist\x12\x17\n\x0fpose_covariance\x18\x06 \x03(\x01\x12\x18\n\x10twist_covariance\x18\x07 \x03(\x01\"a\n\x08GotoGoal\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x32\n\x08position\x18\x02 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x0f\n\x07yaw_rad\x18\x03 \x01(\x01\"\x8f\x01\n\x0cVelocityGoal\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x34\n\nlinear_mps\x18\x02 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\x12\x37\n\rangular_radps\x18\x03 \x01(\x0b\x32 .org.yunlink.mobility.v1.Vector3\"|\n\x0fTrajectoryPoint\x12\r\n\x05\x64t_ms\x18\x01 \x01(\r\x12+\n\x04pose\x18\x02 \x01(\x0b\x32\x1d.org.yunlink.mobility.v1.Pose\x12-\n\x05twist\x18\x03 \x01(\x0b\x32\x1e.org.yunlink.mobility.v1.Twist\"\\\n\x0eTrajectoryGoal\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x38\n\x06points\x18\x02 \x03(\x0b\x32(.org.yunlink.mobility.v1.TrajectoryPointb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'org.yunlink.mobility.v1.mobility_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_VECTOR3']._serialized_start=67
-  _globals['_VECTOR3']._serialized_end=109
-  _globals['_QUATERNION']._serialized_start=111
-  _globals['_QUATERNION']._serialized_end=167
-  _globals['_POSE']._serialized_start=169
-  _globals['_POSE']._serialized_end=285
-  _globals['_TWIST']._serialized_start=287
-  _globals['_TWIST']._serialized_end=395
-  _globals['_ODOMETRY']._serialized_start=398
-  _globals['_ODOMETRY']._serialized_end=618
-  _globals['_GOTOGOAL']._serialized_start=620
-  _globals['_GOTOGOAL']._serialized_end=717
-  _globals['_VELOCITYGOAL']._serialized_start=720
-  _globals['_VELOCITYGOAL']._serialized_end=863
-  _globals['_TRAJECTORYPOINT']._serialized_start=865
-  _globals['_TRAJECTORYPOINT']._serialized_end=989
-  _globals['_TRAJECTORYGOAL']._serialized_start=991
-  _globals['_TRAJECTORYGOAL']._serialized_end=1083
+  _globals['_VECTOR2']._serialized_start=67
+  _globals['_VECTOR2']._serialized_end=98
+  _globals['_VECTOR3']._serialized_start=100
+  _globals['_VECTOR3']._serialized_end=142
+  _globals['_QUATERNION']._serialized_start=144
+  _globals['_QUATERNION']._serialized_end=200
+  _globals['_POSE']._serialized_start=202
+  _globals['_POSE']._serialized_end=318
+  _globals['_TWIST']._serialized_start=320
+  _globals['_TWIST']._serialized_end=428
+  _globals['_ODOMETRY']._serialized_start=431
+  _globals['_ODOMETRY']._serialized_end=651
+  _globals['_GOTOGOAL']._serialized_start=653
+  _globals['_GOTOGOAL']._serialized_end=750
+  _globals['_VELOCITYGOAL']._serialized_start=753
+  _globals['_VELOCITYGOAL']._serialized_end=896
+  _globals['_TRAJECTORYPOINT']._serialized_start=898
+  _globals['_TRAJECTORYPOINT']._serialized_end=1022
+  _globals['_TRAJECTORYGOAL']._serialized_start=1024
+  _globals['_TRAJECTORYGOAL']._serialized_end=1116
 # @@protoc_insertion_point(module_scope)

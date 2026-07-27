@@ -68,6 +68,107 @@ message UavControl {
   double desired_yaw_rate_radps = 6;
   uint32 yaw_mode = 7;
   uint32 controller_type = 8;
+  org.yunlink.mobility.v1.Vector2 desired_body_xy_position_m = 9;
+  org.yunlink.mobility.v1.Vector2 desired_body_xy_velocity_mps = 10;
+  double fixed_height_m = 11;
+}
+
+enum UavYawMode {
+  UAV_YAW_KEEP = 0;
+  UAV_YAW_SET_ANGLE = 1;
+  UAV_YAW_SET_RATE = 2;
+}
+
+enum UavControllerType {
+  UAV_CONTROLLER_DEFAULT = 0;
+  UAV_CONTROLLER_POSITION = 1;
+  UAV_CONTROLLER_ATTITUDE = 2;
+}
+
+message YawTarget {
+  UavYawMode mode = 1;
+  double value = 2;
+}
+
+message HeightLock {
+  double height_m = 1;
+}
+
+message WorldPositionTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 position_m = 2;
+}
+
+message BodyPositionTarget {
+  org.yunlink.mobility.v1.Vector2 body_xy_position_m = 1;
+  double fixed_height_m = 2;
+}
+
+message TrajectorySetpointTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 position_m = 2;
+  org.yunlink.mobility.v1.Vector3 velocity_mps = 3;
+  org.yunlink.mobility.v1.Vector3 acceleration_mps2 = 4;
+}
+
+message WorldVelocityTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 velocity_mps = 2;
+  HeightLock height_lock = 3;
+}
+
+message BodyVelocityTarget {
+  org.yunlink.mobility.v1.Vector2 body_xy_velocity_mps = 1;
+  double fixed_height_m = 2;
+}
+
+message UavDirectControlGoal {
+  oneof target {
+    WorldPositionTarget world_position = 1;
+    BodyPositionTarget body_position = 2;
+    TrajectorySetpointTarget trajectory_setpoint = 3;
+    WorldVelocityTarget world_velocity = 4;
+    BodyVelocityTarget body_velocity = 5;
+  }
+  YawTarget yaw = 6;
+  UavControllerType controller = 7;
+  uint32 lease_ms = 8;
+}
+
+message UavWaypoint {
+  org.yunlink.mobility.v1.Vector3 position_m = 1;
+  double yaw_rad = 2;
+  double hold_time_s = 3;
+}
+
+message UavWaypointMissionGoal {
+  string frame_id = 1;
+  repeated UavWaypoint waypoints = 2;
+  bool interrupt_current_task = 3;
+}
+
+message UavPlanningState {
+  uint64 source_stamp_ns = 1;
+  string planner_type = 2;
+  uint32 planning_state = 3;
+  string fsm_state = 4;
+  bool local_odom_valid = 5;
+  bool global_odom_valid = 6;
+  bool local_map_valid = 7;
+  bool global_map_valid = 8;
+  string global_frame = 9;
+  string local_frame = 10;
+  string active_frame = 11;
+  org.yunlink.mobility.v1.Vector3 home_point_m = 12;
+  uint32 current_waypoint_index = 13;
+  uint32 total_waypoints = 14;
+  org.yunlink.mobility.v1.Vector3 current_global_goal_m = 15;
+  org.yunlink.mobility.v1.Vector3 current_local_goal_m = 16;
+  org.yunlink.mobility.v1.Vector3 current_local_subgoal_m = 17;
+  double distance_to_goal_m = 18;
+  double min_obstacle_distance_m = 19;
+  string control_output_mode = 20;
+  string failure_reason = 21;
 }
 
 message UavControlState {

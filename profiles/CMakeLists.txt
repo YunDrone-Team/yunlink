@@ -59,7 +59,11 @@ protobuf_generate_cpp(
 add_library(yunlink_profile_sunray STATIC
   ${YUNLINK_SUNRAY_PROTO_SRCS}
   ${YUNLINK_SUNRAY_PROTO_HDRS}
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v1/control_validation.cpp
 )
-target_include_directories(yunlink_profile_sunray PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(yunlink_profile_sunray PUBLIC
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${YUNLINK_PROFILE_PROTO_ROOT}
+)
 target_link_libraries(yunlink_profile_sunray PUBLIC yunlink_profile_mobility protobuf::libprotobuf)
 add_library(yunlink::profile_sunray ALIAS yunlink_profile_sunray)

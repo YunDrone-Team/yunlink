@@ -2,6 +2,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 
 #include "yunlink/runtime/runtime_v2.hpp"
 #include "yunlink/core/core_messages_v2.hpp"
@@ -28,6 +29,7 @@ int main() {
     SessionInfo active;
     bool action_received = false;
     bool link_down = false;
+    std::string server_peer_id;
     client.subscribe([&](const RuntimeEvent& event) {
         if (event.kind == RuntimeEventKind::kLink && !event.link_up) {
             std::lock_guard<std::mutex> lock(mutex);
@@ -42,6 +44,12 @@ int main() {
         }
     });
     server.subscribe([&](const RuntimeEvent& event) {
+        if (event.kind == RuntimeEventKind::kSession &&
+            event.session.state == SessionState::kActive) {
+            std::lock_guard<std::mutex> lock(mutex);
+            server_peer_id = event.peer.id;
+            changed.notify_all();
+        }
         if (event.kind == RuntimeEventKind::kEnvelope &&
             event.envelope.family == MessageFamily::kAction) {
             std::lock_guard<std::mutex> lock(mutex);
@@ -65,6 +73,11 @@ int main() {
     assert(active.negotiated_profiles.at("org.yunlink.mobility").minor == 0);
     assert(active.rejected_profiles.size() == 1);
     assert(active.rejected_profiles.front() == "com.example.server");
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        assert(changed.wait_for(
+            lock, std::chrono::seconds(3), [&]() { return !server_peer_id.empty(); }));
+    }
 
     assert(server.set_entities({{"entity.alpha", "robot", "Alpha"}}) == ErrorCode::kOk);
     const auto target = TargetSelector::entity("entity.alpha");
@@ -89,6 +102,31 @@ int main() {
         std::unique_lock<std::mutex> lock(mutex);
         assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() { return action_received; }));
     }
+    for (int attempt = 0;
+         attempt < 100 &&
+         !server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility");
+         ++attempt) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    assert(server.has_authority(
+        server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    assert(!server.has_authority(
+        "another-peer", session_id, "entity.alpha", "org.yunlink.mobility"));
+
+    assert(client.publish(peer.id,
+                          session_id,
+                          MessageFamily::kEntityDirectory,
+                          static_cast<uint8_t>(DirectoryOperation::kDetachRequest),
+                          TargetSelector::endpoint(server_config.endpoint_uid),
+                          {"yunlink.core", 2, 0, "attachment_request"},
+                          encode(AttachmentRequest{"stale-revision", {"entity.alpha"}}),
+                          &handle) == ErrorCode::kOk);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    assert(server.has_authority(
+        server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    server.revoke_authority(server_peer_id, session_id, {"entity.alpha"});
+    assert(!server.has_authority(
+        server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
 
     server.stop();
     {
