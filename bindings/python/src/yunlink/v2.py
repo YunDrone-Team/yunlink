@@ -427,6 +427,12 @@ class Runtime:
             )
         )
 
+    def configuration(self, timeout_s: float = 5.0):
+        """Return the generic Configuration Service client for this runtime."""
+        from .configuration_client import ConfigurationClient
+
+        return ConfigurationClient(self, timeout_s)
+
     def publish(
         self,
         peer: Peer,

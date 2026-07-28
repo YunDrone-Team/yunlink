@@ -388,6 +388,36 @@ Bytes encode(const ConfigResourceApplyRequest& value) {
 Bytes encode(const ConfigResourceApplyResponse& value) {
     return ::yunlink::encode_payload(value);
 }
+Bytes encode(const ConfigResourceVariantListRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantListResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantCreateRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantCreateResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantSaveCurrentRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantSaveCurrentResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantActivateRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantActivateResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantDeleteRequest& value) {
+    return ::yunlink::encode_payload(value);
+}
+Bytes encode(const ConfigResourceVariantDeleteResponse& value) {
+    return ::yunlink::encode_payload(value);
+}
 
 Bytes encode(const LogListResponse& value) {
     Writer writer;
@@ -536,6 +566,36 @@ bool decode(const Bytes& bytes, ConfigResourceApplyRequest* value) {
     return ::yunlink::decode_payload(bytes, value);
 }
 bool decode(const Bytes& bytes, ConfigResourceApplyResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantListRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantListResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantCreateRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantCreateResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantSaveCurrentRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantSaveCurrentResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantActivateRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantActivateResponse* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantDeleteRequest* value) {
+    return ::yunlink::decode_payload(bytes, value);
+}
+bool decode(const Bytes& bytes, ConfigResourceVariantDeleteResponse* value) {
     return ::yunlink::decode_payload(bytes, value);
 }
 

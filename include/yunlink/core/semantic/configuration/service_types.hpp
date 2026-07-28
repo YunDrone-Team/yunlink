@@ -49,6 +49,21 @@ enum class ConfigApplyOutcome : uint8_t {
     kFailed = 4,
 };
 
+// Describes when a persisted field change can take effect.  This is intentionally
+// provider-neutral: adapters translate their local lifecycle terminology here.
+enum class ConfigFieldUpdatePolicy : uint8_t {
+    kHotReload = 0,
+    kComponentRestart = 1,
+    kEndpointRestart = 2,
+    kDeviceReboot = 3,
+    kManual = 4,
+};
+
+enum class ConfigVariantSource : uint8_t {
+    kDefault = 1,
+    kActive = 2,
+};
+
 struct ConfigValue {
     ConfigValueType type = ConfigValueType::kString;
     bool bool_value = false;
@@ -103,6 +118,7 @@ struct ConfigResourceDescriptor {
     bool readable = true;
     bool writable = false;
     bool apply_supported = false;
+    bool variants_supported = false;
 };
 
 struct ConfigChoice {
@@ -124,6 +140,9 @@ struct ConfigFieldSchema {
     double maximum = 0.0;
     std::string validation_pattern;
     std::vector<ConfigChoice> choices;
+    std::string group_path;
+    ConfigFieldUpdatePolicy update_policy = ConfigFieldUpdatePolicy::kManual;
+    std::string unit;
 };
 
 struct ConfigFieldValue {
@@ -135,7 +154,18 @@ struct ConfigSnapshot {
     std::string resource_id;
     std::string revision;
     std::string applied_revision;
+    std::string variant_id;
+    std::string active_variant_id;
     std::vector<ConfigFieldValue> values;
+};
+
+struct ConfigVariantDescriptor {
+    std::string id;
+    std::string title;
+    std::string revision;
+    uint64_t modified_at_ns = 0;
+    bool active = false;
+    bool mutable_variant = true;
 };
 
 struct ConfigFieldError {
@@ -173,6 +203,8 @@ struct ConfigResourceDescribeResponse {
 
 struct ConfigResourceGetRequest {
     std::string resource_id;
+    // Empty selects the resource's currently active variant.
+    std::string variant_id;
 };
 
 struct ConfigResourceGetResponse {
@@ -183,6 +215,8 @@ struct ConfigResourceGetResponse {
 
 struct ConfigResourcePatchRequest {
     std::string resource_id;
+    // Empty selects the resource's currently active variant.
+    std::string variant_id;
     std::string expected_revision;
     std::vector<ConfigFieldValue> updates;
     bool validate_only = false;
@@ -191,9 +225,18 @@ struct ConfigResourcePatchRequest {
 struct ConfigResourcePatchResponse {
     ConfigServiceStatus status = ConfigServiceStatus::kInternalError;
     std::string message;
+    // Current persisted snapshot. For validate-only patches this remains the exact
+    // base snapshot that the client supplied in expected_revision.
     ConfigSnapshot snapshot;
     std::vector<ConfigFieldError> errors;
     ConfigEffects effects;
+    // Provider-normalized proposal for a successful validate-only patch. This is
+    // display-only: candidate_snapshot.revision identifies candidate content, not a
+    // persisted revision accepted by a later save. A client saves by resubmitting the
+    // same updates with snapshot.revision; a concurrent persisted change then yields
+    // Conflict and requires a fresh Get + validation cycle.
+    bool has_candidate_snapshot = false;
+    ConfigSnapshot candidate_snapshot;
 };
 
 struct ConfigResourceApplyRequest {
@@ -207,6 +250,70 @@ struct ConfigResourceApplyResponse {
     std::string applied_revision;
     ConfigApplyOutcome outcome = ConfigApplyOutcome::kFailed;
     ConfigEffects effects;
+};
+
+struct ConfigResourceVariantListRequest {
+    std::string resource_id;
+};
+
+struct ConfigResourceVariantListResponse {
+    ConfigServiceStatus status = ConfigServiceStatus::kInternalError;
+    std::string message;
+    std::string active_variant_id;
+    std::vector<ConfigVariantDescriptor> variants;
+};
+
+struct ConfigResourceVariantCreateRequest {
+    std::string resource_id;
+    std::string variant_id;
+    ConfigVariantSource source = ConfigVariantSource::kActive;
+    std::string expected_active_revision;
+};
+
+struct ConfigResourceVariantCreateResponse {
+    ConfigServiceStatus status = ConfigServiceStatus::kInternalError;
+    std::string message;
+    ConfigVariantDescriptor variant;
+    ConfigEffects effects;
+};
+
+struct ConfigResourceVariantSaveCurrentRequest {
+    std::string resource_id;
+    std::string variant_id;
+    std::string expected_variant_revision;
+    std::string expected_active_revision;
+};
+
+struct ConfigResourceVariantSaveCurrentResponse {
+    ConfigServiceStatus status = ConfigServiceStatus::kInternalError;
+    std::string message;
+    ConfigVariantDescriptor variant;
+    ConfigEffects effects;
+};
+
+struct ConfigResourceVariantActivateRequest {
+    std::string resource_id;
+    std::string variant_id;
+    std::string expected_active_revision;
+};
+
+struct ConfigResourceVariantActivateResponse {
+    ConfigServiceStatus status = ConfigServiceStatus::kInternalError;
+    std::string message;
+    std::string applied_revision;
+    ConfigApplyOutcome outcome = ConfigApplyOutcome::kFailed;
+    ConfigEffects effects;
+};
+
+struct ConfigResourceVariantDeleteRequest {
+    std::string resource_id;
+    std::string variant_id;
+    std::string expected_revision;
+};
+
+struct ConfigResourceVariantDeleteResponse {
+    ConfigServiceStatus status = ConfigServiceStatus::kInternalError;
+    std::string message;
 };
 
 struct ConfigurationServiceHandle {

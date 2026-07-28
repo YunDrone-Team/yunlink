@@ -14,6 +14,9 @@ from .v2 import (
     TargetScope,
     TypeRef,
 )
+from .configuration import *
+from .configuration_client import ConfigurationClient, ConfigurationEndpoint, configuration
+from .configuration_codec import ConfigurationCodecError, decode as decode_configuration, encode as encode_configuration
 
 __all__ = [
     "Error",
@@ -28,4 +31,12 @@ __all__ = [
     "Target",
     "TargetScope",
     "TypeRef",
+    "ConfigurationClient",
+    "ConfigurationEndpoint",
+    "ConfigurationCodecError",
+    "configuration",
+    "decode_configuration",
+    "encode_configuration",
 ]
+
+__all__ += [name for name in dir() if name.startswith("Config")]

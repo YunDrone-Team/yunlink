@@ -172,8 +172,15 @@ pub enum Event {
         state: u8,
         authenticated: bool,
     },
-    Link { peer_id: String, up: bool },
-    Error { peer_id: String, code: u16, message: String },
+    Link {
+        peer_id: String,
+        up: bool,
+    },
+    Error {
+        peer_id: String,
+        code: u16,
+        message: String,
+    },
 }
 
 struct CallbackContext {
@@ -231,10 +238,7 @@ unsafe fn copy_message(event: &sys::yunlink_v2_event_t) -> Message {
     }
 }
 
-unsafe extern "C" fn event_callback(
-    event: *const sys::yunlink_v2_event_t,
-    user_data: *mut c_void,
-) {
+unsafe extern "C" fn event_callback(event: *const sys::yunlink_v2_event_t, user_data: *mut c_void) {
     if event.is_null() || user_data.is_null() {
         return;
     }
@@ -292,11 +296,12 @@ fn profile_view(value: &Profile) -> sys::yunlink_v2_profile_view_t {
 }
 
 fn c_buffer(value: &[std::ffi::c_char]) -> String {
-    let len = value.iter().position(|byte| *byte == 0).unwrap_or(value.len());
-    String::from_utf8_lossy(unsafe {
-        slice::from_raw_parts(value.as_ptr().cast::<u8>(), len)
-    })
-    .into_owned()
+    let len = value
+        .iter()
+        .position(|byte| *byte == 0)
+        .unwrap_or(value.len());
+    String::from_utf8_lossy(unsafe { slice::from_raw_parts(value.as_ptr().cast::<u8>(), len) })
+        .into_owned()
 }
 
 struct Raw(*mut sys::yunlink_v2_runtime_t);
@@ -387,9 +392,8 @@ impl Runtime {
     }
 
     pub async fn open_session(&self, peer: &Peer) -> Result<u64> {
-        let session_id = unsafe {
-            sys::yunlink_v2_runtime_open_session(self.raw(), string_view(&peer.id))
-        };
+        let session_id =
+            unsafe { sys::yunlink_v2_runtime_open_session(self.raw(), string_view(&peer.id)) };
         (session_id != 0)
             .then_some(session_id)
             .ok_or(Error { code: 8 })
@@ -414,7 +418,11 @@ impl Runtime {
         qos: Qos,
         source_entity_uid: &str,
     ) -> Result<MessageHandle> {
-        let uid_views = target.uids().iter().map(|uid| string_view(uid)).collect::<Vec<_>>();
+        let uid_views = target
+            .uids()
+            .iter()
+            .map(|uid| string_view(uid))
+            .collect::<Vec<_>>();
         let native_target = sys::yunlink_v2_target_view_t {
             scope: target.scope(),
             uids: uid_views.as_ptr(),

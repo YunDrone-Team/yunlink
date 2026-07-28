@@ -73,6 +73,16 @@ enum class ConfigurationOperation : uint8_t {
     kPatchResponse = 8,
     kApplyRequest = 9,
     kApplyResponse = 10,
+    kVariantListRequest = 11,
+    kVariantListResponse = 12,
+    kVariantCreateRequest = 13,
+    kVariantCreateResponse = 14,
+    kVariantSaveCurrentRequest = 15,
+    kVariantSaveCurrentResponse = 16,
+    kVariantActivateRequest = 17,
+    kVariantActivateResponse = 18,
+    kVariantDeleteRequest = 19,
+    kVariantDeleteResponse = 20,
 };
 
 enum class LogOperation : uint8_t {

@@ -5,6 +5,7 @@
 
 #include "../binary_codec_io.hpp"
 
+#include <cmath>
 #include <utility>
 
 namespace yunlink::configuration_codec {
@@ -71,6 +72,15 @@ inline bool valid_outcome(uint8_t value) {
            value <= static_cast<uint8_t>(ConfigApplyOutcome::kFailed);
 }
 
+inline bool valid_update_policy(uint8_t value) {
+    return value <= static_cast<uint8_t>(ConfigFieldUpdatePolicy::kManual);
+}
+
+inline bool valid_variant_source(uint8_t value) {
+    return value >= static_cast<uint8_t>(ConfigVariantSource::kDefault) &&
+           value <= static_cast<uint8_t>(ConfigVariantSource::kActive);
+}
+
 inline void write_value(BufferWriter& writer, const ConfigValue& value) {
     writer.write_u8(static_cast<uint8_t>(value.type));
     switch (value.type) {
@@ -81,6 +91,10 @@ inline void write_value(BufferWriter& writer, const ConfigValue& value) {
         writer.write_u64(static_cast<uint64_t>(value.int64_value));
         return;
     case ConfigValueType::kDouble:
+        if (!std::isfinite(value.double_value)) {
+            writer.invalidate();
+            return;
+        }
         writer.write_double(value.double_value);
         return;
     case ConfigValueType::kString:
@@ -91,6 +105,10 @@ inline void write_value(BufferWriter& writer, const ConfigValue& value) {
         return;
     case ConfigValueType::kDoubleList:
         write_vector(writer, value.double_list_value, [](BufferWriter& target, double item) {
+            if (!std::isfinite(item)) {
+                target.invalidate();
+                return;
+            }
             target.write_double(item);
         });
         return;
@@ -116,14 +134,14 @@ inline bool read_value(BufferReader& reader, ConfigValue* out) {
         return true;
     }
     case ConfigValueType::kDouble:
-        return reader.read_double(&out->double_value);
+        return reader.read_double(&out->double_value) && std::isfinite(out->double_value);
     case ConfigValueType::kString:
         return reader.read_string(&out->string_value);
     case ConfigValueType::kStringList:
         return read_strings(reader, &out->string_list_value);
     case ConfigValueType::kDoubleList:
         return read_vector(reader, &out->double_list_value, [](BufferReader& source, double* item) {
-            return source.read_double(item);
+            return source.read_double(item) && std::isfinite(*item);
         });
     }
     return false;
@@ -136,12 +154,14 @@ inline void write_descriptor(BufferWriter& writer, const ConfigResourceDescripto
     writer.write_bool(value.readable);
     writer.write_bool(value.writable);
     writer.write_bool(value.apply_supported);
+    writer.write_bool(value.variants_supported);
 }
 
 inline bool read_descriptor(BufferReader& reader, ConfigResourceDescriptor* out) {
     return out != nullptr && reader.read_string(&out->id) && reader.read_string(&out->title) &&
            reader.read_string(&out->description) && reader.read_bool(&out->readable) &&
-           reader.read_bool(&out->writable) && reader.read_bool(&out->apply_supported);
+           reader.read_bool(&out->writable) && reader.read_bool(&out->apply_supported) &&
+           reader.read_bool(&out->variants_supported);
 }
 
 inline void write_choice(BufferWriter& writer, const ConfigChoice& value) {
@@ -167,6 +187,9 @@ inline void write_schema(BufferWriter& writer, const ConfigFieldSchema& value) {
     writer.write_double(value.maximum);
     writer.write_string(value.validation_pattern);
     write_vector(writer, value.choices, write_choice);
+    writer.write_string(value.group_path);
+    writer.write_u8(static_cast<uint8_t>(value.update_policy));
+    writer.write_string(value.unit);
 }
 
 inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
@@ -177,11 +200,21 @@ inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
         return false;
     }
     out->type = static_cast<ConfigValueType>(type);
-    return reader.read_bool(&out->required) && reader.read_bool(&out->read_only) &&
+    uint8_t update_policy = 0;
+    if (!(reader.read_bool(&out->required) && reader.read_bool(&out->read_only) &&
            reader.read_bool(&out->sensitive) && reader.read_bool(&out->has_minimum) &&
            reader.read_double(&out->minimum) && reader.read_bool(&out->has_maximum) &&
            reader.read_double(&out->maximum) && reader.read_string(&out->validation_pattern) &&
-           read_vector(reader, &out->choices, read_choice);
+           read_vector(reader, &out->choices, read_choice) && reader.read_string(&out->group_path) &&
+           reader.read_u8(&update_policy) && reader.read_string(&out->unit))) {
+        return false;
+    }
+    if (!std::isfinite(out->minimum) || !std::isfinite(out->maximum) ||
+        !valid_update_policy(update_policy)) {
+        return false;
+    }
+    out->update_policy = static_cast<ConfigFieldUpdatePolicy>(update_policy);
+    return true;
 }
 
 inline void write_field_value(BufferWriter& writer, const ConfigFieldValue& value) {
@@ -197,13 +230,31 @@ inline void write_snapshot(BufferWriter& writer, const ConfigSnapshot& value) {
     writer.write_string(value.resource_id);
     writer.write_string(value.revision);
     writer.write_string(value.applied_revision);
+    writer.write_string(value.variant_id);
+    writer.write_string(value.active_variant_id);
     write_vector(writer, value.values, write_field_value);
 }
 
 inline bool read_snapshot(BufferReader& reader, ConfigSnapshot* out) {
     return out != nullptr && reader.read_string(&out->resource_id) &&
            reader.read_string(&out->revision) && reader.read_string(&out->applied_revision) &&
+           reader.read_string(&out->variant_id) && reader.read_string(&out->active_variant_id) &&
            read_vector(reader, &out->values, read_field_value);
+}
+
+inline void write_variant(BufferWriter& writer, const ConfigVariantDescriptor& value) {
+    writer.write_string(value.id);
+    writer.write_string(value.title);
+    writer.write_string(value.revision);
+    writer.write_u64(value.modified_at_ns);
+    writer.write_bool(value.active);
+    writer.write_bool(value.mutable_variant);
+}
+
+inline bool read_variant(BufferReader& reader, ConfigVariantDescriptor* out) {
+    return out != nullptr && reader.read_string(&out->id) && reader.read_string(&out->title) &&
+           reader.read_string(&out->revision) && reader.read_u64(&out->modified_at_ns) &&
+           reader.read_bool(&out->active) && reader.read_bool(&out->mutable_variant);
 }
 
 inline void write_field_error(BufferWriter& writer, const ConfigFieldError& value) {
