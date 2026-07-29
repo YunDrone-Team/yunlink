@@ -12,8 +12,10 @@
 namespace yunlink::v2 {
 namespace {
 
-constexpr std::array<uint8_t, 4> kQueryMagic{{'Y', 'L', 'Q', '2'}};
-constexpr std::array<uint8_t, 4> kReplyMagic{{'Y', 'L', 'R', '2'}};
+constexpr std::array<uint8_t, 4> kQueryMagicV2{{'Y', 'L', 'Q', '2'}};
+constexpr std::array<uint8_t, 4> kQueryMagicV3{{'Y', 'L', 'Q', '3'}};
+constexpr std::array<uint8_t, 4> kReplyMagicV2{{'Y', 'L', 'R', '2'}};
+constexpr std::array<uint8_t, 4> kReplyMagicV3{{'Y', 'L', 'R', '3'}};
 constexpr size_t kMaxDiscoveryBytes = 8192;
 constexpr uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr uint64_t kFnvPrime = 1099511628211ULL;
@@ -46,6 +48,11 @@ class Writer {
     void u16(uint16_t value) {
         value_.push_back(static_cast<uint8_t>(value >> 8U));
         value_.push_back(static_cast<uint8_t>(value));
+    }
+    void u32(uint32_t value) {
+        for (int shift = 24; shift >= 0; shift -= 8) {
+            value_.push_back(static_cast<uint8_t>(value >> shift));
+        }
     }
     void u64(uint64_t value) {
         for (int shift = 56; shift >= 0; shift -= 8) {
@@ -99,6 +106,16 @@ class Reader {
         *value = static_cast<uint16_t>(value_[cursor_] << 8U) |
                  static_cast<uint16_t>(value_[cursor_ + 1]);
         cursor_ += 2;
+        return true;
+    }
+    bool u32(uint32_t* value) {
+        if (value == nullptr || cursor_ + 4 > payload_size_) {
+            return false;
+        }
+        *value = 0;
+        for (int shift = 24; shift >= 0; shift -= 8) {
+            *value |= static_cast<uint32_t>(value_[cursor_++]) << shift;
+        }
         return true;
     }
     bool u64(uint64_t* value) {
@@ -161,11 +178,14 @@ bool valid_advertisement(const DiscoveryAdvertisement& value) {
 }  // namespace
 
 Bytes encode_discovery_query(const DiscoveryQuery& query, const std::string& shared_secret) {
-    if (query.nonce == 0 || query.response_window_ms == 0) {
+    if (query.nonce == 0 || query.response_window_ms == 0 ||
+        (query.format_version != kDiscoveryFormatV2 &&
+         query.format_version != kDiscoveryFormatV3)) {
         return {};
     }
     Writer writer;
-    writer.bytes(kQueryMagic.data(), kQueryMagic.size());
+    const auto& magic = query.format_version == kDiscoveryFormatV3 ? kQueryMagicV3 : kQueryMagicV2;
+    writer.bytes(magic.data(), magic.size());
     writer.u64(query.nonce);
     writer.u16(query.response_window_ms);
     return writer.finish(shared_secret);
@@ -179,9 +199,15 @@ bool decode_discovery_query(const Bytes& bytes,
     }
     Reader reader(bytes, bytes.size() - sizeof(uint64_t));
     DiscoveryQuery parsed;
-    if (!reader.magic(kQueryMagic) || !reader.u64(&parsed.nonce) ||
-        !reader.u16(&parsed.response_window_ms) || !reader.done() || parsed.nonce == 0 ||
-        parsed.response_window_ms == 0) {
+    if (reader.magic(kQueryMagicV3)) {
+        parsed.format_version = kDiscoveryFormatV3;
+    } else if (reader.magic(kQueryMagicV2)) {
+        parsed.format_version = kDiscoveryFormatV2;
+    } else {
+        return false;
+    }
+    if (!reader.u64(&parsed.nonce) || !reader.u16(&parsed.response_window_ms) || !reader.done() ||
+        parsed.nonce == 0 || parsed.response_window_ms == 0) {
         return false;
     }
     *query = parsed;
@@ -195,11 +221,13 @@ Bytes encode_discovery_reply(const DiscoveryQuery& query,
         return {};
     }
     Writer writer;
-    writer.bytes(kReplyMagic.data(), kReplyMagic.size());
+    const bool supports_entity_agent_id = query.format_version == kDiscoveryFormatV3;
+    const auto& magic = supports_entity_agent_id ? kReplyMagicV3 : kReplyMagicV2;
+    writer.bytes(magic.data(), magic.size());
     writer.u64(query.nonce);
     writer.u8(kProtocolMajor);
     writer.u8(kHeaderVersion);
-    writer.u16(kSchemaVersion);
+    writer.u16(supports_entity_agent_id ? kDiscoveryFormatV3 : kSchemaVersion);
     writer.text(advertisement.endpoint_uid);
     writer.text(advertisement.display_name);
     writer.u16(advertisement.tcp_listen_port);
@@ -220,6 +248,9 @@ Bytes encode_discovery_reply(const DiscoveryQuery& query,
         writer.text(entity.kind);
         writer.text(entity.display_name);
         writer.u8(static_cast<uint8_t>(entity.availability));
+        if (supports_entity_agent_id) {
+            writer.u32(entity.agent_id);
+        }
     }
     writer.u64(advertisement.started_at_ms);
     writer.u64(advertisement.sequence);
@@ -241,9 +272,16 @@ bool decode_discovery_reply(const Bytes& bytes,
     uint8_t header = 0;
     uint16_t schema = 0;
     uint8_t count = 0;
-    if (!reader.magic(kReplyMagic) || !reader.u64(&nonce) || nonce != expected_nonce ||
-        !reader.u8(&protocol) || protocol != kProtocolMajor || !reader.u8(&header) ||
-        header != kHeaderVersion || !reader.u16(&schema) || schema != kSchemaVersion ||
+    bool includes_entity_agent_id = false;
+    if (reader.magic(kReplyMagicV3)) {
+        includes_entity_agent_id = true;
+    } else if (!reader.magic(kReplyMagicV2)) {
+        return false;
+    }
+    if (!reader.u64(&nonce) || nonce != expected_nonce || !reader.u8(&protocol) ||
+        protocol != kProtocolMajor || !reader.u8(&header) || header != kHeaderVersion ||
+        !reader.u16(&schema) ||
+        schema != (includes_entity_agent_id ? kDiscoveryFormatV3 : kSchemaVersion) ||
         !reader.text(&parsed.endpoint_uid) || !reader.text(&parsed.display_name) ||
         !reader.u16(&parsed.tcp_listen_port) || !reader.u8(&count)) {
         return false;
@@ -278,6 +316,9 @@ bool decode_discovery_reply(const Bytes& bytes,
         if (!reader.text(&entity.entity_uid) || !reader.text(&entity.kind) ||
             !reader.text(&entity.display_name) || !reader.u8(&availability) ||
             availability > static_cast<uint8_t>(Availability::kOffline)) {
+            return false;
+        }
+        if (includes_entity_agent_id && !reader.u32(&entity.agent_id)) {
             return false;
         }
         entity.availability = static_cast<Availability>(availability);

@@ -16,10 +16,15 @@
 namespace yunlink::v2 {
 
 constexpr uint16_t kDefaultDiscoveryPort = 9697;
+// Discovery packets are independently versioned from the Wire schema. Keep v2
+// for legacy clients; v3 adds the authoritative per-entity Agent ID in replies.
+constexpr uint8_t kDiscoveryFormatV2 = 2;
+constexpr uint8_t kDiscoveryFormatV3 = 3;
 
 struct DiscoveryQuery {
     uint64_t nonce = 0;
     uint16_t response_window_ms = 250;
+    uint8_t format_version = kDiscoveryFormatV2;
 };
 
 struct DiscoveryEntitySummary {
@@ -27,6 +32,8 @@ struct DiscoveryEntitySummary {
     std::string kind;
     std::string display_name;
     Availability availability = Availability::kUnknown;
+    // Zero means an older discovery-v2 reply did not carry this field.
+    uint32_t agent_id = 0;
 };
 
 struct DiscoveryAdvertisement {
