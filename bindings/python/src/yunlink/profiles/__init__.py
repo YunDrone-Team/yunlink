@@ -6,7 +6,7 @@ SUNRAY_PROFILE_ID = "com.yundrone.sunray"
 
 from .org.yunlink.mobility.v1 import mobility_pb2 as mobility
 from .org.yunlink.telemetry.v1 import telemetry_pb2 as telemetry
-from .com.yundrone.sunray.v1 import sunray_pb2 as sunray
+from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 from .validation import (
     valid_metric_key,
     validate_summary_snapshot,

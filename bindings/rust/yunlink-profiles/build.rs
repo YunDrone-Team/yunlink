@@ -6,7 +6,7 @@ fn main() {
     let profiles = root.join("profiles");
     let mobility = profiles.join("org.yunlink.mobility/v1/mobility.proto");
     let telemetry = profiles.join("org.yunlink.telemetry/v1/telemetry.proto");
-    let sunray = profiles.join("com.yundrone.sunray/v1/sunray.proto");
+    let sunray = profiles.join("com.yundrone.sunray/v2/sunray.proto");
     let protoc = protoc_bin_vendored::protoc_bin_path().expect("vendored protoc");
     env::set_var("PROTOC", protoc);
     prost_build::Config::new()

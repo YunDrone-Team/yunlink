@@ -13,7 +13,7 @@ YunLink is split into three boundaries:
    authority, and generic message families. Core is C++17 and does not depend on
    Protobuf or any product Profile.
 2. **Profiles** define optional typed payloads. This repository currently ships
-   `org.yunlink.mobility@1.0` and `com.yundrone.sunray@1.0`. Profiles are built
+   `org.yunlink.mobility@1.0` and `com.yundrone.sunray@2.0`. Profiles are built
    only with `YUNLINK_BUILD_PROFILES=ON`.
 3. **Adapters** live in the integrating product. They translate external
    framework data into Profile payloads or framework-neutral Stream samples.

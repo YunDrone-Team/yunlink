@@ -65,8 +65,29 @@ bool runtime_write(const std::shared_ptr<RuntimeConnection>& connection, const B
     }
     std::error_code error;
     std::lock_guard<std::mutex> lock(connection->send_mutex);
-    const size_t sent = asio::write(*connection->socket, asio::buffer(bytes), error);
-    return !error && sent == bytes.size();
+    size_t offset = 0;
+    size_t retry_count = 0;
+    while (offset < bytes.size() && connection->running.load()) {
+        const size_t sent = connection->socket->write_some(
+            asio::buffer(bytes.data() + offset, bytes.size() - offset), error);
+        if (!error) {
+            if (sent == 0U) {
+                return false;
+            }
+            offset += sent;
+            retry_count = 0;
+            continue;
+        }
+        if (error != asio::error::would_block && error != asio::error::try_again) {
+            return false;
+        }
+        if (++retry_count > 1000U) {
+            return false;
+        }
+        error.clear();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return offset == bytes.size();
 }
 
 void runtime_receive_loop(Runtime::Impl* impl,

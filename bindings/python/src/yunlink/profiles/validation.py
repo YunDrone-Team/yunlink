@@ -1,6 +1,6 @@
 import math
 
-from .com.yundrone.sunray.v1 import sunray_pb2 as sunray
+from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 from .org.yunlink.telemetry.v1 import telemetry_pb2 as telemetry
 
 

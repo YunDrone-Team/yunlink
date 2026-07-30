@@ -1,8 +1,8 @@
-#include "com.yundrone.sunray/v1/control_validation.hpp"
+#include "com.yundrone.sunray/v2/control_validation.hpp"
 
 #include <cmath>
 
-namespace com::yundrone::sunray::v1 {
+namespace com::yundrone::sunray::v2 {
 namespace {
 
 bool fail(std::string* error, const char* detail) {
@@ -123,4 +123,4 @@ bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
     return true;
 }
 
-}  // namespace com::yundrone::sunray::v1
+}  // namespace com::yundrone::sunray::v2

@@ -4,9 +4,9 @@
 #include <cstdint>
 #include <string>
 
-#include "com.yundrone.sunray/v1/sunray.pb.h"
+#include "com.yundrone.sunray/v2/sunray.pb.h"
 
-namespace com::yundrone::sunray::v1 {
+namespace com::yundrone::sunray::v2 {
 
 constexpr uint32_t kMinDirectControlLeaseMs = 250;
 constexpr uint32_t kMaxDirectControlLeaseMs = 2000;
@@ -19,6 +19,6 @@ bool validate_emergency_kill_goal(const EmergencyKillGoal& goal,
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error = nullptr);
 
-}  // namespace com::yundrone::sunray::v1
+}  // namespace com::yundrone::sunray::v2
 
 #endif

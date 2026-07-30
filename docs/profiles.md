@@ -8,7 +8,7 @@ part of the Core library target and are disabled by default.
 `org.yunlink.mobility@1.0` defines geometry, odometry, goto, velocity, and
 trajectory payloads.
 
-`com.yundrone.sunray@1.0` defines Sunray telemetry, vehicle actions, formation
+`com.yundrone.sunray@2.0` defines Sunray telemetry, vehicle actions, formation
 actions, diagnostics, events, and Feature RPC payloads. It imports the Mobility
 Profile for common geometry.
 

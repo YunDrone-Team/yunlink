@@ -16,14 +16,14 @@ pub mod org {
 pub mod com {
     pub mod yundrone {
         pub mod sunray {
-            pub mod v1 {
-                include!(concat!(env!("OUT_DIR"), "/com.yundrone.sunray.v1.rs"));
+            pub mod v2 {
+                include!(concat!(env!("OUT_DIR"), "/com.yundrone.sunray.v2.rs"));
             }
         }
     }
 }
 
-pub use com::yundrone::sunray::v1 as sunray;
+pub use com::yundrone::sunray::v2 as sunray;
 pub use org::yunlink::mobility::v1 as mobility;
 pub use org::yunlink::telemetry::v1 as telemetry;
 

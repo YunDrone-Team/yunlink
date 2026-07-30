@@ -25,403 +25,8 @@ fn decode_payload<T>(
     reader.done().then_some(value).ok_or(Error { code: 6 })
 }
 
-impl ConfigurationPayload for ConfigResourceListRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.u8(0);
-            Ok(())
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let _ = reader.u8()?;
-            Ok(Self)
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceListResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            writer.list(&self.resources, write_descriptor)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                resources: reader.list(read_descriptor)?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceDescribeRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| writer.text(&self.resource_id))
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceDescribeResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            write_descriptor(writer, &self.resource)?;
-            writer.list(&self.fields, write_schema)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                resource: read_descriptor(reader)?,
-                fields: reader.list(read_schema)?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceGetRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.text(&self.resource_id)?;
-            writer.text(&self.variant_id)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-                variant_id: reader.text()?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceGetResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            write_snapshot(writer, &self.snapshot)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                snapshot: read_snapshot(reader)?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourcePatchRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.text(&self.resource_id)?;
-            writer.text(&self.variant_id)?;
-            writer.text(&self.expected_revision)?;
-            writer.list(&self.updates, write_field_value)?;
-            writer.boolean(self.validate_only);
-            Ok(())
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-                variant_id: reader.text()?,
-                expected_revision: reader.text()?,
-                updates: reader.list(read_field_value)?,
-                validate_only: reader.boolean()?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourcePatchResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            write_snapshot(writer, &self.snapshot)?;
-            writer.boolean(self.candidate_snapshot.is_some());
-            if let Some(candidate_snapshot) = &self.candidate_snapshot {
-                write_snapshot(writer, candidate_snapshot)?;
-            }
-            writer.list(&self.errors, write_error)?;
-            write_effects(writer, &self.effects)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                snapshot: read_snapshot(reader)?,
-                candidate_snapshot: if reader.boolean()? {
-                    Some(read_snapshot(reader)?)
-                } else {
-                    None
-                },
-                errors: reader.list(read_error)?,
-                effects: read_effects(reader)?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceApplyRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.text(&self.resource_id)?;
-            writer.text(&self.expected_revision)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-                expected_revision: reader.text()?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceApplyResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            writer.text(&self.applied_revision)?;
-            writer.u8(self.outcome as u8);
-            write_effects(writer, &self.effects)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                applied_revision: reader.text()?,
-                outcome: outcome(reader.u8()?)?,
-                effects: read_effects(reader)?,
-            })
-        })
-    }
-}
-
-impl ConfigurationPayload for ConfigResourceVariantListRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| writer.text(&self.resource_id))
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-            })
-        })
-    }
-}
-impl ConfigurationPayload for ConfigResourceVariantListResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            writer.text(&self.active_variant_id)?;
-            writer.list(&self.variants, write_variant)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                active_variant_id: reader.text()?,
-                variants: reader.list(read_variant)?,
-            })
-        })
-    }
-}
-
-fn write_variant_create(
-    writer: &mut Writer,
-    resource_id: &str,
-    variant_id: &str,
-    source: ConfigVariantSource,
-    revision: &str,
-) -> std::result::Result<(), ()> {
-    writer.text(resource_id)?;
-    writer.text(variant_id)?;
-    writer.u8(source as u8);
-    writer.text(revision)
-}
-fn read_variant_create(
-    reader: &mut Reader<'_>,
-) -> std::result::Result<(String, String, ConfigVariantSource, String), ()> {
-    Ok((
-        reader.text()?,
-        reader.text()?,
-        variant_source(reader.u8()?)?,
-        reader.text()?,
-    ))
-}
-impl ConfigurationPayload for ConfigResourceVariantCreateRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_variant_create(
-                writer,
-                &self.resource_id,
-                &self.variant_id,
-                self.source,
-                &self.expected_active_revision,
-            )
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (resource_id, variant_id, source, expected_active_revision) =
-                read_variant_create(reader)?;
-            Ok(Self {
-                resource_id,
-                variant_id,
-                source,
-                expected_active_revision,
-            })
-        })
-    }
-}
-
-macro_rules! impl_variant_mutation_response {
-    ($type:ty) => {
-        impl ConfigurationPayload for $type {
-            fn encode(&self) -> Result<Vec<u8>> {
-                encode_payload(|writer| {
-                    write_status(writer, self.status, &self.message)?;
-                    write_variant(writer, &self.variant)?;
-                    write_effects(writer, &self.effects)
-                })
-            }
-            fn decode(bytes: &[u8]) -> Result<Self> {
-                decode_payload(bytes, |reader| {
-                    let (status, message) = read_status(reader)?;
-                    Ok(Self {
-                        status,
-                        message,
-                        variant: read_variant(reader)?,
-                        effects: read_effects(reader)?,
-                    })
-                })
-            }
-        }
-    };
-}
-impl_variant_mutation_response!(ConfigResourceVariantCreateResponse);
-impl_variant_mutation_response!(ConfigResourceVariantSaveCurrentResponse);
-
-impl ConfigurationPayload for ConfigResourceVariantSaveCurrentRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.text(&self.resource_id)?;
-            writer.text(&self.variant_id)?;
-            writer.text(&self.expected_variant_revision)?;
-            writer.text(&self.expected_active_revision)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-                variant_id: reader.text()?,
-                expected_variant_revision: reader.text()?,
-                expected_active_revision: reader.text()?,
-            })
-        })
-    }
-}
-impl ConfigurationPayload for ConfigResourceVariantActivateRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.text(&self.resource_id)?;
-            writer.text(&self.variant_id)?;
-            writer.text(&self.expected_active_revision)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-                variant_id: reader.text()?,
-                expected_active_revision: reader.text()?,
-            })
-        })
-    }
-}
-impl ConfigurationPayload for ConfigResourceVariantActivateResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            write_status(writer, self.status, &self.message)?;
-            writer.text(&self.applied_revision)?;
-            writer.u8(self.outcome as u8);
-            write_effects(writer, &self.effects)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self {
-                status,
-                message,
-                applied_revision: reader.text()?,
-                outcome: outcome(reader.u8()?)?,
-                effects: read_effects(reader)?,
-            })
-        })
-    }
-}
-impl ConfigurationPayload for ConfigResourceVariantDeleteRequest {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| {
-            writer.text(&self.resource_id)?;
-            writer.text(&self.variant_id)?;
-            writer.text(&self.expected_revision)
-        })
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            Ok(Self {
-                resource_id: reader.text()?,
-                variant_id: reader.text()?,
-                expected_revision: reader.text()?,
-            })
-        })
-    }
-}
-impl ConfigurationPayload for ConfigResourceVariantDeleteResponse {
-    fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| write_status(writer, self.status, &self.message))
-    }
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        decode_payload(bytes, |reader| {
-            let (status, message) = read_status(reader)?;
-            Ok(Self { status, message })
-        })
-    }
-}
+include!("configuration_codec/resources.rs");
+include!("configuration_codec/variants.rs");
 
 #[cfg(test)]
 mod tests {
@@ -446,16 +51,19 @@ mod tests {
             validate_only: true,
         };
         let expected = vec![
-            0x14, 0x00, b's', b'u', b'n', b'r', b'a', b'y', b'.', b'p', b'a', b'r', b'a',
-            b'm', b's', b'.', b'f', b'l', b'i', b'g', b'h', b't', 0x06, 0x00, b'i', b'n',
-            b'd', b'o', b'o', b'r', 0x05, 0x00, b'r', b'e', b'v', b'-', b'7', 0x02, 0x00,
-            0x11, 0x00, b'c', b'o', b'n', b't', b'r', b'o', b'l', b'.', b'm', b'a', b'x',
-            b'_', b's', b'p', b'e', b'e', b'd', 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x0c, 0x40, 0x0f, 0x00, b'c', b'o', b'n', b't', b'r', b'o', b'l', b'.', b'e',
-            b'n', b'a', b'b', b'l', b'e', b'd', 0x01, 0x01, 0x01,
+            0x14, 0x00, b's', b'u', b'n', b'r', b'a', b'y', b'.', b'p', b'a', b'r', b'a', b'm',
+            b's', b'.', b'f', b'l', b'i', b'g', b'h', b't', 0x06, 0x00, b'i', b'n', b'd', b'o',
+            b'o', b'r', 0x05, 0x00, b'r', b'e', b'v', b'-', b'7', 0x02, 0x00, 0x11, 0x00, b'c',
+            b'o', b'n', b't', b'r', b'o', b'l', b'.', b'm', b'a', b'x', b'_', b's', b'p', b'e',
+            b'e', b'd', 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x40, 0x0f, 0x00, b'c',
+            b'o', b'n', b't', b'r', b'o', b'l', b'.', b'e', b'n', b'a', b'b', b'l', b'e', b'd',
+            0x01, 0x01, 0x01,
         ];
         assert_eq!(request.encode().unwrap(), expected);
-        assert_eq!(ConfigResourcePatchRequest::decode(&expected).unwrap(), request);
+        assert_eq!(
+            ConfigResourcePatchRequest::decode(&expected).unwrap(),
+            request
+        );
         let mut trailing = expected.clone();
         trailing.push(0);
         assert!(ConfigResourcePatchRequest::decode(&trailing).is_err());
@@ -497,7 +105,10 @@ mod tests {
             }],
         };
         let payload = response.encode().unwrap();
-        assert_eq!(ConfigResourceDescribeResponse::decode(&payload).unwrap(), response);
+        assert_eq!(
+            ConfigResourceDescribeResponse::decode(&payload).unwrap(),
+            response
+        );
         let variants = ConfigResourceVariantListResponse {
             status: ConfigServiceStatus::Ok,
             message: "ok".to_owned(),
@@ -543,20 +154,18 @@ mod tests {
             effects: ConfigEffects::default(),
         };
         let preview_expected = vec![
-            0x00, 0x09, 0x00, b'v', b'a', b'l', b'i', b'd', b'a', b't', b'e', b'd',
-            0x14, 0x00, b's', b'u', b'n', b'r', b'a', b'y', b'.', b'p', b'a', b'r',
-            b'a', b'm', b's', b'.', b'f', b'l', b'i', b'g', b'h', b't', 0x02, 0x00,
-            b'r', b'1', 0x02, 0x00, b'r', b'1', 0x06, 0x00, b'i', b'n', b'd', b'o',
-            b'o', b'r', 0x06, 0x00, b'i', b'n', b'd', b'o', b'o', b'r', 0x01, 0x00,
-            0x11, 0x00, b'c', b'o', b'n', b't', b'r', b'o', b'l', b'.', b'm', b'a',
-            b'x', b'_', b's', b'p', b'e', b'e', b'd', 0x03, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x08, 0x40, 0x01, 0x14, 0x00, b's', b'u', b'n', b'r', b'a',
-            b'y', b'.', b'p', b'a', b'r', b'a', b'm', b's', b'.', b'f', b'l', b'i',
-            b'g', b'h', b't', 0x0b, 0x00, b'c', b'a', b'n', b'd', b'i', b'd', b'a',
-            b't', b'e', b'-', b'2', 0x02, 0x00, b'r', b'1', 0x06, 0x00, b'i', b'n',
-            b'd', b'o', b'o', b'r', 0x06, 0x00, b'i', b'n', b'd', b'o', b'o', b'r',
-            0x01, 0x00, 0x11, 0x00, b'c', b'o', b'n', b't', b'r', b'o', b'l', b'.',
-            b'm', b'a', b'x', b'_', b's', b'p', b'e', b'e', b'd', 0x03, 0x00, 0x00,
+            0x00, 0x09, 0x00, b'v', b'a', b'l', b'i', b'd', b'a', b't', b'e', b'd', 0x14, 0x00,
+            b's', b'u', b'n', b'r', b'a', b'y', b'.', b'p', b'a', b'r', b'a', b'm', b's', b'.',
+            b'f', b'l', b'i', b'g', b'h', b't', 0x02, 0x00, b'r', b'1', 0x02, 0x00, b'r', b'1',
+            0x06, 0x00, b'i', b'n', b'd', b'o', b'o', b'r', 0x06, 0x00, b'i', b'n', b'd', b'o',
+            b'o', b'r', 0x01, 0x00, 0x11, 0x00, b'c', b'o', b'n', b't', b'r', b'o', b'l', b'.',
+            b'm', b'a', b'x', b'_', b's', b'p', b'e', b'e', b'd', 0x03, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x08, 0x40, 0x01, 0x14, 0x00, b's', b'u', b'n', b'r', b'a', b'y', b'.',
+            b'p', b'a', b'r', b'a', b'm', b's', b'.', b'f', b'l', b'i', b'g', b'h', b't', 0x0b,
+            0x00, b'c', b'a', b'n', b'd', b'i', b'd', b'a', b't', b'e', b'-', b'2', 0x02, 0x00,
+            b'r', b'1', 0x06, 0x00, b'i', b'n', b'd', b'o', b'o', b'r', 0x06, 0x00, b'i', b'n',
+            b'd', b'o', b'o', b'r', 0x01, 0x00, 0x11, 0x00, b'c', b'o', b'n', b't', b'r', b'o',
+            b'l', b'.', b'm', b'a', b'x', b'_', b's', b'p', b'e', b'e', b'd', 0x03, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x0c, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
         assert_eq!(preview.encode().unwrap(), preview_expected);

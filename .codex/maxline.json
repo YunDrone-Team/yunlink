@@ -1,20 +1,16 @@
 {
-  "max_lines": 300,
-  "max_files_per_dir": 12,
-  "max_lines_overrides": {
-    "src/core/core_messages_v2.cpp": 600,
-    "bindings/rust/yunlink/src/v2.rs": 560,
-    "bindings/python/src/yunlink/v2.py": 520,
-    "src/discovery/discovery_v2.cpp": 440,
-    "src/runtime/v2/runtime.cpp": 340,
-    "src/core/wire_v2_codec.cpp": 340
-  },
+  "max_lines": 350,
+  "test_max_lines": 450,
+  "max_files_per_dir": 8,
+  "max_lines_overrides": {},
   "include_exts": ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "py", "rs"],
   "scan_roots": [
     "include",
     "src",
+    "tests",
     "bindings/rust",
     "bindings/python/src",
+    "bindings/python/tests",
     "tools"
   ],
   "exclude_dirs": [

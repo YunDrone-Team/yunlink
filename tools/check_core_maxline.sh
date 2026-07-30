@@ -18,6 +18,7 @@ config_path = Path(sys.argv[2]).resolve()
 config = json.loads(config_path.read_text(encoding="utf-8"))
 
 max_lines = int(config.get("max_lines", 300))
+test_max_lines = int(config.get("test_max_lines", 450))
 max_files_per_dir = int(config.get("max_files_per_dir", 8))
 line_overrides = {
     str(path): int(limit) for path, limit in config.get("max_lines_overrides", {}).items()
@@ -49,6 +50,11 @@ def excluded(rel_path: str) -> bool:
     rel_posix = PurePosixPath(rel_path)
     return any(rel_posix.match(pattern) for pattern in exclude_globs)
 
+
+def test_source(rel_path: str) -> bool:
+    parts = PurePosixPath(rel_path).parts
+    return "test" in parts or "tests" in parts or Path(rel_path).name.startswith("test_")
+
 for scan_root in scan_roots:
     if not scan_root.exists():
         continue
@@ -69,15 +75,16 @@ for scan_root in scan_roots:
             fanout[path.parent.relative_to(root_dir).as_posix()] += 1
             with path.open("r", encoding="utf-8", errors="replace") as handle:
                 line_count = sum(1 for _ in handle)
-            if line_count > line_overrides.get(rel_path, max_lines):
-                bad_lines.append((rel_path, line_count))
+            limit = line_overrides.get(rel_path, test_max_lines if test_source(rel_path) else max_lines)
+            if line_count > limit:
+                bad_lines.append((rel_path, line_count, limit))
 
 bad_fanout = [(path, count) for path, count in fanout.items() if count > max_files_per_dir]
 
 if bad_lines:
     print(f"FAILED: {len(bad_lines)} file(s) above {max_lines} lines")
-    for rel_path, line_count in sorted(bad_lines, key=lambda item: item[1], reverse=True):
-        print(f"- {rel_path}: {line_count}")
+    for rel_path, line_count, limit in sorted(bad_lines, key=lambda item: item[1], reverse=True):
+        print(f"- {rel_path}: {line_count} (limit {limit})")
 
 if bad_fanout:
     print(f"FAILED: {len(bad_fanout)} directory(s) above {max_files_per_dir} source files")
@@ -91,6 +98,7 @@ ext_label = ",".join(sorted(include_exts))
 roots_label = ", ".join(path.relative_to(root_dir).as_posix() for path in scan_roots if path.exists())
 print(
     f"OK: checked {checked} source file(s) under [{roots_label}], "
-    f"extensions [{ext_label}], configured line limits and <= {max_files_per_dir} files/dir"
+    f"extensions [{ext_label}], production <= {max_lines}, tests <= {test_max_lines}, "
+    f"and <= {max_files_per_dir} files/dir"
 )
 PY

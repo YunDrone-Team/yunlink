@@ -4,8 +4,8 @@
 #include <sstream>
 #include <string>
 
-#include "com.yundrone.sunray/v1/sunray.pb.h"
-#include "com.yundrone.sunray/v1/control_validation.hpp"
+#include "com.yundrone.sunray/v2/sunray.pb.h"
+#include "com.yundrone.sunray/v2/control_validation.hpp"
 #include "org.yunlink.mobility/v1/mobility.pb.h"
 #include "org.yunlink.telemetry/v1/summary_validation.hpp"
 
@@ -20,9 +20,9 @@ std::string hex(const std::string& value) {
     return stream.str();
 }
 
-void valid_yaw(com::yundrone::sunray::v1::UavDirectControlGoal* goal) {
-    goal->mutable_yaw()->set_mode(com::yundrone::sunray::v1::UAV_YAW_KEEP);
-    goal->set_controller(com::yundrone::sunray::v1::UAV_CONTROLLER_DEFAULT);
+void valid_yaw(com::yundrone::sunray::v2::UavDirectControlGoal* goal) {
+    goal->mutable_yaw()->set_mode(com::yundrone::sunray::v2::UAV_YAW_KEEP);
+    goal->set_controller(com::yundrone::sunray::v2::UAV_CONTROLLER_DEFAULT);
 }
 
 template <typename Message> void assert_round_trip(const Message& source) {
@@ -44,7 +44,7 @@ int main() {
            "0a036d6170121b09000000000000f03f1100000000000000c019000000000000e03f190000000000"
            "00d03f");
 
-    com::yundrone::sunray::v1::FeatureStartRequest request;
+    com::yundrone::sunray::v2::FeatureStartRequest request;
     request.set_name("mapping");
     assert(hex(request.SerializeAsString()) == "0a076d617070696e67");
 
@@ -77,7 +77,7 @@ int main() {
     assert(!org::yunlink::telemetry::v1::validate_summary_snapshot(summary, &validation_error));
     assert(validation_error == "invalid metric key");
 
-    using namespace com::yundrone::sunray::v1;
+    using namespace com::yundrone::sunray::v2;
     EmergencyKillGoal emergency_kill;
     assert(!validate_emergency_kill_goal(emergency_kill, &validation_error));
     assert(validation_error == "emergency kill requires explicit confirmation");

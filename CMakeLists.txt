@@ -79,6 +79,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/core/wire_v2.cpp
   src/core/wire_v2_codec.cpp
   src/core/core_messages_v2.cpp
+  src/core/core_messages_v2_configuration.cpp
   src/runtime/v2/runtime.cpp
   src/runtime/v2/runtime_api.cpp
   src/runtime/v2/runtime_common.cpp
@@ -87,6 +88,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/v2/authority.cpp
   src/c/v2/runtime.cpp
   src/discovery/discovery_v2.cpp
+  src/discovery/discovery_v2_advertiser.cpp
   src/core/configuration_service/codec.cpp
 )
 

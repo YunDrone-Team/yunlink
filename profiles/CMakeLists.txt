@@ -54,12 +54,12 @@ add_library(yunlink::profile_telemetry ALIAS yunlink_profile_telemetry)
 protobuf_generate_cpp(
   YUNLINK_SUNRAY_PROTO_SRCS
   YUNLINK_SUNRAY_PROTO_HDRS
-  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v1/sunray.proto
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray.proto
 )
 add_library(yunlink_profile_sunray STATIC
   ${YUNLINK_SUNRAY_PROTO_SRCS}
   ${YUNLINK_SUNRAY_PROTO_HDRS}
-  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v1/control_validation.cpp
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/control_validation.cpp
 )
 target_include_directories(yunlink_profile_sunray PUBLIC
   ${CMAKE_CURRENT_BINARY_DIR}

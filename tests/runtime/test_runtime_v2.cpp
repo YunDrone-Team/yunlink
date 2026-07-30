@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
@@ -15,18 +16,21 @@ int main() {
     server_config.endpoint_uid = "endpoint.server";
     server_config.tcp_listen_port = 19696;
     server_config.profiles = {{"org.yunlink.mobility", 1, 0, "mobility-digest"},
-                              {"com.example.server", 1, 0, "server-digest"}};
+                              {"com.example.server", 1, 0, "server-digest"},
+                              {"com.yundrone.sunray", 2, 0, "sunray-v2"}};
     RuntimeConfig client_config;
     client_config.endpoint_uid = "endpoint.client";
     client_config.tcp_listen_port = 19697;
     client_config.profiles = {{"org.yunlink.mobility", 1, 2, "mobility-digest"},
-                              {"com.example.unknown", 1, 0, "unknown-digest"}};
+                              {"com.example.unknown", 1, 0, "unknown-digest"},
+                              {"com.yundrone.sunray", 1, 0, "sunray-v1"}};
     assert(server.start(server_config) == ErrorCode::kOk);
     assert(client.start(client_config) == ErrorCode::kOk);
 
     std::mutex mutex;
     std::condition_variable changed;
     SessionInfo active;
+    SessionInfo server_active;
     bool action_received = false;
     bool link_down = false;
     std::string server_peer_id;
@@ -48,6 +52,7 @@ int main() {
             event.session.state == SessionState::kActive) {
             std::lock_guard<std::mutex> lock(mutex);
             server_peer_id = event.peer.id;
+            server_active = event.session;
             changed.notify_all();
         }
         if (event.kind == RuntimeEventKind::kEnvelope &&
@@ -71,13 +76,24 @@ int main() {
     assert(active.authenticated);
     assert(active.has_profile("org.yunlink.mobility", 1));
     assert(active.negotiated_profiles.at("org.yunlink.mobility").minor == 0);
-    assert(active.rejected_profiles.size() == 1);
-    assert(active.rejected_profiles.front() == "com.example.server");
+    assert(active.rejected_profiles.size() == 2);
+    assert(std::find(active.rejected_profiles.begin(),
+                     active.rejected_profiles.end(),
+                     "com.example.server") != active.rejected_profiles.end());
+    assert(std::find(active.rejected_profiles.begin(),
+                     active.rejected_profiles.end(),
+                     "com.yundrone.sunray") != active.rejected_profiles.end());
     {
         std::unique_lock<std::mutex> lock(mutex);
         assert(changed.wait_for(
             lock, std::chrono::seconds(3), [&]() { return !server_peer_id.empty(); }));
     }
+    assert(std::find(server_active.rejected_profiles.begin(),
+                     server_active.rejected_profiles.end(),
+                     "com.example.unknown") != server_active.rejected_profiles.end());
+    assert(std::find(server_active.rejected_profiles.begin(),
+                     server_active.rejected_profiles.end(),
+                     "com.yundrone.sunray") != server_active.rejected_profiles.end());
 
     assert(server.set_entities({{"entity.alpha", "robot", "Alpha"}}) == ErrorCode::kOk);
     const auto target = TargetSelector::entity("entity.alpha");

@@ -14,7 +14,7 @@ GENERIC_PATHS = [
     ROOT / "src/c/v2",
     ROOT / "bindings/rust/yunlink/src/v2.rs",
     ROOT / "bindings/rust/yunlink-sys/src/v2.rs",
-    ROOT / "bindings/python/src/yunlink/v2.py",
+    ROOT / "bindings/python/src/yunlink/v2",
 ]
 ROS_FREE_PATHS = GENERIC_PATHS + [ROOT / "profiles"]
 

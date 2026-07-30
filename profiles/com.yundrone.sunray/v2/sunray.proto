@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package com.yundrone.sunray.v1;
+package com.yundrone.sunray.v2;
 
 import "org.yunlink.mobility/v1/mobility.proto";
 
@@ -245,22 +245,34 @@ message FormationTaskGoal {
   string label = 4;
 }
 
+// These values mirror the stable ROS FeatureSummary contract. This v2 profile
+// is a hard cut: the old supervisor runtime-state enum is not carried on Wire.
+enum FeatureCategory {
+  FEATURE_CATEGORY_UNKNOWN = 0;
+  FEATURE_CATEGORY_CORE = 1;
+  FEATURE_CATEGORY_EXAMPLE = 2;
+  FEATURE_CATEGORY_BASIC = 3;
+}
+
+enum FeatureHealthState {
+  FEATURE_HEALTH_STOPPED = 0;
+  FEATURE_HEALTH_RUNNING = 1;
+  FEATURE_HEALTH_RUNNING_UNHEALTHY = 2;
+  FEATURE_HEALTH_UNAVAILABLE = 3;
+}
+
 message FeatureDescriptor {
   string name = 1;
   string display_name = 2;
   string group_name = 3;
   string group_display_name = 4;
   string description = 5;
-  bool core_feature = 6;
-  bool example_feature = 7;
-  bool basic_feature = 8;
-  bool auto_start = 9;
-  bool check_feature_state = 10;
-  uint32 runtime_state = 11;
-  string runtime_error = 12;
-  repeated string depends_on = 13;
-  repeated string start_preview_units = 14;
-  repeated string start_preview_commands = 15;
+  FeatureCategory category = 6;
+  bool check_health = 7;
+  FeatureHealthState health_state = 8;
+  string health_message = 9;
+  bool auto_start = 10;
+  string start_preview_command = 11;
 }
 
 message FeatureListRequest {}
@@ -274,7 +286,6 @@ message FeatureGetResponse {
   bool success = 1;
   string message = 2;
   FeatureDescriptor feature = 3;
-  bool running = 4;
 }
 message FeatureStartRequest { string name = 1; }
 message FeatureStartResponse {
