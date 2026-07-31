@@ -1,7 +1,7 @@
 use prost::Message;
 use yunlink_profiles::{
-    mobility, sunray, validate_emergency_kill_goal, validate_uav_direct_control_goal,
-    validate_uav_waypoint_mission_goal,
+    mobility, sunray, validate_emergency_kill_goal, validate_land_goal, validate_takeoff_goal,
+    validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[
@@ -47,6 +47,28 @@ fn emergency_kill_requires_confirmation_and_matches_golden_vector() {
         sunray::EmergencyKillGoal::decode(goal.encode_to_vec().as_slice()).unwrap(),
         goal
     );
+}
+
+#[test]
+fn flight_goal_parameters_validate_and_empty_payloads_remain_decodable() {
+    let takeoff = sunray::TakeoffGoal {
+        takeoff_relative_height_m: 1.2,
+        takeoff_max_velocity_mps: 0.5,
+    };
+    validate_takeoff_goal(&takeoff).unwrap();
+    assert_eq!(
+        sunray::TakeoffGoal::decode([].as_slice()).unwrap(),
+        sunray::TakeoffGoal::default()
+    );
+    assert!(validate_takeoff_goal(&sunray::TakeoffGoal {
+        takeoff_relative_height_m: -1.0,
+        takeoff_max_velocity_mps: 0.0,
+    })
+    .is_err());
+    validate_land_goal(&sunray::LandGoal {
+        land_max_velocity_mps: 0.4,
+    })
+    .unwrap();
 }
 
 #[test]
@@ -136,8 +158,12 @@ fn waypoint_limits_and_round_trip() {
             position_m: Some(vector3(1.0, 2.0, 3.0)),
             yaw_rad: 0.5,
             hold_time_s: 1.5,
+            arrival_action: sunray::UavWaypointArrivalAction::UavWaypointHoldSetYaw as i32,
         }],
         interrupt_current_task: true,
+        task_name: "yunlink-task-42".into(),
+        takeoff_if_needed: true,
+        completion_action: sunray::UavMissionCompletionAction::UavMissionFinishHover as i32,
     };
     validate_uav_waypoint_mission_goal(&mission).unwrap();
     let bytes = mission.encode_to_vec();
@@ -153,6 +179,7 @@ fn waypoint_limits_and_round_trip() {
             position_m: Some(vector3(0.0, 0.0, 0.0)),
             yaw_rad: 0.0,
             hold_time_s: 0.0,
+            arrival_action: sunray::UavWaypointArrivalAction::UavWaypointNext as i32,
         },
     );
     assert!(validate_uav_waypoint_mission_goal(&mission).is_err());

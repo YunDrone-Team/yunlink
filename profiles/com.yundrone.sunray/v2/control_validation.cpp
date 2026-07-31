@@ -105,18 +105,42 @@ bool validate_emergency_kill_goal(const EmergencyKillGoal& goal, std::string* er
     return goal.confirmed() || fail(error, "emergency kill requires explicit confirmation");
 }
 
+bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error) {
+    if (!std::isfinite(goal.takeoff_relative_height_m()) || goal.takeoff_relative_height_m() < 0.0 ||
+        !std::isfinite(goal.takeoff_max_velocity_mps()) || goal.takeoff_max_velocity_mps() < 0.0) {
+        return fail(error, "takeoff goal is invalid");
+    }
+    return true;
+}
+
+bool validate_land_goal(const LandGoal& goal, std::string* error) {
+    return std::isfinite(goal.land_max_velocity_mps()) && goal.land_max_velocity_mps() >= 0.0 ||
+                   fail(error, "land goal is invalid");
+}
+
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error) {
     if (goal.frame_id().empty()) {
         return fail(error, "waypoint frame is missing");
     }
+    if (goal.task_name().empty() || goal.task_name().size() > kMaxWaypointTaskNameBytes) {
+        return fail(error, "waypoint task name is invalid");
+    }
+    if (goal.completion_action() != UAV_MISSION_FINISH_HOVER &&
+        goal.completion_action() != UAV_MISSION_FINISH_RETURN_HOME_AND_LAND &&
+        goal.completion_action() != UAV_MISSION_FINISH_LAND_NOW) {
+        return fail(error, "waypoint completion action is invalid");
+    }
     if (goal.waypoints_size() == 0 || goal.waypoints_size() > kMaxWaypointCount) {
         return fail(error, "waypoint count is invalid");
     }
     for (const auto& waypoint : goal.waypoints()) {
+        const bool holding = waypoint.arrival_action() == UAV_WAYPOINT_HOLD_CURRENT_YAW ||
+                             waypoint.arrival_action() == UAV_WAYPOINT_HOLD_SET_YAW;
         if (!waypoint.has_position_m() || !finite(waypoint.position_m()) ||
             !std::isfinite(waypoint.yaw_rad()) || !std::isfinite(waypoint.hold_time_s()) ||
-            waypoint.hold_time_s() < 0.0) {
+            waypoint.hold_time_s() < 0.0 ||
+            (waypoint.arrival_action() != UAV_WAYPOINT_NEXT && !holding)) {
             return fail(error, "waypoint is invalid");
         }
     }

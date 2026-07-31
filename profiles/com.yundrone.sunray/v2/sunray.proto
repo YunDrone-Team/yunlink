@@ -139,16 +139,63 @@ message EmergencyKillGoal {
   bool confirmed = 1;
 }
 
+message TakeoffGoal {
+  // Zero selects the UAV controller defaults.
+  double takeoff_relative_height_m = 1;
+  double takeoff_max_velocity_mps = 2;
+}
+
+message LandGoal {
+  // Zero selects the UAV controller default.
+  double land_max_velocity_mps = 1;
+}
+
+message HoverGoal {}
+
+enum UavWaypointArrivalAction {
+  UAV_WAYPOINT_NEXT = 0;
+  UAV_WAYPOINT_HOLD_CURRENT_YAW = 1;
+  UAV_WAYPOINT_HOLD_SET_YAW = 2;
+}
+
+enum UavMissionCompletionAction {
+  UAV_MISSION_FINISH_HOVER = 0;
+  UAV_MISSION_FINISH_RETURN_HOME_AND_LAND = 1;
+  UAV_MISSION_FINISH_LAND_NOW = 2;
+}
+
 message UavWaypoint {
   org.yunlink.mobility.v1.Vector3 position_m = 1;
   double yaw_rad = 2;
   double hold_time_s = 3;
+  UavWaypointArrivalAction arrival_action = 4;
 }
 
 message UavWaypointMissionGoal {
   string frame_id = 1;
   repeated UavWaypoint waypoints = 2;
   bool interrupt_current_task = 3;
+  string task_name = 4;
+  bool takeoff_if_needed = 5;
+  UavMissionCompletionAction completion_action = 6;
+}
+
+enum UavPlanningMainState {
+  UAV_PLANNING_MAIN_NOT_READY = 0;
+  UAV_PLANNING_MAIN_WAIT_MISSION = 1;
+  UAV_PLANNING_MAIN_TASK_MAIN = 2;
+  UAV_PLANNING_MAIN_SAFETY_ESCAPE = 3;
+}
+
+enum UavPlanningTaskState {
+  UAV_PLANNING_TASK_IDLE = 0;
+  UAV_PLANNING_TASK_TAKEOFF = 1;
+  UAV_PLANNING_TASK_WAIT_TRAJECTORY = 2;
+  UAV_PLANNING_TASK_EXEC_TRAJECTORY = 3;
+  UAV_PLANNING_TASK_HOLDING = 4;
+  UAV_PLANNING_TASK_WAYPOINT_COMPLETED = 5;
+  UAV_PLANNING_TASK_LAND = 6;
+  UAV_PLANNING_TASK_FAILED = 7;
 }
 
 message UavPlanningState {
@@ -173,6 +220,11 @@ message UavPlanningState {
   double min_obstacle_distance_m = 19;
   string control_output_mode = 20;
   string failure_reason = 21;
+  UavPlanningMainState main_state = 22;
+  UavPlanningTaskState task_state = 23;
+  string task_name = 24;
+  UavWaypoint current_waypoint = 25;
+  double hold_remaining_s = 26;
 }
 
 message UavControlState {

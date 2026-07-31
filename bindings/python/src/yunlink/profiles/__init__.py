@@ -11,6 +11,8 @@ from .validation import (
     valid_metric_key,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
+    validate_land_goal,
+    validate_takeoff_goal,
     validate_uav_direct_control_goal,
     validate_uav_waypoint_mission_goal,
 )
@@ -25,6 +27,8 @@ __all__ = [
     "valid_metric_key",
     "validate_summary_snapshot",
     "validate_emergency_kill_goal",
+    "validate_land_goal",
+    "validate_takeoff_goal",
     "validate_uav_direct_control_goal",
     "validate_uav_waypoint_mission_goal",
 ]

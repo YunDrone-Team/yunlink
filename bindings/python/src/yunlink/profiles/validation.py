@@ -134,9 +134,32 @@ def validate_emergency_kill_goal(goal: sunray.EmergencyKillGoal) -> None:
         raise ValueError("emergency kill requires explicit confirmation")
 
 
+def validate_takeoff_goal(goal: sunray.TakeoffGoal) -> None:
+    if (
+        not math.isfinite(goal.takeoff_relative_height_m)
+        or goal.takeoff_relative_height_m < 0
+        or not math.isfinite(goal.takeoff_max_velocity_mps)
+        or goal.takeoff_max_velocity_mps < 0
+    ):
+        raise ValueError("takeoff goal is invalid")
+
+
+def validate_land_goal(goal: sunray.LandGoal) -> None:
+    if not math.isfinite(goal.land_max_velocity_mps) or goal.land_max_velocity_mps < 0:
+        raise ValueError("land goal is invalid")
+
+
 def validate_uav_waypoint_mission_goal(goal: sunray.UavWaypointMissionGoal) -> None:
     if not goal.frame_id:
         raise ValueError("waypoint frame is missing")
+    if not goal.task_name or len(goal.task_name.encode()) > 96:
+        raise ValueError("waypoint task name is invalid")
+    if goal.completion_action not in {
+        sunray.UAV_MISSION_FINISH_HOVER,
+        sunray.UAV_MISSION_FINISH_RETURN_HOME_AND_LAND,
+        sunray.UAV_MISSION_FINISH_LAND_NOW,
+    }:
+        raise ValueError("waypoint completion action is invalid")
     if not 1 <= len(goal.waypoints) <= 256:
         raise ValueError("waypoint count is invalid")
     for waypoint in goal.waypoints:
@@ -146,5 +169,11 @@ def validate_uav_waypoint_mission_goal(goal: sunray.UavWaypointMissionGoal) -> N
             or not math.isfinite(waypoint.yaw_rad)
             or not math.isfinite(waypoint.hold_time_s)
             or waypoint.hold_time_s < 0
+            or waypoint.arrival_action
+            not in {
+                sunray.UAV_WAYPOINT_NEXT,
+                sunray.UAV_WAYPOINT_HOLD_CURRENT_YAW,
+                sunray.UAV_WAYPOINT_HOLD_SET_YAW,
+            }
         ):
             raise ValueError("waypoint is invalid")

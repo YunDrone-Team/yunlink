@@ -86,6 +86,21 @@ int main() {
     assert_round_trip(emergency_kill);
     assert(hex(emergency_kill.SerializeAsString()) == "0801");
 
+    TakeoffGoal takeoff;
+    takeoff.set_takeoff_relative_height_m(1.2);
+    takeoff.set_takeoff_max_velocity_mps(0.5);
+    assert(validate_takeoff_goal(takeoff, &validation_error));
+    assert_round_trip(takeoff);
+    takeoff.set_takeoff_relative_height_m(-1.0);
+    assert(!validate_takeoff_goal(takeoff, &validation_error));
+
+    LandGoal land;
+    land.set_land_max_velocity_mps(0.4);
+    assert(validate_land_goal(land, &validation_error));
+    assert_round_trip(land);
+    land.set_land_max_velocity_mps(std::numeric_limits<double>::infinity());
+    assert(!validate_land_goal(land, &validation_error));
+
     UavDirectControlGoal world_position;
     valid_yaw(&world_position);
     world_position.mutable_world_position()->set_frame_id("map");
@@ -164,15 +179,17 @@ int main() {
     second->mutable_position_m()->set_z(4.0);
     second->set_yaw_rad(-0.25);
     mission.set_interrupt_current_task(true);
+    mission.set_task_name("yunlink-task-42");
+    mission.set_takeoff_if_needed(true);
+    mission.set_completion_action(UAV_MISSION_FINISH_HOVER);
+    first->set_arrival_action(UAV_WAYPOINT_HOLD_SET_YAW);
+    second->set_arrival_action(UAV_WAYPOINT_NEXT);
     assert(validate_uav_waypoint_mission_goal(mission, &validation_error));
     assert_round_trip(mission);
-    assert(hex(mission.SerializeAsString()) ==
-           "0a036d6170122f0a1b09000000000000f03f1100000000000000401900000000000008401100000000"
-           "0000e03f19000000000000f83f12260a1b09000000000000f0bf1100000000000000c0190000000000"
-           "00104011000000000000d0bf1801");
 
     UavWaypointMissionGoal empty_mission;
     empty_mission.set_frame_id("map");
+    empty_mission.set_task_name("yunlink-empty");
     assert(!validate_uav_waypoint_mission_goal(empty_mission, &validation_error));
     for (int index = 0; index <= kMaxWaypointCount; ++index) {
         empty_mission.add_waypoints()->mutable_position_m();

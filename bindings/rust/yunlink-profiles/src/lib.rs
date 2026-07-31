@@ -36,6 +36,7 @@ pub const SUMMARY_MAX_PAYLOAD_BYTES: usize = 16 * 1024;
 pub const MIN_DIRECT_CONTROL_LEASE_MS: u32 = 250;
 pub const MAX_DIRECT_CONTROL_LEASE_MS: u32 = 2000;
 pub const MAX_WAYPOINT_COUNT: usize = 256;
+pub const MAX_WAYPOINT_TASK_NAME_BYTES: usize = 96;
 
 pub fn valid_metric_key(key: &str) -> bool {
     if key.is_empty() || key.len() > 128 {
@@ -198,11 +199,32 @@ pub fn validate_emergency_kill_goal(goal: &sunray::EmergencyKillGoal) -> Result<
     }
 }
 
+pub fn validate_takeoff_goal(goal: &sunray::TakeoffGoal) -> Result<(), &'static str> {
+    (goal.takeoff_relative_height_m.is_finite()
+        && goal.takeoff_relative_height_m >= 0.0
+        && goal.takeoff_max_velocity_mps.is_finite()
+        && goal.takeoff_max_velocity_mps >= 0.0)
+        .then_some(())
+        .ok_or("takeoff goal is invalid")
+}
+
+pub fn validate_land_goal(goal: &sunray::LandGoal) -> Result<(), &'static str> {
+    (goal.land_max_velocity_mps.is_finite() && goal.land_max_velocity_mps >= 0.0)
+        .then_some(())
+        .ok_or("land goal is invalid")
+}
+
 pub fn validate_uav_waypoint_mission_goal(
     goal: &sunray::UavWaypointMissionGoal,
 ) -> Result<(), &'static str> {
     if goal.frame_id.is_empty() {
         return Err("waypoint frame is missing");
+    }
+    if goal.task_name.is_empty() || goal.task_name.len() > MAX_WAYPOINT_TASK_NAME_BYTES {
+        return Err("waypoint task name is invalid");
+    }
+    if !(0..=2).contains(&goal.completion_action) {
+        return Err("waypoint completion action is invalid");
     }
     if goal.waypoints.is_empty() || goal.waypoints.len() > MAX_WAYPOINT_COUNT {
         return Err("waypoint count is invalid");
@@ -212,6 +234,7 @@ pub fn validate_uav_waypoint_mission_goal(
             || !waypoint.yaw_rad.is_finite()
             || !waypoint.hold_time_s.is_finite()
             || waypoint.hold_time_s < 0.0
+            || !(0..=2).contains(&waypoint.arrival_action)
     }) {
         return Err("waypoint is invalid");
     }

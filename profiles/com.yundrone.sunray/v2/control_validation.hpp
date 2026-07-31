@@ -11,11 +11,14 @@ namespace com::yundrone::sunray::v2 {
 constexpr uint32_t kMinDirectControlLeaseMs = 250;
 constexpr uint32_t kMaxDirectControlLeaseMs = 2000;
 constexpr int kMaxWaypointCount = 256;
+constexpr size_t kMaxWaypointTaskNameBytes = 96;
 
 bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal,
                                       std::string* error = nullptr);
 bool validate_emergency_kill_goal(const EmergencyKillGoal& goal,
                                   std::string* error = nullptr);
+bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error = nullptr);
+bool validate_land_goal(const LandGoal& goal, std::string* error = nullptr);
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error = nullptr);
 

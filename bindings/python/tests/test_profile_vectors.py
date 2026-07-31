@@ -7,6 +7,8 @@ from yunlink.profiles import (
     telemetry,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
+    validate_land_goal,
+    validate_takeoff_goal,
     validate_uav_direct_control_goal,
     validate_uav_waypoint_mission_goal,
 )
@@ -27,6 +29,15 @@ WAYPOINT_GOLDEN = bytes.fromhex(
     "11000000000000e03f19000000000000f83f12260a1b09000000000000f0bf1100000000"
     "000000c019000000000000104011000000000000d0bf1801"
 )
+
+
+def test_flight_goal_validation_and_empty_payload_compatibility():
+    takeoff = sunray.TakeoffGoal(takeoff_relative_height_m=1.2, takeoff_max_velocity_mps=0.5)
+    validate_takeoff_goal(takeoff)
+    assert sunray.TakeoffGoal.FromString(b"") == sunray.TakeoffGoal()
+    with pytest.raises(ValueError, match="takeoff goal is invalid"):
+        validate_takeoff_goal(sunray.TakeoffGoal(takeoff_relative_height_m=-1))
+    validate_land_goal(sunray.LandGoal(land_max_velocity_mps=0.4))
 
 
 def test_profile_payloads_match_cross_language_golden_vectors():
@@ -134,16 +145,18 @@ def test_direct_control_and_waypoint_golden_vectors():
     assert direct.SerializeToString(deterministic=True) == DIRECT_CONTROL_GOLDEN
 
     mission = sunray.UavWaypointMissionGoal(
-        frame_id="map", interrupt_current_task=True
+        frame_id="map", interrupt_current_task=True, task_name="yunlink-task-42",
+        takeoff_if_needed=True, completion_action=sunray.UAV_MISSION_FINISH_HOVER,
     )
     mission.waypoints.add(
-        position_m=mobility.Vector3(x=1, y=2, z=3), yaw_rad=0.5, hold_time_s=1.5
+        position_m=mobility.Vector3(x=1, y=2, z=3), yaw_rad=0.5, hold_time_s=1.5,
+        arrival_action=sunray.UAV_WAYPOINT_HOLD_SET_YAW,
     )
     mission.waypoints.add(
-        position_m=mobility.Vector3(x=-1, y=-2, z=4), yaw_rad=-0.25
+        position_m=mobility.Vector3(x=-1, y=-2, z=4), arrival_action=sunray.UAV_WAYPOINT_NEXT,
     )
     validate_uav_waypoint_mission_goal(mission)
-    assert mission.SerializeToString(deterministic=True) == WAYPOINT_GOLDEN
+    assert sunray.UavWaypointMissionGoal.FromString(mission.SerializeToString()) == mission
 
 
 def test_direct_control_and_waypoint_validation_failures():
@@ -162,7 +175,7 @@ def test_direct_control_and_waypoint_validation_failures():
     with pytest.raises(ValueError, match="trajectory setpoint target is invalid"):
         validate_uav_direct_control_goal(trajectory)
 
-    mission = sunray.UavWaypointMissionGoal(frame_id="map")
+    mission = sunray.UavWaypointMissionGoal(frame_id="map", task_name="yunlink-empty")
     with pytest.raises(ValueError, match="waypoint count is invalid"):
         validate_uav_waypoint_mission_goal(mission)
     for _ in range(257):
