@@ -185,6 +185,7 @@ int main() {
     assert(fresh_client.connect_peer("127.0.0.1", server_config.tcp_listen_port, &fresh_peer) ==
            ErrorCode::kOk);
     const uint64_t fresh_session_id = fresh_client.open_session(fresh_peer.id);
+    static_cast<void>(fresh_session_id);
     assert(fresh_session_id != 0);
     {
         std::unique_lock<std::mutex> lock(fresh_mutex);
