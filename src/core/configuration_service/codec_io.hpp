@@ -202,11 +202,11 @@ inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
     out->type = static_cast<ConfigValueType>(type);
     uint8_t update_policy = 0;
     if (!(reader.read_bool(&out->required) && reader.read_bool(&out->read_only) &&
-           reader.read_bool(&out->sensitive) && reader.read_bool(&out->has_minimum) &&
-           reader.read_double(&out->minimum) && reader.read_bool(&out->has_maximum) &&
-           reader.read_double(&out->maximum) && reader.read_string(&out->validation_pattern) &&
-           read_vector(reader, &out->choices, read_choice) && reader.read_string(&out->group_path) &&
-           reader.read_u8(&update_policy) && reader.read_string(&out->unit))) {
+          reader.read_bool(&out->sensitive) && reader.read_bool(&out->has_minimum) &&
+          reader.read_double(&out->minimum) && reader.read_bool(&out->has_maximum) &&
+          reader.read_double(&out->maximum) && reader.read_string(&out->validation_pattern) &&
+          read_vector(reader, &out->choices, read_choice) && reader.read_string(&out->group_path) &&
+          reader.read_u8(&update_policy) && reader.read_string(&out->unit))) {
         return false;
     }
     if (!std::isfinite(out->minimum) || !std::isfinite(out->maximum) ||

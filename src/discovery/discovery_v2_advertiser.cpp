@@ -41,7 +41,8 @@ DiscoveryAdvertiser::~DiscoveryAdvertiser() {
 ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
                                      DiscoveryAdvertisement advertisement,
                                      std::string shared_secret) {
-    if (impl_->running.load() || bind_port == 0 || !discovery_advertisement_is_valid(advertisement)) {
+    if (impl_->running.load() || bind_port == 0 ||
+        !discovery_advertisement_is_valid(advertisement)) {
         return ErrorCode::kInvalidArgument;
     }
     if (advertisement.started_at_ms == 0) {

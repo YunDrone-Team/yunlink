@@ -99,8 +99,7 @@ ByteBuffer encode_payload(const ConfigResourcePatchRequest& payload) {
 
 bool decode_payload(const ByteBuffer& bytes, ConfigResourcePatchRequest* payload) {
     return parse_payload(bytes, payload, [](BufferReader& reader, ConfigResourcePatchRequest* out) {
-        return reader.read_string(&out->resource_id) &&
-               reader.read_string(&out->variant_id) &&
+        return reader.read_string(&out->resource_id) && reader.read_string(&out->variant_id) &&
                reader.read_string(&out->expected_revision) &&
                read_vector(reader, &out->updates, read_field_value) &&
                reader.read_bool(&out->validate_only);
@@ -326,9 +325,8 @@ bool decode_payload(const ByteBuffer& bytes, ConfigResourceVariantDeleteRequest*
 }
 
 ByteBuffer encode_payload(const ConfigResourceVariantDeleteResponse& payload) {
-    return build_payload([&](BufferWriter& writer) {
-        write_status(writer, payload.status, payload.message);
-    });
+    return build_payload(
+        [&](BufferWriter& writer) { write_status(writer, payload.status, payload.message); });
 }
 
 bool decode_payload(const ByteBuffer& bytes, ConfigResourceVariantDeleteResponse* payload) {

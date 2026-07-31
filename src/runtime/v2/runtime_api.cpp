@@ -15,8 +15,7 @@ ErrorCode Runtime::set_entities(std::vector<EntityDescriptor> entities) {
     for (const auto& entity : entities) {
         entity_uids.insert(entity.entity_uid);
     }
-    for (auto lease = impl_->authority_leases.begin();
-         lease != impl_->authority_leases.end();) {
+    for (auto lease = impl_->authority_leases.begin(); lease != impl_->authority_leases.end();) {
         if (entity_uids.count(lease->first.first) == 0U) {
             lease = impl_->authority_leases.erase(lease);
         } else {

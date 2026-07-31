@@ -65,8 +65,7 @@ int main() {
         }
     });
     Peer peer;
-    assert(client.connect_peer("127.0.0.1", server.listening_port(), &peer) ==
-           ErrorCode::kOk);
+    assert(client.connect_peer("127.0.0.1", server.listening_port(), &peer) == ErrorCode::kOk);
     const uint64_t session_id = client.open_session(peer.id);
     static_cast<void>(session_id);
     assert(session_id != 0);
@@ -126,10 +125,10 @@ int main() {
          ++attempt) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    assert(server.has_authority(
-        server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
-    assert(!server.has_authority(
-        "another-peer", session_id, "entity.alpha", "org.yunlink.mobility"));
+    assert(
+        server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    assert(
+        !server.has_authority("another-peer", session_id, "entity.alpha", "org.yunlink.mobility"));
 
     assert(client.publish(peer.id,
                           session_id,
@@ -140,11 +139,11 @@ int main() {
                           encode(AttachmentRequest{"stale-revision", {"entity.alpha"}}),
                           &handle) == ErrorCode::kOk);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    assert(server.has_authority(
-        server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    assert(
+        server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
     server.revoke_authority(server_peer_id, session_id, {"entity.alpha"});
-    assert(!server.has_authority(
-        server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    assert(
+        !server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
 
     server.stop();
     {
