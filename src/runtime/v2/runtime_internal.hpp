@@ -26,6 +26,7 @@ struct RuntimeConnection {
 struct Runtime::Impl {
     RuntimeConfig config;
     std::atomic<bool> running{false};
+    std::atomic<uint16_t> listening_port{0};
     std::atomic<uint64_t> next_message_id{1};
     std::atomic<uint64_t> next_session_id{1};
     asio::io_context accept_io;

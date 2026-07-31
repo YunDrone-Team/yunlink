@@ -112,4 +112,8 @@ bool Runtime::session(const std::string& peer_id, uint64_t session_id, SessionIn
     return true;
 }
 
+uint16_t Runtime::listening_port() const {
+    return impl_->listening_port.load();
+}
+
 }  // namespace yunlink::v2

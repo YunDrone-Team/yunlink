@@ -185,6 +185,7 @@ class Runtime {
     ErrorCode start(const RuntimeConfig& config);
     void stop();
     bool running() const;
+    uint16_t listening_port() const;
 
     ErrorCode connect_peer(const std::string& ip, uint16_t port, Peer* out = nullptr);
     void close_peer(const std::string& peer_id);

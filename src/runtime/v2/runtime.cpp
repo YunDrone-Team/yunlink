@@ -107,6 +107,11 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
         impl_->acceptor.reset();
         return ErrorCode::kInternal;
     }
+    impl_->listening_port.store(impl_->acceptor->local_endpoint(error).port());
+    if (error) {
+        impl_->acceptor.reset();
+        return ErrorCode::kInternal;
+    }
     impl_->running.store(true);
     impl_->accept_thread = std::thread([this]() {
         while (impl_->running.load()) {
@@ -176,6 +181,7 @@ void Runtime::stop() {
         close_connection(connection);
     }
     impl_->acceptor.reset();
+    impl_->listening_port.store(0);
 }
 
 bool Runtime::running() const {

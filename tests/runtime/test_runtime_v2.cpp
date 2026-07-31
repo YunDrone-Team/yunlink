@@ -14,18 +14,20 @@ int main() {
     Runtime client;
     RuntimeConfig server_config;
     server_config.endpoint_uid = "endpoint.server";
-    server_config.tcp_listen_port = 19696;
+    server_config.tcp_listen_port = 0;
     server_config.profiles = {{"org.yunlink.mobility", 1, 0, "mobility-digest"},
                               {"com.example.server", 1, 0, "server-digest"},
                               {"com.yundrone.sunray", 2, 0, "sunray-v2"}};
     RuntimeConfig client_config;
     client_config.endpoint_uid = "endpoint.client";
-    client_config.tcp_listen_port = 19697;
+    client_config.tcp_listen_port = 0;
     client_config.profiles = {{"org.yunlink.mobility", 1, 2, "mobility-digest"},
                               {"com.example.unknown", 1, 0, "unknown-digest"},
                               {"com.yundrone.sunray", 1, 0, "sunray-v1"}};
     assert(server.start(server_config) == ErrorCode::kOk);
+    server_config.tcp_listen_port = server.listening_port();
     assert(client.start(client_config) == ErrorCode::kOk);
+    assert(server.listening_port() != 0);
 
     std::mutex mutex;
     std::condition_variable changed;
@@ -63,7 +65,7 @@ int main() {
         }
     });
     Peer peer;
-    assert(client.connect_peer("127.0.0.1", server_config.tcp_listen_port, &peer) ==
+    assert(client.connect_peer("127.0.0.1", server.listening_port(), &peer) ==
            ErrorCode::kOk);
     const uint64_t session_id = client.open_session(peer.id);
     static_cast<void>(session_id);
@@ -152,7 +154,7 @@ int main() {
     }
     assert(server.start(server_config) == ErrorCode::kOk);
     Peer reconnected_peer;
-    assert(client.connect_peer("127.0.0.1", server_config.tcp_listen_port, &reconnected_peer) ==
+    assert(client.connect_peer("127.0.0.1", server.listening_port(), &reconnected_peer) ==
            ErrorCode::kOk);
     assert(reconnected_peer.id == peer.id);
     const uint64_t reconnected_session_id = client.open_session(reconnected_peer.id);
