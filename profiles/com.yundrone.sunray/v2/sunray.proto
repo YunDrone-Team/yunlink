@@ -4,27 +4,18 @@ package com.yundrone.sunray.v2;
 
 import "org.yunlink.mobility/v1/mobility.proto";
 
-message VehicleCore {
-  bool armed = 1;
-  uint32 navigation_mode = 2;
-  org.yunlink.mobility.v1.Pose pose = 3;
-  org.yunlink.mobility.v1.Twist twist = 4;
-  float battery_percent = 5;
-}
-
-message Px4State {
-  bool connected = 1;
+// Controller-confirmed flight state. This is deliberately not a PX4/MAVROS
+// mirror: it contains only facts exposed by Sunray's public UAVControlState.
+// Pose and twist are carried exclusively by mobility/Odometry.
+message FlightControlState {
+  uint64 source_stamp_ns = 1;
   bool armed = 2;
-  string flight_mode = 3;
-  uint32 system_status = 4;
-  uint32 landed_state = 5;
+  bool landed = 3;
+  uint32 control_mode = 4;
+  uint32 control_state = 5;
   float battery_voltage_v = 6;
-  float battery_current_a = 7;
-  float battery_percentage = 8;
-  org.yunlink.mobility.v1.Pose local_pose = 9;
-  org.yunlink.mobility.v1.Twist local_twist = 10;
-  org.yunlink.mobility.v1.Pose target_pose = 11;
-  bool target_valid = 12;
+  uint32 battery_percent = 7;
+  bool manual_override = 8;
 }
 
 message OdomStatus {

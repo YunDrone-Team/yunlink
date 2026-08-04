@@ -40,6 +40,14 @@ bool valid_continuous_lease(uint32_t lease_ms) {
 
 }  // namespace
 
+bool validate_flight_control_state(const FlightControlState& state, std::string* error) {
+    if (!std::isfinite(state.battery_voltage_v()) || state.battery_voltage_v() < 0.0F ||
+        state.battery_percent() > 100U) {
+        return fail(error, "flight control state is invalid");
+    }
+    return true;
+}
+
 bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal, std::string* error) {
     if (!valid_yaw(goal)) {
         return fail(error, "yaw target is missing or invalid");
@@ -76,8 +84,7 @@ bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal, std::str
         }
         return true;
     case UavDirectControlGoal::kWorldVelocity:
-        if (!valid_continuous_lease(goal.lease_ms()) ||
-            goal.world_velocity().frame_id().empty() ||
+        if (!valid_continuous_lease(goal.lease_ms()) || goal.world_velocity().frame_id().empty() ||
             !goal.world_velocity().has_velocity_mps() ||
             !finite(goal.world_velocity().velocity_mps()) ||
             (goal.world_velocity().has_height_lock() &&
@@ -106,8 +113,9 @@ bool validate_emergency_kill_goal(const EmergencyKillGoal& goal, std::string* er
 }
 
 bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error) {
-    if (!std::isfinite(goal.takeoff_relative_height_m()) || goal.takeoff_relative_height_m() < 0.0 ||
-        !std::isfinite(goal.takeoff_max_velocity_mps()) || goal.takeoff_max_velocity_mps() < 0.0) {
+    if (!std::isfinite(goal.takeoff_relative_height_m()) ||
+        goal.takeoff_relative_height_m() < 0.0 || !std::isfinite(goal.takeoff_max_velocity_mps()) ||
+        goal.takeoff_max_velocity_mps() < 0.0) {
         return fail(error, "takeoff goal is invalid");
     }
     return true;
@@ -115,11 +123,10 @@ bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error) {
 
 bool validate_land_goal(const LandGoal& goal, std::string* error) {
     return std::isfinite(goal.land_max_velocity_mps()) && goal.land_max_velocity_mps() >= 0.0 ||
-                   fail(error, "land goal is invalid");
+           fail(error, "land goal is invalid");
 }
 
-bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
-                                        std::string* error) {
+bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal, std::string* error) {
     if (goal.frame_id().empty()) {
         return fail(error, "waypoint frame is missing");
     }

@@ -57,6 +57,15 @@ def _finite_vector(value) -> bool:
     return all(math.isfinite(component) for component in components)
 
 
+def validate_flight_control_state(state: sunray.FlightControlState) -> None:
+    if (
+        not math.isfinite(state.battery_voltage_v)
+        or state.battery_voltage_v < 0
+        or state.battery_percent > 100
+    ):
+        raise ValueError("flight control state is invalid")
+
+
 def validate_uav_direct_control_goal(goal: sunray.UavDirectControlGoal) -> None:
     valid_yaw = (
         goal.HasField("yaw")

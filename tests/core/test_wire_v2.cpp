@@ -19,7 +19,7 @@ int main() {
     envelope.message_id = 99;
     envelope.source = {"bridge.alpha", "e-bridge.alpha-uav-1"};
     envelope.target = TargetSelector::entity("gcs.operator");
-    envelope.type = {"com.yundrone.sunray", 2, 0, "Px4State"};
+    envelope.type = {"com.yundrone.sunray", 2, 0, "FlightControlState"};
     envelope.created_at_ms = 1000;
     envelope.ttl_ms = 250;
     envelope.payload = {0x08, 0x01};

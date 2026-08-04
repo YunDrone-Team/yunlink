@@ -1,7 +1,7 @@
 use prost::Message;
 use yunlink_profiles::{
     mobility, sunray, validate_emergency_kill_goal, validate_land_goal, validate_takeoff_goal,
-    validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
+    validate_flight_control_state, validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[
@@ -46,6 +46,30 @@ fn emergency_kill_requires_confirmation_and_matches_golden_vector() {
     assert_eq!(
         sunray::EmergencyKillGoal::decode(goal.encode_to_vec().as_slice()).unwrap(),
         goal
+    );
+}
+
+#[test]
+fn flight_control_state_round_trips_and_rejects_invalid_battery_values() {
+    let mut state = sunray::FlightControlState {
+        source_stamp_ns: 42,
+        armed: true,
+        landed: false,
+        control_mode: 1,
+        control_state: 3,
+        battery_voltage_v: 15.2,
+        battery_percent: 88,
+        manual_override: false,
+    };
+    validate_flight_control_state(&state).unwrap();
+    assert_eq!(
+        sunray::FlightControlState::decode(state.encode_to_vec().as_slice()).unwrap(),
+        state
+    );
+    state.battery_percent = 101;
+    assert_eq!(
+        validate_flight_control_state(&state),
+        Err("flight control state is invalid")
     );
 }
 

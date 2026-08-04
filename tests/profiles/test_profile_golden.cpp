@@ -78,6 +78,18 @@ int main() {
     assert(validation_error == "invalid metric key");
 
     using namespace com::yundrone::sunray::v2;
+    FlightControlState flight_control;
+    flight_control.set_source_stamp_ns(42);
+    flight_control.set_armed(true);
+    flight_control.set_control_mode(1);
+    flight_control.set_control_state(3);
+    flight_control.set_battery_voltage_v(15.2F);
+    flight_control.set_battery_percent(88);
+    assert(validate_flight_control_state(flight_control, &validation_error));
+    assert_round_trip(flight_control);
+    flight_control.set_battery_percent(101);
+    assert(!validate_flight_control_state(flight_control, &validation_error));
+
     EmergencyKillGoal emergency_kill;
     assert(!validate_emergency_kill_goal(emergency_kill, &validation_error));
     assert(validation_error == "emergency kill requires explicit confirmation");

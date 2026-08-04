@@ -38,6 +38,16 @@ pub const MAX_DIRECT_CONTROL_LEASE_MS: u32 = 2000;
 pub const MAX_WAYPOINT_COUNT: usize = 256;
 pub const MAX_WAYPOINT_TASK_NAME_BYTES: usize = 96;
 
+pub fn validate_flight_control_state(
+    state: &sunray::FlightControlState,
+) -> Result<(), &'static str> {
+    (state.battery_voltage_v.is_finite()
+        && state.battery_voltage_v >= 0.0
+        && state.battery_percent <= 100)
+        .then_some(())
+        .ok_or("flight control state is invalid")
+}
+
 pub fn valid_metric_key(key: &str) -> bool {
     if key.is_empty() || key.len() > 128 {
         return false;

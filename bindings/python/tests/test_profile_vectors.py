@@ -5,6 +5,7 @@ from yunlink.profiles import (
     mobility,
     sunray,
     telemetry,
+    validate_flight_control_state,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
     validate_land_goal,
@@ -38,6 +39,22 @@ def test_flight_goal_validation_and_empty_payload_compatibility():
     with pytest.raises(ValueError, match="takeoff goal is invalid"):
         validate_takeoff_goal(sunray.TakeoffGoal(takeoff_relative_height_m=-1))
     validate_land_goal(sunray.LandGoal(land_max_velocity_mps=0.4))
+
+
+def test_flight_control_state_round_trips_and_rejects_invalid_battery_values():
+    state = sunray.FlightControlState(
+        source_stamp_ns=42,
+        armed=True,
+        control_mode=1,
+        control_state=3,
+        battery_voltage_v=15.2,
+        battery_percent=88,
+    )
+    validate_flight_control_state(state)
+    assert sunray.FlightControlState.FromString(state.SerializeToString()) == state
+    state.battery_percent = 101
+    with pytest.raises(ValueError, match="flight control state is invalid"):
+        validate_flight_control_state(state)
 
 
 def test_profile_payloads_match_cross_language_golden_vectors():

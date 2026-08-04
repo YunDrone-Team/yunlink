@@ -9,6 +9,7 @@ from .org.yunlink.telemetry.v1 import telemetry_pb2 as telemetry
 from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 from .validation import (
     valid_metric_key,
+    validate_flight_control_state,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
     validate_land_goal,
@@ -25,6 +26,7 @@ __all__ = [
     "telemetry",
     "sunray",
     "valid_metric_key",
+    "validate_flight_control_state",
     "validate_summary_snapshot",
     "validate_emergency_kill_goal",
     "validate_land_goal",
