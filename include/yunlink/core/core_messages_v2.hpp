@@ -66,6 +66,15 @@ struct StreamSubscription {
     uint32_t max_payload_bytes = 0;
 };
 
+struct StreamSubscriptionStatus {
+    bool success = false;
+    bool subscribed = false;
+    std::string stream_uid;
+    float max_rate_hz = 0.0F;
+    uint32_t max_payload_bytes = 0;
+    std::string message;
+};
+
 struct StreamSample {
     std::string stream_uid;
     std::string encoding;
@@ -131,6 +140,7 @@ Bytes encode(const AuthorityRequest& value);
 Bytes encode(const AuthorityStatus& value);
 Bytes encode(const StreamCatalog& value);
 Bytes encode(const StreamSubscription& value);
+Bytes encode(const StreamSubscriptionStatus& value);
 Bytes encode(const StreamSample& value);
 Bytes encode(const ActionUpdate& value);
 Bytes encode(const BulkDescriptor& value);
@@ -165,6 +175,7 @@ bool decode(const Bytes& bytes, AuthorityRequest* value);
 bool decode(const Bytes& bytes, AuthorityStatus* value);
 bool decode(const Bytes& bytes, StreamCatalog* value);
 bool decode(const Bytes& bytes, StreamSubscription* value);
+bool decode(const Bytes& bytes, StreamSubscriptionStatus* value);
 bool decode(const Bytes& bytes, StreamSample* value);
 bool decode(const Bytes& bytes, ActionUpdate* value);
 bool decode(const Bytes& bytes, BulkDescriptor* value);

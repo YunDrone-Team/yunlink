@@ -66,6 +66,17 @@ Bytes encode(const StreamSubscription& value) {
     return writer.take();
 }
 
+Bytes encode(const StreamSubscriptionStatus& value) {
+    Writer writer;
+    writer.u8(value.success ? 1 : 0);
+    writer.u8(value.subscribed ? 1 : 0);
+    writer.text(value.stream_uid);
+    writer.f32(value.max_rate_hz);
+    writer.u32(value.max_payload_bytes);
+    writer.text(value.message);
+    return writer.take();
+}
+
 Bytes encode(const StreamSample& value) {
     Writer writer;
     writer.text(value.stream_uid);
@@ -183,6 +194,18 @@ bool decode(const Bytes& bytes, StreamSubscription* value) {
     return decode_all(bytes, value, [](Reader& reader, auto* out) {
         return reader.text(&out->stream_uid) && valid_uid(out->stream_uid) &&
                reader.f32(&out->max_rate_hz) && reader.u32(&out->max_payload_bytes);
+    });
+}
+
+bool decode(const Bytes& bytes, StreamSubscriptionStatus* value) {
+    return decode_all(bytes, value, [](Reader& reader, auto* out) {
+        uint8_t success = 0;
+        uint8_t subscribed = 0;
+        return reader.u8(&success) && success <= 1 && (out->success = success != 0, true) &&
+               reader.u8(&subscribed) && subscribed <= 1 &&
+               (out->subscribed = subscribed != 0, true) && reader.text(&out->stream_uid) &&
+               valid_uid(out->stream_uid) && reader.f32(&out->max_rate_hz) &&
+               reader.u32(&out->max_payload_bytes) && reader.text(&out->message);
     });
 }
 

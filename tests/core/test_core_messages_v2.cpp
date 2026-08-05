@@ -55,6 +55,25 @@ int main() {
     truncated_sample.pop_back();
     assert(!decode(truncated_sample, &decoded_sample));
 
+    StreamSubscriptionStatus subscription_status;
+    subscription_status.success = true;
+    subscription_status.subscribed = true;
+    subscription_status.stream_uid = "entity.stream.raw";
+    subscription_status.max_rate_hz = 15.0F;
+    subscription_status.max_payload_bytes = 4096;
+    subscription_status.message = "subscription active";
+    StreamSubscriptionStatus decoded_subscription_status;
+    const Bytes encoded_subscription_status = encode(subscription_status);
+    assert(decode(encoded_subscription_status, &decoded_subscription_status));
+    assert(decoded_subscription_status.success);
+    assert(decoded_subscription_status.subscribed);
+    assert(decoded_subscription_status.stream_uid == subscription_status.stream_uid);
+    assert(decoded_subscription_status.max_rate_hz == subscription_status.max_rate_hz);
+    assert(decoded_subscription_status.max_payload_bytes == subscription_status.max_payload_bytes);
+    Bytes invalid_subscription_status = encoded_subscription_status;
+    invalid_subscription_status[0] = 2;
+    assert(!decode(invalid_subscription_status, &decoded_subscription_status));
+
     yunlink::ConfigResourceGetResponse configuration;
     configuration.status = yunlink::ConfigServiceStatus::kOk;
     configuration.message = "ok";

@@ -30,9 +30,17 @@ impl Runtime {
             display_name: string_view(&config.display_name),
             shared_secret: string_view(&config.shared_secret),
             tcp_listen_port: config.tcp_listen_port,
-            profiles: profiles.as_ptr(),
+            profiles: if profiles.is_empty() {
+                std::ptr::null()
+            } else {
+                profiles.as_ptr()
+            },
             profile_count: profiles.len(),
-            required_profiles: required.as_ptr(),
+            required_profiles: if required.is_empty() {
+                std::ptr::null()
+            } else {
+                required.as_ptr()
+            },
             required_profile_count: required.len(),
         };
         if let Err(error) = ensure(unsafe { sys::yunlink_v2_runtime_start(raw, &native) }) {
@@ -187,6 +195,17 @@ impl Runtime {
             )
         })?;
         Ok(c_buffer(&uid))
+    }
+}
+
+#[cfg(test)]
+mod runtime_tests {
+    use super::*;
+
+    #[test]
+    fn runtime_starts_without_profile_lists() {
+        Runtime::start(RuntimeConfig::new("rust.empty-profiles", 0))
+            .expect("empty profile lists are valid C ABI input");
     }
 }
 

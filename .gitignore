@@ -48,4 +48,5 @@ output/testing/
 
 .codex/*
 !.codex/maxline.json
+.codebase-memory/
 rsync2testdevice.sh
