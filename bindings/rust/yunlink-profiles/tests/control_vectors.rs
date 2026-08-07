@@ -1,7 +1,8 @@
 use prost::Message;
 use yunlink_profiles::{
-    mobility, sunray, validate_emergency_kill_goal, validate_land_goal, validate_takeoff_goal,
-    validate_flight_control_state, validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
+    mobility, sunray, validate_emergency_kill_goal, validate_flight_control_state,
+    validate_land_goal, validate_takeoff_goal, validate_uav_direct_control_goal,
+    validate_uav_waypoint_mission_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[

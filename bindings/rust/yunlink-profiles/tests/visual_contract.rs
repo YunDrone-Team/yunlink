@@ -43,7 +43,9 @@ fn shared_visual_vectors_define_the_v1_contract() {
     let values = vectors();
     assert!(valid_ylpc(&hex(&values["point_cloud.valid.hex"])));
     assert!(!valid_ylpc(&hex(&values["point_cloud.invalid_stride.hex"])));
-    assert!(!valid_ylpc(&hex(&values["point_cloud.invalid_truncated.hex"])));
+    assert!(!valid_ylpc(&hex(
+        &values["point_cloud.invalid_truncated.hex"]
+    )));
     assert_eq!(hex(&values["image.raw.hex"]), vec![0, 1, 2, 3, 4, 5]);
     assert!(values["marker.add.json"].contains("\"frame_locked\""));
     assert!(values["marker.delete.json"].contains("\"action\":2"));
