@@ -157,6 +157,7 @@ if (YUNLINK_BUILD_TESTS)
     target_link_libraries(test_profile_golden PRIVATE
       yunlink_profile_sunray
       yunlink_profile_telemetry
+      yunlink_profile_media
     )
     add_test(NAME test_profile_golden COMMAND test_profile_golden)
 

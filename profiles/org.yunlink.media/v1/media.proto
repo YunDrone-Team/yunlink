@@ -1,0 +1,198 @@
+syntax = "proto3";
+
+package org.yunlink.media.v1;
+
+enum MediaError {
+  MEDIA_ERROR_UNSPECIFIED = 0;
+  MEDIA_OK = 1;
+  MEDIA_INVALID_REQUEST = 2;
+  MEDIA_CAMERA_UNAVAILABLE = 3;
+  MEDIA_UNSUPPORTED = 4;
+  MEDIA_BUSY = 5;
+  MEDIA_OPERATION_FAILED = 6;
+  MEDIA_TIMEOUT = 7;
+  MEDIA_INTERNAL_ERROR = 8;
+  MEDIA_PERMISSION_DENIED = 9;
+  MEDIA_NOT_FOUND = 10;
+  MEDIA_INTEGRITY_ERROR = 11;
+}
+
+enum MediaAssetKind {
+  MEDIA_ASSET_KIND_UNSPECIFIED = 0;
+  MEDIA_PHOTO = 1;
+  MEDIA_THUMBNAIL = 2;
+  MEDIA_VIDEO = 3;
+}
+
+enum MediaAssetTransferState {
+  MEDIA_TRANSFER_STATE_UNSPECIFIED = 0;
+  MEDIA_TRANSFER_OPEN = 1;
+  MEDIA_TRANSFER_COMPLETE = 2;
+  MEDIA_TRANSFER_CANCELLED = 3;
+  MEDIA_TRANSFER_FAILED = 4;
+}
+
+message MediaAssetRef {
+  string asset_id = 1;
+  MediaAssetKind kind = 2;
+  string mime_type = 3;
+  uint64 size_bytes = 4;
+  bytes sha256 = 5;
+  uint64 created_at_ns = 6;
+  string camera_uid = 7;
+  string display_name = 8;
+}
+
+message CameraDescriptor {
+  string camera_uid = 1;
+  uint32 camera_id = 2;
+  string name = 3;
+  string image_topic = 4;
+  string camera_info_topic = 5;
+  bool online = 6;
+  double frame_rate_hz = 7;
+  uint32 width = 8;
+  uint32 height = 9;
+  string encoding = 10;
+  bool recording = 11;
+  bool live_view_supported = 12;
+  bool live_view_control_supported = 13;
+  bool live_view_active = 14;
+  string error_message = 15;
+}
+
+message CameraCatalogSnapshot {
+  uint64 generated_at_ns = 1;
+  repeated CameraDescriptor cameras = 2;
+  bool camera_manager_available = 3;
+  reserved 4, 5;
+  reserved "media_gateway_available", "media_gateway_error";
+}
+
+message MediaEndpointDescriptor {
+  string uri = 1;
+  string username = 2;
+  string password = 3;
+  uint64 credential_expires_at_ns = 4;
+  string protocol = 5;
+}
+
+message CameraListRequest {}
+
+message CameraListResponse {
+  MediaError error = 1;
+  string message = 2;
+  CameraCatalogSnapshot catalog = 3;
+}
+
+message CameraTakePhotoRequest {
+  string camera_uid = 1;
+}
+
+message CameraTakePhotoResponse {
+  MediaError error = 1;
+  string message = 2;
+  MediaAssetRef photo = 3;
+  MediaAssetRef thumbnail = 4;
+}
+
+message CameraStartRecordingRequest {
+  string camera_uid = 1;
+}
+
+message CameraStartRecordingResponse {
+  MediaError error = 1;
+  string message = 2;
+}
+
+message CameraStopRecordingRequest {
+  string camera_uid = 1;
+}
+
+message CameraStopRecordingResponse {
+  MediaError error = 1;
+  string message = 2;
+  MediaAssetRef video = 3;
+  MediaAssetRef thumbnail = 4;
+}
+
+message CameraOpenLiveViewRequest {
+  string camera_uid = 1;
+  string client_view_id = 2;
+}
+
+message CameraOpenLiveViewResponse {
+  MediaError error = 1;
+  string message = 2;
+  string lease_id = 3;
+  uint32 lease_ttl_ms = 4;
+  MediaEndpointDescriptor endpoint = 5;
+}
+
+message CameraRenewLiveViewRequest {
+  string lease_id = 1;
+}
+
+message CameraRenewLiveViewResponse {
+  MediaError error = 1;
+  string message = 2;
+  uint32 lease_ttl_ms = 3;
+}
+
+message CameraCloseLiveViewRequest {
+  string lease_id = 1;
+}
+
+message CameraCloseLiveViewResponse {
+  MediaError error = 1;
+  string message = 2;
+}
+
+message MediaAssetOpen {
+  string asset_id = 1;
+}
+
+message MediaAssetOpenResponse {
+  MediaError error = 1;
+  string message = 2;
+  string transfer_id = 3;
+  MediaAssetRef asset = 4;
+  uint32 chunk_size_bytes = 5;
+}
+
+message MediaAssetChunk {
+  string transfer_id = 1;
+  uint64 offset = 2;
+  uint32 max_bytes = 3;
+}
+
+message MediaAssetChunkResponse {
+  MediaError error = 1;
+  string message = 2;
+  string transfer_id = 3;
+  uint64 offset = 4;
+  bytes data = 5;
+  bool eof = 6;
+}
+
+message MediaAssetClose {
+  string transfer_id = 1;
+  bool cancel = 2;
+}
+
+message MediaAssetCloseResponse {
+  MediaError error = 1;
+  string message = 2;
+}
+
+message MediaAssetStatus {
+  string transfer_id = 1;
+}
+
+message MediaAssetStatusResponse {
+  MediaError error = 1;
+  string message = 2;
+  MediaAssetTransferState state = 3;
+  uint64 bytes_sent = 4;
+  uint64 total_bytes = 5;
+}

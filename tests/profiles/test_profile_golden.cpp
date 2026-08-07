@@ -7,6 +7,8 @@
 #include "com.yundrone.sunray/v2/sunray.pb.h"
 #include "com.yundrone.sunray/v2/control_validation.hpp"
 #include "org.yunlink.mobility/v1/mobility.pb.h"
+#include "org.yunlink.media/v1/media.pb.h"
+#include "org.yunlink.media/v1/media_validation.hpp"
 #include "org.yunlink.telemetry/v1/summary_validation.hpp"
 
 namespace {
@@ -61,6 +63,62 @@ int main() {
     assert(org::yunlink::telemetry::v1::validate_summary_snapshot(summary));
     assert(hex(summary.SerializeAsString()) ==
            "080112180a0e6f72672e746573742e72656164791202080120012802");
+
+    org::yunlink::media::v1::CameraTakePhotoRequest photo_request;
+    photo_request.set_camera_uid("front");
+    assert(hex(photo_request.SerializeAsString()) == "0a0566726f6e74");
+    assert(org::yunlink::media::v1::validate_camera_request(photo_request.camera_uid()));
+
+    org::yunlink::media::v1::MediaEndpointDescriptor media_endpoint;
+    media_endpoint.set_uri("rtsp://192.168.10.60:8554/front");
+    media_endpoint.set_username("viewer");
+    media_endpoint.set_password("secret");
+    media_endpoint.set_protocol("rtsp");
+    assert(org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    assert(hex(media_endpoint.SerializeAsString()) ==
+           "0a1f727473703a2f2f3139322e3136382e31302e36303a383535342f66726f6e74"
+           "12067669657765721a067365637265742a0472747370");
+    media_endpoint.set_uri("rtsp://viewer@192.168.10.60:8554/front");
+    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    media_endpoint.set_uri("rtsp://192.168.10.60:8554/front#track");
+    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    media_endpoint.set_uri("rtsp://192.168.10.60/front");
+    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    media_endpoint.set_uri("rtsp://192.168.10. 60:8554/front");
+    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    media_endpoint.set_uri("rtsp://bad!host:8554/front");
+    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    media_endpoint.set_uri("rtsp://caf\xc3\xa9:8554/front");
+    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+
+    org::yunlink::media::v1::CameraCatalogSnapshot camera_catalog;
+    camera_catalog.set_generated_at_ns(42);
+    camera_catalog.set_camera_manager_available(true);
+    auto* camera = camera_catalog.add_cameras();
+    camera->set_camera_uid("front");
+    camera->set_camera_id(1);
+    camera->set_name("Front camera");
+    camera->set_online(true);
+    camera->set_frame_rate_hz(30.0);
+    assert(org::yunlink::media::v1::validate_camera_catalog_snapshot(camera_catalog));
+    assert_round_trip(camera_catalog);
+
+    org::yunlink::media::v1::MediaAssetRef photo_asset;
+    photo_asset.set_asset_id("asset-01");
+    photo_asset.set_kind(org::yunlink::media::v1::MEDIA_PHOTO);
+    photo_asset.set_mime_type("image/png");
+    photo_asset.set_size_bytes(8);
+    photo_asset.set_sha256(std::string(32, '\x01'));
+    photo_asset.set_camera_uid("front");
+    assert(org::yunlink::media::v1::validate_media_asset_ref(photo_asset));
+    assert_round_trip(photo_asset);
+
+    org::yunlink::media::v1::MediaAssetChunkResponse rejected_chunk;
+    rejected_chunk.set_error(org::yunlink::media::v1::MEDIA_BUSY);
+    rejected_chunk.set_message("queue is full");
+    assert(org::yunlink::media::v1::validate_media_asset_chunk(rejected_chunk));
+    rejected_chunk.set_transfer_id("not valid!");
+    assert(!org::yunlink::media::v1::validate_media_asset_chunk(rejected_chunk));
 
     *summary.add_metrics() = *metric;
     std::string validation_error;

@@ -5,6 +5,12 @@ from yunlink.profiles import (
     mobility,
     sunray,
     telemetry,
+    media,
+    validate_camera_catalog_snapshot,
+    validate_camera_descriptor,
+    validate_media_asset_chunk,
+    validate_media_asset_ref,
+    validate_media_endpoint_descriptor,
     validate_flight_control_state,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
@@ -30,6 +36,67 @@ WAYPOINT_GOLDEN = bytes.fromhex(
     "11000000000000e03f19000000000000f83f12260a1b09000000000000f0bf1100000000"
     "000000c019000000000000104011000000000000d0bf1801"
 )
+
+
+def test_media_profile_matches_cross_language_golden_and_rejects_invalid_assets():
+    request = media.CameraTakePhotoRequest(camera_uid="front")
+    assert request.SerializeToString(deterministic=True) == bytes.fromhex("0a0566726f6e74")
+
+    camera = media.CameraDescriptor(
+        camera_uid="front", camera_id=1, name="Front camera", online=True,
+        frame_rate_hz=30.0,
+    )
+    validate_camera_descriptor(camera)
+    catalog = media.CameraCatalogSnapshot(
+        generated_at_ns=42, cameras=[camera], camera_manager_available=True,
+    )
+    validate_camera_catalog_snapshot(catalog)
+    catalog.cameras.add().CopyFrom(camera)
+    with pytest.raises(ValueError, match="duplicate camera uid"):
+        validate_camera_catalog_snapshot(catalog)
+
+    asset = media.MediaAssetRef(
+        asset_id="asset-01", kind=media.MEDIA_PHOTO, mime_type="image/png",
+        size_bytes=8, sha256=b"\x01" * 32, camera_uid="front",
+    )
+    validate_media_asset_ref(asset)
+    asset.sha256 = b"\x01" * 31
+    with pytest.raises(ValueError, match="media asset reference is invalid"):
+        validate_media_asset_ref(asset)
+
+    chunk = media.MediaAssetChunkResponse(
+        error=media.MEDIA_OK, transfer_id="transfer-01", eof=True,
+    )
+    validate_media_asset_chunk(chunk)
+    validate_media_asset_chunk(
+        media.MediaAssetChunkResponse(error=media.MEDIA_BUSY, message="queue is full")
+    )
+
+
+def test_media_rtsp_source_descriptor_matches_golden_and_rejects_unsafe_uris():
+    endpoint = media.MediaEndpointDescriptor(
+        uri="rtsp://192.168.10.60:8554/front",
+        username="viewer",
+        password="secret",
+        protocol="rtsp",
+    )
+    validate_media_endpoint_descriptor(endpoint)
+    assert endpoint.SerializeToString(deterministic=True) == bytes.fromhex(
+        "0a1f727473703a2f2f3139322e3136382e31302e36303a383535342f66726f6e74"
+        "12067669657765721a067365637265742a0472747370"
+    )
+    for uri in (
+        "http://192.168.10.60:8554/front",
+        "rtsp://viewer@192.168.10.60:8554/front",
+        "rtsp://192.168.10.60:8554/front#track",
+        "rtsp://192.168.10.60/front",
+        "rtsp://192.168.10. 60:8554/front",
+        "rtsp://bad!host:8554/front",
+        "rtsp://caf\u00e9:8554/front",
+    ):
+        endpoint.uri = uri
+        with pytest.raises(ValueError, match="media endpoint descriptor is invalid"):
+            validate_media_endpoint_descriptor(endpoint)
 
 
 def test_flight_goal_validation_and_empty_payload_compatibility():
