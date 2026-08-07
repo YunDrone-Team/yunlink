@@ -12,6 +12,15 @@ trajectory payloads.
 actions, diagnostics, events, and Feature RPC payloads. It imports the Mobility
 Profile for common geometry.
 
+`org.yunlink.visual@1` defines a neutral StreamSample contract for bounded
+point-cloud, marker-array, and image data. Its complete wire, metadata, and
+golden-vector specification is in
+[`profiles/org.yunlink.visual-v1.md`](profiles/org.yunlink.visual-v1.md).
+
+Sunray's registered `SummarySnapshot` metric keys, their quality semantics,
+and the boundary between the display summary and high-rate flight state are in
+[`profiles/com.yundrone.sunray-v2-summary-metrics.md`](profiles/com.yundrone.sunray-v2-summary-metrics.md).
+
 Both schemas use proto3 syntax compatible with Protobuf 3.6 and avoid newer
 optional-field syntax.
 

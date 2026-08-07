@@ -159,6 +159,12 @@ if (YUNLINK_BUILD_TESTS)
       yunlink_profile_telemetry
     )
     add_test(NAME test_profile_golden COMMAND test_profile_golden)
+
+    add_executable(test_visual_contract tests/profiles/test_visual_contract.cpp)
+    target_compile_definitions(test_visual_contract PRIVATE
+      YUNLINK_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+    add_test(NAME test_visual_contract COMMAND test_visual_contract)
   endif()
 endif()
 
