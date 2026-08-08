@@ -1,4 +1,7 @@
-use crate::{media, MEDIA_MAX_CAMERAS, MEDIA_MAX_CHUNK_BYTES, MEDIA_MAX_SOURCE_URI_BYTES};
+use crate::{
+    media, MEDIA_MAX_ASSET_PAGE_SIZE, MEDIA_MAX_CAMERAS, MEDIA_MAX_CHUNK_BYTES,
+    MEDIA_MAX_DIMENSION_PIXELS, MEDIA_MAX_PAGE_TOKEN_BYTES, MEDIA_MAX_SOURCE_URI_BYTES,
+};
 
 fn valid_token(value: &str, max_bytes: usize) -> bool {
     !value.is_empty()
@@ -6,6 +9,13 @@ fn valid_token(value: &str, max_bytes: usize) -> bool {
         && value
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+}
+
+fn valid_page_token(value: &str) -> bool {
+    value.len() <= MEDIA_MAX_PAGE_TOKEN_BYTES
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'='))
 }
 
 pub fn validate_camera_descriptor(camera: &media::CameraDescriptor) -> Result<(), &'static str> {
@@ -99,6 +109,86 @@ pub fn validate_media_asset_ref(asset: &media::MediaAssetRef) -> Result<(), &'st
         && asset.display_name.len() <= 160)
         .then_some(())
         .ok_or("media asset reference is invalid")
+}
+
+pub fn validate_media_asset_item(item: &media::MediaAssetItem) -> Result<(), &'static str> {
+    let asset = item.asset.as_ref().ok_or("media asset item is invalid")?;
+    validate_media_asset_ref(asset).map_err(|_| "media asset item is invalid")?;
+    if asset.kind == media::MediaAssetKind::MediaThumbnail as i32
+        || item.width > MEDIA_MAX_DIMENSION_PIXELS
+        || item.height > MEDIA_MAX_DIMENSION_PIXELS
+    {
+        return Err("media asset item is invalid");
+    }
+    if let Some(thumbnail) = &item.thumbnail {
+        validate_media_asset_ref(thumbnail)
+            .map_err(|_| "media asset thumbnail relation is invalid")?;
+        if thumbnail.kind != media::MediaAssetKind::MediaThumbnail as i32
+            || thumbnail.camera_uid != asset.camera_uid
+            || thumbnail.asset_id == asset.asset_id
+        {
+            return Err("media asset thumbnail relation is invalid");
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_media_asset_list_request(
+    request: &media::MediaAssetListRequest,
+) -> Result<(), &'static str> {
+    use std::collections::HashSet;
+
+    if (!request.camera_uid.is_empty() && !valid_token(&request.camera_uid, 96))
+        || request.page_size == 0
+        || request.page_size as usize > MEDIA_MAX_ASSET_PAGE_SIZE
+        || !valid_page_token(&request.page_token)
+        || (request.created_after_ns != 0
+            && request.created_before_ns != 0
+            && request.created_after_ns > request.created_before_ns)
+    {
+        return Err("media asset list request is invalid");
+    }
+    let mut kinds = HashSet::new();
+    for kind in &request.kinds {
+        if !matches!(
+            media::MediaAssetKind::try_from(*kind),
+            Ok(media::MediaAssetKind::MediaPhoto | media::MediaAssetKind::MediaVideo)
+        ) || !kinds.insert(*kind)
+        {
+            return Err("media asset list kind is invalid");
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_media_asset_list_response(
+    response: &media::MediaAssetListResponse,
+) -> Result<(), &'static str> {
+    use std::collections::HashSet;
+
+    let error = media::MediaError::try_from(response.error)
+        .map_err(|_| "media asset list response is invalid")?;
+    if error == media::MediaError::Unspecified
+        || response.message.len() > 256
+        || response.items.len() > MEDIA_MAX_ASSET_PAGE_SIZE
+        || !valid_page_token(&response.next_page_token)
+    {
+        return Err("media asset list response is invalid");
+    }
+    if error != media::MediaError::MediaOk
+        && (!response.items.is_empty() || !response.next_page_token.is_empty())
+    {
+        return Err("failed media asset list response contains data");
+    }
+    let mut asset_ids = HashSet::new();
+    for item in &response.items {
+        validate_media_asset_item(item)
+            .map_err(|_| "media asset list response contains duplicate or invalid asset")?;
+        if !asset_ids.insert(item.asset.as_ref().unwrap().asset_id.as_str()) {
+            return Err("media asset list response contains duplicate or invalid asset");
+        }
+    }
+    Ok(())
 }
 
 pub fn validate_media_asset_chunk(

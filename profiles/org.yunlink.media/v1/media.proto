@@ -43,6 +43,31 @@ message MediaAssetRef {
   string display_name = 8;
 }
 
+message MediaAssetItem {
+  MediaAssetRef asset = 1;
+  MediaAssetRef thumbnail = 2;
+  uint32 width = 3;
+  uint32 height = 4;
+  uint64 duration_ms = 5;
+}
+
+message MediaAssetListRequest {
+  string camera_uid = 1;
+  repeated MediaAssetKind kinds = 2;
+  uint64 created_after_ns = 3;
+  uint64 created_before_ns = 4;
+  uint32 page_size = 5;
+  string page_token = 6;
+}
+
+message MediaAssetListResponse {
+  MediaError error = 1;
+  string message = 2;
+  repeated MediaAssetItem items = 3;
+  string next_page_token = 4;
+  uint64 catalog_revision = 5;
+}
+
 message CameraDescriptor {
   string camera_uid = 1;
   uint32 camera_id = 2;

@@ -10,6 +10,9 @@ from yunlink.profiles import (
     validate_camera_descriptor,
     validate_media_asset_chunk,
     validate_media_asset_ref,
+    validate_media_asset_item,
+    validate_media_asset_list_request,
+    validate_media_asset_list_response,
     validate_media_endpoint_descriptor,
     validate_flight_control_state,
     validate_summary_snapshot,
@@ -97,6 +100,35 @@ def test_media_rtsp_source_descriptor_matches_golden_and_rejects_unsafe_uris():
         endpoint.uri = uri
         with pytest.raises(ValueError, match="media endpoint descriptor is invalid"):
             validate_media_endpoint_descriptor(endpoint)
+
+
+def test_media_asset_list_contract_is_paged_and_keeps_thumbnail_relation_explicit():
+    request = media.MediaAssetListRequest(
+        camera_uid="front", kinds=[media.MEDIA_PHOTO, media.MEDIA_VIDEO],
+        created_after_ns=10, created_before_ns=20, page_size=25, page_token="Y3Vyc29y",
+    )
+    validate_media_asset_list_request(request)
+    assert request.SerializeToString(deterministic=True).hex() == (
+        "0a0566726f6e7412020103180a2014281932085933567963323979"
+    )
+    asset = media.MediaAssetRef(
+        asset_id="photo-1", kind=media.MEDIA_PHOTO, mime_type="image/png", size_bytes=8,
+        sha256=b"\x01" * 32, created_at_ns=42, camera_uid="front", display_name="photo.png",
+    )
+    thumbnail = media.MediaAssetRef(
+        asset_id="thumb-1", kind=media.MEDIA_THUMBNAIL, mime_type="image/png", size_bytes=4,
+        sha256=b"\x02" * 32, created_at_ns=42, camera_uid="front", display_name="thumb.png",
+    )
+    response = media.MediaAssetListResponse(
+        error=media.MEDIA_OK, items=[media.MediaAssetItem(
+            asset=asset, thumbnail=thumbnail, width=1920, height=1080,
+        )], next_page_token="next", catalog_revision=7,
+    )
+    validate_media_asset_item(response.items[0])
+    validate_media_asset_list_response(response)
+    request.page_size = 101
+    with pytest.raises(ValueError, match="media asset list request is invalid"):
+        validate_media_asset_list_request(request)
 
 
 def test_flight_goal_validation_and_empty_payload_compatibility():

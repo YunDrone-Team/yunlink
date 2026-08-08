@@ -21,6 +21,11 @@ Sunray's registered `SummarySnapshot` metric keys, their quality semantics,
 and the boundary between the display summary and high-rate flight state are in
 [`profiles/com.yundrone.sunray-v2-summary-metrics.md`](profiles/com.yundrone.sunray-v2-summary-metrics.md).
 
+`org.yunlink.media@1` defines camera control, live-view leases, a cursor-paged
+media catalog, and Bulk file metadata. RTSP/H.264 frames remain outside
+YunLink; see [`profiles/org.yunlink.media-v1.md`](../profiles/org.yunlink.media-v1.md)
+for the catalog and thumbnail relationship rules.
+
 Both schemas use proto3 syntax compatible with Protobuf 3.6 and avoid newer
 optional-field syntax.
 

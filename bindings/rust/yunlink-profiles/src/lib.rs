@@ -47,6 +47,9 @@ pub const MAX_WAYPOINT_TASK_NAME_BYTES: usize = 96;
 pub const MEDIA_MAX_CAMERAS: usize = 32;
 pub const MEDIA_MAX_CHUNK_BYTES: usize = 256 * 1024;
 pub const MEDIA_MAX_SOURCE_URI_BYTES: usize = 2048;
+pub const MEDIA_MAX_ASSET_PAGE_SIZE: usize = 100;
+pub const MEDIA_MAX_PAGE_TOKEN_BYTES: usize = 512;
+pub const MEDIA_MAX_DIMENSION_PIXELS: u32 = 32768;
 
 mod validation_media;
 mod validation_sunray;

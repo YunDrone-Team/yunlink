@@ -39,6 +39,14 @@ bool valid_token(const std::string& value, std::size_t max_bytes) {
     return true;
 }
 
+bool valid_page_token(const std::string& value) {
+    return value.size() <= kMediaMaxPageTokenBytes &&
+           std::all_of(value.begin(), value.end(), [](const unsigned char character) {
+               return ascii_alphanumeric(character) || character == '-' || character == '_' ||
+                      character == '=';
+           });
+}
+
 bool valid_error(MediaError error) {
     return error >= MEDIA_OK && error <= MEDIA_INTEGRITY_ERROR;
 }
@@ -168,6 +176,72 @@ bool validate_media_asset_ref(const MediaAssetRef& asset, std::string* error) {
         !valid_token(asset.camera_uid(), kMediaMaxCameraUidBytes) ||
         asset.display_name().size() > 160) {
         return fail("media asset reference is invalid", error);
+    }
+    if (error != nullptr) {
+        error->clear();
+    }
+    return true;
+}
+
+bool validate_media_asset_item(const MediaAssetItem& item, std::string* error) {
+    if (!item.has_asset() || !validate_media_asset_ref(item.asset(), error) ||
+        item.asset().kind() == MEDIA_THUMBNAIL || item.width() > kMediaMaxDimensionPixels ||
+        item.height() > kMediaMaxDimensionPixels) {
+        return fail("media asset item is invalid", error);
+    }
+    if (item.has_thumbnail()) {
+        if (!validate_media_asset_ref(item.thumbnail(), error) ||
+            item.thumbnail().kind() != MEDIA_THUMBNAIL ||
+            item.thumbnail().camera_uid() != item.asset().camera_uid() ||
+            item.thumbnail().asset_id() == item.asset().asset_id()) {
+            return fail("media asset thumbnail relation is invalid", error);
+        }
+    }
+    if (error != nullptr) {
+        error->clear();
+    }
+    return true;
+}
+
+bool validate_media_asset_list_request(const MediaAssetListRequest& request, std::string* error) {
+    if ((!request.camera_uid().empty() &&
+         !valid_token(request.camera_uid(), kMediaMaxCameraUidBytes)) ||
+        request.page_size() == 0 || request.page_size() > kMediaMaxAssetPageSize ||
+        !valid_page_token(request.page_token()) ||
+        (request.created_after_ns() != 0 && request.created_before_ns() != 0 &&
+         request.created_after_ns() > request.created_before_ns())) {
+        return fail("media asset list request is invalid", error);
+    }
+    std::unordered_set<int> kinds;
+    for (const auto kind : request.kinds()) {
+        if ((kind != MEDIA_PHOTO && kind != MEDIA_VIDEO) ||
+            !kinds.insert(static_cast<int>(kind)).second) {
+            return fail("media asset list kind is invalid", error);
+        }
+    }
+    if (error != nullptr) {
+        error->clear();
+    }
+    return true;
+}
+
+bool validate_media_asset_list_response(const MediaAssetListResponse& response,
+                                        std::string* error) {
+    if (!valid_error(response.error()) || response.message().size() > kMediaMaxMessageBytes ||
+        response.items_size() > static_cast<int>(kMediaMaxAssetPageSize) ||
+        !valid_page_token(response.next_page_token())) {
+        return fail("media asset list response is invalid", error);
+    }
+    if (response.error() != MEDIA_OK &&
+        (response.items_size() != 0 || !response.next_page_token().empty())) {
+        return fail("failed media asset list response contains data", error);
+    }
+    std::unordered_set<std::string> asset_ids;
+    for (const auto& item : response.items()) {
+        if (!validate_media_asset_item(item, error) ||
+            !asset_ids.insert(item.asset().asset_id()).second) {
+            return fail("media asset list response contains duplicate or invalid asset", error);
+        }
     }
     if (error != nullptr) {
         error->clear();

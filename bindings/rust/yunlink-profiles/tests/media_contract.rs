@@ -2,6 +2,7 @@ use prost::Message;
 use yunlink_profiles::{
     media, validate_camera_catalog_snapshot, validate_camera_descriptor,
     validate_media_asset_chunk, validate_media_asset_ref, validate_media_endpoint_descriptor,
+    validate_media_asset_list_request, validate_media_asset_list_response,
 };
 
 #[test]
@@ -13,6 +14,52 @@ fn camera_request_matches_cross_language_golden_vector() {
         request.encode_to_vec(),
         hex::decode("0a0566726f6e74").unwrap()
     );
+}
+
+#[test]
+fn asset_list_contract_is_paged_and_keeps_thumbnail_relation_explicit() {
+    let request = media::MediaAssetListRequest {
+        camera_uid: "front".into(),
+        kinds: vec![media::MediaAssetKind::MediaPhoto as i32, media::MediaAssetKind::MediaVideo as i32],
+        created_after_ns: 10,
+        created_before_ns: 20,
+        page_size: 25,
+        page_token: "Y3Vyc29y".into(),
+    };
+    validate_media_asset_list_request(&request).unwrap();
+    assert_eq!(request.encode_to_vec(), hex::decode("0a0566726f6e7412020103180a2014281932085933567963323979").unwrap());
+
+    let asset = media::MediaAssetRef {
+        asset_id: "photo-1".into(),
+        kind: media::MediaAssetKind::MediaPhoto as i32,
+        mime_type: "image/png".into(),
+        size_bytes: 8,
+        sha256: vec![1; 32],
+        created_at_ns: 42,
+        camera_uid: "front".into(),
+        display_name: "photo.png".into(),
+    };
+    let thumbnail = media::MediaAssetRef {
+        asset_id: "thumb-1".into(),
+        kind: media::MediaAssetKind::MediaThumbnail as i32,
+        mime_type: "image/png".into(),
+        size_bytes: 4,
+        sha256: vec![2; 32],
+        created_at_ns: 42,
+        camera_uid: "front".into(),
+        display_name: "thumb.png".into(),
+    };
+    let response = media::MediaAssetListResponse {
+        error: media::MediaError::MediaOk as i32,
+        items: vec![media::MediaAssetItem { asset: Some(asset), thumbnail: Some(thumbnail), width: 1920, height: 1080, duration_ms: 0 }],
+        next_page_token: "next".into(),
+        catalog_revision: 7,
+        ..Default::default()
+    };
+    validate_media_asset_list_response(&response).unwrap();
+    let mut invalid = request.clone();
+    invalid.page_size = 101;
+    assert!(validate_media_asset_list_request(&invalid).is_err());
 }
 
 #[test]

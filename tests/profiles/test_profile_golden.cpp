@@ -69,6 +69,47 @@ int main() {
     assert(hex(photo_request.SerializeAsString()) == "0a0566726f6e74");
     assert(org::yunlink::media::v1::validate_camera_request(photo_request.camera_uid()));
 
+    org::yunlink::media::v1::MediaAssetListRequest list_request;
+    list_request.set_camera_uid("front");
+    list_request.add_kinds(org::yunlink::media::v1::MEDIA_PHOTO);
+    list_request.add_kinds(org::yunlink::media::v1::MEDIA_VIDEO);
+    list_request.set_created_after_ns(10);
+    list_request.set_created_before_ns(20);
+    list_request.set_page_size(25);
+    list_request.set_page_token("Y3Vyc29y");
+    assert(org::yunlink::media::v1::validate_media_asset_list_request(list_request));
+    assert(hex(list_request.SerializeAsString()) ==
+           "0a0566726f6e7412020103180a2014281932085933567963323979");
+
+    org::yunlink::media::v1::MediaAssetListResponse list_response;
+    list_response.set_error(org::yunlink::media::v1::MEDIA_OK);
+    list_response.set_next_page_token("next");
+    list_response.set_catalog_revision(7);
+    auto* item = list_response.add_items();
+    auto* listed_asset = item->mutable_asset();
+    listed_asset->set_asset_id("photo-1");
+    listed_asset->set_kind(org::yunlink::media::v1::MEDIA_PHOTO);
+    listed_asset->set_mime_type("image/png");
+    listed_asset->set_size_bytes(8);
+    listed_asset->set_sha256(std::string(32, '\x01'));
+    listed_asset->set_created_at_ns(42);
+    listed_asset->set_camera_uid("front");
+    listed_asset->set_display_name("photo.png");
+    auto* listed_thumbnail = item->mutable_thumbnail();
+    listed_thumbnail->set_asset_id("thumb-1");
+    listed_thumbnail->set_kind(org::yunlink::media::v1::MEDIA_THUMBNAIL);
+    listed_thumbnail->set_mime_type("image/png");
+    listed_thumbnail->set_size_bytes(4);
+    listed_thumbnail->set_sha256(std::string(32, '\x02'));
+    listed_thumbnail->set_created_at_ns(42);
+    listed_thumbnail->set_camera_uid("front");
+    listed_thumbnail->set_display_name("thumb.png");
+    item->set_width(1920);
+    item->set_height(1080);
+    assert(org::yunlink::media::v1::validate_media_asset_list_response(list_response));
+    list_request.set_page_size(101);
+    assert(!org::yunlink::media::v1::validate_media_asset_list_request(list_request));
+
     org::yunlink::media::v1::MediaEndpointDescriptor media_endpoint;
     media_endpoint.set_uri("rtsp://192.168.10.60:8554/front");
     media_endpoint.set_username("viewer");
