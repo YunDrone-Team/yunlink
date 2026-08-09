@@ -106,6 +106,7 @@ uint64_t Runtime::open_session(const std::string& peer_id) {
 void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope) {
     if (envelope.family != MessageFamily::kSession) {
         bool authorized = false;
+        bool profile_supported = false;
         {
             std::lock_guard<std::mutex> lock(impl->mutex);
             const auto it = impl->sessions.find({peer.id, envelope.session_id});
@@ -118,6 +119,11 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
                 }
                 authorized = envelope.target.matches(
                     impl->config.endpoint_uid, entity_uids, impl->config.group_uids);
+                profile_supported =
+                    envelope.type.is_core() ||
+                    it->second.supports_profile(envelope.type.profile_id,
+                                                envelope.type.major,
+                                                envelope.type.minor);
             }
         }
         if (!authorized) {
@@ -128,6 +134,16 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
                           {},
                           ErrorCode::kUnauthorized,
                           "inactive session, source mismatch, or target mismatch"});
+            return;
+        }
+        if (!profile_supported) {
+            runtime_emit(impl,
+                         {RuntimeEventKind::kError,
+                          peer,
+                          envelope,
+                          {},
+                          ErrorCode::kUnsupported,
+                          "message type exceeds the negotiated profile version"});
             return;
         }
         if (runtime_handle_authority(impl, peer, envelope)) {

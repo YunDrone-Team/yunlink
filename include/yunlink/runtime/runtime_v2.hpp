@@ -147,6 +147,9 @@ struct SessionInfo {
     std::vector<std::string> rejected_profiles;
 
     bool has_profile(const std::string& profile_id, uint16_t major) const;
+    bool supports_profile(const std::string& profile_id,
+                          uint16_t major,
+                          uint16_t minimum_minor) const;
 };
 
 enum class RuntimeEventKind : uint8_t {
@@ -210,6 +213,11 @@ class Runtime {
     void unsubscribe(size_t token);
     std::vector<SessionInfo> sessions() const;
     bool session(const std::string& peer_id, uint64_t session_id, SessionInfo* out) const;
+    bool session_supports_profile(const std::string& peer_id,
+                                  uint64_t session_id,
+                                  const std::string& profile_id,
+                                  uint16_t major,
+                                  uint16_t minimum_minor) const;
     bool has_authority(const std::string& peer_id,
                        uint64_t session_id,
                        const std::string& entity_uid,

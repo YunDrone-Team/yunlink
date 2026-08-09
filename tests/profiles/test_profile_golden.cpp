@@ -110,27 +110,20 @@ int main() {
     list_request.set_page_size(101);
     assert(!org::yunlink::media::v1::validate_media_asset_list_request(list_request));
 
-    org::yunlink::media::v1::MediaEndpointDescriptor media_endpoint;
-    media_endpoint.set_uri("rtsp://192.168.10.60:8554/front");
-    media_endpoint.set_username("viewer");
-    media_endpoint.set_password("secret");
-    media_endpoint.set_protocol("rtsp");
-    assert(org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
-    assert(hex(media_endpoint.SerializeAsString()) ==
-           "0a1f727473703a2f2f3139322e3136382e31302e36303a383535342f66726f6e74"
-           "12067669657765721a067365637265742a0472747370");
-    media_endpoint.set_uri("rtsp://viewer@192.168.10.60:8554/front");
-    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
-    media_endpoint.set_uri("rtsp://192.168.10.60:8554/front#track");
-    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
-    media_endpoint.set_uri("rtsp://192.168.10.60/front");
-    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
-    media_endpoint.set_uri("rtsp://192.168.10. 60:8554/front");
-    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
-    media_endpoint.set_uri("rtsp://bad!host:8554/front");
-    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
-    media_endpoint.set_uri("rtsp://caf\xc3\xa9:8554/front");
-    assert(!org::yunlink::media::v1::validate_media_endpoint_descriptor(media_endpoint));
+    org::yunlink::media::v1::CameraStartRtspResponse rtsp_response;
+    rtsp_response.set_error(org::yunlink::media::v1::MEDIA_OK);
+    rtsp_response.set_message("ready");
+    rtsp_response.set_rtsp_url(
+        "rtsp://viewer:secret@192.168.10.60:8554/front/main?profile=high&token=a%2Fb");
+    assert(org::yunlink::media::v1::validate_camera_start_rtsp_response(rtsp_response));
+    assert(hex(rtsp_response.SerializeAsString()) ==
+           "0801120572656164791a4b727473703a2f2f7669657765723a736563726574403139322e"
+           "3136382e31302e36303a383535342f66726f6e742f6d61696e3f70726f66696c653d6869"
+           "676826746f6b656e3d6125324662");
+    rtsp_response.clear_rtsp_url();
+    assert(!org::yunlink::media::v1::validate_camera_start_rtsp_response(rtsp_response));
+    rtsp_response.set_error(org::yunlink::media::v1::MEDIA_OPERATION_FAILED);
+    assert(org::yunlink::media::v1::validate_camera_start_rtsp_response(rtsp_response));
 
     org::yunlink::media::v1::CameraCatalogSnapshot camera_catalog;
     camera_catalog.set_generated_at_ns(42);
@@ -141,8 +134,15 @@ int main() {
     camera->set_name("Front camera");
     camera->set_online(true);
     camera->set_frame_rate_hz(30.0);
+    camera->set_live_view_supported(true);
+    camera->set_live_view_active(true);
+    camera->set_live_view_autostart(true);
+    camera->set_rtsp_url("rtsp://192.168.10.38:8554/front");
     assert(org::yunlink::media::v1::validate_camera_catalog_snapshot(camera_catalog));
     assert_round_trip(camera_catalog);
+    camera->clear_rtsp_url();
+    assert(!org::yunlink::media::v1::validate_camera_catalog_snapshot(camera_catalog));
+    camera->set_rtsp_url("rtsp://192.168.10.38:8554/front");
 
     org::yunlink::media::v1::MediaAssetRef photo_asset;
     photo_asset.set_asset_id("asset-01");

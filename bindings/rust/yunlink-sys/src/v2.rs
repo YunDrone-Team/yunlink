@@ -170,4 +170,12 @@ extern "C" {
         profile_id: yunlink_v2_string_view_t,
         major: u16,
     ) -> u8;
+    pub fn yunlink_v2_runtime_session_supports_profile(
+        runtime: *const yunlink_v2_runtime_t,
+        peer_id: yunlink_v2_string_view_t,
+        session_id: u64,
+        profile_id: yunlink_v2_string_view_t,
+        major: u16,
+        minimum_minor: u16,
+    ) -> u8;
 }

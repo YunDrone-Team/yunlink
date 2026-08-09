@@ -21,6 +21,8 @@ bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error = nullptr
 bool validate_land_goal(const LandGoal& goal, std::string* error = nullptr);
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error = nullptr);
+bool validate_planner_set_home_request(const PlannerSetHomeRequest& request,
+                                       std::string* error = nullptr);
 
 }  // namespace com::yundrone::sunray::v2
 

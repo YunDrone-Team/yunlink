@@ -1,8 +1,8 @@
 use prost::Message;
 use yunlink_profiles::{
     mobility, sunray, validate_emergency_kill_goal, validate_flight_control_state,
-    validate_land_goal, validate_takeoff_goal, validate_uav_direct_control_goal,
-    validate_uav_waypoint_mission_goal,
+    validate_land_goal, validate_planner_set_home_request, validate_takeoff_goal,
+    validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[
@@ -208,4 +208,25 @@ fn waypoint_limits_and_round_trip() {
         },
     );
     assert!(validate_uav_waypoint_mission_goal(&mission).is_err());
+}
+
+#[test]
+fn planner_v21_messages_round_trip_and_validate() {
+    assert!(sunray::UavReturnHomeGoal::decode([].as_slice()).is_ok());
+    assert!(sunray::PlannerCancelTaskRequest::decode([].as_slice()).is_ok());
+    let mut request = sunray::PlannerSetHomeRequest {
+        home_m: Some(vector3(1.0, -2.0, 0.5)),
+        frame_id: "map".into(),
+    };
+    validate_planner_set_home_request(&request).unwrap();
+    assert_eq!(
+        request.encode_to_vec(),
+        vec![
+            0x0a, 0x1b, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0x11, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0,
+            0x3f, 0x12, 0x03, 0x6d, 0x61, 0x70,
+        ]
+    );
+    request.home_m.as_mut().unwrap().z = f64::NAN;
+    assert!(validate_planner_set_home_request(&request).is_err());
 }

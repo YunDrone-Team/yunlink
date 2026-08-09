@@ -27,6 +27,20 @@ def validate_camera_descriptor(camera: media.CameraDescriptor) -> None:
         and len(camera.camera_info_topic.encode()) <= 256
         and len(camera.encoding.encode()) <= 64
         and len(camera.error_message.encode()) <= 256
+        and len(camera.rtsp_url.encode()) <= 2048
+        and not any(ord(char) < 0x20 or ord(char) == 0x7F for char in camera.rtsp_url)
+        and (
+            not camera.live_view_active
+            or (camera.live_view_supported and bool(camera.rtsp_url))
+        )
+        and (
+            camera.live_view_supported
+            or (
+                not camera.live_view_control_supported
+                and not camera.rtsp_url
+                and not camera.live_view_autostart
+            )
+        )
         and math.isfinite(camera.frame_rate_hz)
         and camera.frame_rate_hz >= 0
     ):
@@ -44,38 +58,18 @@ def validate_camera_catalog_snapshot(snapshot: media.CameraCatalogSnapshot) -> N
         camera_uids.add(camera.camera_uid)
 
 
-def validate_media_endpoint_descriptor(endpoint: media.MediaEndpointDescriptor) -> None:
-    uri = endpoint.uri
-    rest = uri.removeprefix("rtsp://") if uri.startswith("rtsp://") else ""
-    authority, separator, path = rest.partition("/")
-    host, port_separator, port_text = authority.rpartition(":")
-    if host.startswith("[") and host.endswith("]"):
-        valid_host = len(host) > 2 and all(
-            char.isascii() and (char.isdigit() or char.lower() in "abcdef" or char in ":.")
-            for char in host[1:-1]
-        )
-    else:
-        valid_host = bool(host) and all(
-            char.isascii() and (char.isalnum() or char in ".-") for char in host
-        )
-    valid_port = port_text.isascii() and port_text.isdigit() and 0 < int(port_text) <= 65535
+def validate_camera_start_rtsp_response(response: media.CameraStartRtspResponse) -> None:
     if not (
-        endpoint.protocol == "rtsp"
-        and separator == "/"
-        and bool(path)
-        and valid_host
-        and port_separator == ":"
-        and valid_port
-        and len(uri.encode()) <= 2048
-        and "@" not in uri
-        and "#" not in uri
-        and not any(ord(char) < 0x20 or ord(char) == 0x7F for char in uri)
-        and len(endpoint.username.encode()) <= 256
-        and len(endpoint.password.encode()) <= 256
-        and not any(ord(char) < 0x20 or ord(char) == 0x7F for char in endpoint.username)
-        and not any(ord(char) < 0x20 or ord(char) == 0x7F for char in endpoint.password)
+        response.error in set(range(media.MEDIA_OK, media.MEDIA_INTEGRITY_ERROR + 1))
+        and len(response.message.encode()) <= 256
+        and len(response.rtsp_url.encode()) <= 2048
+        and not any(ord(char) < 0x20 or ord(char) == 0x7F for char in response.rtsp_url)
+        and (
+            (response.error == media.MEDIA_OK and bool(response.rtsp_url))
+            or (response.error != media.MEDIA_OK and not response.rtsp_url)
+        )
     ):
-        raise ValueError("media endpoint descriptor is invalid")
+        raise ValueError("camera start RTSP response is invalid")
 
 
 def validate_media_asset_ref(asset: media.MediaAssetRef) -> None:
@@ -366,3 +360,12 @@ def validate_uav_waypoint_mission_goal(goal: sunray.UavWaypointMissionGoal) -> N
             }
         ):
             raise ValueError("waypoint is invalid")
+
+
+def validate_planner_set_home_request(request: sunray.PlannerSetHomeRequest) -> None:
+    if (
+        not request.frame_id
+        or not request.HasField("home_m")
+        or not _finite_vector(request.home_m)
+    ):
+        raise ValueError("Planner home request is invalid")

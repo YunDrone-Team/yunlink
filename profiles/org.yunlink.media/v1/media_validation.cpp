@@ -20,12 +20,6 @@ bool ascii_alphanumeric(unsigned char character) {
            (character >= '0' && character <= '9');
 }
 
-bool ascii_hexadecimal(unsigned char character) {
-    return (character >= '0' && character <= '9') ||
-           (character >= 'a' && character <= 'f') ||
-           (character >= 'A' && character <= 'F');
-}
-
 bool valid_token(const std::string& value, std::size_t max_bytes) {
     if (value.empty() || value.size() > max_bytes) {
         return false;
@@ -57,57 +51,6 @@ bool contains_control(const std::string& value) {
     });
 }
 
-bool valid_host(const std::string& host) {
-    if (host.empty())
-        return false;
-    if (host.front() == '[' && host.back() == ']') {
-        if (host.size() <= 2)
-            return false;
-        return std::all_of(host.begin() + 1, host.end() - 1, [](const unsigned char character) {
-            return ascii_hexadecimal(character) || character == ':' || character == '.';
-        });
-    }
-    return std::all_of(host.begin(), host.end(), [](const unsigned char character) {
-        return ascii_alphanumeric(character) || character == '.' || character == '-';
-    });
-}
-
-bool valid_rtsp_uri(const std::string& uri) {
-    constexpr char kPrefix[] = "rtsp://";
-    if (uri.size() <= sizeof(kPrefix) - 1 || uri.size() > kMediaMaxSourceUriBytes ||
-        uri.rfind(kPrefix, 0) != 0 || uri.find('@') != std::string::npos ||
-        uri.find('#') != std::string::npos || contains_control(uri)) {
-        return false;
-    }
-    const auto authority_begin = sizeof(kPrefix) - 1;
-    const auto path_begin = uri.find('/', authority_begin);
-    if (path_begin == std::string::npos || path_begin == authority_begin ||
-        path_begin + 1 >= uri.size()) {
-        return false;
-    }
-    const auto authority = uri.substr(authority_begin, path_begin - authority_begin);
-    const auto port_separator = authority.rfind(':');
-    if (port_separator == std::string::npos || port_separator == 0 ||
-        port_separator + 1 >= authority.size()) {
-        return false;
-    }
-    const auto host = authority.substr(0, port_separator);
-    const auto port = authority.substr(port_separator + 1);
-    if (!valid_host(host))
-        return false;
-    if (!std::all_of(port.begin(), port.end(), [](const unsigned char character) {
-            return character >= '0' && character <= '9';
-        })) {
-        return false;
-    }
-    try {
-        const auto value = std::stoul(port);
-        return value > 0 && value <= 65535;
-    } catch (...) {
-        return false;
-    }
-}
-
 }  // namespace
 
 bool validate_camera_request(const std::string& camera_uid, std::string* error) {
@@ -127,6 +70,13 @@ bool validate_camera_descriptor(const CameraDescriptor& camera, std::string* err
     if (camera.name().size() > 128 || camera.image_topic().size() > 256 ||
         camera.camera_info_topic().size() > 256 || camera.encoding().size() > 64 ||
         camera.error_message().size() > kMediaMaxMessageBytes ||
+        camera.rtsp_url().size() > kMediaMaxSourceUriBytes ||
+        contains_control(camera.rtsp_url()) ||
+        (camera.live_view_active() &&
+         (!camera.live_view_supported() || camera.rtsp_url().empty())) ||
+        (!camera.live_view_supported() &&
+         (camera.live_view_control_supported() || !camera.rtsp_url().empty() ||
+          camera.live_view_autostart())) ||
         !std::isfinite(camera.frame_rate_hz()) || camera.frame_rate_hz() < 0.0) {
         return fail("camera descriptor is invalid", error);
     }
@@ -155,13 +105,14 @@ bool validate_camera_catalog_snapshot(const CameraCatalogSnapshot& snapshot, std
     return true;
 }
 
-bool validate_media_endpoint_descriptor(const MediaEndpointDescriptor& endpoint,
-                                        std::string* error) {
-    if (endpoint.protocol() != "rtsp" || !valid_rtsp_uri(endpoint.uri()) ||
-        endpoint.username().size() > kMediaMaxCredentialBytes ||
-        endpoint.password().size() > kMediaMaxCredentialBytes ||
-        contains_control(endpoint.username()) || contains_control(endpoint.password())) {
-        return fail("media endpoint descriptor is invalid", error);
+bool validate_camera_start_rtsp_response(const CameraStartRtspResponse& response,
+                                         std::string* error) {
+    if (!valid_error(response.error()) || response.message().size() > kMediaMaxMessageBytes ||
+        response.rtsp_url().size() > kMediaMaxSourceUriBytes ||
+        contains_control(response.rtsp_url()) ||
+        (response.error() == MEDIA_OK && response.rtsp_url().empty()) ||
+        (response.error() != MEDIA_OK && !response.rtsp_url().empty())) {
+        return fail("camera start RTSP response is invalid", error);
     }
     if (error != nullptr) {
         error->clear();

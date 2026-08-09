@@ -32,7 +32,13 @@ __pycache__/
 *.pyo
 .venv/
 .venv-bindings-wheel/
+.pytest_cache/
+.mypy_cache/
 .ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
 bindings/python/uv.lock
 
 # Local caches / logs

@@ -273,4 +273,19 @@ uint8_t yunlink_v2_runtime_session_has_profile(const yunlink_v2_runtime_t* runti
                : 0;
 }
 
+uint8_t yunlink_v2_runtime_session_supports_profile(const yunlink_v2_runtime_t* runtime,
+                                                    yunlink_v2_string_view_t peer_id,
+                                                    uint64_t session_id,
+                                                    yunlink_v2_string_view_t profile_id,
+                                                    uint16_t major,
+                                                    uint16_t minimum_minor) {
+    if (runtime == nullptr) {
+        return 0;
+    }
+    return runtime->runtime.session_supports_profile(
+               copy(peer_id), session_id, copy(profile_id), major, minimum_minor)
+               ? 1
+               : 0;
+}
+
 }  // extern "C"

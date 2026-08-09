@@ -84,6 +84,8 @@ message CameraDescriptor {
   bool live_view_control_supported = 13;
   bool live_view_active = 14;
   string error_message = 15;
+  string rtsp_url = 16;
+  bool live_view_autostart = 17;
 }
 
 message CameraCatalogSnapshot {
@@ -92,14 +94,6 @@ message CameraCatalogSnapshot {
   bool camera_manager_available = 3;
   reserved 4, 5;
   reserved "media_gateway_available", "media_gateway_error";
-}
-
-message MediaEndpointDescriptor {
-  string uri = 1;
-  string username = 2;
-  string password = 3;
-  uint64 credential_expires_at_ns = 4;
-  string protocol = 5;
 }
 
 message CameraListRequest {}
@@ -141,34 +135,21 @@ message CameraStopRecordingResponse {
   MediaAssetRef thumbnail = 4;
 }
 
-message CameraOpenLiveViewRequest {
+message CameraStartRtspRequest {
   string camera_uid = 1;
-  string client_view_id = 2;
 }
 
-message CameraOpenLiveViewResponse {
+message CameraStartRtspResponse {
   MediaError error = 1;
   string message = 2;
-  string lease_id = 3;
-  uint32 lease_ttl_ms = 4;
-  MediaEndpointDescriptor endpoint = 5;
+  string rtsp_url = 3;
 }
 
-message CameraRenewLiveViewRequest {
-  string lease_id = 1;
+message CameraStopRtspRequest {
+  string camera_uid = 1;
 }
 
-message CameraRenewLiveViewResponse {
-  MediaError error = 1;
-  string message = 2;
-  uint32 lease_ttl_ms = 3;
-}
-
-message CameraCloseLiveViewRequest {
-  string lease_id = 1;
-}
-
-message CameraCloseLiveViewResponse {
+message CameraStopRtspResponse {
   MediaError error = 1;
   string message = 2;
 }

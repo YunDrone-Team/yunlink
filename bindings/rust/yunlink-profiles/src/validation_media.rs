@@ -25,6 +25,17 @@ pub fn validate_camera_descriptor(camera: &media::CameraDescriptor) -> Result<()
         && camera.camera_info_topic.len() <= 256
         && camera.encoding.len() <= 64
         && camera.error_message.len() <= 256
+        && camera.rtsp_url.len() <= MEDIA_MAX_SOURCE_URI_BYTES
+        && !camera
+            .rtsp_url
+            .bytes()
+            .any(|byte| byte < 0x20 || byte == 0x7f)
+        && (!camera.live_view_active
+            || (camera.live_view_supported && !camera.rtsp_url.is_empty()))
+        && (camera.live_view_supported
+            || (!camera.live_view_control_supported
+                && camera.rtsp_url.is_empty()
+                && !camera.live_view_autostart))
         && camera.frame_rate_hz.is_finite()
         && camera.frame_rate_hz >= 0.0)
         .then_some(())
@@ -49,52 +60,22 @@ pub fn validate_camera_catalog_snapshot(
     Ok(())
 }
 
-pub fn validate_media_endpoint_descriptor(
-    endpoint: &media::MediaEndpointDescriptor,
+pub fn validate_camera_start_rtsp_response(
+    response: &media::CameraStartRtspResponse,
 ) -> Result<(), &'static str> {
-    let uri = endpoint.uri.as_str();
-    let rest = uri
-        .strip_prefix("rtsp://")
-        .ok_or("media endpoint descriptor is invalid")?;
-    let (authority, path) = rest
-        .split_once('/')
-        .ok_or("media endpoint descriptor is invalid")?;
-    let (host, port) = authority
-        .rsplit_once(':')
-        .ok_or("media endpoint descriptor is invalid")?;
-    let port = port
-        .parse::<u16>()
-        .map_err(|_| "media endpoint descriptor is invalid")?;
-    let valid_host = if host.starts_with('[') && host.ends_with(']') {
-        host.len() > 2
-            && host[1..host.len() - 1]
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit() || matches!(byte, b':' | b'.'))
-    } else {
-        host.bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-'))
-    };
-    (endpoint.protocol == "rtsp"
-        && !host.is_empty()
-        && valid_host
-        && port > 0
-        && !path.is_empty()
-        && uri.len() <= MEDIA_MAX_SOURCE_URI_BYTES
-        && !uri.contains('@')
-        && !uri.contains('#')
-        && !uri.bytes().any(|byte| byte < 0x20 || byte == 0x7f)
-        && endpoint.username.len() <= 256
-        && endpoint.password.len() <= 256
-        && !endpoint
-            .username
+    let error = media::MediaError::try_from(response.error)
+        .map_err(|_| "camera start RTSP response is invalid")?;
+    (error != media::MediaError::Unspecified
+        && response.message.len() <= 256
+        && response.rtsp_url.len() <= MEDIA_MAX_SOURCE_URI_BYTES
+        && !response
+            .rtsp_url
             .bytes()
             .any(|byte| byte < 0x20 || byte == 0x7f)
-        && !endpoint
-            .password
-            .bytes()
-            .any(|byte| byte < 0x20 || byte == 0x7f))
+        && ((error == media::MediaError::MediaOk && !response.rtsp_url.is_empty())
+            || (error != media::MediaError::MediaOk && response.rtsp_url.is_empty())))
     .then_some(())
-    .ok_or("media endpoint descriptor is invalid")
+    .ok_or("camera start RTSP response is invalid")
 }
 
 pub fn validate_media_asset_ref(asset: &media::MediaAssetRef) -> Result<(), &'static str> {

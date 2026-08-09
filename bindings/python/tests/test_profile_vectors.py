@@ -13,7 +13,7 @@ from yunlink.profiles import (
     validate_media_asset_item,
     validate_media_asset_list_request,
     validate_media_asset_list_response,
-    validate_media_endpoint_descriptor,
+    validate_camera_start_rtsp_response,
     validate_flight_control_state,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
@@ -21,6 +21,7 @@ from yunlink.profiles import (
     validate_takeoff_goal,
     validate_uav_direct_control_goal,
     validate_uav_waypoint_mission_goal,
+    validate_planner_set_home_request,
 )
 
 
@@ -47,13 +48,19 @@ def test_media_profile_matches_cross_language_golden_and_rejects_invalid_assets(
 
     camera = media.CameraDescriptor(
         camera_uid="front", camera_id=1, name="Front camera", online=True,
-        frame_rate_hz=30.0,
+        frame_rate_hz=30.0, live_view_supported=True, live_view_active=True,
+        live_view_autostart=True,
+        rtsp_url="rtsp://192.168.10.38:8554/front",
     )
     validate_camera_descriptor(camera)
     catalog = media.CameraCatalogSnapshot(
         generated_at_ns=42, cameras=[camera], camera_manager_available=True,
     )
     validate_camera_catalog_snapshot(catalog)
+    catalog.cameras[0].rtsp_url = ""
+    with pytest.raises(ValueError, match="camera descriptor is invalid"):
+        validate_camera_catalog_snapshot(catalog)
+    catalog.cameras[0].CopyFrom(camera)
     catalog.cameras.add().CopyFrom(camera)
     with pytest.raises(ValueError, match="duplicate camera uid"):
         validate_camera_catalog_snapshot(catalog)
@@ -76,30 +83,25 @@ def test_media_profile_matches_cross_language_golden_and_rejects_invalid_assets(
     )
 
 
-def test_media_rtsp_source_descriptor_matches_golden_and_rejects_unsafe_uris():
-    endpoint = media.MediaEndpointDescriptor(
-        uri="rtsp://192.168.10.60:8554/front",
-        username="viewer",
-        password="secret",
-        protocol="rtsp",
+def test_media_rtsp_start_response_preserves_the_provider_url_byte_for_byte():
+    response = media.CameraStartRtspResponse(
+        error=media.MEDIA_OK,
+        message="ready",
+        rtsp_url="rtsp://viewer:secret@192.168.10.60:8554/front/main?profile=high&token=a%2Fb",
     )
-    validate_media_endpoint_descriptor(endpoint)
-    assert endpoint.SerializeToString(deterministic=True) == bytes.fromhex(
-        "0a1f727473703a2f2f3139322e3136382e31302e36303a383535342f66726f6e74"
-        "12067669657765721a067365637265742a0472747370"
+    validate_camera_start_rtsp_response(response)
+    assert response.SerializeToString(deterministic=True).hex() == (
+        "0801120572656164791a4b727473703a2f2f7669657765723a736563726574403139322e"
+        "3136382e31302e36303a383535342f66726f6e742f6d61696e3f70726f66696c653d6869"
+        "676826746f6b656e3d6125324662"
     )
-    for uri in (
-        "http://192.168.10.60:8554/front",
-        "rtsp://viewer@192.168.10.60:8554/front",
-        "rtsp://192.168.10.60:8554/front#track",
-        "rtsp://192.168.10.60/front",
-        "rtsp://192.168.10. 60:8554/front",
-        "rtsp://bad!host:8554/front",
-        "rtsp://caf\u00e9:8554/front",
-    ):
-        endpoint.uri = uri
-        with pytest.raises(ValueError, match="media endpoint descriptor is invalid"):
-            validate_media_endpoint_descriptor(endpoint)
+
+    response.rtsp_url = ""
+    with pytest.raises(ValueError, match="camera start RTSP response is invalid"):
+        validate_camera_start_rtsp_response(response)
+    response.error = media.MEDIA_OPERATION_FAILED
+    response.message = "provider rejected start"
+    validate_camera_start_rtsp_response(response)
 
 
 def test_media_asset_list_contract_is_paged_and_keeps_thumbnail_relation_explicit():
@@ -168,6 +170,15 @@ def test_profile_payloads_match_cross_language_golden_vectors():
 
     with pytest.raises(DecodeError):
         sunray.FeatureStartRequest.FromString(b"\x0a\x08mapping")
+
+    home = sunray.PlannerSetHomeRequest(frame_id="map")
+    home.home_m.x = 1.0
+    home.home_m.y = -2.0
+    home.home_m.z = 0.5
+    validate_planner_set_home_request(home)
+    assert home.SerializeToString(deterministic=True) == bytes.fromhex(
+        "0a1b09000000000000f03f1100000000000000c019000000000000e03f12036d6170"
+    )
 
     summary = telemetry.SummarySnapshot(generated_at_ns=1)
     metric = summary.metrics.add(

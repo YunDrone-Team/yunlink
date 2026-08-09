@@ -27,6 +27,14 @@ ErrorCode Runtime::set_entities(std::vector<EntityDescriptor> entities) {
 }
 
 ErrorCode Runtime::send(const std::string& peer_id, const Envelope& envelope) {
+    if (envelope.family != MessageFamily::kSession && !envelope.type.is_core() &&
+        !session_supports_profile(peer_id,
+                                  envelope.session_id,
+                                  envelope.type.profile_id,
+                                  envelope.type.major,
+                                  envelope.type.minor)) {
+        return ErrorCode::kUnsupported;
+    }
     std::shared_ptr<RuntimeConnection> connection;
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
@@ -109,6 +117,17 @@ bool Runtime::session(const std::string& peer_id, uint64_t session_id, SessionIn
         *out = it->second;
     }
     return true;
+}
+
+bool Runtime::session_supports_profile(const std::string& peer_id,
+                                       uint64_t session_id,
+                                       const std::string& profile_id,
+                                       uint16_t major,
+                                       uint16_t minimum_minor) const {
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    const auto it = impl_->sessions.find({peer_id, session_id});
+    return it != impl_->sessions.end() &&
+           it->second.supports_profile(profile_id, major, minimum_minor);
 }
 
 uint16_t Runtime::listening_port() const {

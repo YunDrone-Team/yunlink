@@ -59,6 +59,11 @@ class Runtime:
         lib.yunlink_v2_runtime_close_peer.restype = None
         lib.yunlink_v2_runtime_session_has_profile.argtypes = [ctypes.c_void_p, _StringView, ctypes.c_uint64, _StringView, ctypes.c_uint16]
         lib.yunlink_v2_runtime_session_has_profile.restype = ctypes.c_uint8
+        lib.yunlink_v2_runtime_session_supports_profile.argtypes = [
+            ctypes.c_void_p, _StringView, ctypes.c_uint64, _StringView,
+            ctypes.c_uint16, ctypes.c_uint16,
+        ]
+        lib.yunlink_v2_runtime_session_supports_profile.restype = ctypes.c_uint8
         lib.yunlink_v2_runtime_subscribe.argtypes = [ctypes.c_void_p, _Callback, ctypes.c_void_p]
         lib.yunlink_v2_runtime_subscribe.restype = ctypes.c_uint64
         lib.yunlink_v2_runtime_unsubscribe.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
@@ -123,6 +128,14 @@ class Runtime:
     def session_has_profile(self, peer: Peer, session_id: int, profile_id: str, major: int) -> bool:
         return bool(self._lib.yunlink_v2_runtime_session_has_profile(
             self._runtime, view(encoded(peer.peer_id)), session_id, view(encoded(profile_id)), major
+        ))
+
+    def session_supports_profile(
+        self, peer: Peer, session_id: int, profile_id: str, major: int, minimum_minor: int
+    ) -> bool:
+        return bool(self._lib.yunlink_v2_runtime_session_supports_profile(
+            self._runtime, view(encoded(peer.peer_id)), session_id,
+            view(encoded(profile_id)), major, minimum_minor
         ))
 
     def configuration(self, timeout_s: float = 5.0):

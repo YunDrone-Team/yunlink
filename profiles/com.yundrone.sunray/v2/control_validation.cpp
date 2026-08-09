@@ -154,4 +154,11 @@ bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal, std:
     return true;
 }
 
+bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std::string* error) {
+    if (request.frame_id().empty() || !request.has_home_m() || !finite(request.home_m())) {
+        return fail(error, "Planner home request is invalid");
+    }
+    return true;
+}
+
 }  // namespace com::yundrone::sunray::v2

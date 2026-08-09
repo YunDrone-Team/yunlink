@@ -76,6 +76,10 @@ int main() {
     }
     assert(active.authenticated);
     assert(active.has_profile("org.yunlink.mobility", 1));
+    assert(active.supports_profile("org.yunlink.mobility", 1, 0));
+    assert(!active.supports_profile("org.yunlink.mobility", 1, 1));
+    assert(client.session_supports_profile(peer.id, session_id, "org.yunlink.mobility", 1, 0));
+    assert(!client.session_supports_profile(peer.id, session_id, "org.yunlink.mobility", 1, 1));
     assert(active.negotiated_profiles.at("org.yunlink.mobility").minor == 0);
     assert(active.rejected_profiles.size() == 2);
     assert(std::find(active.rejected_profiles.begin(),
@@ -115,6 +119,14 @@ int main() {
                           {"org.yunlink.mobility", 1, 0, "GotoGoal"},
                           {1, 2, 3},
                           &handle) == ErrorCode::kOk);
+    assert(client.publish(peer.id,
+                          session_id,
+                          MessageFamily::kAction,
+                          static_cast<uint8_t>(ActionOperation::kGoal),
+                          target,
+                          {"org.yunlink.mobility", 1, 1, "TrajectoryGoal"},
+                          {},
+                          &handle) == ErrorCode::kUnsupported);
     {
         std::unique_lock<std::mutex> lock(mutex);
         assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() { return action_received; }));

@@ -125,8 +125,15 @@ bool decode_profile_list(const Bytes& payload, std::vector<ProfileDescriptor>* p
 }
 
 bool SessionInfo::has_profile(const std::string& profile_id, uint16_t major) const {
+    return supports_profile(profile_id, major, 0);
+}
+
+bool SessionInfo::supports_profile(const std::string& profile_id,
+                                   uint16_t major,
+                                   uint16_t minimum_minor) const {
     const auto it = negotiated_profiles.find(profile_id);
-    return it != negotiated_profiles.end() && it->second.major == major;
+    return it != negotiated_profiles.end() && it->second.major == major &&
+           it->second.minor >= minimum_minor;
 }
 
 }  // namespace yunlink::v2

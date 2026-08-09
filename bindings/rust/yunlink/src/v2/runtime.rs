@@ -183,6 +183,26 @@ impl Runtime {
         }
     }
 
+    pub fn session_supports_profile(
+        &self,
+        peer: &Peer,
+        session_id: u64,
+        profile_id: &str,
+        major: u16,
+        minimum_minor: u16,
+    ) -> bool {
+        unsafe {
+            sys::yunlink_v2_runtime_session_supports_profile(
+                self.raw(),
+                string_view(&peer.id),
+                session_id,
+                string_view(profile_id),
+                major,
+                minimum_minor,
+            ) != 0
+        }
+    }
+
     pub fn session_endpoint_uid(&self, peer: &Peer, session_id: u64) -> Result<String> {
         let mut uid = [0_i8; 129];
         ensure(unsafe {

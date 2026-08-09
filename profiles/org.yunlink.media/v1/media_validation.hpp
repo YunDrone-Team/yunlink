@@ -16,7 +16,6 @@ constexpr std::size_t kMediaMaxTransferIdBytes = 128;
 constexpr std::size_t kMediaMaxChunkBytes = 256 * 1024;
 constexpr std::size_t kMediaSha256Bytes = 32;
 constexpr std::size_t kMediaMaxSourceUriBytes = 2048;
-constexpr std::size_t kMediaMaxCredentialBytes = 256;
 constexpr std::size_t kMediaMaxAssetPageSize = 100;
 constexpr std::size_t kMediaMaxPageTokenBytes = 512;
 constexpr std::uint32_t kMediaMaxDimensionPixels = 32768;
@@ -24,8 +23,8 @@ constexpr std::uint32_t kMediaMaxDimensionPixels = 32768;
 bool validate_camera_descriptor(const CameraDescriptor& camera, std::string* error = nullptr);
 bool validate_camera_catalog_snapshot(const CameraCatalogSnapshot& snapshot,
                                       std::string* error = nullptr);
-bool validate_media_endpoint_descriptor(const MediaEndpointDescriptor& endpoint,
-                                        std::string* error = nullptr);
+bool validate_camera_start_rtsp_response(const CameraStartRtspResponse& response,
+                                         std::string* error = nullptr);
 bool validate_media_asset_ref(const MediaAssetRef& asset, std::string* error = nullptr);
 bool validate_media_asset_item(const MediaAssetItem& item, std::string* error = nullptr);
 bool validate_media_asset_list_request(const MediaAssetListRequest& request,

@@ -171,6 +171,23 @@ message UavWaypointMissionGoal {
   UavMissionCompletionAction completion_action = 6;
 }
 
+message UavReturnHomeGoal {}
+
+message PlannerCancelTaskRequest {}
+message PlannerCancelTaskResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+message PlannerSetHomeRequest {
+  org.yunlink.mobility.v1.Vector3 home_m = 1;
+  string frame_id = 2;
+}
+message PlannerSetHomeResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
 enum UavPlanningMainState {
   UAV_PLANNING_MAIN_NOT_READY = 0;
   UAV_PLANNING_MAIN_WAIT_MISSION = 1;

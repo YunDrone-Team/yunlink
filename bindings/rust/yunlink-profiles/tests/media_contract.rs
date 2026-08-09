@@ -1,7 +1,7 @@
 use prost::Message;
 use yunlink_profiles::{
     media, validate_camera_catalog_snapshot, validate_camera_descriptor,
-    validate_media_asset_chunk, validate_media_asset_ref, validate_media_endpoint_descriptor,
+    validate_camera_start_rtsp_response, validate_media_asset_chunk, validate_media_asset_ref,
     validate_media_asset_list_request, validate_media_asset_list_response,
 };
 
@@ -63,38 +63,29 @@ fn asset_list_contract_is_paged_and_keeps_thumbnail_relation_explicit() {
 }
 
 #[test]
-fn rtsp_source_descriptor_is_bounded_and_contains_no_embedded_credentials() {
-    let endpoint = media::MediaEndpointDescriptor {
-        uri: "rtsp://192.168.10.60:8554/front".into(),
-        username: "viewer".into(),
-        password: "secret".into(),
-        protocol: "rtsp".into(),
-        ..Default::default()
+fn rtsp_start_response_preserves_the_provider_url_byte_for_byte() {
+    let response = media::CameraStartRtspResponse {
+        error: media::MediaError::MediaOk as i32,
+        message: "ready".into(),
+        rtsp_url:
+            "rtsp://viewer:secret@192.168.10.60:8554/front/main?profile=high&token=a%2Fb"
+                .into(),
     };
-    validate_media_endpoint_descriptor(&endpoint).unwrap();
+    validate_camera_start_rtsp_response(&response).unwrap();
     assert_eq!(
-        endpoint.encode_to_vec(),
+        response.encode_to_vec(),
         hex::decode(
-            "0a1f727473703a2f2f3139322e3136382e31302e36303a383535342f66726f6e74".to_owned()
-                + "12067669657765721a067365637265742a0472747370"
+            "0801120572656164791a4b727473703a2f2f7669657765723a736563726574403139322e3136382e31302e36303a383535342f66726f6e742f6d61696e3f70726f66696c653d6869676826746f6b656e3d6125324662"
         )
         .unwrap()
     );
-    for uri in [
-        "http://192.168.10.60:8554/front",
-        "rtsp://viewer@192.168.10.60:8554/front",
-        "rtsp://192.168.10.60:8554/front#track",
-        "rtsp://192.168.10.60/front",
-        "rtsp://192.168.10. 60:8554/front",
-        "rtsp://bad!host:8554/front",
-        "rtsp://caf\u{00e9}:8554/front",
-    ] {
-        let invalid = media::MediaEndpointDescriptor {
-            uri: uri.into(),
-            ..endpoint.clone()
-        };
-        assert!(validate_media_endpoint_descriptor(&invalid).is_err());
-    }
+
+    let mut invalid = response.clone();
+    invalid.rtsp_url.clear();
+    assert!(validate_camera_start_rtsp_response(&invalid).is_err());
+    invalid.error = media::MediaError::MediaOperationFailed as i32;
+    invalid.message = "provider rejected start".into();
+    assert!(validate_camera_start_rtsp_response(&invalid).is_ok());
 }
 
 #[test]
@@ -105,6 +96,10 @@ fn catalog_and_asset_contracts_reject_ambiguous_data() {
         name: "Front camera".into(),
         online: true,
         frame_rate_hz: 30.0,
+        live_view_supported: true,
+        live_view_active: true,
+        live_view_autostart: true,
+        rtsp_url: "rtsp://192.168.10.38:8554/front".into(),
         ..Default::default()
     };
     validate_camera_descriptor(&camera).unwrap();
@@ -115,6 +110,12 @@ fn catalog_and_asset_contracts_reject_ambiguous_data() {
         ..Default::default()
     };
     validate_camera_catalog_snapshot(&catalog).unwrap();
+    catalog.cameras[0].rtsp_url.clear();
+    assert_eq!(
+        validate_camera_catalog_snapshot(&catalog),
+        Err("camera descriptor is invalid")
+    );
+    catalog.cameras[0] = camera.clone();
     catalog.cameras.push(camera);
     assert_eq!(
         validate_camera_catalog_snapshot(&catalog),

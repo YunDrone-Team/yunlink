@@ -145,3 +145,11 @@ pub fn validate_uav_waypoint_mission_goal(
     }
     Ok(())
 }
+
+pub fn validate_planner_set_home_request(
+    request: &sunray::PlannerSetHomeRequest,
+) -> Result<(), &'static str> {
+    (!request.frame_id.is_empty() && request.home_m.as_ref().is_some_and(finite_vector3))
+        .then_some(())
+        .ok_or("Planner home request is invalid")
+}
