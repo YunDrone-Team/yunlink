@@ -1,36 +1,43 @@
 # org.yunlink.media@1
 
-This optional Profile carries camera control, RTSP start/stop RPCs, a device
+This optional Profile carries camera control, RTSP view-session RPCs, a device
 media catalog, and Bulk file transfer metadata. It does not carry video frames.
 RTSP/H.264 remains the live data plane; YunLink only transports the URL returned
 by the camera provider.
 
-## RTSP live source
+## RTSP view session
 
-`CameraStartRtspRequest` and `CameraStopRtspRequest` directly mirror the device
-camera-management operations. A successful start returns a non-empty
-`rtsp_url`. YunLink validates only the payload size and the absence of control
-characters; it does not parse, normalize, redact, or reconstruct the URL. The
-Bridge must copy the provider response byte-for-byte, including userinfo, port,
-path, query, and escaping.
+`CameraStartRtspRequest` opens an idempotent viewing record scoped to the
+authenticated peer, Session, entity, and camera. It does not start or own the
+device source. Before returning success, the Bridge refreshes the camera list
+and requires an online camera whose provider reports `rtsp_running=true` and a
+valid `rtsp://` URL. A successful response returns that provider-owned URL.
 
-There is no transport-level viewer lease or renewal RPC. Source reachability,
-idempotent start/stop behavior, and concurrent viewer handling belong to the
-camera provider. Clients keep credentials private and must not place the full
-URL in logs or UI state.
+`CameraStopRtspRequest` closes only the caller's viewing record. It is
+idempotent and must never stop or reconfigure the device RTSP source. Detach,
+Session disconnect, and entity removal release the affected viewing records.
+Other Sessions and viewers remain unaffected.
 
-`CameraDescriptor` reports `live_view_active`, `live_view_autostart`, and the
-provider-owned `rtsp_url`. An active source must have a non-empty URL. A client
-may consume that URL without calling Start. Clients must not stop an autostart
-source when their local viewer closes. This supports device boot-time autostart
-without turning a read-only viewer into the owner of the source.
+`CameraDescriptor.live_view_supported` and `live_view_active` are true only
+when the camera is online and the provider reports an active, valid RTSP
+source. `live_view_control_supported` and `live_view_autostart` are false in
+this contract: they remain on the wire for schema stability, not as device
+control signals.
 
-Catalog, media-list, RTSP start/stop, and Bulk-open requests are read/view
+There is no transport-level lease renewal RPC. The Bridge owns only Session
+bookkeeping, while source lifecycle and concurrent RTSP consumers belong to
+the camera provider. Clients keep the URL and any embedded credentials in a
+private backend and must not place them in logs, UI state, or snapshots.
+
+Catalog, media-list, RTSP view-session, and Bulk-open requests are read/view
 operations. They do not grant media-control authority, but remain limited to an
 authenticated attached Session and the entity visibility policy enforced by
 the Bridge. `CameraTakePhoto`, `CameraStartRecording`, and
 `CameraStopRecording` remain media-control operations and require
 `org.yunlink.media` authority.
+
+Endpoints implementing this behavior advertise `media-live-view-session-v1`.
+The retired `media-live-rtsp-url-v1` capability must not be advertised.
 
 ## Media catalog
 
