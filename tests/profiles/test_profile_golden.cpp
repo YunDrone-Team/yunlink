@@ -289,13 +289,13 @@ int main() {
     second->mutable_position_m()->set_y(-2.0);
     second->mutable_position_m()->set_z(4.0);
     second->set_yaw_rad(-0.25);
-    mission.set_interrupt_current_task(true);
     mission.set_task_name("yunlink-task-42");
-    mission.set_takeoff_if_needed(true);
     mission.set_completion_action(UAV_MISSION_FINISH_HOVER);
     first->set_arrival_action(UAV_WAYPOINT_HOLD_SET_YAW);
     second->set_arrival_action(UAV_WAYPOINT_NEXT);
     assert(validate_uav_waypoint_mission_goal(mission, &validation_error));
+    assert(hex(mission.SerializeAsString()) ==
+           "0a036d617012310a1b09000000000000f03f11000000000000004019000000000000084011000000000000e03f19000000000000f83f200212260a1b09000000000000f0bf1100000000000000c019000000000000104011000000000000d0bf1a0f79756e6c696e6b2d7461736b2d3432");
     assert_round_trip(mission);
 
     UavWaypointMissionGoal empty_mission;

@@ -179,19 +179,32 @@ fn direct_control_golden_and_validation_failures() {
 fn waypoint_limits_and_round_trip() {
     let mut mission = sunray::UavWaypointMissionGoal {
         frame_id: "map".into(),
-        waypoints: vec![sunray::UavWaypoint {
-            position_m: Some(vector3(1.0, 2.0, 3.0)),
-            yaw_rad: 0.5,
-            hold_time_s: 1.5,
-            arrival_action: sunray::UavWaypointArrivalAction::UavWaypointHoldSetYaw as i32,
-        }],
-        interrupt_current_task: true,
+        waypoints: vec![
+            sunray::UavWaypoint {
+                position_m: Some(vector3(1.0, 2.0, 3.0)),
+                yaw_rad: 0.5,
+                hold_time_s: 1.5,
+                arrival_action: sunray::UavWaypointArrivalAction::UavWaypointHoldSetYaw as i32,
+            },
+            sunray::UavWaypoint {
+                position_m: Some(vector3(-1.0, -2.0, 4.0)),
+                yaw_rad: -0.25,
+                hold_time_s: 0.0,
+                arrival_action: sunray::UavWaypointArrivalAction::UavWaypointNext as i32,
+            },
+        ],
         task_name: "yunlink-task-42".into(),
-        takeoff_if_needed: true,
         completion_action: sunray::UavMissionCompletionAction::UavMissionFinishHover as i32,
     };
     validate_uav_waypoint_mission_goal(&mission).unwrap();
     let bytes = mission.encode_to_vec();
+    assert_eq!(
+        bytes,
+        hex::decode(
+            "0a036d617012310a1b09000000000000f03f11000000000000004019000000000000084011000000000000e03f19000000000000f83f200212260a1b09000000000000f0bf1100000000000000c019000000000000104011000000000000d0bf1a0f79756e6c696e6b2d7461736b2d3432"
+        )
+        .unwrap()
+    );
     assert_eq!(
         sunray::UavWaypointMissionGoal::decode(bytes.as_slice()).unwrap(),
         mission
@@ -211,7 +224,7 @@ fn waypoint_limits_and_round_trip() {
 }
 
 #[test]
-fn planner_v21_messages_round_trip_and_validate() {
+fn planner_v22_messages_round_trip_and_validate() {
     assert!(sunray::UavReturnHomeGoal::decode([].as_slice()).is_ok());
     assert!(sunray::PlannerCancelTaskRequest::decode([].as_slice()).is_ok());
     let mut request = sunray::PlannerSetHomeRequest {

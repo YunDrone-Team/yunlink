@@ -272,17 +272,21 @@ def test_direct_control_and_waypoint_golden_vectors():
     assert direct.SerializeToString(deterministic=True) == DIRECT_CONTROL_GOLDEN
 
     mission = sunray.UavWaypointMissionGoal(
-        frame_id="map", interrupt_current_task=True, task_name="yunlink-task-42",
-        takeoff_if_needed=True, completion_action=sunray.UAV_MISSION_FINISH_HOVER,
+        frame_id="map", task_name="yunlink-task-42",
+        completion_action=sunray.UAV_MISSION_FINISH_HOVER,
     )
     mission.waypoints.add(
         position_m=mobility.Vector3(x=1, y=2, z=3), yaw_rad=0.5, hold_time_s=1.5,
         arrival_action=sunray.UAV_WAYPOINT_HOLD_SET_YAW,
     )
     mission.waypoints.add(
-        position_m=mobility.Vector3(x=-1, y=-2, z=4), arrival_action=sunray.UAV_WAYPOINT_NEXT,
+        position_m=mobility.Vector3(x=-1, y=-2, z=4), yaw_rad=-0.25,
+        arrival_action=sunray.UAV_WAYPOINT_NEXT,
     )
     validate_uav_waypoint_mission_goal(mission)
+    assert mission.SerializeToString(deterministic=True) == bytes.fromhex(
+        "0a036d617012310a1b09000000000000f03f11000000000000004019000000000000084011000000000000e03f19000000000000f83f200212260a1b09000000000000f0bf1100000000000000c019000000000000104011000000000000d0bf1a0f79756e6c696e6b2d7461736b2d3432"
+    )
     assert sunray.UavWaypointMissionGoal.FromString(mission.SerializeToString()) == mission
 
 

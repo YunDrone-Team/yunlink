@@ -165,10 +165,8 @@ message UavWaypoint {
 message UavWaypointMissionGoal {
   string frame_id = 1;
   repeated UavWaypoint waypoints = 2;
-  bool interrupt_current_task = 3;
-  string task_name = 4;
-  bool takeoff_if_needed = 5;
-  UavMissionCompletionAction completion_action = 6;
+  string task_name = 3;
+  UavMissionCompletionAction completion_action = 4;
 }
 
 message UavReturnHomeGoal {}
@@ -207,32 +205,15 @@ enum UavPlanningTaskState {
 }
 
 message UavPlanningState {
-  uint64 source_stamp_ns = 1;
-  string planner_type = 2;
-  uint32 planning_state = 3;
-  string fsm_state = 4;
-  bool local_odom_valid = 5;
-  bool global_odom_valid = 6;
-  bool local_map_valid = 7;
-  bool global_map_valid = 8;
-  string global_frame = 9;
-  string local_frame = 10;
-  string active_frame = 11;
-  org.yunlink.mobility.v1.Vector3 home_point_m = 12;
-  uint32 current_waypoint_index = 13;
-  uint32 total_waypoints = 14;
-  org.yunlink.mobility.v1.Vector3 current_global_goal_m = 15;
-  org.yunlink.mobility.v1.Vector3 current_local_goal_m = 16;
-  org.yunlink.mobility.v1.Vector3 current_local_subgoal_m = 17;
-  double distance_to_goal_m = 18;
-  double min_obstacle_distance_m = 19;
-  string control_output_mode = 20;
-  string failure_reason = 21;
-  UavPlanningMainState main_state = 22;
-  UavPlanningTaskState task_state = 23;
-  string task_name = 24;
-  UavWaypoint current_waypoint = 25;
-  double hold_remaining_s = 26;
+  UavPlanningMainState main_state = 1;
+  UavPlanningTaskState task_state = 2;
+  string task_name = 3;
+  uint32 current_waypoint_index = 4;
+  uint32 total_waypoints = 5;
+  UavWaypoint current_waypoint = 6;
+  double distance_to_goal_m = 7;
+  double hold_remaining_s = 8;
+  string failure_reason = 9;
 }
 
 message UavControlState {
