@@ -154,9 +154,79 @@ bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal, std:
     return true;
 }
 
+bool validate_uav_nav_goal(const UavNavGoal& goal, std::string* error) {
+    if (goal.frame_id().empty() || !goal.has_position_m() || !finite(goal.position_m()) ||
+        !std::isfinite(goal.yaw_rad())) {
+        return fail(error, "UAV navigation goal is invalid");
+    }
+    return true;
+}
+
+bool validate_ugv_move_point_goal(const UgvMovePointGoal& goal, std::string* error) {
+    if (!goal.has_point_m() || !finite(goal.point_m()) || goal.point_m().z() != 0.0 ||
+        !std::isfinite(goal.desired_yaw_rad())) {
+        return fail(error, "UGV move point goal is invalid");
+    }
+    if (goal.frame() != UGV_MOVE_LOCAL && goal.frame() != UGV_MOVE_BODY) {
+        return fail(error, "UGV move point frame is invalid");
+    }
+    if (goal.yaw_mode() != UGV_YAW_KEEP && goal.yaw_mode() != UGV_YAW_SET) {
+        return fail(error, "UGV yaw mode is invalid");
+    }
+    if ((goal.frame() == UGV_MOVE_LOCAL) != !goal.local_frame_id().empty()) {
+        return fail(error, "UGV local frame contract is invalid");
+    }
+    return true;
+}
+
+bool validate_ugv_velocity_goal(const UgvVelocityGoal& goal, std::string* error) {
+    if (!valid_continuous_lease(goal.lease_ms())) {
+        return fail(error, "UGV velocity lease is invalid");
+    }
+    switch (goal.target_case()) {
+    case UgvVelocityGoal::kLocal:
+        if (goal.local().frame_id().empty() || !goal.local().has_linear_mps() ||
+            !finite(goal.local().linear_mps()) || !std::isfinite(goal.local().desired_yaw_rad())) {
+            return fail(error, "UGV local velocity target is invalid");
+        }
+        return true;
+    case UgvVelocityGoal::kBody:
+        if (!goal.body().has_linear_mps() || !finite(goal.body().linear_mps()) ||
+            !std::isfinite(goal.body().yaw_rate_radps())) {
+            return fail(error, "UGV body velocity target is invalid");
+        }
+        return true;
+    case UgvVelocityGoal::TARGET_NOT_SET:
+        return fail(error, "UGV velocity target is missing");
+    }
+    return fail(error, "UGV velocity target is invalid");
+}
+
 bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std::string* error) {
     if (request.frame_id().empty() || !request.has_home_m() || !finite(request.home_m())) {
         return fail(error, "Planner home request is invalid");
+    }
+    return true;
+}
+
+bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error) {
+    if (!std::isfinite(goal.yaw_rad()) || !std::isfinite(goal.pitch_rad())) {
+        return fail(error, "gimbal angle goal is invalid");
+    }
+    return true;
+}
+
+bool validate_gimbal_rate_goal(const GimbalRateGoal& goal, std::string* error) {
+    if (goal.yaw_control() < -100 || goal.yaw_control() > 100 ||
+        goal.pitch_control() < -100 || goal.pitch_control() > 100) {
+        return fail(error, "gimbal rate control must be between -100 and 100");
+    }
+    return true;
+}
+
+bool validate_gimbal_zoom_absolute_goal(const GimbalZoomAbsoluteGoal& goal, std::string* error) {
+    if (!std::isfinite(goal.zoom()) || goal.zoom() < 1.0 || goal.zoom() > 30.9) {
+        return fail(error, "gimbal zoom must be between 1.0 and 30.9");
     }
     return true;
 }

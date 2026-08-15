@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package org.yunlink.system.v1;
+
+enum ClockSyncError {
+  CLOCK_SYNC_UNSPECIFIED = 0;
+  CLOCK_SYNC_OK = 1;
+  CLOCK_SYNC_INVALID_REQUEST = 2;
+  CLOCK_SYNC_ARMED_BLOCKED = 3;
+  CLOCK_SYNC_OUT_OF_RANGE = 4;
+  CLOCK_SYNC_HELPER_UNAVAILABLE = 5;
+  CLOCK_SYNC_INTERNAL_ERROR = 6;
+}
+
+message ClockSyncRequest {
+  uint64 unix_time_ms = 1;
+  string source = 2;
+}
+
+message ClockSyncResponse {
+  ClockSyncError error = 1;
+  string message = 2;
+  uint64 previous_unix_time_ms = 3;
+  uint64 applied_unix_time_ms = 4;
+  int64 delta_ms = 5;
+}

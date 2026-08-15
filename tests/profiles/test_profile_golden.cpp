@@ -10,6 +10,8 @@
 #include "org.yunlink.media/v1/media.pb.h"
 #include "org.yunlink.media/v1/media_validation.hpp"
 #include "org.yunlink.telemetry/v1/summary_validation.hpp"
+#include "org.yunlink.system/v1/system.pb.h"
+#include "org.yunlink.system/v1/system_validation.hpp"
 
 namespace {
 
@@ -36,6 +38,25 @@ template <typename Message> void assert_round_trip(const Message& source) {
 }  // namespace
 
 int main() {
+    org::yunlink::system::v1::ClockSyncRequest clock_request;
+    clock_request.set_unix_time_ms(1767225600123ULL);
+    clock_request.set_source("sunray-gcs");
+    assert(org::yunlink::system::v1::validate_clock_sync_request(clock_request));
+    assert(hex(clock_request.SerializeAsString()) ==
+           "08fbd0eab6b733120a73756e7261792d676373");
+
+    org::yunlink::system::v1::ClockSyncResponse clock_response;
+    clock_response.set_error(org::yunlink::system::v1::CLOCK_SYNC_OK);
+    clock_response.set_message("synchronized");
+    clock_response.set_previous_unix_time_ms(1767225600000ULL);
+    clock_response.set_applied_unix_time_ms(1767225600123ULL);
+    clock_response.set_delta_ms(123);
+    assert(org::yunlink::system::v1::validate_clock_sync_response(clock_response));
+    clock_request.set_unix_time_ms(1000);
+    assert(!org::yunlink::system::v1::validate_clock_sync_request(clock_request));
+    clock_response.clear_previous_unix_time_ms();
+    assert(!org::yunlink::system::v1::validate_clock_sync_response(clock_response));
+
     org::yunlink::mobility::v1::GotoGoal goal;
     goal.set_frame_id("map");
     goal.mutable_position()->set_x(1.0);
@@ -275,6 +296,67 @@ int main() {
     assert(!validate_uav_direct_control_goal(body_position, &validation_error));
     trajectory_acceleration->set_z(std::numeric_limits<double>::infinity());
     assert(!validate_uav_direct_control_goal(trajectory, &validation_error));
+
+    UgvMovePointGoal ugv_move;
+    ugv_move.set_frame(UGV_MOVE_LOCAL);
+    ugv_move.mutable_point_m()->set_x(1.0);
+    ugv_move.mutable_point_m()->set_y(-2.0);
+    ugv_move.set_yaw_mode(UGV_YAW_SET);
+    ugv_move.set_desired_yaw_rad(0.25);
+    ugv_move.set_local_frame_id("map");
+    assert(validate_ugv_move_point_goal(ugv_move, &validation_error));
+    assert(hex(ugv_move.SerializeAsString()) ==
+           "121209000000000000f03f1100000000000000c0180121000000000000d03f2a036d6170");
+    ugv_move.mutable_point_m()->set_z(0.1);
+    assert(!validate_ugv_move_point_goal(ugv_move, &validation_error));
+
+    UgvVelocityGoal ugv_velocity;
+    ugv_velocity.mutable_body()->mutable_linear_mps()->set_x(0.5);
+    ugv_velocity.mutable_body()->mutable_linear_mps()->set_y(0.1);
+    ugv_velocity.mutable_body()->set_yaw_rate_radps(-0.2);
+    ugv_velocity.set_lease_ms(750);
+    assert(validate_ugv_velocity_goal(ugv_velocity, &validation_error));
+    assert(hex(ugv_velocity.SerializeAsString()) ==
+           "121d0a1209000000000000e03f119a9999999999b93f119a9999999999c9bf18ee05");
+    ugv_velocity.set_lease_ms(kMinDirectControlLeaseMs - 1);
+    assert(!validate_ugv_velocity_goal(ugv_velocity, &validation_error));
+
+    UgvControlState ugv_state;
+    ugv_state.set_source_stamp_ns(42);
+    ugv_state.set_drive_type(1);
+    ugv_state.set_diagnostic_message("hold");
+    ugv_state.set_fsm_state(1);
+    ugv_state.set_odom_ready(true);
+    assert(hex(ugv_state.SerializeAsString()) == "082a28014a04686f6c6450017801");
+    assert(UgvHoldGoal{}.SerializeAsString().empty());
+
+    GimbalParams gimbal_state;
+    gimbal_state.set_roll_rad(1.0);
+    gimbal_state.set_pitch_rad(-0.5);
+    gimbal_state.set_yaw_rad(0.25);
+    gimbal_state.set_zoom(3.5);
+    gimbal_state.set_connected(true);
+    gimbal_state.set_roll_rate_rad_s(0.1);
+    gimbal_state.set_pitch_rate_rad_s(-0.2);
+    gimbal_state.set_yaw_rate_rad_s(0.3);
+    assert(hex(gimbal_state.SerializeAsString()) ==
+           "11000000000000f03f19000000000000e0bf21000000000000d03f290000000000000c40"
+           "3801419a9999999999b93f499a9999999999c9bf51333333333333d33f");
+
+    GimbalAngleGoal gimbal_angle;
+    gimbal_angle.set_yaw_rad(1.5707963267948966);
+    gimbal_angle.set_pitch_rad(-0.7853981633974483);
+    assert(validate_gimbal_angle_goal(gimbal_angle, &validation_error));
+    assert(hex(gimbal_angle.SerializeAsString()) ==
+           "09182d4454fb21f93f11182d4454fb21e9bf");
+
+    GimbalRateGoal gimbal_rate;
+    gimbal_rate.set_yaw_control(45);
+    gimbal_rate.set_pitch_control(-30);
+    assert(validate_gimbal_rate_goal(gimbal_rate, &validation_error));
+    assert(hex(gimbal_rate.SerializeAsString()) == "082d10e2ffffffffffffffff01");
+    gimbal_rate.set_yaw_control(101);
+    assert(!validate_gimbal_rate_goal(gimbal_rate, &validation_error));
 
     UavWaypointMissionGoal mission;
     mission.set_frame_id("map");

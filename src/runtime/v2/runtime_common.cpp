@@ -42,6 +42,10 @@ uint64_t runtime_now_ms() {
                                      .count());
 }
 
+std::chrono::steady_clock::time_point runtime_steady_now() {
+    return std::chrono::steady_clock::now();
+}
+
 std::string runtime_peer_id(const std::string& ip, uint16_t port) {
     return "tcp://" + ip + ":" + std::to_string(port);
 }

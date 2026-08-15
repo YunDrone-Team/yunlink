@@ -115,6 +115,7 @@ struct RuntimeConfig {
     std::vector<ProfileDescriptor> required_profiles;
     std::vector<std::string> group_uids;
     std::vector<QosChannelPolicy> qos_policies;
+    std::function<std::string(const TypeRef&)> action_authority_scope_resolver;
     std::string shared_secret = "yunlink-default-secret";
     uint16_t tcp_listen_port = 9696;
     int connect_timeout_ms = 5000;
@@ -147,9 +148,8 @@ struct SessionInfo {
     std::vector<std::string> rejected_profiles;
 
     bool has_profile(const std::string& profile_id, uint16_t major) const;
-    bool supports_profile(const std::string& profile_id,
-                          uint16_t major,
-                          uint16_t minimum_minor) const;
+    bool
+    supports_profile(const std::string& profile_id, uint16_t major, uint16_t minimum_minor) const;
 };
 
 enum class RuntimeEventKind : uint8_t {

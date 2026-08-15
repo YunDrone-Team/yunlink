@@ -176,6 +176,7 @@ Bytes WireCodec::encode(const Envelope& input, bool auto_fill_header) const {
 }
 
 DecodeResult WireCodec::decode(const uint8_t* data, size_t len, uint64_t now_ms) const {
+    (void)now_ms;
     DecodeResult result;
     if (data == nullptr || len < kMinEnvelopeSize) {
         result.code = ErrorCode::kDecodeError;
@@ -301,13 +302,10 @@ DecodeResult WireCodec::decode(const uint8_t* data, size_t len, uint64_t now_ms)
         result.consumed = total_len;
         return result;
     }
-    if (value.ttl_ms > 0 && now_ms > 0 &&
-        (value.created_at_ms > std::numeric_limits<uint64_t>::max() - value.ttl_ms ||
-         value.created_at_ms + value.ttl_ms < now_ms)) {
-        result.code = ErrorCode::kTimeout;
-        result.consumed = total_len;
-        return result;
-    }
+    // `created_at_ms` is a sender wall-clock observation.  Comparing it with a
+    // receiver wall clock makes a valid session impossible when an embedded
+    // endpoint boots without an RTC.  Runtime deadlines and leases use the
+    // local monotonic clock instead; keep this field for audit and telemetry.
     value.payload.assign(data + header_len, data + header_len + payload_len);
     value.checksum = wire_checksum;
     result.envelope = std::move(value);

@@ -84,3 +84,20 @@ target_include_directories(yunlink_profile_sunray PUBLIC
 )
 target_link_libraries(yunlink_profile_sunray PUBLIC yunlink_profile_mobility protobuf::libprotobuf)
 add_library(yunlink::profile_sunray ALIAS yunlink_profile_sunray)
+
+protobuf_generate_cpp(
+  YUNLINK_SYSTEM_PROTO_SRCS
+  YUNLINK_SYSTEM_PROTO_HDRS
+  ${YUNLINK_PROFILE_PROTO_ROOT}/org.yunlink.system/v1/system.proto
+)
+add_library(yunlink_profile_system STATIC
+  ${YUNLINK_SYSTEM_PROTO_SRCS}
+  ${YUNLINK_SYSTEM_PROTO_HDRS}
+  ${YUNLINK_PROFILE_PROTO_ROOT}/org.yunlink.system/v1/system_validation.cpp
+)
+target_include_directories(yunlink_profile_system PUBLIC
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${YUNLINK_PROFILE_PROTO_ROOT}
+)
+target_link_libraries(yunlink_profile_system PUBLIC protobuf::libprotobuf)
+add_library(yunlink::profile_system ALIAS yunlink_profile_system)

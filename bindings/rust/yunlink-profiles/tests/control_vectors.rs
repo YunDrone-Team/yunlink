@@ -1,8 +1,10 @@
 use prost::Message;
 use yunlink_profiles::{
     mobility, sunray, validate_emergency_kill_goal, validate_flight_control_state,
+    validate_gimbal_angle_goal, validate_gimbal_rate_goal, validate_gimbal_zoom_absolute_goal,
     validate_land_goal, validate_planner_set_home_request, validate_takeoff_goal,
     validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
+    validate_ugv_move_point_goal, validate_ugv_velocity_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[
@@ -242,4 +244,102 @@ fn planner_v22_messages_round_trip_and_validate() {
     );
     request.home_m.as_mut().unwrap().z = f64::NAN;
     assert!(validate_planner_set_home_request(&request).is_err());
+}
+
+#[test]
+fn gimbal_v24_messages_match_golden_vectors_and_validate() {
+    let state = sunray::GimbalParams {
+        roll_rad: 1.0,
+        pitch_rad: -0.5,
+        yaw_rad: 0.25,
+        zoom: 3.5,
+        connected: true,
+        roll_rate_rad_s: 0.1,
+        pitch_rate_rad_s: -0.2,
+        yaw_rate_rad_s: 0.3,
+    };
+    assert_eq!(
+        hex::encode(state.encode_to_vec()),
+        "11000000000000f03f19000000000000e0bf21000000000000d03f290000000000000c403801419a9999999999b93f499a9999999999c9bf51333333333333d33f"
+    );
+
+    let angle = sunray::GimbalAngleGoal {
+        yaw_rad: std::f64::consts::FRAC_PI_2,
+        pitch_rad: -std::f64::consts::FRAC_PI_4,
+    };
+    validate_gimbal_angle_goal(&angle).unwrap();
+    assert_eq!(
+        hex::encode(angle.encode_to_vec()),
+        "09182d4454fb21f93f11182d4454fb21e9bf"
+    );
+
+    let rate = sunray::GimbalRateGoal {
+        yaw_control: 45,
+        pitch_control: -30,
+    };
+    validate_gimbal_rate_goal(&rate).unwrap();
+    assert_eq!(
+        hex::encode(rate.encode_to_vec()),
+        "082d10e2ffffffffffffffff01"
+    );
+
+    let zoom = sunray::GimbalZoomAbsoluteGoal { zoom: 3.5 };
+    validate_gimbal_zoom_absolute_goal(&zoom).unwrap();
+    assert_eq!(hex::encode(zoom.encode_to_vec()), "090000000000000c40");
+    assert!(sunray::GimbalCenterGoal::decode([].as_slice()).is_ok());
+
+    assert!(validate_gimbal_rate_goal(&sunray::GimbalRateGoal {
+        yaw_control: 101,
+        pitch_control: 0,
+    })
+    .is_err());
+}
+
+#[test]
+fn ugv_v25_messages_match_golden_vectors_and_validate() {
+    let mut move_goal = sunray::UgvMovePointGoal {
+        frame: sunray::UgvMovePointFrame::UgvMoveLocal as i32,
+        point_m: Some(vector3(1.0, -2.0, 0.0)),
+        yaw_mode: sunray::UgvYawMode::UgvYawSet as i32,
+        desired_yaw_rad: 0.25,
+        local_frame_id: "map".into(),
+    };
+    validate_ugv_move_point_goal(&move_goal).unwrap();
+    assert_eq!(
+        hex::encode(move_goal.encode_to_vec()),
+        "121209000000000000f03f1100000000000000c0180121000000000000d03f2a036d6170"
+    );
+    move_goal.point_m.as_mut().unwrap().z = 0.1;
+    assert!(validate_ugv_move_point_goal(&move_goal).is_err());
+
+    let mut velocity = sunray::UgvVelocityGoal {
+        target: Some(sunray::ugv_velocity_goal::Target::Body(
+            sunray::UgvBodyVelocityTarget {
+                linear_mps: Some(mobility::Vector2 { x: 0.5, y: 0.1 }),
+                yaw_rate_radps: -0.2,
+            },
+        )),
+        lease_ms: 750,
+    };
+    validate_ugv_velocity_goal(&velocity).unwrap();
+    assert_eq!(
+        hex::encode(velocity.encode_to_vec()),
+        "121d0a1209000000000000e03f119a9999999999b93f119a9999999999c9bf18ee05"
+    );
+    velocity.lease_ms = 249;
+    assert!(validate_ugv_velocity_goal(&velocity).is_err());
+
+    let state = sunray::UgvControlState {
+        source_stamp_ns: 42,
+        drive_type: 1,
+        diagnostic_message: "hold".into(),
+        fsm_state: 1,
+        odom_ready: true,
+        ..Default::default()
+    };
+    assert_eq!(
+        hex::encode(state.encode_to_vec()),
+        "082a28014a04686f6c6450017801"
+    );
+    assert!(sunray::UgvHoldGoal {}.encode_to_vec().is_empty());
 }

@@ -21,8 +21,15 @@ bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error = nullptr
 bool validate_land_goal(const LandGoal& goal, std::string* error = nullptr);
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
                                         std::string* error = nullptr);
+bool validate_uav_nav_goal(const UavNavGoal& goal, std::string* error = nullptr);
+bool validate_ugv_move_point_goal(const UgvMovePointGoal& goal, std::string* error = nullptr);
+bool validate_ugv_velocity_goal(const UgvVelocityGoal& goal, std::string* error = nullptr);
 bool validate_planner_set_home_request(const PlannerSetHomeRequest& request,
                                        std::string* error = nullptr);
+bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error = nullptr);
+bool validate_gimbal_rate_goal(const GimbalRateGoal& goal, std::string* error = nullptr);
+bool validate_gimbal_zoom_absolute_goal(const GimbalZoomAbsoluteGoal& goal,
+                                        std::string* error = nullptr);
 
 }  // namespace com::yundrone::sunray::v2
 

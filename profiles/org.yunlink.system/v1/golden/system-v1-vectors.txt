@@ -1,0 +1,2 @@
+# org.yunlink.system/v1 deterministic protobuf payloads
+clock_sync_request=08fbd0eab6b733120a73756e7261792d676373

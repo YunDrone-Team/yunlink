@@ -169,6 +169,12 @@ message UavWaypointMissionGoal {
   UavMissionCompletionAction completion_action = 4;
 }
 
+message UavNavGoal {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 position_m = 2;
+  double yaw_rad = 3;
+}
+
 message UavReturnHomeGoal {}
 
 message PlannerCancelTaskRequest {}
@@ -214,6 +220,7 @@ message UavPlanningState {
   double distance_to_goal_m = 7;
   double hold_remaining_s = 8;
   string failure_reason = 9;
+  string planner_frame_id = 10;
 }
 
 message UavControlState {
@@ -250,15 +257,74 @@ message UgvControlState {
   org.yunlink.mobility.v1.Odometry odometry = 12;
   org.yunlink.mobility.v1.Pose target_pose = 13;
   org.yunlink.mobility.v1.Twist controller_output = 14;
+  bool odom_ready = 15;
 }
 
+enum UgvMovePointFrame {
+  UGV_MOVE_LOCAL = 0;
+  UGV_MOVE_BODY = 1;
+}
+
+enum UgvYawMode {
+  UGV_YAW_KEEP = 0;
+  UGV_YAW_SET = 1;
+}
+
+message UgvMovePointGoal {
+  UgvMovePointFrame frame = 1;
+  org.yunlink.mobility.v1.Vector3 point_m = 2;
+  UgvYawMode yaw_mode = 3;
+  double desired_yaw_rad = 4;
+  string local_frame_id = 5;
+}
+
+message UgvLocalVelocityTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector2 linear_mps = 2;
+  double desired_yaw_rad = 3;
+}
+
+message UgvBodyVelocityTarget {
+  org.yunlink.mobility.v1.Vector2 linear_mps = 1;
+  double yaw_rate_radps = 2;
+}
+
+message UgvVelocityGoal {
+  oneof target {
+    UgvLocalVelocityTarget local = 1;
+    UgvBodyVelocityTarget body = 2;
+  }
+  uint32 lease_ms = 3;
+}
+
+message UgvHoldGoal {}
+
 message GimbalParams {
-  uint64 source_stamp_ns = 1;
+  reserved 1, 6;
   double roll_rad = 2;
   double pitch_rad = 3;
   double yaw_rad = 4;
   double zoom = 5;
-  uint32 mode = 6;
+  bool connected = 7;
+  double roll_rate_rad_s = 8;
+  double pitch_rate_rad_s = 9;
+  double yaw_rate_rad_s = 10;
+}
+
+message GimbalAngleGoal {
+  double yaw_rad = 1;
+  double pitch_rad = 2;
+}
+
+message GimbalRateGoal {
+  int32 yaw_control = 1;
+  int32 pitch_control = 2;
+}
+
+message GimbalCenterGoal {}
+
+message GimbalZoomAbsoluteGoal {
+  double zoom = 1;
 }
 
 message RuntimeDiagnostic {

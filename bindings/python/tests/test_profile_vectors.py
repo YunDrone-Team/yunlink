@@ -6,6 +6,7 @@ from yunlink.profiles import (
     sunray,
     telemetry,
     media,
+    system,
     validate_camera_catalog_snapshot,
     validate_camera_descriptor,
     validate_media_asset_chunk,
@@ -14,6 +15,8 @@ from yunlink.profiles import (
     validate_media_asset_list_request,
     validate_media_asset_list_response,
     validate_camera_start_rtsp_response,
+    validate_clock_sync_request,
+    validate_clock_sync_response,
     validate_flight_control_state,
     validate_summary_snapshot,
     validate_emergency_kill_goal,
@@ -21,8 +24,68 @@ from yunlink.profiles import (
     validate_takeoff_goal,
     validate_uav_direct_control_goal,
     validate_uav_waypoint_mission_goal,
+    validate_ugv_move_point_goal,
+    validate_ugv_velocity_goal,
     validate_planner_set_home_request,
+    validate_gimbal_angle_goal,
+    validate_gimbal_rate_goal,
+    validate_gimbal_zoom_absolute_goal,
 )
+from yunlink.profiles.validation import (
+    MINIMUM_TRUSTED_UNIX_TIME_MS,
+    MAXIMUM_TRUSTED_UNIX_TIME_MS,
+)
+
+
+def test_system_clock_profile_matches_cross_language_golden_vectors():
+    request = system.ClockSyncRequest(
+        unix_time_ms=1_767_225_600_123, source="sunray-gcs"
+    )
+    validate_clock_sync_request(request)
+    assert request.SerializeToString(deterministic=True).hex() == (
+        "08fbd0eab6b733120a73756e7261792d676373"
+    )
+
+    status = system.ClockSyncResponse(
+        error=system.CLOCK_SYNC_OK,
+        message="synchronized",
+        previous_unix_time_ms=1_767_225_600_000,
+        applied_unix_time_ms=1_767_225_600_123,
+        delta_ms=123,
+    )
+    validate_clock_sync_response(status)
+
+    request.unix_time_ms = 1_000
+    with pytest.raises(ValueError, match="clock sync request is invalid"):
+        validate_clock_sync_request(request)
+
+
+def test_system_clock_profile_rejects_inconsistent_response():
+    def response(error, state, trusted, armed_blocked):
+        return system.ClockSyncResponse(error=error)
+
+    invalid = [
+        response(system.CLOCK_SYNC_OK, 0, False, False),
+    ]
+    for value in invalid:
+        with pytest.raises(ValueError, match="clock response is invalid"):
+            validate_clock_sync_response(value)
+
+
+def test_system_clock_profile_enforces_product_time_boundaries_and_source_token():
+    for value in (MINIMUM_TRUSTED_UNIX_TIME_MS, MAXIMUM_TRUSTED_UNIX_TIME_MS):
+        validate_clock_sync_request(system.ClockSyncRequest(
+            unix_time_ms=value, source="sunray-gcs"
+        ))
+    for value in (MINIMUM_TRUSTED_UNIX_TIME_MS - 1, MAXIMUM_TRUSTED_UNIX_TIME_MS + 1):
+        with pytest.raises(ValueError):
+            validate_clock_sync_request(system.ClockSyncRequest(
+                unix_time_ms=value, source="sunray-gcs"
+            ))
+    with pytest.raises(ValueError):
+        validate_clock_sync_request(system.ClockSyncRequest(
+            unix_time_ms=MINIMUM_TRUSTED_UNIX_TIME_MS, source="sunray gcs"
+        ))
 
 
 GOTO_GOLDEN = bytes.fromhex(
@@ -156,6 +219,81 @@ def test_flight_control_state_round_trips_and_rejects_invalid_battery_values():
     state.battery_percent = 101
     with pytest.raises(ValueError, match="flight control state is invalid"):
         validate_flight_control_state(state)
+
+
+def test_gimbal_v24_messages_match_cross_language_vectors_and_validate():
+    state = sunray.GimbalParams(
+        roll_rad=1.0,
+        pitch_rad=-0.5,
+        yaw_rad=0.25,
+        zoom=3.5,
+        connected=True,
+        roll_rate_rad_s=0.1,
+        pitch_rate_rad_s=-0.2,
+        yaw_rate_rad_s=0.3,
+    )
+    assert state.SerializeToString(deterministic=True).hex() == (
+        "11000000000000f03f19000000000000e0bf21000000000000d03f"
+        "290000000000000c403801419a9999999999b93f499a9999999999c9bf"
+        "51333333333333d33f"
+    )
+
+    angle = sunray.GimbalAngleGoal(yaw_rad=1.5707963267948966, pitch_rad=-0.7853981633974483)
+    validate_gimbal_angle_goal(angle)
+    assert angle.SerializeToString(deterministic=True).hex() == (
+        "09182d4454fb21f93f11182d4454fb21e9bf"
+    )
+    rate = sunray.GimbalRateGoal(yaw_control=45, pitch_control=-30)
+    validate_gimbal_rate_goal(rate)
+    assert rate.SerializeToString(deterministic=True).hex() == (
+        "082d10e2ffffffffffffffff01"
+    )
+    zoom = sunray.GimbalZoomAbsoluteGoal(zoom=3.5)
+    validate_gimbal_zoom_absolute_goal(zoom)
+    assert zoom.SerializeToString(deterministic=True).hex() == "090000000000000c40"
+    assert sunray.GimbalCenterGoal.FromString(b"") == sunray.GimbalCenterGoal()
+    with pytest.raises(ValueError, match="between -100 and 100"):
+        validate_gimbal_rate_goal(sunray.GimbalRateGoal(yaw_control=101))
+
+
+def test_ugv_v25_messages_match_cross_language_vectors_and_validate():
+    move_goal = sunray.UgvMovePointGoal(
+        frame=sunray.UGV_MOVE_LOCAL,
+        yaw_mode=sunray.UGV_YAW_SET,
+        desired_yaw_rad=0.25,
+        local_frame_id="map",
+    )
+    move_goal.point_m.x = 1.0
+    move_goal.point_m.y = -2.0
+    validate_ugv_move_point_goal(move_goal)
+    assert move_goal.SerializeToString(deterministic=True).hex() == (
+        "121209000000000000f03f1100000000000000c0180121000000000000d03f2a036d6170"
+    )
+    move_goal.point_m.z = 0.1
+    with pytest.raises(ValueError, match="UGV move point goal is invalid"):
+        validate_ugv_move_point_goal(move_goal)
+
+    velocity = sunray.UgvVelocityGoal(lease_ms=750)
+    velocity.body.linear_mps.x = 0.5
+    velocity.body.linear_mps.y = 0.1
+    velocity.body.yaw_rate_radps = -0.2
+    validate_ugv_velocity_goal(velocity)
+    assert velocity.SerializeToString(deterministic=True).hex() == (
+        "121d0a1209000000000000e03f119a9999999999b93f119a9999999999c9bf18ee05"
+    )
+    velocity.lease_ms = 249
+    with pytest.raises(ValueError, match="UGV velocity lease is invalid"):
+        validate_ugv_velocity_goal(velocity)
+
+    state = sunray.UgvControlState(
+        source_stamp_ns=42,
+        drive_type=1,
+        diagnostic_message="hold",
+        fsm_state=1,
+        odom_ready=True,
+    )
+    assert state.SerializeToString(deterministic=True).hex() == "082a28014a04686f6c6450017801"
+    assert sunray.UgvHoldGoal().SerializeToString(deterministic=True) == b""
 
 
 def test_profile_payloads_match_cross_language_golden_vectors():

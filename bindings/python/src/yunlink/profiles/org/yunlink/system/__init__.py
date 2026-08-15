@@ -1,0 +1,1 @@
+"""YunLink system profile namespace."""

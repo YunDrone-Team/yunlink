@@ -2,6 +2,7 @@
 #define YUNLINK_RUNTIME_V2_RUNTIME_INTERNAL_HPP
 
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -38,7 +39,7 @@ struct Runtime::Impl {
     struct AuthorityLease {
         std::string peer_id;
         uint64_t session_id = 0;
-        uint64_t expires_at_ms = 0;
+        std::chrono::steady_clock::time_point expires_at;
     };
     std::map<std::pair<std::string, std::string>, AuthorityLease> authority_leases;
     size_t next_subscription = 1;
@@ -47,6 +48,7 @@ struct Runtime::Impl {
 };
 
 uint64_t runtime_now_ms();
+std::chrono::steady_clock::time_point runtime_steady_now();
 std::string runtime_peer_id(const std::string& ip, uint16_t port);
 void runtime_emit(Runtime::Impl* impl, const RuntimeEvent& event);
 bool runtime_write(const std::shared_ptr<RuntimeConnection>& connection, const Bytes& bytes);

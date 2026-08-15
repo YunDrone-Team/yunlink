@@ -6,6 +6,7 @@
 
 namespace yunlink::v2 {
 namespace {
+constexpr uint32_t kMaximumAuthorityLeaseMs = 60U * 60U * 1000U;
 
 TypeRef authority_status_type() {
     return {"yunlink.core", 2, 0, "authority.status"};
@@ -57,18 +58,18 @@ bool runtime_handle_authority(Runtime::Impl* impl, const Peer& peer, const Envel
     status.detail = "invalid authority request";
     if (!decode(envelope.payload, &request) || envelope.target.scope != TargetScope::kEntity ||
         envelope.target.uids.size() != 1 || request.authority_scope.empty() ||
-        request.lease_ttl_ms == 0) {
+        request.lease_ttl_ms == 0 || request.lease_ttl_ms > kMaximumAuthorityLeaseMs) {
         send_status(impl, peer, envelope, status);
         return true;
     }
     const auto key = std::make_pair(envelope.target.uids.front(), request.authority_scope);
-    const uint64_t now = runtime_now_ms();
+    const auto now = runtime_steady_now();
     status.authority_scope = request.authority_scope;
     status.lease_ttl_ms = request.lease_ttl_ms;
     {
         std::lock_guard<std::mutex> lock(impl->mutex);
         auto existing = impl->authority_leases.find(key);
-        if (existing != impl->authority_leases.end() && existing->second.expires_at_ms <= now) {
+        if (existing != impl->authority_leases.end() && existing->second.expires_at <= now) {
             existing = impl->authority_leases.erase(existing);
         }
         const auto operation = static_cast<AuthorityOperation>(envelope.operation);
@@ -87,7 +88,7 @@ bool runtime_handle_authority(Runtime::Impl* impl, const Peer& peer, const Envel
             }
         } else if (operation == AuthorityOperation::kRenew) {
             if (owner) {
-                existing->second.expires_at_ms = now + request.lease_ttl_ms;
+                existing->second.expires_at = now + std::chrono::milliseconds(request.lease_ttl_ms);
                 status.state = "controller";
                 status.reason_code = 0;
                 status.detail = "authority renewed";
@@ -97,8 +98,10 @@ bool runtime_handle_authority(Runtime::Impl* impl, const Peer& peer, const Envel
             }
         } else if (operation == AuthorityOperation::kClaim) {
             if (existing == impl->authority_leases.end() || owner || request.allow_preempt) {
-                impl->authority_leases[key] = {
-                    peer.id, envelope.session_id, now + request.lease_ttl_ms};
+                impl->authority_leases[key] = {peer.id,
+                                               envelope.session_id,
+                                               now +
+                                                   std::chrono::milliseconds(request.lease_ttl_ms)};
                 status.state = "controller";
                 status.reason_code = 0;
                 status.detail = owner ? "authority refreshed" : "authority granted";
@@ -127,12 +130,18 @@ bool runtime_action_authorized(Runtime::Impl* impl,
         }
         return false;
     }
-    const auto key = std::make_pair(envelope.target.uids.front(), envelope.type.profile_id);
-    const uint64_t now = runtime_now_ms();
+    std::string authority_scope = envelope.type.profile_id;
+    if (impl->config.action_authority_scope_resolver) {
+        const auto resolved = impl->config.action_authority_scope_resolver(envelope.type);
+        if (!resolved.empty())
+            authority_scope = resolved;
+    }
+    const auto key = std::make_pair(envelope.target.uids.front(), authority_scope);
+    const auto now = runtime_steady_now();
     std::lock_guard<std::mutex> lock(impl->mutex);
     const auto lease = impl->authority_leases.find(key);
     const bool authorized = lease != impl->authority_leases.end() &&
-                            lease->second.expires_at_ms > now && lease->second.peer_id == peer.id &&
+                            lease->second.expires_at > now && lease->second.peer_id == peer.id &&
                             lease->second.session_id == envelope.session_id;
     if (!authorized && detail != nullptr) {
         *detail = "no active authority lease for entity and profile scope";
@@ -164,11 +173,11 @@ bool Runtime::has_authority(const std::string& peer_id,
                             const std::string& entity_uid,
                             const std::string& authority_scope) const {
     const auto key = std::make_pair(entity_uid, authority_scope);
-    const uint64_t now = runtime_now_ms();
+    const auto now = runtime_steady_now();
     std::lock_guard<std::mutex> lock(impl_->mutex);
     const auto lease = impl_->authority_leases.find(key);
     return lease != impl_->authority_leases.end() && lease->second.peer_id == peer_id &&
-           lease->second.session_id == session_id && lease->second.expires_at_ms > now;
+           lease->second.session_id == session_id && lease->second.expires_at > now;
 }
 
 void Runtime::revoke_authority(const std::string& peer_id,

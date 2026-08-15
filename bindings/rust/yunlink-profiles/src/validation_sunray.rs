@@ -146,10 +146,81 @@ pub fn validate_uav_waypoint_mission_goal(
     Ok(())
 }
 
+pub fn validate_uav_nav_goal(goal: &sunray::UavNavGoal) -> Result<(), &'static str> {
+    (!goal.frame_id.is_empty()
+        && goal.position_m.as_ref().is_some_and(finite_vector3)
+        && goal.yaw_rad.is_finite())
+    .then_some(())
+    .ok_or("UAV navigation goal is invalid")
+}
+
+pub fn validate_ugv_move_point_goal(goal: &sunray::UgvMovePointGoal) -> Result<(), &'static str> {
+    let valid_frame = matches!(goal.frame, 0 | 1);
+    let valid_yaw_mode = matches!(goal.yaw_mode, 0 | 1);
+    let valid_point = goal
+        .point_m
+        .as_ref()
+        .is_some_and(|point| finite_vector3(point) && point.z == 0.0);
+    let valid_frame_id = (goal.frame == 0) == !goal.local_frame_id.is_empty();
+    (valid_frame
+        && valid_yaw_mode
+        && valid_point
+        && goal.desired_yaw_rad.is_finite()
+        && valid_frame_id)
+        .then_some(())
+        .ok_or("UGV move point goal is invalid")
+}
+
+pub fn validate_ugv_velocity_goal(goal: &sunray::UgvVelocityGoal) -> Result<(), &'static str> {
+    use sunray::ugv_velocity_goal::Target;
+
+    if !(MIN_DIRECT_CONTROL_LEASE_MS..=MAX_DIRECT_CONTROL_LEASE_MS).contains(&goal.lease_ms) {
+        return Err("UGV velocity lease is invalid");
+    }
+    match goal.target.as_ref() {
+        Some(Target::Local(value))
+            if !value.frame_id.is_empty()
+                && value.linear_mps.as_ref().is_some_and(finite_vector2)
+                && value.desired_yaw_rad.is_finite() =>
+        {
+            Ok(())
+        }
+        Some(Target::Local(_)) => Err("UGV local velocity target is invalid"),
+        Some(Target::Body(value))
+            if value.linear_mps.as_ref().is_some_and(finite_vector2)
+                && value.yaw_rate_radps.is_finite() =>
+        {
+            Ok(())
+        }
+        Some(Target::Body(_)) => Err("UGV body velocity target is invalid"),
+        None => Err("UGV velocity target is missing"),
+    }
+}
+
 pub fn validate_planner_set_home_request(
     request: &sunray::PlannerSetHomeRequest,
 ) -> Result<(), &'static str> {
     (!request.frame_id.is_empty() && request.home_m.as_ref().is_some_and(finite_vector3))
         .then_some(())
         .ok_or("Planner home request is invalid")
+}
+
+pub fn validate_gimbal_angle_goal(goal: &sunray::GimbalAngleGoal) -> Result<(), &'static str> {
+    (goal.yaw_rad.is_finite() && goal.pitch_rad.is_finite())
+        .then_some(())
+        .ok_or("gimbal angle goal is invalid")
+}
+
+pub fn validate_gimbal_rate_goal(goal: &sunray::GimbalRateGoal) -> Result<(), &'static str> {
+    ((-100..=100).contains(&goal.yaw_control) && (-100..=100).contains(&goal.pitch_control))
+        .then_some(())
+        .ok_or("gimbal rate control must be between -100 and 100")
+}
+
+pub fn validate_gimbal_zoom_absolute_goal(
+    goal: &sunray::GimbalZoomAbsoluteGoal,
+) -> Result<(), &'static str> {
+    (goal.zoom.is_finite() && (1.0..=30.9).contains(&goal.zoom))
+        .then_some(())
+        .ok_or("gimbal zoom must be between 1.0 and 30.9")
 }

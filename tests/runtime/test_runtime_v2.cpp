@@ -16,12 +16,18 @@ int main() {
     server_config.endpoint_uid = "endpoint.server";
     server_config.tcp_listen_port = 0;
     server_config.profiles = {{"org.yunlink.mobility", 1, 0, "mobility-digest"},
+                              {"com.example.ugv", 1, 0, "ugv-digest"},
                               {"com.example.server", 1, 0, "server-digest"},
                               {"com.yundrone.sunray", 2, 0, "sunray-v2"}};
+    server_config.action_authority_scope_resolver = [](const TypeRef& type) {
+        return type.profile_id == "com.example.ugv" ? std::string("org.yunlink.mobility")
+                                                    : type.profile_id;
+    };
     RuntimeConfig client_config;
     client_config.endpoint_uid = "endpoint.client";
     client_config.tcp_listen_port = 0;
     client_config.profiles = {{"org.yunlink.mobility", 1, 2, "mobility-digest"},
+                              {"com.example.ugv", 1, 0, "ugv-digest"},
                               {"com.example.unknown", 1, 0, "unknown-digest"},
                               {"com.yundrone.sunray", 1, 0, "sunray-v1"}};
     assert(server.start(server_config) == ErrorCode::kOk);
@@ -141,6 +147,20 @@ int main() {
         server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
     assert(
         !server.has_authority("another-peer", session_id, "entity.alpha", "org.yunlink.mobility"));
+
+    action_received = false;
+    assert(client.publish(peer.id,
+                          session_id,
+                          MessageFamily::kAction,
+                          static_cast<uint8_t>(ActionOperation::kGoal),
+                          target,
+                          {"com.example.ugv", 1, 0, "VelocityGoal"},
+                          {4, 5, 6},
+                          &handle) == ErrorCode::kOk);
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() { return action_received; }));
+    }
 
     assert(client.publish(peer.id,
                           session_id,

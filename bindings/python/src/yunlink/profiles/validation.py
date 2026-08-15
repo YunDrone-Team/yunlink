@@ -3,6 +3,41 @@ import math
 from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 from .org.yunlink.telemetry.v1 import telemetry_pb2 as telemetry
 from .org.yunlink.media.v1 import media_pb2 as media
+from .org.yunlink.system.v1 import system_pb2 as system
+
+MINIMUM_TRUSTED_UNIX_TIME_MS = 1_704_067_200_000
+MAXIMUM_TRUSTED_UNIX_TIME_MS = 4_102_444_800_000
+
+
+def _valid_clock_source(value: str) -> bool:
+    return bool(value) and len(value.encode()) <= 64 and all(
+        char.isascii() and (char.isalnum() or char in "-_.") for char in value
+    )
+
+
+def validate_clock_sync_request(request: system.ClockSyncRequest) -> None:
+    if not (
+        MINIMUM_TRUSTED_UNIX_TIME_MS
+        <= request.unix_time_ms
+        <= MAXIMUM_TRUSTED_UNIX_TIME_MS
+        and _valid_clock_source(request.source)
+    ):
+        raise ValueError("clock sync request is invalid")
+
+
+def validate_clock_sync_response(response: system.ClockSyncResponse) -> None:
+    if response.error not in range(system.CLOCK_SYNC_OK, system.CLOCK_SYNC_INTERNAL_ERROR + 1):
+        raise ValueError("clock sync response error is invalid")
+    if len(response.message.encode()) > 256:
+        raise ValueError("clock sync response message is too long")
+    if response.error == system.CLOCK_SYNC_OK:
+        valid = lambda value: MINIMUM_TRUSTED_UNIX_TIME_MS <= value <= MAXIMUM_TRUSTED_UNIX_TIME_MS
+        if not valid(response.previous_unix_time_ms) or not valid(response.applied_unix_time_ms):
+            raise ValueError("clock sync response timestamps are invalid")
+        if response.delta_ms != response.applied_unix_time_ms - response.previous_unix_time_ms:
+            raise ValueError("clock sync response delta is invalid")
+    elif response.previous_unix_time_ms or response.applied_unix_time_ms or response.delta_ms:
+        raise ValueError("failed clock sync response contains timestamps")
 
 
 def _valid_media_token(value: str, max_bytes: int) -> bool:
@@ -369,3 +404,64 @@ def validate_planner_set_home_request(request: sunray.PlannerSetHomeRequest) -> 
         or not _finite_vector(request.home_m)
     ):
         raise ValueError("Planner home request is invalid")
+
+
+def validate_uav_nav_goal(goal: sunray.UavNavGoal) -> None:
+    if (
+        not goal.frame_id
+        or not goal.HasField("position_m")
+        or not _finite_vector(goal.position_m)
+        or not math.isfinite(goal.yaw_rad)
+    ):
+        raise ValueError("UAV navigation goal is invalid")
+
+
+def validate_ugv_move_point_goal(goal: sunray.UgvMovePointGoal) -> None:
+    if not (
+        goal.frame in {sunray.UGV_MOVE_LOCAL, sunray.UGV_MOVE_BODY}
+        and goal.yaw_mode in {sunray.UGV_YAW_KEEP, sunray.UGV_YAW_SET}
+        and goal.HasField("point_m")
+        and _finite_vector(goal.point_m)
+        and goal.point_m.z == 0
+        and math.isfinite(goal.desired_yaw_rad)
+        and ((goal.frame == sunray.UGV_MOVE_LOCAL) == bool(goal.local_frame_id))
+    ):
+        raise ValueError("UGV move point goal is invalid")
+
+
+def validate_ugv_velocity_goal(goal: sunray.UgvVelocityGoal) -> None:
+    if not 250 <= goal.lease_ms <= 2000:
+        raise ValueError("UGV velocity lease is invalid")
+    target = goal.WhichOneof("target")
+    if target == "local":
+        valid = (
+            bool(goal.local.frame_id)
+            and goal.local.HasField("linear_mps")
+            and _finite_vector(goal.local.linear_mps)
+            and math.isfinite(goal.local.desired_yaw_rad)
+        )
+    elif target == "body":
+        valid = (
+            goal.body.HasField("linear_mps")
+            and _finite_vector(goal.body.linear_mps)
+            and math.isfinite(goal.body.yaw_rate_radps)
+        )
+    else:
+        valid = False
+    if not valid:
+        raise ValueError("UGV velocity target is invalid")
+
+
+def validate_gimbal_angle_goal(goal: sunray.GimbalAngleGoal) -> None:
+    if not math.isfinite(goal.yaw_rad) or not math.isfinite(goal.pitch_rad):
+        raise ValueError("gimbal angle goal is invalid")
+
+
+def validate_gimbal_rate_goal(goal: sunray.GimbalRateGoal) -> None:
+    if not -100 <= goal.yaw_control <= 100 or not -100 <= goal.pitch_control <= 100:
+        raise ValueError("gimbal rate control must be between -100 and 100")
+
+
+def validate_gimbal_zoom_absolute_goal(goal: sunray.GimbalZoomAbsoluteGoal) -> None:
+    if not math.isfinite(goal.zoom) or not 1.0 <= goal.zoom <= 30.9:
+        raise ValueError("gimbal zoom must be between 1.0 and 30.9")

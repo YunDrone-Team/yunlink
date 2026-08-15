@@ -43,7 +43,8 @@ int main() {
     auto corrupt = bytes;
     corrupt[corrupt.size() - 5] ^= 0x80;
     assert(codec.decode(corrupt.data(), corrupt.size()).code == ErrorCode::kChecksumMismatch);
-    assert(codec.decode(bytes.data(), bytes.size(), 1300).code == ErrorCode::kTimeout);
+    constexpr uint64_t kReceiverClockIn2026Ms = 1767225600000ULL;
+    assert(codec.decode(bytes.data(), bytes.size(), kReceiverClockIn2026Ms).ok());
 
     auto v1 = bytes;
     v1[4] = 1;
