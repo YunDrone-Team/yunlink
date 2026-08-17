@@ -176,6 +176,25 @@ int main() {
     server.revoke_authority(server_peer_id, session_id, {"entity.alpha"});
     assert(
         !server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    assert(client.publish(peer.id,
+                          session_id,
+                          MessageFamily::kAuthority,
+                          static_cast<uint8_t>(AuthorityOperation::kClaim),
+                          target,
+                          {"yunlink.core", 2, 0, "authority.request"},
+                          encode(AuthorityRequest{"org.yunlink.mobility", 50, false}),
+                          &handle) == ErrorCode::kOk);
+    for (int attempt = 0;
+         attempt < 50 &&
+         !server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility");
+         ++attempt) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    assert(
+        server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    assert(
+        !server.has_authority(server_peer_id, session_id, "entity.alpha", "org.yunlink.mobility"));
 
     server.stop();
     {

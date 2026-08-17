@@ -2,9 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck disable=SC1091
+source "${ROOT_DIR}/tools/build_jobs.sh"
+yunlink_configure_build_jobs
 
 cmake --preset ninja-debug
-cmake --build --preset ninja-debug --target \
+cmake --build --preset ninja-debug --parallel "$YUNLINK_BUILD_JOBS" --target \
   yunlink_ffi \
   test_c_ffi_v2
 ctest --test-dir "${ROOT_DIR}/build/ninja-debug" -R "test_c_ffi_v2" --output-on-failure

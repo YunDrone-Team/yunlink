@@ -32,15 +32,15 @@ pub fn validate_clock_sync_response(response: &ClockSyncResponse) -> Result<(), 
         return Err("clock sync response error or message is invalid");
     }
     if response.error == ClockSyncError::ClockSyncOk as i32 {
-        let valid = |value| {
-            (crate::MINIMUM_TRUSTED_UNIX_TIME_MS..=crate::MAXIMUM_TRUSTED_UNIX_TIME_MS)
-                .contains(&value)
-        };
-        if !valid(response.previous_unix_time_ms) || !valid(response.applied_unix_time_ms) {
+        if response.previous_unix_time_ms > i64::MAX as u64
+            || !(crate::MINIMUM_TRUSTED_UNIX_TIME_MS..=crate::MAXIMUM_TRUSTED_UNIX_TIME_MS)
+                .contains(&response.applied_unix_time_ms)
+        {
             return Err("clock sync response timestamps are invalid");
         }
-        if response.delta_ms
-            != response.applied_unix_time_ms as i64 - response.previous_unix_time_ms as i64
+        if Some(response.delta_ms)
+            != (response.applied_unix_time_ms as i64)
+                .checked_sub(response.previous_unix_time_ms as i64)
         {
             return Err("clock sync response delta is invalid");
         }

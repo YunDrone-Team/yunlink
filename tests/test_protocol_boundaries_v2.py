@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import re
-import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,11 +62,8 @@ legacy_paths = (
     "src/runtime/state",
     "examples",
 )
-tracked_paths = set(
-    subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
-)
 for legacy in legacy_paths:
-    if any(path == legacy or path.startswith(f"{legacy}/") for path in tracked_paths):
+    if (ROOT / legacy).exists():
         violations.append(f"Wire v1 public path still exists: {legacy}")
 
 for path in (ROOT / "CMakePresets.json", ROOT / "bindings/rust/yunlink-sys/build.rs"):

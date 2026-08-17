@@ -52,10 +52,15 @@ int main() {
     clock_response.set_applied_unix_time_ms(1767225600123ULL);
     clock_response.set_delta_ms(123);
     assert(org::yunlink::system::v1::validate_clock_sync_response(clock_response));
+    clock_response.set_previous_unix_time_ms(31449600000ULL);
+    clock_response.set_delta_ms(1735776000123LL);
+    assert(org::yunlink::system::v1::validate_clock_sync_response(clock_response));
     clock_request.set_unix_time_ms(1000);
     assert(!org::yunlink::system::v1::validate_clock_sync_request(clock_request));
     clock_response.clear_previous_unix_time_ms();
     assert(!org::yunlink::system::v1::validate_clock_sync_response(clock_response));
+    clock_response.set_delta_ms(1767225600123LL);
+    assert(org::yunlink::system::v1::validate_clock_sync_response(clock_response));
 
     org::yunlink::mobility::v1::GotoGoal goal;
     goal.set_frame_id("map");

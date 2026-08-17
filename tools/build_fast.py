@@ -49,7 +49,15 @@ def main() -> int:
     print(f"[build_fast] jobs={jobs}")
     print(f"[build_fast] command={format_command(cmd)}")
 
-    completed = subprocess.run(cmd, check=False)
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "MAKEFLAGS": f"-j{jobs}",
+            "CMAKE_BUILD_PARALLEL_LEVEL": str(jobs),
+            "CARGO_BUILD_JOBS": str(jobs),
+        }
+    )
+    completed = subprocess.run(cmd, check=False, env=environment)
     return completed.returncode
 
 

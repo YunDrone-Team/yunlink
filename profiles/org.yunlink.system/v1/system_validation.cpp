@@ -1,6 +1,7 @@
 #include "org.yunlink.system/v1/system_validation.hpp"
 
 #include <algorithm>
+#include <limits>
 
 namespace org::yunlink::system::v1 {
 namespace {
@@ -31,8 +32,8 @@ bool validate_clock_sync_response(const ClockSyncResponse& response, std::string
         return fail(error, "clock sync response enum or message is invalid");
     }
     const bool ok = response.error() == CLOCK_SYNC_OK;
-    if (ok && (response.previous_unix_time_ms() < kMinimumTrustedUnixTimeMs ||
-               response.previous_unix_time_ms() > kMaximumTrustedUnixTimeMs ||
+    if (ok && (response.previous_unix_time_ms() >
+                   static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ||
                response.applied_unix_time_ms() < kMinimumTrustedUnixTimeMs ||
                response.applied_unix_time_ms() > kMaximumTrustedUnixTimeMs ||
                response.delta_ms() != static_cast<int64_t>(response.applied_unix_time_ms()) -

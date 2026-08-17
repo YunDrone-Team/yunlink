@@ -1,8 +1,9 @@
 use prost::Message;
 use yunlink_profiles::{
     media, validate_camera_catalog_snapshot, validate_camera_descriptor,
-    validate_camera_start_rtsp_response, validate_media_asset_chunk, validate_media_asset_ref,
+    validate_camera_start_rtsp_response, validate_media_asset_chunk,
     validate_media_asset_list_request, validate_media_asset_list_response,
+    validate_media_asset_ref,
 };
 
 #[test]
@@ -20,14 +21,20 @@ fn camera_request_matches_cross_language_golden_vector() {
 fn asset_list_contract_is_paged_and_keeps_thumbnail_relation_explicit() {
     let request = media::MediaAssetListRequest {
         camera_uid: "front".into(),
-        kinds: vec![media::MediaAssetKind::MediaPhoto as i32, media::MediaAssetKind::MediaVideo as i32],
+        kinds: vec![
+            media::MediaAssetKind::MediaPhoto as i32,
+            media::MediaAssetKind::MediaVideo as i32,
+        ],
         created_after_ns: 10,
         created_before_ns: 20,
         page_size: 25,
         page_token: "Y3Vyc29y".into(),
     };
     validate_media_asset_list_request(&request).unwrap();
-    assert_eq!(request.encode_to_vec(), hex::decode("0a0566726f6e7412020103180a2014281932085933567963323979").unwrap());
+    assert_eq!(
+        request.encode_to_vec(),
+        hex::decode("0a0566726f6e7412020103180a2014281932085933567963323979").unwrap()
+    );
 
     let asset = media::MediaAssetRef {
         asset_id: "photo-1".into(),
@@ -51,7 +58,13 @@ fn asset_list_contract_is_paged_and_keeps_thumbnail_relation_explicit() {
     };
     let response = media::MediaAssetListResponse {
         error: media::MediaError::MediaOk as i32,
-        items: vec![media::MediaAssetItem { asset: Some(asset), thumbnail: Some(thumbnail), width: 1920, height: 1080, duration_ms: 0 }],
+        items: vec![media::MediaAssetItem {
+            asset: Some(asset),
+            thumbnail: Some(thumbnail),
+            width: 1920,
+            height: 1080,
+            duration_ms: 0,
+        }],
         next_page_token: "next".into(),
         catalog_revision: 7,
         ..Default::default()
@@ -67,9 +80,8 @@ fn rtsp_start_response_preserves_the_provider_url_byte_for_byte() {
     let response = media::CameraStartRtspResponse {
         error: media::MediaError::MediaOk as i32,
         message: "ready".into(),
-        rtsp_url:
-            "rtsp://viewer:secret@192.168.10.60:8554/front/main?profile=high&token=a%2Fb"
-                .into(),
+        rtsp_url: "rtsp://viewer:secret@192.168.10.60:8554/front/main?profile=high&token=a%2Fb"
+            .into(),
     };
     validate_camera_start_rtsp_response(&response).unwrap();
     assert_eq!(

@@ -47,7 +47,8 @@ Core only:
 ```bash
 git submodule update --init --recursive
 cmake -S . -B build/core -DYUNLINK_BUILD_PROFILES=OFF -DYUNLINK_BUILD_TESTS=ON
-cmake --build build/core -j
+JOBS=$(( $(nproc) > 1 ? $(nproc) - 1 : 1 ))
+cmake --build build/core --parallel "$JOBS"
 ctest --test-dir build/core --output-on-failure
 ```
 
@@ -55,14 +56,16 @@ Core plus the optional Protobuf Profiles:
 
 ```bash
 cmake -S . -B build/profiles -DYUNLINK_BUILD_PROFILES=ON -DYUNLINK_BUILD_TESTS=ON
-cmake --build build/profiles -j
+JOBS=$(( $(nproc) > 1 ? $(nproc) - 1 : 1 ))
+cmake --build build/profiles --parallel "$JOBS"
 ctest --test-dir build/profiles --output-on-failure
 ```
 
 Bindings:
 
 ```bash
-cargo test --workspace --manifest-path bindings/rust/Cargo.toml
+JOBS=$(( $(nproc) > 1 ? $(nproc) - 1 : 1 ))
+cargo test --jobs "$JOBS" --workspace --manifest-path bindings/rust/Cargo.toml
 tools/bindings/run_all.sh
 ```
 

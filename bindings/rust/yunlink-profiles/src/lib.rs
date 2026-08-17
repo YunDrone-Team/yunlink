@@ -36,8 +36,8 @@ pub mod com {
 pub use com::yundrone::sunray::v2 as sunray;
 pub use org::yunlink::media::v1 as media;
 pub use org::yunlink::mobility::v1 as mobility;
-pub use org::yunlink::telemetry::v1 as telemetry;
 pub use org::yunlink::system::v1 as system;
+pub use org::yunlink::telemetry::v1 as telemetry;
 
 pub const MOBILITY_PROFILE_ID: &str = "org.yunlink.mobility";
 pub const TELEMETRY_PROFILE_ID: &str = "org.yunlink.telemetry";
@@ -62,13 +62,13 @@ pub const MAXIMUM_TRUSTED_UNIX_TIME_MS: u64 = 4_102_444_800_000;
 
 mod validation_media;
 mod validation_sunray;
-mod validation_telemetry;
 mod validation_system;
+mod validation_telemetry;
 
 pub use validation_media::*;
 pub use validation_sunray::*;
-pub use validation_telemetry::*;
 pub use validation_system::*;
+pub use validation_telemetry::*;
 
 #[cfg(test)]
 mod tests {

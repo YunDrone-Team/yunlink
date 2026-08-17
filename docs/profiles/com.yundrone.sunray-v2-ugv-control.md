@@ -12,8 +12,7 @@ hardware emergency-stop facility.
 - `com.yundrone.sunray.ugv.hold.v1`
 - `com.yundrone.sunray.ugv.control-state.v1`
 
-New clients use these capabilities as a hard gate and do not use
-`org.yunlink.mobility.goto.v1` for UGV control.
+New clients use these four capabilities as the complete UGV control gate.
 
 ## Move Point
 
