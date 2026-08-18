@@ -210,8 +210,12 @@ int main() {
     flight_control.set_control_state(3);
     flight_control.set_battery_voltage_v(15.2F);
     flight_control.set_battery_percent(88);
+    flight_control.set_controller_type(ACTIVE_CONTROLLER_MPC);
     assert(validate_flight_control_state(flight_control, &validation_error));
     assert_round_trip(flight_control);
+    flight_control.set_controller_type(static_cast<ActiveControllerType>(5));
+    assert(!validate_flight_control_state(flight_control, &validation_error));
+    flight_control.set_controller_type(ACTIVE_CONTROLLER_MPC);
     flight_control.set_battery_percent(101);
     assert(!validate_flight_control_state(flight_control, &validation_error));
 

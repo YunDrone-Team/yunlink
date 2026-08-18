@@ -123,9 +123,14 @@ def test_flight_control_state_round_trips_and_rejects_invalid_battery_values():
         control_state=3,
         battery_voltage_v=15.2,
         battery_percent=88,
+        controller_type=sunray.ACTIVE_CONTROLLER_MPC,
     )
     validate_flight_control_state(state)
     assert sunray.FlightControlState.FromString(state.SerializeToString()) == state
+    state.controller_type = 5
+    with pytest.raises(ValueError, match="flight control state is invalid"):
+        validate_flight_control_state(state)
+    state.controller_type = sunray.ACTIVE_CONTROLLER_MPC
     state.battery_percent = 101
     with pytest.raises(ValueError, match="flight control state is invalid"):
         validate_flight_control_state(state)

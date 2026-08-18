@@ -107,6 +107,13 @@ def validate_flight_control_state(state: sunray.FlightControlState) -> None:
         not math.isfinite(state.battery_voltage_v)
         or state.battery_voltage_v < 0
         or state.battery_percent > 100
+        or state.controller_type not in {
+            sunray.ACTIVE_CONTROLLER_UNKNOWN,
+            sunray.ACTIVE_CONTROLLER_PX4,
+            sunray.ACTIVE_CONTROLLER_SO3,
+            sunray.ACTIVE_CONTROLLER_MPC,
+            sunray.ACTIVE_CONTROLLER_NMPC,
+        }
     ):
         raise ValueError("flight control state is invalid")
 

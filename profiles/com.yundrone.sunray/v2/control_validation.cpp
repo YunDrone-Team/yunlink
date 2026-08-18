@@ -42,7 +42,8 @@ bool valid_continuous_lease(uint32_t lease_ms) {
 
 bool validate_flight_control_state(const FlightControlState& state, std::string* error) {
     if (!std::isfinite(state.battery_voltage_v()) || state.battery_voltage_v() < 0.0F ||
-        state.battery_percent() > 100U) {
+        state.battery_percent() > 100U || state.controller_type() < ACTIVE_CONTROLLER_UNKNOWN ||
+        state.controller_type() > ACTIVE_CONTROLLER_NMPC) {
         return fail(error, "flight control state is invalid");
     }
     return true;
