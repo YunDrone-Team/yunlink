@@ -13,8 +13,9 @@ resolve_clang_format() {
   local candidate
   for candidate in \
     "${CLANG_FORMAT_BIN:-}" \
-    "$(command -v clang-format 2>/dev/null || true)" \
     "$(command -v clang-format-18 2>/dev/null || true)" \
+    "/opt/homebrew/opt/llvm@18/bin/clang-format" \
+    "$(command -v clang-format 2>/dev/null || true)" \
     "$(command -v clang-format-17 2>/dev/null || true)" \
     "$(command -v clang-format-16 2>/dev/null || true)" \
     "/opt/homebrew/opt/llvm/bin/clang-format" \
