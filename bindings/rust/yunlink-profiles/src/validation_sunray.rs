@@ -16,9 +16,10 @@ pub fn validate_flight_control_state(
 ) -> Result<(), &'static str> {
     (state.battery_voltage_v.is_finite()
         && state.battery_voltage_v >= 0.0
-        && state.battery_percent <= 100)
-        .then_some(())
-        .ok_or("flight control state is invalid")
+        && state.battery_percent <= 100
+        && (0..=4).contains(&state.controller_type))
+    .then_some(())
+    .ok_or("flight control state is invalid")
 }
 
 pub fn validate_uav_direct_control_goal(

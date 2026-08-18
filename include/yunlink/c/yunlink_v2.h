@@ -145,13 +145,13 @@ YUNLINK_V2_API uint8_t yunlink_v2_runtime_session_has_profile(const yunlink_v2_r
                                                               uint64_t session_id,
                                                               yunlink_v2_string_view_t profile_id,
                                                               uint16_t major);
-YUNLINK_V2_API uint8_t yunlink_v2_runtime_session_supports_profile(
-    const yunlink_v2_runtime_t* runtime,
-    yunlink_v2_string_view_t peer_id,
-    uint64_t session_id,
-    yunlink_v2_string_view_t profile_id,
-    uint16_t major,
-    uint16_t minimum_minor);
+YUNLINK_V2_API uint8_t
+yunlink_v2_runtime_session_supports_profile(const yunlink_v2_runtime_t* runtime,
+                                            yunlink_v2_string_view_t peer_id,
+                                            uint64_t session_id,
+                                            yunlink_v2_string_view_t profile_id,
+                                            uint16_t major,
+                                            uint16_t minimum_minor);
 
 #ifdef __cplusplus
 }

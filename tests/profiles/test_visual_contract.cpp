@@ -36,7 +36,8 @@ std::vector<uint8_t> hex(const std::string& value) {
         return static_cast<uint8_t>(std::tolower(static_cast<unsigned char>(character)) - 'a' + 10);
     };
     for (size_t index = 0; index < value.size(); index += 2) {
-        bytes.push_back(static_cast<uint8_t>((nibble(value[index]) << 4) | nibble(value[index + 1])));
+        bytes.push_back(
+            static_cast<uint8_t>((nibble(value[index]) << 4) | nibble(value[index + 1])));
     }
     return bytes;
 }

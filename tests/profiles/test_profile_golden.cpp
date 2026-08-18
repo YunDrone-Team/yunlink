@@ -42,8 +42,7 @@ int main() {
     clock_request.set_unix_time_ms(1767225600123ULL);
     clock_request.set_source("sunray-gcs");
     assert(org::yunlink::system::v1::validate_clock_sync_request(clock_request));
-    assert(hex(clock_request.SerializeAsString()) ==
-           "08fbd0eab6b733120a73756e7261792d676373");
+    assert(hex(clock_request.SerializeAsString()) == "08fbd0eab6b733120a73756e7261792d676373");
 
     org::yunlink::system::v1::ClockSyncResponse clock_response;
     clock_response.set_error(org::yunlink::system::v1::CLOCK_SYNC_OK);
@@ -210,8 +209,12 @@ int main() {
     flight_control.set_control_state(3);
     flight_control.set_battery_voltage_v(15.2F);
     flight_control.set_battery_percent(88);
+    flight_control.set_controller_type(ACTIVE_CONTROLLER_MPC);
     assert(validate_flight_control_state(flight_control, &validation_error));
     assert_round_trip(flight_control);
+    flight_control.set_controller_type(static_cast<ActiveControllerType>(5));
+    assert(!validate_flight_control_state(flight_control, &validation_error));
+    flight_control.set_controller_type(ACTIVE_CONTROLLER_MPC);
     flight_control.set_battery_percent(101);
     assert(!validate_flight_control_state(flight_control, &validation_error));
 
@@ -352,8 +355,7 @@ int main() {
     gimbal_angle.set_yaw_rad(1.5707963267948966);
     gimbal_angle.set_pitch_rad(-0.7853981633974483);
     assert(validate_gimbal_angle_goal(gimbal_angle, &validation_error));
-    assert(hex(gimbal_angle.SerializeAsString()) ==
-           "09182d4454fb21f93f11182d4454fb21e9bf");
+    assert(hex(gimbal_angle.SerializeAsString()) == "09182d4454fb21f93f11182d4454fb21e9bf");
 
     GimbalRateGoal gimbal_rate;
     gimbal_rate.set_yaw_control(45);
@@ -382,7 +384,9 @@ int main() {
     second->set_arrival_action(UAV_WAYPOINT_NEXT);
     assert(validate_uav_waypoint_mission_goal(mission, &validation_error));
     assert(hex(mission.SerializeAsString()) ==
-           "0a036d617012310a1b09000000000000f03f11000000000000004019000000000000084011000000000000e03f19000000000000f83f200212260a1b09000000000000f0bf1100000000000000c019000000000000104011000000000000d0bf1a0f79756e6c696e6b2d7461736b2d3432");
+           "0a036d617012310a1b09000000000000f03f11000000000000004019000000000000084011000000000000e"
+           "03f19000000000000f83f200212260a1b09000000000000f0bf1100000000000000c0190000000000001040"
+           "11000000000000d0bf1a0f79756e6c696e6b2d7461736b2d3432");
     assert_round_trip(mission);
 
     UavWaypointMissionGoal empty_mission;

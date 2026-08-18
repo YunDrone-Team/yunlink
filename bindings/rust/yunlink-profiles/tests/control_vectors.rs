@@ -63,12 +63,19 @@ fn flight_control_state_round_trips_and_rejects_invalid_battery_values() {
         battery_voltage_v: 15.2,
         battery_percent: 88,
         manual_override: false,
+        controller_type: sunray::ActiveControllerType::ActiveControllerMpc as i32,
     };
     validate_flight_control_state(&state).unwrap();
     assert_eq!(
         sunray::FlightControlState::decode(state.encode_to_vec().as_slice()).unwrap(),
         state
     );
+    state.controller_type = 5;
+    assert_eq!(
+        validate_flight_control_state(&state),
+        Err("flight control state is invalid")
+    );
+    state.controller_type = sunray::ActiveControllerType::ActiveControllerMpc as i32;
     state.battery_percent = 101;
     assert_eq!(
         validate_flight_control_state(&state),

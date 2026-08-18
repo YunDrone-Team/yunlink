@@ -4,6 +4,14 @@ package com.yundrone.sunray.v2;
 
 import "org.yunlink.mobility/v1/mobility.proto";
 
+enum ActiveControllerType {
+  ACTIVE_CONTROLLER_UNKNOWN = 0;
+  ACTIVE_CONTROLLER_PX4 = 1;
+  ACTIVE_CONTROLLER_SO3 = 2;
+  ACTIVE_CONTROLLER_MPC = 3;
+  ACTIVE_CONTROLLER_NMPC = 4;
+}
+
 // Controller-confirmed flight state. This is deliberately not a PX4/MAVROS
 // mirror: it contains only facts exposed by Sunray's public UAVControlState.
 // Pose and twist are carried exclusively by mobility/Odometry.
@@ -16,6 +24,7 @@ message FlightControlState {
   float battery_voltage_v = 6;
   uint32 battery_percent = 7;
   bool manual_override = 8;
+  ActiveControllerType controller_type = 9;
 }
 
 message OdomStatus {

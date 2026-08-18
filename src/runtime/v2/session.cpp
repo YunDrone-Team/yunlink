@@ -120,10 +120,9 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
                 authorized = envelope.target.matches(
                     impl->config.endpoint_uid, entity_uids, impl->config.group_uids);
                 profile_supported =
-                    envelope.type.is_core() ||
-                    it->second.supports_profile(envelope.type.profile_id,
-                                                envelope.type.major,
-                                                envelope.type.minor);
+                    envelope.type.is_core() || it->second.supports_profile(envelope.type.profile_id,
+                                                                           envelope.type.major,
+                                                                           envelope.type.minor);
             }
         }
         if (!authorized) {
