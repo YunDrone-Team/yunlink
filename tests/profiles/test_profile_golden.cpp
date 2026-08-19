@@ -397,5 +397,53 @@ int main() {
         empty_mission.add_waypoints()->mutable_position_m();
     }
     assert(!validate_uav_waypoint_mission_goal(empty_mission, &validation_error));
+
+    FormationSetRequest ring;
+    ring.set_formation_type(FORMATION_DYNAMIC_RING);
+    ring.set_align_yaw_with_trajectory(true);
+    ring.mutable_ring()->set_radius_m(3.0);
+    ring.mutable_ring()->set_move_speed_mps(-0.5);
+    assert(validate_formation_set_request(ring, &validation_error));
+    assert(hex(ring.SerializeAsString()) ==
+           "081510012a1209000000000000084011000000000000e0bf");
+
+    FormationSetRequest leader;
+    leader.set_formation_type(FORMATION_LEADER);
+    for (int index = 0; index < 25; ++index) {
+        leader.mutable_leader()->add_agent_slots(index < 2 ? index + 1 : 0);
+        leader.mutable_leader()->add_virtual_leader_slots(index == 0);
+    }
+    leader.mutable_leader()->set_spacing_m(2.0);
+    assert(validate_formation_set_request(leader, &validation_error));
+
+    FormationLeaderTargetRequest target;
+    target.set_target_mode(FORMATION_LEADER_TARGET_FIXED_POSE);
+    target.set_source_stamp_ns(42);
+    target.set_frame_id("map");
+    target.mutable_target_pose()->mutable_position()->set_x(1.0);
+    target.mutable_target_pose()->mutable_position()->set_y(2.0);
+    target.mutable_target_pose()->mutable_position()->set_z(3.0);
+    target.mutable_target_pose()->mutable_orientation()->set_w(1.0);
+    assert(validate_formation_leader_target_request(target, &validation_error));
+    assert(hex(target.SerializeAsString()) ==
+           "0801102a1a036d617022280a1b09000000000000f03f110000000000000040190000000000000840"
+           "120921000000000000f03f");
+
+    FormationState formation_state;
+    formation_state.set_source_stamp_ns(42);
+    formation_state.set_frame_id("map");
+    formation_state.set_agent_id("uav1");
+    formation_state.mutable_task_epoch()->set_domain_created_ns(10);
+    formation_state.mutable_task_epoch()->set_origin_agent_id("uav1");
+    formation_state.mutable_task_epoch()->set_origin_sequence(2);
+    formation_state.set_phase(FORMATION_PHASE_ACTIVE);
+    formation_state.set_formation_type(FORMATION_LEADER);
+    formation_state.set_formation_established(true);
+    formation_state.set_virtual_leader_target_valid(true);
+    *formation_state.mutable_virtual_leader_target() = target.target_pose();
+    assert(validate_formation_state(formation_state, &validation_error));
+    assert(hex(formation_state.SerializeAsString()) ==
+           "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000"
+           "000000f03f110000000000000040190000000000000840120921000000000000f03f");
     return 0;
 }

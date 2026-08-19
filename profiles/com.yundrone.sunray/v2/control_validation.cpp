@@ -1,6 +1,7 @@
 #include "com.yundrone.sunray/v2/control_validation.hpp"
 
 #include <cmath>
+#include <unordered_set>
 
 namespace com::yundrone::sunray::v2 {
 namespace {
@@ -18,6 +19,17 @@ bool finite(const org::yunlink::mobility::v1::Vector2& value) {
 
 bool finite(const org::yunlink::mobility::v1::Vector3& value) {
     return std::isfinite(value.x()) && std::isfinite(value.y()) && std::isfinite(value.z());
+}
+
+bool finite(const org::yunlink::mobility::v1::Quaternion& value) {
+    const double norm_squared = value.x() * value.x() + value.y() * value.y() +
+                                value.z() * value.z() + value.w() * value.w();
+    return std::isfinite(norm_squared) && norm_squared > 1e-12;
+}
+
+bool finite(const org::yunlink::mobility::v1::Pose& value) {
+    return value.has_position() && value.has_orientation() && finite(value.position()) &&
+           finite(value.orientation());
 }
 
 bool valid_yaw(const UavDirectControlGoal& goal) {
@@ -257,6 +269,108 @@ bool validate_ugv_planning_state(const UgvPlanningState& state, std::string* err
 bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std::string* error) {
     if (request.frame_id().empty() || !request.has_home_m() || !finite(request.home_m())) {
         return fail(error, "Planner home request is invalid");
+    }
+    return true;
+}
+
+bool validate_formation_set_request(const FormationSetRequest& request, std::string* error) {
+    const auto positive = [](double value) { return std::isfinite(value) && value > 0.0; };
+    const auto moving = [](double value) {
+        return std::isfinite(value) && std::abs(value) > 0.0;
+    };
+    switch (request.formation_type()) {
+    case FORMATION_TAKEOFF:
+    case FORMATION_LAND:
+        return true;
+    case FORMATION_STATIC_LINE:
+        if (!request.has_line() || !positive(request.line().spacing_m()) ||
+            !std::isfinite(request.line().angle_deg())) {
+            return fail(error, "formation line is invalid");
+        }
+        return true;
+    case FORMATION_STATIC_POLYGON:
+        if (!request.has_polygon() || !positive(request.polygon().side_length_m())) {
+            return fail(error, "formation polygon is invalid");
+        }
+        return true;
+    case FORMATION_DYNAMIC_POLYGON:
+        if (!request.has_polygon() || !positive(request.polygon().side_length_m()) ||
+            !moving(request.polygon().move_speed_mps())) {
+            return fail(error, "dynamic formation polygon is invalid");
+        }
+        return true;
+    case FORMATION_DYNAMIC_RING:
+        if (!request.has_ring() || !positive(request.ring().radius_m()) ||
+            !moving(request.ring().move_speed_mps())) {
+            return fail(error, "dynamic formation ring is invalid");
+        }
+        return true;
+    case FORMATION_DYNAMIC_LEMNISCATE:
+        if (!request.has_lemniscate() || !positive(request.lemniscate().x_scale_m()) ||
+            !positive(request.lemniscate().y_scale_m()) ||
+            !moving(request.lemniscate().move_speed_mps())) {
+            return fail(error, "dynamic formation lemniscate is invalid");
+        }
+        return true;
+    case FORMATION_LEADER: {
+        if (!request.has_leader() || request.leader().agent_slots_size() != 25 ||
+            request.leader().virtual_leader_slots_size() != 25 ||
+            !positive(request.leader().spacing_m())) {
+            return fail(error, "formation leader layout is invalid");
+        }
+        std::unordered_set<uint32_t> agents;
+        for (const auto slot : request.leader().agent_slots()) {
+            if (slot > 255 || (slot != 0 && !agents.insert(slot).second)) {
+                return fail(error, "formation leader agent slots are invalid");
+            }
+        }
+        if (agents.empty()) {
+            return fail(error, "formation leader has no agent slots");
+        }
+        int leader_slots = 0;
+        for (const auto slot : request.leader().virtual_leader_slots()) {
+            leader_slots += slot ? 1 : 0;
+        }
+        return leader_slots == 1 || fail(error, "formation leader target slot is invalid");
+    }
+    case FORMATION_UNKNOWN:
+        return fail(error, "formation type is invalid");
+    default:
+        return fail(error, "formation type is invalid");
+    }
+}
+
+bool validate_formation_leader_target_request(const FormationLeaderTargetRequest& request,
+                                              std::string* error) {
+    if (request.target_mode() == FORMATION_LEADER_TARGET_FIXED_POSE) {
+        return !request.frame_id().empty() && request.has_target_pose() &&
+                       finite(request.target_pose())
+                   ? true
+                   : fail(error, "formation leader fixed pose is invalid");
+    }
+    if (request.target_mode() == FORMATION_LEADER_TARGET_ODOM_TOPIC) {
+        return request.odom_topic().size() > 1 && request.odom_topic().front() == '/'
+                   ? true
+                   : fail(error, "formation leader odometry topic is invalid");
+    }
+    return fail(error, "formation leader target mode is invalid");
+}
+
+bool validate_formation_state(const FormationState& state, std::string* error) {
+    const bool valid_type = state.formation_type() == FORMATION_UNKNOWN ||
+                            state.formation_type() == FORMATION_TAKEOFF ||
+                            state.formation_type() == FORMATION_LAND ||
+                            state.formation_type() == FORMATION_STATIC_LINE ||
+                            state.formation_type() == FORMATION_STATIC_POLYGON ||
+                            state.formation_type() == FORMATION_LEADER ||
+                            state.formation_type() == FORMATION_DYNAMIC_POLYGON ||
+                            state.formation_type() == FORMATION_DYNAMIC_RING ||
+                            state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE;
+    if (state.phase() < FORMATION_PHASE_IDLE || state.phase() > FORMATION_PHASE_ERROR ||
+        !valid_type || (state.virtual_leader_target_valid() &&
+                        (!state.has_virtual_leader_target() ||
+                         !finite(state.virtual_leader_target())))) {
+        return fail(error, "formation state is invalid");
     }
     return true;
 }

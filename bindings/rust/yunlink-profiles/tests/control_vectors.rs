@@ -1,9 +1,10 @@
 use prost::Message;
 use yunlink_profiles::{
     mobility, sunray, validate_emergency_kill_goal, validate_flight_control_state,
-    validate_gimbal_angle_goal, validate_gimbal_rate_goal, validate_gimbal_zoom_absolute_goal,
-    validate_land_goal, validate_planner_set_home_request, validate_takeoff_goal,
-    validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
+    validate_formation_leader_target_request, validate_formation_set_request,
+    validate_formation_state, validate_gimbal_angle_goal, validate_gimbal_rate_goal,
+    validate_gimbal_zoom_absolute_goal, validate_land_goal, validate_planner_set_home_request,
+    validate_takeoff_goal, validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
     validate_ugv_move_point_goal, validate_ugv_velocity_goal,
 };
 
@@ -349,4 +350,131 @@ fn ugv_v25_messages_match_golden_vectors_and_validate() {
         "082a28014a04686f6c6450017801"
     );
     assert!(sunray::UgvHoldGoal {}.encode_to_vec().is_empty());
+}
+
+#[test]
+fn formation_v27_messages_match_golden_vectors_and_validate() {
+    let ring = sunray::FormationSetRequest {
+        formation_type: 21,
+        align_yaw_with_trajectory: true,
+        ring: Some(sunray::FormationRing {
+            radius_m: 3.0,
+            move_speed_mps: -0.5,
+        }),
+        ..Default::default()
+    };
+    validate_formation_set_request(&ring).unwrap();
+    assert_eq!(
+        hex::encode(ring.encode_to_vec()),
+        "081510012a1209000000000000084011000000000000e0bf"
+    );
+
+    for request in [
+        sunray::FormationSetRequest {
+            formation_type: 1,
+            ..Default::default()
+        },
+        sunray::FormationSetRequest {
+            formation_type: 2,
+            ..Default::default()
+        },
+        sunray::FormationSetRequest {
+            formation_type: 10,
+            line: Some(sunray::FormationLine {
+                spacing_m: 2.0,
+                angle_deg: 90.0,
+            }),
+            ..Default::default()
+        },
+        sunray::FormationSetRequest {
+            formation_type: 11,
+            polygon: Some(sunray::FormationPolygon {
+                side_length_m: 2.0,
+                move_speed_mps: 0.0,
+            }),
+            ..Default::default()
+        },
+        sunray::FormationSetRequest {
+            formation_type: 20,
+            polygon: Some(sunray::FormationPolygon {
+                side_length_m: 2.0,
+                move_speed_mps: 0.5,
+            }),
+            ..Default::default()
+        },
+        sunray::FormationSetRequest {
+            formation_type: 22,
+            lemniscate: Some(sunray::FormationLemniscate {
+                x_scale_m: 3.0,
+                y_scale_m: 2.0,
+                move_speed_mps: 0.5,
+            }),
+            ..Default::default()
+        },
+    ] {
+        validate_formation_set_request(&request).unwrap();
+    }
+
+    let leader = sunray::FormationSetRequest {
+        formation_type: 12,
+        leader: Some(sunray::FormationLeader {
+            agent_slots: [1, 2].into_iter().chain([0; 23]).collect(),
+            spacing_m: 2.0,
+            virtual_leader_slots: [true].into_iter().chain([false; 24]).collect(),
+        }),
+        ..Default::default()
+    };
+    validate_formation_set_request(&leader).unwrap();
+
+    let pose = mobility::Pose {
+        position: Some(vector3(1.0, 2.0, 3.0)),
+        orientation: Some(mobility::Quaternion {
+            w: 1.0,
+            ..Default::default()
+        }),
+    };
+    let target = sunray::FormationLeaderTargetRequest {
+        target_mode: 1,
+        source_stamp_ns: 42,
+        frame_id: "map".into(),
+        target_pose: Some(pose.clone()),
+        odom_topic: String::new(),
+    };
+    validate_formation_leader_target_request(&target).unwrap();
+    assert_eq!(
+        hex::encode(target.encode_to_vec()),
+        "0801102a1a036d617022280a1b09000000000000f03f110000000000000040190000000000000840120921000000000000f03f"
+    );
+    let topic = sunray::FormationLeaderTargetRequest {
+        target_mode: 2,
+        odom_topic: "/tracked/leader/odom".into(),
+        ..Default::default()
+    };
+    validate_formation_leader_target_request(&topic).unwrap();
+
+    let state = sunray::FormationState {
+        source_stamp_ns: 42,
+        frame_id: "map".into(),
+        agent_id: "uav1".into(),
+        task_epoch: Some(sunray::FormationTaskEpoch {
+            domain_created_ns: 10,
+            origin_agent_id: "uav1".into(),
+            origin_sequence: 2,
+        }),
+        phase: 2,
+        formation_type: 12,
+        formation_established: true,
+        virtual_leader_target_valid: true,
+        virtual_leader_target: Some(pose),
+        ..Default::default()
+    };
+    validate_formation_state(&state).unwrap();
+    assert_eq!(
+        hex::encode(state.encode_to_vec()),
+        "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000000000f03f110000000000000040190000000000000840120921000000000000f03f"
+    );
+
+    let mut invalid = ring;
+    invalid.ring.as_mut().unwrap().move_speed_mps = 0.0;
+    assert!(validate_formation_set_request(&invalid).is_err());
 }

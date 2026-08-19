@@ -401,11 +401,119 @@ message VehicleEvent {
 
 message EmptyGoal {}
 
-message FormationTaskGoal {
-  string group_uid = 1;
-  uint32 formation_shape = 2;
-  double spacing_m = 3;
-  string label = 4;
+enum FormationType {
+  FORMATION_UNKNOWN = 0;
+  FORMATION_TAKEOFF = 1;
+  FORMATION_LAND = 2;
+  FORMATION_STATIC_LINE = 10;
+  FORMATION_STATIC_POLYGON = 11;
+  FORMATION_LEADER = 12;
+  FORMATION_DYNAMIC_POLYGON = 20;
+  FORMATION_DYNAMIC_RING = 21;
+  FORMATION_DYNAMIC_LEMNISCATE = 22;
+}
+
+enum FormationPhase {
+  FORMATION_PHASE_IDLE = 0;
+  FORMATION_PHASE_TRANSITIONING = 1;
+  FORMATION_PHASE_ACTIVE = 2;
+  FORMATION_PHASE_DYNAMIC_STOPPED = 3;
+  FORMATION_PHASE_ERROR = 4;
+}
+
+enum FormationLeaderTargetMode {
+  FORMATION_LEADER_TARGET_UNSPECIFIED = 0;
+  FORMATION_LEADER_TARGET_FIXED_POSE = 1;
+  FORMATION_LEADER_TARGET_ODOM_TOPIC = 2;
+}
+
+message FormationTaskEpoch {
+  uint64 domain_created_ns = 1;
+  string origin_agent_id = 2;
+  uint64 origin_sequence = 3;
+}
+
+message FormationLine {
+  double spacing_m = 1;
+  double angle_deg = 2;
+}
+
+message FormationPolygon {
+  double side_length_m = 1;
+  double move_speed_mps = 2;
+}
+
+message FormationRing {
+  double radius_m = 1;
+  double move_speed_mps = 2;
+}
+
+message FormationLemniscate {
+  double x_scale_m = 1;
+  double y_scale_m = 2;
+  double move_speed_mps = 3;
+}
+
+message FormationLeader {
+  repeated uint32 agent_slots = 1;
+  double spacing_m = 2;
+  repeated bool virtual_leader_slots = 3;
+}
+
+message FormationSetRequest {
+  FormationType formation_type = 1;
+  bool align_yaw_with_trajectory = 2;
+  FormationLine line = 3;
+  FormationPolygon polygon = 4;
+  FormationRing ring = 5;
+  FormationLemniscate lemniscate = 6;
+  FormationLeader leader = 7;
+}
+
+message FormationSetResponse {
+  bool success = 1;
+  uint32 error_code = 2;
+  FormationTaskEpoch epoch = 3;
+  string message = 4;
+}
+
+message FormationLeaderTargetRequest {
+  FormationLeaderTargetMode target_mode = 1;
+  uint64 source_stamp_ns = 2;
+  string frame_id = 3;
+  org.yunlink.mobility.v1.Pose target_pose = 4;
+  string odom_topic = 5;
+}
+
+message FormationLeaderTargetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message FormationStopDynamicRequest {}
+
+message FormationStopDynamicResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message FormationState {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string agent_id = 3;
+  FormationTaskEpoch task_epoch = 4;
+  string task_payload_digest = 5;
+  uint64 activation_time_domain_ns = 6;
+  FormationPhase phase = 7;
+  FormationType formation_type = 8;
+  bool formation_established = 9;
+  bool dynamic_running = 10;
+  uint64 dynamic_start_time_domain_ns = 11;
+  bool virtual_leader_target_valid = 12;
+  org.yunlink.mobility.v1.Pose virtual_leader_target = 13;
+  string formation_layout_key = 14;
+  bool formation_layout_valid = 15;
+  string last_error = 16;
 }
 
 // These values mirror the stable ROS FeatureSummary contract. This v2 profile

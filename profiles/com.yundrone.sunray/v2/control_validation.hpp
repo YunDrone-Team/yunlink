@@ -30,6 +30,11 @@ bool validate_ugv_waypoint_mission_goal(const UgvWaypointMissionGoal& goal,
 bool validate_ugv_planning_state(const UgvPlanningState& state, std::string* error = nullptr);
 bool validate_planner_set_home_request(const PlannerSetHomeRequest& request,
                                        std::string* error = nullptr);
+bool validate_formation_set_request(const FormationSetRequest& request,
+                                    std::string* error = nullptr);
+bool validate_formation_leader_target_request(const FormationLeaderTargetRequest& request,
+                                              std::string* error = nullptr);
+bool validate_formation_state(const FormationState& state, std::string* error = nullptr);
 bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error = nullptr);
 bool validate_gimbal_rate_goal(const GimbalRateGoal& goal, std::string* error = nullptr);
 bool validate_gimbal_zoom_absolute_goal(const GimbalZoomAbsoluteGoal& goal,
