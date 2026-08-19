@@ -203,6 +203,57 @@ bool validate_ugv_velocity_goal(const UgvVelocityGoal& goal, std::string* error)
     return fail(error, "UGV velocity target is invalid");
 }
 
+bool validate_ugv_nav_goal(const UgvNavGoal& goal, std::string* error) {
+    if (goal.frame_id().empty() || !goal.has_position_m() || !finite(goal.position_m()) ||
+        !std::isfinite(goal.yaw_rad())) {
+        return fail(error, "UGV navigation goal is invalid");
+    }
+    return true;
+}
+
+bool validate_ugv_waypoint_mission_goal(const UgvWaypointMissionGoal& goal,
+                                        std::string* error) {
+    if (goal.frame_id().empty()) {
+        return fail(error, "UGV waypoint frame is missing");
+    }
+    if (goal.task_name().empty() || goal.task_name().size() > kMaxWaypointTaskNameBytes) {
+        return fail(error, "UGV waypoint task name is invalid");
+    }
+    if (goal.completion_action() != UGV_MISSION_HOLD &&
+        goal.completion_action() != UGV_MISSION_RETURN_HOME_AND_HOLD) {
+        return fail(error, "UGV waypoint completion action is invalid");
+    }
+    if (goal.waypoints_size() == 0 || goal.waypoints_size() > kMaxWaypointCount) {
+        return fail(error, "UGV waypoint count is invalid");
+    }
+    for (const auto& waypoint : goal.waypoints()) {
+        if (!waypoint.has_position_m() || !finite(waypoint.position_m()) ||
+            !std::isfinite(waypoint.yaw_rad()) || !std::isfinite(waypoint.hold_time_s()) ||
+            waypoint.hold_time_s() < 0.0 ||
+            (waypoint.arrival_action() != UGV_WAYPOINT_NEXT &&
+             waypoint.arrival_action() != UGV_WAYPOINT_HOLD_CURRENT_YAW &&
+             waypoint.arrival_action() != UGV_WAYPOINT_HOLD_SET_YAW)) {
+            return fail(error, "UGV waypoint is invalid");
+        }
+    }
+    return true;
+}
+
+bool validate_ugv_planning_state(const UgvPlanningState& state, std::string* error) {
+    if (state.main_state() > 3 || state.task_state() > 5 ||
+        state.current_waypoint_index() > state.total_waypoints() ||
+        !std::isfinite(state.distance_to_goal_m()) || state.distance_to_goal_m() < 0.0 ||
+        !std::isfinite(state.hold_remaining_s()) || state.hold_remaining_s() < 0.0 ||
+        (state.has_current_waypoint() &&
+         (!state.current_waypoint().has_position_m() ||
+          !finite(state.current_waypoint().position_m()) ||
+          !std::isfinite(state.current_waypoint().yaw_rad()) ||
+          !std::isfinite(state.current_waypoint().hold_time_s())))) {
+        return fail(error, "UGV planning state is invalid");
+    }
+    return true;
+}
+
 bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std::string* error) {
     if (request.frame_id().empty() || !request.has_home_m() || !finite(request.home_m())) {
         return fail(error, "Planner home request is invalid");

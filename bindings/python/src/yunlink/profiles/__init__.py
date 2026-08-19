@@ -36,7 +36,10 @@ from .validation import (
     validate_uav_nav_goal,
     validate_uav_waypoint_mission_goal,
     validate_ugv_move_point_goal,
+    validate_ugv_nav_goal,
+    validate_ugv_planning_state,
     validate_ugv_velocity_goal,
+    validate_ugv_waypoint_mission_goal,
 )
 
 __all__ = [
@@ -74,5 +77,8 @@ __all__ = [
     "validate_uav_nav_goal",
     "validate_uav_waypoint_mission_goal",
     "validate_ugv_move_point_goal",
+    "validate_ugv_nav_goal",
+    "validate_ugv_planning_state",
     "validate_ugv_velocity_goal",
+    "validate_ugv_waypoint_mission_goal",
 ]

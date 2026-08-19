@@ -308,6 +308,53 @@ message UgvVelocityGoal {
 
 message UgvHoldGoal {}
 
+enum UgvWaypointArrivalAction {
+  UGV_WAYPOINT_NEXT = 0;
+  UGV_WAYPOINT_HOLD_CURRENT_YAW = 1;
+  UGV_WAYPOINT_HOLD_SET_YAW = 2;
+}
+
+enum UgvMissionCompletionAction {
+  UGV_MISSION_HOLD = 0;
+  UGV_MISSION_RETURN_HOME_AND_HOLD = 1;
+}
+
+message UgvNavGoal {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector2 position_m = 2;
+  double yaw_rad = 3;
+}
+
+message UgvWaypoint {
+  org.yunlink.mobility.v1.Vector2 position_m = 1;
+  double yaw_rad = 2;
+  double hold_time_s = 3;
+  UgvWaypointArrivalAction arrival_action = 4;
+}
+
+message UgvWaypointMissionGoal {
+  string task_name = 1;
+  string frame_id = 2;
+  repeated UgvWaypoint waypoints = 3;
+  UgvMissionCompletionAction completion_action = 4;
+}
+
+message UgvReturnHomeGoal {}
+
+message UgvPlanningState {
+  uint64 source_stamp_ns = 1;
+  uint32 main_state = 2;
+  uint32 task_state = 3;
+  string task_name = 4;
+  uint32 current_waypoint_index = 5;
+  uint32 total_waypoints = 6;
+  UgvWaypoint current_waypoint = 7;
+  double distance_to_goal_m = 8;
+  double hold_remaining_s = 9;
+  string failure_reason = 10;
+  string planner_frame_id = 11;
+}
+
 message GimbalParams {
   reserved 1, 6;
   double roll_rad = 2;

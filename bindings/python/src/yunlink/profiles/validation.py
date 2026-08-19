@@ -295,6 +295,65 @@ def validate_ugv_velocity_goal(goal: sunray.UgvVelocityGoal) -> None:
         raise ValueError("UGV velocity target is invalid")
 
 
+def validate_ugv_nav_goal(goal: sunray.UgvNavGoal) -> None:
+    if not (
+        goal.frame_id
+        and goal.HasField("position_m")
+        and _finite_vector(goal.position_m)
+        and math.isfinite(goal.yaw_rad)
+    ):
+        raise ValueError("UGV navigation goal is invalid")
+
+
+def validate_ugv_waypoint_mission_goal(goal: sunray.UgvWaypointMissionGoal) -> None:
+    if not goal.frame_id:
+        raise ValueError("UGV waypoint frame is missing")
+    if not goal.task_name or len(goal.task_name.encode()) > 96:
+        raise ValueError("UGV waypoint task name is invalid")
+    if goal.completion_action not in {
+        sunray.UGV_MISSION_HOLD,
+        sunray.UGV_MISSION_RETURN_HOME_AND_HOLD,
+    }:
+        raise ValueError("UGV waypoint completion action is invalid")
+    if not 1 <= len(goal.waypoints) <= 256:
+        raise ValueError("UGV waypoint count is invalid")
+    for waypoint in goal.waypoints:
+        if not (
+            waypoint.HasField("position_m")
+            and _finite_vector(waypoint.position_m)
+            and math.isfinite(waypoint.yaw_rad)
+            and math.isfinite(waypoint.hold_time_s)
+            and waypoint.hold_time_s >= 0
+            and waypoint.arrival_action
+            in {
+                sunray.UGV_WAYPOINT_NEXT,
+                sunray.UGV_WAYPOINT_HOLD_CURRENT_YAW,
+                sunray.UGV_WAYPOINT_HOLD_SET_YAW,
+            }
+        ):
+            raise ValueError("UGV waypoint is invalid")
+
+
+def validate_ugv_planning_state(state: sunray.UgvPlanningState) -> None:
+    current_valid = not state.HasField("current_waypoint") or (
+        state.current_waypoint.HasField("position_m")
+        and _finite_vector(state.current_waypoint.position_m)
+        and math.isfinite(state.current_waypoint.yaw_rad)
+        and math.isfinite(state.current_waypoint.hold_time_s)
+    )
+    if not (
+        0 <= state.main_state <= 3
+        and 0 <= state.task_state <= 5
+        and state.current_waypoint_index <= state.total_waypoints
+        and math.isfinite(state.distance_to_goal_m)
+        and state.distance_to_goal_m >= 0
+        and math.isfinite(state.hold_remaining_s)
+        and state.hold_remaining_s >= 0
+        and current_valid
+    ):
+        raise ValueError("UGV planning state is invalid")
+
+
 def validate_gimbal_angle_goal(goal: sunray.GimbalAngleGoal) -> None:
     if not math.isfinite(goal.yaw_rad) or not math.isfinite(goal.pitch_rad):
         raise ValueError("gimbal angle goal is invalid")

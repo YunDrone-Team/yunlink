@@ -1,6 +1,6 @@
 # Sunray UGV Single-Vehicle Control
 
-`com.yundrone.sunray@2.5` defines the typed payloads used to control one UGV.
+`com.yundrone.sunray@2.6` defines the typed payloads used to control one UGV.
 The actions target an attached UGV entity and require
 `org.yunlink.mobility` Authority. They do not represent swarm control or a
 hardware emergency-stop facility.

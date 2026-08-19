@@ -198,6 +198,59 @@ pub fn validate_ugv_velocity_goal(goal: &sunray::UgvVelocityGoal) -> Result<(), 
     }
 }
 
+pub fn validate_ugv_nav_goal(goal: &sunray::UgvNavGoal) -> Result<(), &'static str> {
+    (!goal.frame_id.is_empty()
+        && goal.position_m.as_ref().is_some_and(finite_vector2)
+        && goal.yaw_rad.is_finite())
+    .then_some(())
+    .ok_or("UGV navigation goal is invalid")
+}
+
+pub fn validate_ugv_waypoint_mission_goal(
+    goal: &sunray::UgvWaypointMissionGoal,
+) -> Result<(), &'static str> {
+    if goal.frame_id.is_empty() {
+        return Err("UGV waypoint frame is missing");
+    }
+    if goal.task_name.is_empty() || goal.task_name.len() > MAX_WAYPOINT_TASK_NAME_BYTES {
+        return Err("UGV waypoint task name is invalid");
+    }
+    if !matches!(goal.completion_action, 0 | 1) {
+        return Err("UGV waypoint completion action is invalid");
+    }
+    if goal.waypoints.is_empty() || goal.waypoints.len() > MAX_WAYPOINT_COUNT {
+        return Err("UGV waypoint count is invalid");
+    }
+    if goal.waypoints.iter().any(|waypoint| {
+        !waypoint.position_m.as_ref().is_some_and(finite_vector2)
+            || !waypoint.yaw_rad.is_finite()
+            || !waypoint.hold_time_s.is_finite()
+            || waypoint.hold_time_s < 0.0
+            || !matches!(waypoint.arrival_action, 0..=2)
+    }) {
+        return Err("UGV waypoint is invalid");
+    }
+    Ok(())
+}
+
+pub fn validate_ugv_planning_state(state: &sunray::UgvPlanningState) -> Result<(), &'static str> {
+    let current_valid = state.current_waypoint.as_ref().is_none_or(|waypoint| {
+        waypoint.position_m.as_ref().is_some_and(finite_vector2)
+            && waypoint.yaw_rad.is_finite()
+            && waypoint.hold_time_s.is_finite()
+    });
+    (state.main_state <= 3
+        && state.task_state <= 5
+        && state.current_waypoint_index <= state.total_waypoints
+        && state.distance_to_goal_m.is_finite()
+        && state.distance_to_goal_m >= 0.0
+        && state.hold_remaining_s.is_finite()
+        && state.hold_remaining_s >= 0.0
+        && current_valid)
+        .then_some(())
+        .ok_or("UGV planning state is invalid")
+}
+
 pub fn validate_planner_set_home_request(
     request: &sunray::PlannerSetHomeRequest,
 ) -> Result<(), &'static str> {

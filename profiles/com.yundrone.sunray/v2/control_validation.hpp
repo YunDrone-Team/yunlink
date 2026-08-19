@@ -24,6 +24,10 @@ bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,
 bool validate_uav_nav_goal(const UavNavGoal& goal, std::string* error = nullptr);
 bool validate_ugv_move_point_goal(const UgvMovePointGoal& goal, std::string* error = nullptr);
 bool validate_ugv_velocity_goal(const UgvVelocityGoal& goal, std::string* error = nullptr);
+bool validate_ugv_nav_goal(const UgvNavGoal& goal, std::string* error = nullptr);
+bool validate_ugv_waypoint_mission_goal(const UgvWaypointMissionGoal& goal,
+                                        std::string* error = nullptr);
+bool validate_ugv_planning_state(const UgvPlanningState& state, std::string* error = nullptr);
 bool validate_planner_set_home_request(const PlannerSetHomeRequest& request,
                                        std::string* error = nullptr);
 bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error = nullptr);
