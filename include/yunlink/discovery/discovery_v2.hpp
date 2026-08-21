@@ -7,6 +7,7 @@
 #define YUNLINK_DISCOVERY_DISCOVERY_V2_HPP
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,9 +18,11 @@ namespace yunlink::v2 {
 
 constexpr uint16_t kDefaultDiscoveryPort = 9697;
 // Discovery packets are independently versioned from the Wire schema. Keep v2
-// for legacy clients; v3 adds the authoritative per-entity Agent ID in replies.
+// for legacy clients; v3 adds the authoritative per-entity Agent ID and v4 adds
+// bounded extension attributes without changing the packet for every new field.
 constexpr uint8_t kDiscoveryFormatV2 = 2;
 constexpr uint8_t kDiscoveryFormatV3 = 3;
+constexpr uint8_t kDiscoveryFormatV4 = 4;
 
 struct DiscoveryQuery {
     uint64_t nonce = 0;
@@ -34,6 +37,9 @@ struct DiscoveryEntitySummary {
     Availability availability = Availability::kUnknown;
     // Zero means an older discovery-v2 reply did not carry this field.
     uint32_t agent_id = 0;
+    // Application-defined, non-secret discovery metadata. Keys are encoded in
+    // lexical order so identical advertisements produce identical packets.
+    std::map<std::string, std::string> attributes;
 };
 
 struct DiscoveryAdvertisement {
@@ -42,6 +48,7 @@ struct DiscoveryAdvertisement {
     uint16_t tcp_listen_port = 9696;
     std::vector<std::string> capabilities;
     std::vector<ProfileDescriptor> profiles;
+    std::map<std::string, std::string> attributes;
     std::vector<DiscoveryEntitySummary> entities;
     uint64_t started_at_ms = 0;
     uint64_t sequence = 0;

@@ -27,8 +27,19 @@ int main() {
     advertisement.capabilities = {"stream", "action"};
     advertisement.profiles = {{"org.yunlink.mobility", 1, 0, "mobility-v1"},
                               {"com.example.demo", 2, 3, "demo-v2.3"}};
-    advertisement.entities = {{"entity:uav:1", "uav", "UAV 1", Availability::kOnline, 1},
-                              {"entity:ugv:27", "ugv", "UGV 27", Availability::kDegraded, 27}};
+    advertisement.attributes = {{"site", "lab-a"}};
+    advertisement.entities = {{"entity:uav:1",
+                               "uav",
+                               "UAV 1",
+                               Availability::kOnline,
+                               1,
+                               {{"hardware_id", "SIM-UAV-001"}, {"model", "sim"}}},
+                              {"entity:ugv:27",
+                               "ugv",
+                               "UGV 27",
+                               Availability::kDegraded,
+                               27,
+                               {{"hardware_id", "SIM-UGV-027"}}}};
     advertisement.started_at_ms = 1000;
     advertisement.sequence = 7;
 
@@ -43,6 +54,8 @@ int main() {
     // Legacy discovery-v2 remains decodable but intentionally cannot carry Agent IDs.
     assert(decoded_reply.entities.front().agent_id == 0);
     assert(decoded_reply.entities.back().agent_id == 0);
+    assert(decoded_reply.attributes.empty());
+    assert(decoded_reply.entities.front().attributes.empty());
     assert(!decode_discovery_reply(encoded_reply, secret, v2_query.nonce + 1, &decoded_reply));
 
     DiscoveryQuery v3_query{43, 250, kDiscoveryFormatV3};
@@ -58,6 +71,26 @@ int main() {
     assert(decoded_reply.entities.size() == 2);
     assert(decoded_reply.entities.front().agent_id == 1);
     assert(decoded_reply.entities.back().agent_id == 27);
+    assert(decoded_reply.attributes.empty());
+    assert(decoded_reply.entities.front().attributes.empty());
+
+    DiscoveryQuery v4_query{44, 250, kDiscoveryFormatV4};
+    const Bytes encoded_v4_query = encode_discovery_query(v4_query, secret);
+    assert(encoded_v4_query.size() == 22);
+    assert(encoded_v4_query[3] == '4');
+    assert(decode_discovery_query(encoded_v4_query, secret, &decoded_query));
+    assert(decoded_query.format_version == kDiscoveryFormatV4);
+    const Bytes v4_reply = encode_discovery_reply(v4_query, advertisement, secret);
+    assert(!v4_reply.empty());
+    assert(v4_reply[3] == '4');
+    assert(decode_discovery_reply(v4_reply, secret, v4_query.nonce, &decoded_reply));
+    assert(decoded_reply.attributes == advertisement.attributes);
+    assert(decoded_reply.entities.front().attributes == advertisement.entities.front().attributes);
+    assert(decoded_reply.entities.back().attributes == advertisement.entities.back().attributes);
+
+    DiscoveryAdvertisement invalid_attributes = advertisement;
+    invalid_attributes.attributes[""] = "invalid";
+    assert(encode_discovery_reply(v4_query, invalid_attributes, secret).empty());
 
     Bytes v1 = encoded_reply;
     v1[3] = '1';
@@ -70,6 +103,10 @@ int main() {
     Bytes truncated_v3 = v3_reply;
     truncated_v3.pop_back();
     assert(!decode_discovery_reply(truncated_v3, secret, v3_query.nonce, &decoded_reply));
+
+    Bytes truncated_v4 = v4_reply;
+    truncated_v4.pop_back();
+    assert(!decode_discovery_reply(truncated_v4, secret, v4_query.nonce, &decoded_reply));
 
     std::cout << "test_discovery_v2 passed\n";
     return 0;

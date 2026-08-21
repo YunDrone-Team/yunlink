@@ -7,9 +7,14 @@ namespace {
 
 constexpr std::array<uint8_t, 4> kQueryMagicV2{{'Y', 'L', 'Q', '2'}};
 constexpr std::array<uint8_t, 4> kQueryMagicV3{{'Y', 'L', 'Q', '3'}};
+constexpr std::array<uint8_t, 4> kQueryMagicV4{{'Y', 'L', 'Q', '4'}};
 constexpr std::array<uint8_t, 4> kReplyMagicV2{{'Y', 'L', 'R', '2'}};
 constexpr std::array<uint8_t, 4> kReplyMagicV3{{'Y', 'L', 'R', '3'}};
+constexpr std::array<uint8_t, 4> kReplyMagicV4{{'Y', 'L', 'R', '4'}};
 constexpr size_t kMaxDiscoveryBytes = 8192;
+constexpr size_t kMaxAttributeCount = 32;
+constexpr size_t kMaxAttributeKeyBytes = 64;
+constexpr size_t kMaxAttributeValueBytes = 512;
 constexpr uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr uint64_t kFnvPrime = 1099511628211ULL;
 
@@ -54,6 +59,23 @@ class Writer {
         u16(static_cast<uint16_t>(value.size()));
         value_.insert(value_.end(), value.begin(), value.end());
         return true;
+    }
+    bool attributes(const std::map<std::string, std::string>& values) {
+        if (values.size() > kMaxAttributeCount) {
+            valid_ = false;
+            return false;
+        }
+        u8(static_cast<uint8_t>(values.size()));
+        for (const auto& [key, value] : values) {
+            if (key.empty() || key.size() > kMaxAttributeKeyBytes ||
+                value.size() > kMaxAttributeValueBytes) {
+                valid_ = false;
+                return false;
+            }
+            text(key);
+            text(value);
+        }
+        return valid_;
     }
     Bytes finish(const std::string& secret) {
         if (!valid_ || value_.size() + sizeof(uint64_t) > kMaxDiscoveryBytes) {
@@ -124,6 +146,23 @@ class Reader {
         cursor_ += size;
         return true;
     }
+    bool attributes(std::map<std::string, std::string>* values) {
+        uint8_t count = 0;
+        if (values == nullptr || !u8(&count) || count > kMaxAttributeCount) {
+            return false;
+        }
+        values->clear();
+        for (uint8_t index = 0; index < count; ++index) {
+            std::string key;
+            std::string value;
+            if (!text(&key) || key.empty() || key.size() > kMaxAttributeKeyBytes || !text(&value) ||
+                value.size() > kMaxAttributeValueBytes ||
+                !values->emplace(std::move(key), std::move(value)).second) {
+                return false;
+            }
+        }
+        return true;
+    }
     bool done() const {
         return cursor_ == payload_size_;
     }
@@ -152,13 +191,21 @@ bool valid_advertisement(const DiscoveryAdvertisement& value) {
         value.entities.size() > UINT8_MAX) {
         return false;
     }
-    return std::all_of(value.profiles.begin(),
+    const auto valid_attributes = [](const auto& attributes) {
+        return attributes.size() <= kMaxAttributeCount &&
+               std::all_of(attributes.begin(), attributes.end(), [](const auto& entry) {
+                   return !entry.first.empty() && entry.first.size() <= kMaxAttributeKeyBytes &&
+                          entry.second.size() <= kMaxAttributeValueBytes;
+               });
+    };
+    return valid_attributes(value.attributes) &&
+           std::all_of(value.profiles.begin(),
                        value.profiles.end(),
                        [](const auto& profile) {
                            return valid_profile_id(profile.profile_id) && profile.major > 0;
                        }) &&
-           std::all_of(value.entities.begin(), value.entities.end(), [](const auto& entity) {
-               return valid_uid(entity.entity_uid);
+           std::all_of(value.entities.begin(), value.entities.end(), [&](const auto& entity) {
+               return valid_uid(entity.entity_uid) && valid_attributes(entity.attributes);
            });
 }
 
@@ -170,12 +217,14 @@ bool discovery_advertisement_is_valid(const DiscoveryAdvertisement& value) {
 
 Bytes encode_discovery_query(const DiscoveryQuery& query, const std::string& shared_secret) {
     if (query.nonce == 0 || query.response_window_ms == 0 ||
-        (query.format_version != kDiscoveryFormatV2 &&
-         query.format_version != kDiscoveryFormatV3)) {
+        (query.format_version != kDiscoveryFormatV2 && query.format_version != kDiscoveryFormatV3 &&
+         query.format_version != kDiscoveryFormatV4)) {
         return {};
     }
     Writer writer;
-    const auto& magic = query.format_version == kDiscoveryFormatV3 ? kQueryMagicV3 : kQueryMagicV2;
+    const auto& magic = query.format_version == kDiscoveryFormatV4   ? kQueryMagicV4
+                        : query.format_version == kDiscoveryFormatV3 ? kQueryMagicV3
+                                                                     : kQueryMagicV2;
     writer.bytes(magic.data(), magic.size());
     writer.u64(query.nonce);
     writer.u16(query.response_window_ms);
@@ -190,7 +239,9 @@ bool decode_discovery_query(const Bytes& bytes,
     }
     Reader reader(bytes, bytes.size() - sizeof(uint64_t));
     DiscoveryQuery parsed;
-    if (reader.magic(kQueryMagicV3)) {
+    if (reader.magic(kQueryMagicV4)) {
+        parsed.format_version = kDiscoveryFormatV4;
+    } else if (reader.magic(kQueryMagicV3)) {
         parsed.format_version = kDiscoveryFormatV3;
     } else if (reader.magic(kQueryMagicV2)) {
         parsed.format_version = kDiscoveryFormatV2;
@@ -212,13 +263,16 @@ Bytes encode_discovery_reply(const DiscoveryQuery& query,
         return {};
     }
     Writer writer;
-    const bool supports_entity_agent_id = query.format_version == kDiscoveryFormatV3;
-    const auto& magic = supports_entity_agent_id ? kReplyMagicV3 : kReplyMagicV2;
+    const bool supports_entity_agent_id = query.format_version >= kDiscoveryFormatV3;
+    const bool supports_attributes = query.format_version >= kDiscoveryFormatV4;
+    const auto& magic = supports_attributes        ? kReplyMagicV4
+                        : supports_entity_agent_id ? kReplyMagicV3
+                                                   : kReplyMagicV2;
     writer.bytes(magic.data(), magic.size());
     writer.u64(query.nonce);
     writer.u8(kProtocolMajor);
     writer.u8(kHeaderVersion);
-    writer.u16(supports_entity_agent_id ? kDiscoveryFormatV3 : kSchemaVersion);
+    writer.u16(query.format_version);
     writer.text(advertisement.endpoint_uid);
     writer.text(advertisement.display_name);
     writer.u16(advertisement.tcp_listen_port);
@@ -233,6 +287,9 @@ Bytes encode_discovery_reply(const DiscoveryQuery& query,
         writer.u16(profile.minor);
         writer.text(profile.schema_digest);
     }
+    if (supports_attributes) {
+        writer.attributes(advertisement.attributes);
+    }
     writer.u8(static_cast<uint8_t>(advertisement.entities.size()));
     for (const auto& entity : advertisement.entities) {
         writer.text(entity.entity_uid);
@@ -241,6 +298,9 @@ Bytes encode_discovery_reply(const DiscoveryQuery& query,
         writer.u8(static_cast<uint8_t>(entity.availability));
         if (supports_entity_agent_id) {
             writer.u32(entity.agent_id);
+        }
+        if (supports_attributes) {
+            writer.attributes(entity.attributes);
         }
     }
     writer.u64(advertisement.started_at_ms);
@@ -263,18 +323,23 @@ bool decode_discovery_reply(const Bytes& bytes,
     uint8_t header = 0;
     uint16_t schema = 0;
     uint8_t count = 0;
-    bool includes_entity_agent_id = false;
-    if (reader.magic(kReplyMagicV3)) {
-        includes_entity_agent_id = true;
-    } else if (!reader.magic(kReplyMagicV2)) {
+    uint8_t format_version = kDiscoveryFormatV2;
+    if (reader.magic(kReplyMagicV4)) {
+        format_version = kDiscoveryFormatV4;
+    } else if (reader.magic(kReplyMagicV3)) {
+        format_version = kDiscoveryFormatV3;
+    } else if (reader.magic(kReplyMagicV2)) {
+        format_version = kDiscoveryFormatV2;
+    } else {
         return false;
     }
+    const bool includes_entity_agent_id = format_version >= kDiscoveryFormatV3;
+    const bool includes_attributes = format_version >= kDiscoveryFormatV4;
     if (!reader.u64(&nonce) || nonce != expected_nonce || !reader.u8(&protocol) ||
         protocol != kProtocolMajor || !reader.u8(&header) || header != kHeaderVersion ||
-        !reader.u16(&schema) ||
-        schema != (includes_entity_agent_id ? kDiscoveryFormatV3 : kSchemaVersion) ||
-        !reader.text(&parsed.endpoint_uid) || !reader.text(&parsed.display_name) ||
-        !reader.u16(&parsed.tcp_listen_port) || !reader.u8(&count)) {
+        !reader.u16(&schema) || schema != format_version || !reader.text(&parsed.endpoint_uid) ||
+        !reader.text(&parsed.display_name) || !reader.u16(&parsed.tcp_listen_port) ||
+        !reader.u8(&count)) {
         return false;
     }
     parsed.capabilities.reserve(count);
@@ -297,6 +362,9 @@ bool decode_discovery_reply(const Bytes& bytes,
         }
         parsed.profiles.push_back(std::move(profile));
     }
+    if (includes_attributes && !reader.attributes(&parsed.attributes)) {
+        return false;
+    }
     if (!reader.u8(&count)) {
         return false;
     }
@@ -310,6 +378,9 @@ bool decode_discovery_reply(const Bytes& bytes,
             return false;
         }
         if (includes_entity_agent_id && !reader.u32(&entity.agent_id)) {
+            return false;
+        }
+        if (includes_attributes && !reader.attributes(&entity.attributes)) {
             return false;
         }
         entity.availability = static_cast<Availability>(availability);
