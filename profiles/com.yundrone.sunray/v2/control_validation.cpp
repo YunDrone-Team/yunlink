@@ -61,6 +61,14 @@ bool validate_flight_control_state(const FlightControlState& state, std::string*
     return true;
 }
 
+bool validate_ugv_control_state(const UgvControlState& state, std::string* error) {
+    if (!std::isfinite(state.battery_voltage_v()) || state.battery_voltage_v() < 0.0F ||
+        state.battery_percent() > 100U) {
+        return fail(error, "UGV control state is invalid");
+    }
+    return true;
+}
+
 bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal, std::string* error) {
     if (!valid_yaw(goal)) {
         return fail(error, "yaw target is missing or invalid");

@@ -335,7 +335,16 @@ int main() {
     ugv_state.set_diagnostic_message("hold");
     ugv_state.set_fsm_state(1);
     ugv_state.set_odom_ready(true);
-    assert(hex(ugv_state.SerializeAsString()) == "082a28014a04686f6c6450017801");
+    ugv_state.set_battery_voltage_v(25.2F);
+    ugv_state.set_battery_percent(76);
+    assert(validate_ugv_control_state(ugv_state, &validation_error));
+    assert(hex(ugv_state.SerializeAsString()) ==
+           "082a28014a04686f6c645001780185019a99c94188014c");
+    ugv_state.set_battery_percent(101);
+    assert(!validate_ugv_control_state(ugv_state, &validation_error));
+    ugv_state.set_battery_percent(76);
+    ugv_state.set_battery_voltage_v(std::numeric_limits<float>::infinity());
+    assert(!validate_ugv_control_state(ugv_state, &validation_error));
     assert(UgvHoldGoal{}.SerializeAsString().empty());
 
     GimbalParams gimbal_state;

@@ -267,6 +267,8 @@ message UgvControlState {
   org.yunlink.mobility.v1.Pose target_pose = 13;
   org.yunlink.mobility.v1.Twist controller_output = 14;
   bool odom_ready = 15;
+  float battery_voltage_v = 16;
+  uint32 battery_percent = 17;
 }
 
 enum UgvMovePointFrame {

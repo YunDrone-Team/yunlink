@@ -118,6 +118,15 @@ def validate_flight_control_state(state: sunray.FlightControlState) -> None:
         raise ValueError("flight control state is invalid")
 
 
+def validate_ugv_control_state(state: sunray.UgvControlState) -> None:
+    if (
+        not math.isfinite(state.battery_voltage_v)
+        or state.battery_voltage_v < 0
+        or state.battery_percent > 100
+    ):
+        raise ValueError("UGV control state is invalid")
+
+
 def validate_uav_direct_control_goal(goal: sunray.UavDirectControlGoal) -> None:
     valid_yaw = (
         goal.HasField("yaw")

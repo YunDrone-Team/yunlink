@@ -19,6 +19,7 @@ from yunlink.profiles import (
     validate_uav_direct_control_goal,
     validate_uav_waypoint_mission_goal,
     validate_ugv_move_point_goal,
+    validate_ugv_control_state,
     validate_ugv_velocity_goal,
     validate_planner_set_home_request,
     validate_gimbal_angle_goal,
@@ -209,8 +210,21 @@ def test_ugv_v25_messages_match_cross_language_vectors_and_validate():
         diagnostic_message="hold",
         fsm_state=1,
         odom_ready=True,
+        battery_voltage_v=25.2,
+        battery_percent=76,
     )
-    assert state.SerializeToString(deterministic=True).hex() == "082a28014a04686f6c6450017801"
+    validate_ugv_control_state(state)
+    assert state.SerializeToString(deterministic=True).hex() == (
+        "082a28014a04686f6c645001780185019a99c94188014c"
+    )
+    assert sunray.UgvControlState.FromString(state.SerializeToString()) == state
+    state.battery_percent = 101
+    with pytest.raises(ValueError, match="UGV control state is invalid"):
+        validate_ugv_control_state(state)
+    state.battery_percent = 76
+    state.battery_voltage_v = float("inf")
+    with pytest.raises(ValueError, match="UGV control state is invalid"):
+        validate_ugv_control_state(state)
     assert sunray.UgvHoldGoal().SerializeToString(deterministic=True) == b""
 
 

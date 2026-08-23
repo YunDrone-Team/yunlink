@@ -14,6 +14,7 @@ constexpr int kMaxWaypointCount = 256;
 constexpr size_t kMaxWaypointTaskNameBytes = 96;
 
 bool validate_flight_control_state(const FlightControlState& state, std::string* error = nullptr);
+bool validate_ugv_control_state(const UgvControlState& state, std::string* error = nullptr);
 bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal,
                                       std::string* error = nullptr);
 bool validate_emergency_kill_goal(const EmergencyKillGoal& goal, std::string* error = nullptr);

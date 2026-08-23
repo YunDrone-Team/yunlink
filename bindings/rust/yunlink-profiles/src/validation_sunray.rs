@@ -37,6 +37,14 @@ pub fn validate_flight_control_state(
     .ok_or("flight control state is invalid")
 }
 
+pub fn validate_ugv_control_state(state: &sunray::UgvControlState) -> Result<(), &'static str> {
+    (state.battery_voltage_v.is_finite()
+        && state.battery_voltage_v >= 0.0
+        && state.battery_percent <= 100)
+        .then_some(())
+        .ok_or("UGV control state is invalid")
+}
+
 pub fn validate_uav_direct_control_goal(
     goal: &sunray::UavDirectControlGoal,
 ) -> Result<(), &'static str> {

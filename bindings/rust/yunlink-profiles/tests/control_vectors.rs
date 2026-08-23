@@ -5,7 +5,7 @@ use yunlink_profiles::{
     validate_formation_state, validate_gimbal_angle_goal, validate_gimbal_rate_goal,
     validate_gimbal_zoom_absolute_goal, validate_land_goal, validate_planner_set_home_request,
     validate_takeoff_goal, validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
-    validate_ugv_move_point_goal, validate_ugv_velocity_goal,
+    validate_ugv_control_state, validate_ugv_move_point_goal, validate_ugv_velocity_goal,
 };
 
 const DIRECT_CONTROL_GOLDEN: &[u8] = &[
@@ -337,18 +337,30 @@ fn ugv_v25_messages_match_golden_vectors_and_validate() {
     velocity.lease_ms = 249;
     assert!(validate_ugv_velocity_goal(&velocity).is_err());
 
-    let state = sunray::UgvControlState {
+    let mut state = sunray::UgvControlState {
         source_stamp_ns: 42,
         drive_type: 1,
         diagnostic_message: "hold".into(),
         fsm_state: 1,
         odom_ready: true,
+        battery_voltage_v: 25.2,
+        battery_percent: 76,
         ..Default::default()
     };
+    validate_ugv_control_state(&state).unwrap();
     assert_eq!(
         hex::encode(state.encode_to_vec()),
-        "082a28014a04686f6c6450017801"
+        "082a28014a04686f6c645001780185019a99c94188014c"
     );
+    assert_eq!(
+        sunray::UgvControlState::decode(state.encode_to_vec().as_slice()).unwrap(),
+        state
+    );
+    state.battery_percent = 101;
+    assert!(validate_ugv_control_state(&state).is_err());
+    state.battery_percent = 76;
+    state.battery_voltage_v = f32::INFINITY;
+    assert!(validate_ugv_control_state(&state).is_err());
     assert!(sunray::UgvHoldGoal {}.encode_to_vec().is_empty());
 }
 
