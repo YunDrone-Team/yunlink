@@ -41,11 +41,17 @@ int main() {
     SessionInfo server_active;
     bool action_received = false;
     bool link_down = false;
+    bool runtime_error = false;
     std::string server_peer_id;
     client.subscribe([&](const RuntimeEvent& event) {
         if (event.kind == RuntimeEventKind::kLink && !event.link_up) {
             std::lock_guard<std::mutex> lock(mutex);
             link_down = true;
+            changed.notify_all();
+        }
+        if (event.kind == RuntimeEventKind::kError) {
+            std::lock_guard<std::mutex> lock(mutex);
+            runtime_error = true;
             changed.notify_all();
         }
         if (event.kind == RuntimeEventKind::kSession &&
@@ -200,6 +206,7 @@ int main() {
     {
         std::unique_lock<std::mutex> lock(mutex);
         assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() { return link_down; }));
+        assert(!runtime_error);
         active = {};
     }
     assert(server.start(server_config) == ErrorCode::kOk);

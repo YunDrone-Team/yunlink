@@ -1,5 +1,13 @@
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <chrono>
 #include <iostream>
+#include <mutex>
+#include <thread>
+#include <vector>
+
+#include <asio.hpp>
 
 #include "yunlink/discovery/discovery_v2.hpp"
 
@@ -107,6 +115,49 @@ int main() {
     Bytes truncated_v4 = v4_reply;
     truncated_v4.pop_back();
     assert(!decode_discovery_reply(truncated_v4, secret, v4_query.nonce, &decoded_reply));
+
+    asio::io_context io;
+    asio::ip::udp::socket reservation(io, asio::ip::udp::endpoint(asio::ip::udp::v4(), 0));
+    const uint16_t advertiser_port = reservation.local_endpoint().port();
+    reservation.close();
+
+    std::mutex event_mutex;
+    std::vector<DiscoveryAdvertiserEvent> events;
+    DiscoveryAdvertiser advertiser;
+    assert(advertiser.start(
+               advertiser_port, advertisement, secret, [&](const DiscoveryAdvertiserEvent& event) {
+                   std::lock_guard<std::mutex> lock(event_mutex);
+                   events.push_back(event);
+               }) == ErrorCode::kOk);
+
+    asio::ip::udp::socket client(io, asio::ip::udp::endpoint(asio::ip::address_v4::loopback(), 0));
+    const asio::ip::udp::endpoint destination(asio::ip::address_v4::loopback(), advertiser_port);
+    client.send_to(asio::buffer(encoded_v3_query), destination);
+    std::array<uint8_t, 4096> response{};
+    asio::ip::udp::endpoint response_source;
+    const size_t response_size = client.receive_from(asio::buffer(response), response_source);
+    assert(response_size > 0);
+    client.send_to(asio::buffer(Bytes{1, 2, 3}), destination);
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    while (std::chrono::steady_clock::now() < deadline) {
+        {
+            std::lock_guard<std::mutex> lock(event_mutex);
+            if (events.size() >= 3)
+                break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    advertiser.stop();
+
+    const auto has_event = [&](DiscoveryAdvertiserEventKind kind) {
+        return std::any_of(events.begin(), events.end(), [&](const auto& event) {
+            return event.kind == kind && event.remote_ip == "127.0.0.1" && event.remote_port != 0;
+        });
+    };
+    assert(has_event(DiscoveryAdvertiserEventKind::kQueryReceived));
+    assert(has_event(DiscoveryAdvertiserEventKind::kReplySent));
+    assert(has_event(DiscoveryAdvertiserEventKind::kRejected));
 
     std::cout << "test_discovery_v2 passed\n";
     return 0;

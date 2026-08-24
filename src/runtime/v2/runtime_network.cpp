@@ -6,7 +6,9 @@ namespace yunlink::v2 {
 namespace {
 
 bool socket_closed(const std::error_code& error) {
-    return error == asio::error::operation_aborted || error == asio::error::bad_descriptor;
+    return error == asio::error::operation_aborted || error == asio::error::bad_descriptor ||
+           error == asio::error::eof || error == asio::error::connection_reset ||
+           error == asio::error::connection_aborted;
 }
 
 bool pop_frame(Runtime::Impl* impl, Bytes* buffer, Envelope* out, ErrorCode* error) {

@@ -7,6 +7,7 @@
 #define YUNLINK_DISCOVERY_DISCOVERY_V2_HPP
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -66,17 +67,35 @@ bool decode_discovery_reply(const Bytes& bytes,
                             uint64_t expected_nonce,
                             DiscoveryAdvertisement* advertisement);
 
+enum class DiscoveryAdvertiserEventKind : uint8_t {
+    kQueryReceived = 1,
+    kReplySent = 2,
+    kRejected = 3,
+    kReceiveError = 4,
+    kSendError = 5,
+};
+
+struct DiscoveryAdvertiserEvent {
+    DiscoveryAdvertiserEventKind kind = DiscoveryAdvertiserEventKind::kQueryReceived;
+    std::string remote_ip;
+    uint16_t remote_port = 0;
+    ErrorCode error = ErrorCode::kOk;
+};
+
 class DiscoveryAdvertiser {
   public:
     struct Impl;
+    using EventHandler = std::function<void(const DiscoveryAdvertiserEvent&)>;
 
     DiscoveryAdvertiser();
     ~DiscoveryAdvertiser();
     DiscoveryAdvertiser(const DiscoveryAdvertiser&) = delete;
     DiscoveryAdvertiser& operator=(const DiscoveryAdvertiser&) = delete;
 
-    ErrorCode
-    start(uint16_t bind_port, DiscoveryAdvertisement advertisement, std::string shared_secret);
+    ErrorCode start(uint16_t bind_port,
+                    DiscoveryAdvertisement advertisement,
+                    std::string shared_secret,
+                    EventHandler event_handler = {});
     void stop();
     bool running() const;
     void set_advertisement(DiscoveryAdvertisement advertisement);

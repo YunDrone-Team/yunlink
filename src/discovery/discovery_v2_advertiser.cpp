@@ -30,6 +30,7 @@ struct DiscoveryAdvertiser::Impl {
     mutable std::mutex mutex;
     DiscoveryAdvertisement advertisement;
     std::string shared_secret;
+    EventHandler event_handler;
 };
 
 DiscoveryAdvertiser::DiscoveryAdvertiser() : impl_(std::make_unique<Impl>()) {}
@@ -40,7 +41,8 @@ DiscoveryAdvertiser::~DiscoveryAdvertiser() {
 
 ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
                                      DiscoveryAdvertisement advertisement,
-                                     std::string shared_secret) {
+                                     std::string shared_secret,
+                                     EventHandler event_handler) {
     if (impl_->running.load() || bind_port == 0 ||
         !discovery_advertisement_is_valid(advertisement)) {
         return ErrorCode::kInvalidArgument;
@@ -50,6 +52,7 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
     }
     impl_->advertisement = std::move(advertisement);
     impl_->shared_secret = std::move(shared_secret);
+    impl_->event_handler = std::move(event_handler);
     impl_->socket = std::make_unique<asio::ip::udp::socket>(impl_->io);
     std::error_code error;
     impl_->socket->open(asio::ip::udp::v4(), error);
@@ -70,6 +73,25 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
     }
     impl_->running.store(true);
     impl_->thread = std::thread([this]() {
+        const auto emit = [this](DiscoveryAdvertiserEventKind kind,
+                                 const asio::ip::udp::endpoint& remote,
+                                 ErrorCode error) {
+            if (!impl_->event_handler)
+                return;
+            DiscoveryAdvertiserEvent event;
+            event.kind = kind;
+            event.error = error;
+            std::error_code endpoint_error;
+            event.remote_ip = remote.address().to_string(endpoint_error);
+            if (endpoint_error)
+                event.remote_ip.clear();
+            event.remote_port = remote.port();
+            try {
+                impl_->event_handler(event);
+            } catch (...) {
+                // Diagnostics must never stop the discovery responder.
+            }
+        };
         std::array<uint8_t, 1024> buffer{};
         while (impl_->running.load()) {
             asio::ip::udp::endpoint remote;
@@ -81,6 +103,7 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
             }
             if (error) {
                 if (impl_->running.load()) {
+                    emit(DiscoveryAdvertiserEventKind::kReceiveError, remote, ErrorCode::kInternal);
                     std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 }
                 continue;
@@ -88,8 +111,10 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
             DiscoveryQuery query;
             const Bytes request(buffer.begin(), buffer.begin() + size);
             if (!decode_discovery_query(request, impl_->shared_secret, &query)) {
+                emit(DiscoveryAdvertiserEventKind::kRejected, remote, ErrorCode::kUnauthorized);
                 continue;
             }
+            emit(DiscoveryAdvertiserEventKind::kQueryReceived, remote, ErrorCode::kOk);
             DiscoveryAdvertisement advertisement;
             {
                 std::lock_guard<std::mutex> lock(impl_->mutex);
@@ -98,9 +123,15 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
                 impl_->advertisement.sequence = advertisement.sequence;
             }
             const Bytes reply = encode_discovery_reply(query, advertisement, impl_->shared_secret);
-            if (!reply.empty()) {
-                impl_->socket->send_to(asio::buffer(reply), remote, 0, error);
+            if (reply.empty()) {
+                emit(DiscoveryAdvertiserEventKind::kSendError, remote, ErrorCode::kEncodeError);
+                continue;
             }
+            impl_->socket->send_to(asio::buffer(reply), remote, 0, error);
+            emit(error ? DiscoveryAdvertiserEventKind::kSendError
+                       : DiscoveryAdvertiserEventKind::kReplySent,
+                 remote,
+                 error ? ErrorCode::kInternal : ErrorCode::kOk);
         }
     });
     return ErrorCode::kOk;

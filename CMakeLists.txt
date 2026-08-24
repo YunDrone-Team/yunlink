@@ -136,7 +136,7 @@ if (YUNLINK_BUILD_TESTS)
   add_test(NAME test_core_messages_v2 COMMAND test_core_messages_v2)
 
   add_executable(test_discovery_v2 tests/core/test_discovery_v2.cpp)
-  target_link_libraries(test_discovery_v2 PRIVATE yunlink)
+  target_link_libraries(test_discovery_v2 PRIVATE yunlink yunlink_asio)
   add_test(NAME test_discovery_v2 COMMAND test_discovery_v2)
 
   add_executable(test_runtime_v2 tests/runtime/test_runtime_v2.cpp)
