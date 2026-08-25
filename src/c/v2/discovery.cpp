@@ -67,10 +67,10 @@ uint16_t yunlink_v2_discovery_encode_query(uint64_t nonce,
     return static_cast<uint16_t>(yunlink::v2::ErrorCode::kOk);
 }
 
-yunlink_v2_discovery_advertisement_t* yunlink_v2_discovery_decode_reply(
-    yunlink_v2_bytes_view_t bytes,
-    yunlink_v2_string_view_t shared_secret,
-    uint64_t expected_nonce) {
+yunlink_v2_discovery_advertisement_t*
+yunlink_v2_discovery_decode_reply(yunlink_v2_bytes_view_t bytes,
+                                  yunlink_v2_string_view_t shared_secret,
+                                  uint64_t expected_nonce) {
     if (bytes.data == nullptr || bytes.len == 0) {
         return nullptr;
     }
@@ -88,108 +88,108 @@ void yunlink_v2_discovery_advertisement_destroy(
     delete advertisement;
 }
 
-yunlink_v2_string_view_t yunlink_v2_discovery_endpoint_uid(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+yunlink_v2_string_view_t
+yunlink_v2_discovery_endpoint_uid(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? empty_view() : view(advertisement->value.endpoint_uid);
 }
 
-yunlink_v2_string_view_t yunlink_v2_discovery_display_name(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+yunlink_v2_string_view_t
+yunlink_v2_discovery_display_name(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? empty_view() : view(advertisement->value.display_name);
 }
 
-uint16_t yunlink_v2_discovery_tcp_port(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+uint16_t yunlink_v2_discovery_tcp_port(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.tcp_listen_port;
 }
 
-uint64_t yunlink_v2_discovery_started_at_ms(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+uint64_t
+yunlink_v2_discovery_started_at_ms(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.started_at_ms;
 }
 
-uint64_t yunlink_v2_discovery_sequence(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+uint64_t yunlink_v2_discovery_sequence(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.sequence;
 }
 
-size_t yunlink_v2_discovery_capability_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+size_t
+yunlink_v2_discovery_capability_count(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.capabilities.size();
 }
 
-yunlink_v2_string_view_t yunlink_v2_discovery_capability_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement, size_t index) {
+yunlink_v2_string_view_t
+yunlink_v2_discovery_capability_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                   size_t index) {
     if (advertisement == nullptr || index >= advertisement->value.capabilities.size()) {
         return empty_view();
     }
     return view(advertisement->value.capabilities[index]);
 }
 
-size_t yunlink_v2_discovery_profile_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+size_t
+yunlink_v2_discovery_profile_count(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.profiles.size();
 }
 
-uint8_t yunlink_v2_discovery_profile_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t index,
-    yunlink_v2_profile_view_t* out_profile) {
+uint8_t yunlink_v2_discovery_profile_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                        size_t index,
+                                        yunlink_v2_profile_view_t* out_profile) {
     if (advertisement == nullptr || out_profile == nullptr ||
         index >= advertisement->value.profiles.size()) {
         return 0;
     }
     const auto& profile = advertisement->value.profiles[index];
-    *out_profile = {view(profile.profile_id), profile.major, profile.minor,
-                    view(profile.schema_digest)};
+    *out_profile = {
+        view(profile.profile_id), profile.major, profile.minor, view(profile.schema_digest)};
     return 1;
 }
 
-size_t yunlink_v2_discovery_attribute_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+size_t
+yunlink_v2_discovery_attribute_count(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.attributes.size();
 }
 
-uint8_t yunlink_v2_discovery_attribute_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t index,
-    yunlink_v2_key_value_view_t* out_attribute) {
+uint8_t yunlink_v2_discovery_attribute_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                          size_t index,
+                                          yunlink_v2_key_value_view_t* out_attribute) {
     return advertisement != nullptr &&
            attribute_at(advertisement->value.attributes, index, out_attribute);
 }
 
-size_t yunlink_v2_discovery_entity_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement) {
+size_t
+yunlink_v2_discovery_entity_count(const yunlink_v2_discovery_advertisement_t* advertisement) {
     return advertisement == nullptr ? 0 : advertisement->value.entities.size();
 }
 
-uint8_t yunlink_v2_discovery_entity_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t index,
-    yunlink_v2_discovery_entity_view_t* out_entity) {
+uint8_t yunlink_v2_discovery_entity_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                       size_t index,
+                                       yunlink_v2_discovery_entity_view_t* out_entity) {
     if (advertisement == nullptr || out_entity == nullptr ||
         index >= advertisement->value.entities.size()) {
         return 0;
     }
     const auto& entity = advertisement->value.entities[index];
-    *out_entity = {view(entity.entity_uid), view(entity.kind), view(entity.display_name),
-                   static_cast<uint8_t>(entity.availability), entity.agent_id};
+    *out_entity = {view(entity.entity_uid),
+                   view(entity.kind),
+                   view(entity.display_name),
+                   static_cast<uint8_t>(entity.availability),
+                   entity.agent_id};
     return 1;
 }
 
 size_t yunlink_v2_discovery_entity_attribute_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement, size_t entity_index) {
+    const yunlink_v2_discovery_advertisement_t* advertisement,
+    size_t entity_index) {
     if (advertisement == nullptr || entity_index >= advertisement->value.entities.size()) {
         return 0;
     }
     return advertisement->value.entities[entity_index].attributes.size();
 }
 
-uint8_t yunlink_v2_discovery_entity_attribute_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t entity_index,
-    size_t attribute_index,
-    yunlink_v2_key_value_view_t* out_attribute) {
+uint8_t
+yunlink_v2_discovery_entity_attribute_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                         size_t entity_index,
+                                         size_t attribute_index,
+                                         yunlink_v2_key_value_view_t* out_attribute) {
     return advertisement != nullptr && entity_index < advertisement->value.entities.size() &&
            attribute_at(advertisement->value.entities[entity_index].attributes,
                         attribute_index,

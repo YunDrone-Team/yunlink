@@ -128,6 +128,13 @@ if (YUNLINK_BUILD_TESTS)
   enable_testing()
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+  # The C++ tests use assert() as their test primitive, including for setup calls.
+  if (MSVC)
+    add_compile_options(/UNDEBUG)
+  else()
+    add_compile_options(-UNDEBUG)
+  endif()
+
   add_executable(test_wire_v2 tests/core/test_wire_v2.cpp)
   target_link_libraries(test_wire_v2 PRIVATE yunlink)
   add_test(NAME test_wire_v2 COMMAND test_wire_v2)

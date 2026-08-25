@@ -78,12 +78,15 @@ int main() {
     native.capabilities = {"example.capability"};
     native.profiles = {{"org.yunlink.mobility", 1, 0, "digest"}};
     native.attributes = {{"site", "test"}};
-    native.entities = {{"uav1", "sunray.uav", "UAV 1", yunlink::v2::Availability::kOnline,
-                        1, {{"sunray.system_mode", "sim"}}}};
+    native.entities = {{"uav1",
+                        "sunray.uav",
+                        "UAV 1",
+                        yunlink::v2::Availability::kOnline,
+                        1,
+                        {{"sunray.system_mode", "sim"}}}};
     const auto reply = yunlink::v2::encode_discovery_reply(query, native, "secret");
     yunlink_v2_bytes_view_t reply_view{reply.data(), reply.size()};
-    auto* advertisement =
-        yunlink_v2_discovery_decode_reply(reply_view, text("secret"), nonce);
+    auto* advertisement = yunlink_v2_discovery_decode_reply(reply_view, text("secret"), nonce);
     assert(advertisement != nullptr);
     assert(yunlink_v2_discovery_tcp_port(advertisement) == 19701);
     assert(yunlink_v2_discovery_entity_count(advertisement) == 1);

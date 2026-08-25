@@ -124,12 +124,11 @@ YUNLINK_V2_API void yunlink_v2_runtime_destroy(yunlink_v2_runtime_t* runtime);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_start(yunlink_v2_runtime_t* runtime,
                                                  const yunlink_v2_runtime_config_t* config);
 YUNLINK_V2_API void yunlink_v2_runtime_stop(yunlink_v2_runtime_t* runtime);
-YUNLINK_V2_API uint16_t yunlink_v2_runtime_listening_port(
-    const yunlink_v2_runtime_t* runtime);
-YUNLINK_V2_API uint16_t yunlink_v2_runtime_set_entity_uids(
-    yunlink_v2_runtime_t* runtime,
-    const yunlink_v2_string_view_t* entity_uids,
-    size_t entity_count);
+YUNLINK_V2_API uint16_t yunlink_v2_runtime_listening_port(const yunlink_v2_runtime_t* runtime);
+YUNLINK_V2_API uint16_t
+yunlink_v2_runtime_set_entity_uids(yunlink_v2_runtime_t* runtime,
+                                   const yunlink_v2_string_view_t* entity_uids,
+                                   size_t entity_count);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime,
                                                    yunlink_v2_string_view_t ip,
                                                    uint16_t port,
@@ -173,59 +172,60 @@ yunlink_v2_runtime_session_supports_profile(const yunlink_v2_runtime_t* runtime,
                                             uint16_t major,
                                             uint16_t minimum_minor);
 
-YUNLINK_V2_API uint16_t yunlink_v2_discovery_encode_query(
-    uint64_t nonce,
-    uint16_t response_window_ms,
-    uint8_t format_version,
-    yunlink_v2_string_view_t shared_secret,
-    uint8_t* out_bytes,
-    size_t out_capacity,
-    size_t* out_size);
+YUNLINK_V2_API uint16_t yunlink_v2_discovery_encode_query(uint64_t nonce,
+                                                          uint16_t response_window_ms,
+                                                          uint8_t format_version,
+                                                          yunlink_v2_string_view_t shared_secret,
+                                                          uint8_t* out_bytes,
+                                                          size_t out_capacity,
+                                                          size_t* out_size);
 YUNLINK_V2_API yunlink_v2_discovery_advertisement_t*
 yunlink_v2_discovery_decode_reply(yunlink_v2_bytes_view_t bytes,
                                   yunlink_v2_string_view_t shared_secret,
                                   uint64_t expected_nonce);
-YUNLINK_V2_API void yunlink_v2_discovery_advertisement_destroy(
-    yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API yunlink_v2_string_view_t yunlink_v2_discovery_endpoint_uid(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API yunlink_v2_string_view_t yunlink_v2_discovery_display_name(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API uint16_t yunlink_v2_discovery_tcp_port(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API uint64_t yunlink_v2_discovery_started_at_ms(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API uint64_t yunlink_v2_discovery_sequence(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API size_t yunlink_v2_discovery_capability_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API yunlink_v2_string_view_t yunlink_v2_discovery_capability_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement, size_t index);
-YUNLINK_V2_API size_t yunlink_v2_discovery_profile_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API uint8_t yunlink_v2_discovery_profile_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t index,
-    yunlink_v2_profile_view_t* out_profile);
-YUNLINK_V2_API size_t yunlink_v2_discovery_attribute_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API uint8_t yunlink_v2_discovery_attribute_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t index,
-    yunlink_v2_key_value_view_t* out_attribute);
-YUNLINK_V2_API size_t yunlink_v2_discovery_entity_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement);
-YUNLINK_V2_API uint8_t yunlink_v2_discovery_entity_at(
-    const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t index,
-    yunlink_v2_discovery_entity_view_t* out_entity);
+YUNLINK_V2_API void
+yunlink_v2_discovery_advertisement_destroy(yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API yunlink_v2_string_view_t
+yunlink_v2_discovery_endpoint_uid(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API yunlink_v2_string_view_t
+yunlink_v2_discovery_display_name(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API uint16_t
+yunlink_v2_discovery_tcp_port(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API uint64_t
+yunlink_v2_discovery_started_at_ms(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API uint64_t
+yunlink_v2_discovery_sequence(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API size_t
+yunlink_v2_discovery_capability_count(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API yunlink_v2_string_view_t
+yunlink_v2_discovery_capability_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                   size_t index);
+YUNLINK_V2_API size_t
+yunlink_v2_discovery_profile_count(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API uint8_t
+yunlink_v2_discovery_profile_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                size_t index,
+                                yunlink_v2_profile_view_t* out_profile);
+YUNLINK_V2_API size_t
+yunlink_v2_discovery_attribute_count(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API uint8_t
+yunlink_v2_discovery_attribute_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                  size_t index,
+                                  yunlink_v2_key_value_view_t* out_attribute);
+YUNLINK_V2_API size_t
+yunlink_v2_discovery_entity_count(const yunlink_v2_discovery_advertisement_t* advertisement);
+YUNLINK_V2_API uint8_t
+yunlink_v2_discovery_entity_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                               size_t index,
+                               yunlink_v2_discovery_entity_view_t* out_entity);
 YUNLINK_V2_API size_t yunlink_v2_discovery_entity_attribute_count(
-    const yunlink_v2_discovery_advertisement_t* advertisement, size_t entity_index);
-YUNLINK_V2_API uint8_t yunlink_v2_discovery_entity_attribute_at(
     const yunlink_v2_discovery_advertisement_t* advertisement,
-    size_t entity_index,
-    size_t attribute_index,
-    yunlink_v2_key_value_view_t* out_attribute);
+    size_t entity_index);
+YUNLINK_V2_API uint8_t
+yunlink_v2_discovery_entity_attribute_at(const yunlink_v2_discovery_advertisement_t* advertisement,
+                                         size_t entity_index,
+                                         size_t attribute_index,
+                                         yunlink_v2_key_value_view_t* out_attribute);
 
 #ifdef __cplusplus
 }

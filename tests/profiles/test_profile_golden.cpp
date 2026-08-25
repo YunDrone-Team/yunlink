@@ -338,8 +338,7 @@ int main() {
     ugv_state.set_battery_voltage_v(25.2F);
     ugv_state.set_battery_percent(76);
     assert(validate_ugv_control_state(ugv_state, &validation_error));
-    assert(hex(ugv_state.SerializeAsString()) ==
-           "082a28014a04686f6c645001780185019a99c94188014c");
+    assert(hex(ugv_state.SerializeAsString()) == "082a28014a04686f6c645001780185019a99c94188014c");
     ugv_state.set_battery_percent(101);
     assert(!validate_ugv_control_state(ugv_state, &validation_error));
     ugv_state.set_battery_percent(76);
@@ -413,8 +412,7 @@ int main() {
     ring.mutable_ring()->set_radius_m(3.0);
     ring.mutable_ring()->set_move_speed_mps(-0.5);
     assert(validate_formation_set_request(ring, &validation_error));
-    assert(hex(ring.SerializeAsString()) ==
-           "081510012a1209000000000000084011000000000000e0bf");
+    assert(hex(ring.SerializeAsString()) == "081510012a1209000000000000084011000000000000e0bf");
 
     FormationSetRequest leader;
     leader.set_formation_type(FORMATION_LEADER);

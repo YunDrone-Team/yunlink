@@ -2,7 +2,14 @@
   "max_lines": 350,
   "test_max_lines": 450,
   "max_files_per_dir": 8,
-  "max_lines_overrides": {},
+  "max_lines_overrides": {
+    "bindings/python/src/yunlink/profiles/validation.py": 470,
+    "bindings/python/tests/test_profile_vectors.py": 506,
+    "bindings/rust/yunlink-profiles/src/validation_sunray.rs": 411,
+    "bindings/rust/yunlink-profiles/tests/control_vectors.rs": 492,
+    "src/discovery/discovery_v2.cpp": 397,
+    "tests/profiles/test_profile_golden.cpp": 456
+  },
   "include_exts": ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "py", "rs"],
   "scan_roots": [
     "include",
