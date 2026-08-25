@@ -123,10 +123,20 @@ def decode_entity_directory(data: bytes) -> EntityDirectory:
     r = _Reader(data); return r.finish(EntityDirectory(r.text(), r.text(), r.items(lambda: _entity_read(r))))
 
 
+def decode_attachment_request(data: bytes) -> AttachmentRequest:
+    r = _Reader(data); return r.finish(AttachmentRequest(r.text(), r.items(r.text)))
+
+
 def decode_attachment_response(data: bytes) -> AttachmentResponse:
     r = _Reader(data); success = r.u8(); value = AttachmentResponse(bool(success), r.text(), r.items(r.text), r.text())
     if success > 1: raise CoreCodecError("invalid attachment success flag")
     return r.finish(value)
+
+
+def decode_authority_request(data: bytes) -> AuthorityRequest:
+    r = _Reader(data); scope, lease_ttl_ms, allow_preempt = r.text(), r.u32(), r.u8()
+    if allow_preempt > 1: raise CoreCodecError("invalid authority preemption flag")
+    return r.finish(AuthorityRequest(scope, lease_ttl_ms, bool(allow_preempt)))
 
 
 def decode_authority_status(data: bytes) -> AuthorityStatus:
@@ -138,6 +148,10 @@ def decode_stream_catalog(data: bytes) -> StreamCatalog:
     def stream() -> StreamDescriptor:
         return StreamDescriptor(r.text(), _type_read(r), r.text(), r.mapping())
     return r.finish(StreamCatalog(r.text(), r.items(stream)))
+
+
+def decode_stream_subscription(data: bytes) -> StreamSubscription:
+    r = _Reader(data); return r.finish(StreamSubscription(r.text(), r.f32(), r.u32()))
 
 
 def decode_stream_subscription_status(data: bytes) -> StreamSubscriptionStatus:
