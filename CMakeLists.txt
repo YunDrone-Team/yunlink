@@ -145,7 +145,7 @@ if (YUNLINK_BUILD_TESTS)
   add_test(NAME test_runtime_v2 COMMAND test_runtime_v2)
 
   add_executable(test_c_ffi_v2 tests/bindings/test_c_ffi_v2.cpp)
-  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink_ffi)
+  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink_ffi yunlink)
   add_test(NAME test_c_ffi_v2 COMMAND test_c_ffi_v2)
 
   add_test(
