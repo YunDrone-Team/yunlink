@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(yunlink VERSION 2.0.0 LANGUAGES CXX)
+project(yunlink VERSION 2.0.1 LANGUAGES CXX)
 
 option(YUNLINK_BUILD_TESTS "Build tests" ON)
 option(YUNLINK_ENABLE_CLANG_TIDY "Run clang-tidy during C++ compilation" OFF)
@@ -87,6 +87,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/v2/session.cpp
   src/runtime/v2/authority.cpp
   src/c/v2/runtime.cpp
+  src/c/v2/discovery.cpp
   src/discovery/discovery_v2.cpp
   src/discovery/discovery_v2_advertiser.cpp
   src/core/configuration_service/codec.cpp

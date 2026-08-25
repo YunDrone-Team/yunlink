@@ -4,13 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VENV_DIR="${ROOT_DIR}/.venv-bindings-wheel"
 WHEEL_DIR="${ROOT_DIR}/output/python-wheel"
+PYTHON_BIN="${PYTHON:-python3}"
 
 mkdir -p "${WHEEL_DIR}"
 rm -f "${WHEEL_DIR}"/yunlink-*.whl
 # CI runners start clean, but developer workspaces can retain a virtualenv
 # whose interpreter was removed or upgraded. Recreate its standard-library
 # links before building so the wheel check remains deterministic.
-python3 -m venv --clear "${VENV_DIR}"
+"${PYTHON_BIN}" -m venv --clear "${VENV_DIR}"
 source "${VENV_DIR}/bin/activate"
 python -m pip install -q --upgrade pip pytest
 python -m pip wheel "${ROOT_DIR}/bindings/python" -w "${WHEEL_DIR}"

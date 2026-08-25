@@ -47,6 +47,8 @@ class Runtime:
         lib.yunlink_v2_runtime_destroy.restype = None
         lib.yunlink_v2_runtime_stop.argtypes = [ctypes.c_void_p]
         lib.yunlink_v2_runtime_stop.restype = None
+        lib.yunlink_v2_runtime_listening_port.argtypes = [ctypes.c_void_p]
+        lib.yunlink_v2_runtime_listening_port.restype = ctypes.c_uint16
         lib.yunlink_v2_runtime_start.argtypes = [ctypes.c_void_p, ctypes.POINTER(_RuntimeConfig)]
         lib.yunlink_v2_runtime_start.restype = ctypes.c_uint16
         lib.yunlink_v2_runtime_connect.argtypes = [ctypes.c_void_p, _StringView, ctypes.c_uint16, ctypes.POINTER(_Peer)]
@@ -108,6 +110,10 @@ class Runtime:
         if code:
             raise Error(code)
         return Peer(native.id.split(b"\0", 1)[0].decode(), native.ip.split(b"\0", 1)[0].decode(), native.port)
+
+    @property
+    def listening_port(self) -> int:
+        return int(self._lib.yunlink_v2_runtime_listening_port(self._runtime))
 
     def open_session(self, peer: Peer) -> int:
         session_id = self._lib.yunlink_v2_runtime_open_session(self._runtime, view(encoded(peer.peer_id)))

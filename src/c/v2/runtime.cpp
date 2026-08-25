@@ -110,6 +110,10 @@ void yunlink_v2_runtime_stop(yunlink_v2_runtime_t* runtime) {
     }
 }
 
+uint16_t yunlink_v2_runtime_listening_port(const yunlink_v2_runtime_t* runtime) {
+    return runtime == nullptr ? 0 : runtime->runtime.listening_port();
+}
+
 uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime,
                                     yunlink_v2_string_view_t ip,
                                     uint16_t port,

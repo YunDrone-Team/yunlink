@@ -43,6 +43,20 @@ class _Peer(ctypes.Structure):
     _fields_ = [("id", ctypes.c_char * 256), ("ip", ctypes.c_char * 64), ("port", ctypes.c_uint16)]
 
 
+class _KeyValueView(ctypes.Structure):
+    _fields_ = [("key", _StringView), ("value", _StringView)]
+
+
+class _DiscoveryEntityView(ctypes.Structure):
+    _fields_ = [
+        ("entity_uid", _StringView),
+        ("kind", _StringView),
+        ("display_name", _StringView),
+        ("availability", ctypes.c_uint8),
+        ("agent_id", ctypes.c_uint32),
+    ]
+
+
 class _TargetView(ctypes.Structure):
     _fields_ = [("scope", ctypes.c_uint8), ("uids", ctypes.POINTER(_StringView)), ("uid_count", ctypes.c_size_t)]
 
@@ -131,3 +145,7 @@ def copy_event(value: _Event) -> Event:
         type_ref=TypeRef(text(value.type_ref.profile_id), value.type_ref.major, text(value.type_ref.type_name), value.type_ref.minor),
         payload=payload,
     )
+
+
+def copy_text(value: _StringView) -> str:
+    return ctypes.string_at(value.data, value.len).decode("utf-8", errors="replace") if value.data and value.len else ""
