@@ -114,6 +114,22 @@ uint16_t yunlink_v2_runtime_listening_port(const yunlink_v2_runtime_t* runtime) 
     return runtime == nullptr ? 0 : runtime->runtime.listening_port();
 }
 
+uint16_t yunlink_v2_runtime_set_entity_uids(yunlink_v2_runtime_t* runtime,
+                                            const yunlink_v2_string_view_t* entity_uids,
+                                            size_t entity_count) {
+    if (runtime == nullptr || ((entity_uids == nullptr) != (entity_count == 0))) {
+        return result(yunlink::v2::ErrorCode::kInvalidArgument);
+    }
+    std::vector<yunlink::v2::EntityDescriptor> entities;
+    entities.reserve(entity_count);
+    for (size_t i = 0; i < entity_count; ++i) {
+        yunlink::v2::EntityDescriptor entity;
+        entity.entity_uid = copy(entity_uids[i]);
+        entities.push_back(std::move(entity));
+    }
+    return result(runtime->runtime.set_entities(std::move(entities)));
+}
+
 uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime,
                                     yunlink_v2_string_view_t ip,
                                     uint16_t port,

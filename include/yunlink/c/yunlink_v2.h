@@ -126,6 +126,10 @@ YUNLINK_V2_API uint16_t yunlink_v2_runtime_start(yunlink_v2_runtime_t* runtime,
 YUNLINK_V2_API void yunlink_v2_runtime_stop(yunlink_v2_runtime_t* runtime);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_listening_port(
     const yunlink_v2_runtime_t* runtime);
+YUNLINK_V2_API uint16_t yunlink_v2_runtime_set_entity_uids(
+    yunlink_v2_runtime_t* runtime,
+    const yunlink_v2_string_view_t* entity_uids,
+    size_t entity_count);
 YUNLINK_V2_API uint16_t yunlink_v2_runtime_connect(yunlink_v2_runtime_t* runtime,
                                                    yunlink_v2_string_view_t ip,
                                                    uint16_t port,

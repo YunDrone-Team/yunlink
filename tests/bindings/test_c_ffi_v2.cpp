@@ -33,6 +33,8 @@ int main() {
     server_config.profile_count = 1;
     assert(yunlink_v2_runtime_start(server, &server_config) == 0);
     assert(yunlink_v2_runtime_listening_port(server) == 19701);
+    const yunlink_v2_string_view_t entity_uids[] = {text("uav1")};
+    assert(yunlink_v2_runtime_set_entity_uids(server, entity_uids, 1) == 0);
 
     auto client_config = server_config;
     client_config.endpoint_uid = text("ffi.client");
