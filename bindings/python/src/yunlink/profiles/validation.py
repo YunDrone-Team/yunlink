@@ -23,12 +23,10 @@ from .validation_shell import (
 MINIMUM_TRUSTED_UNIX_TIME_MS = 1_704_067_200_000
 MAXIMUM_TRUSTED_UNIX_TIME_MS = 4_102_444_800_000
 
-
 def _valid_clock_source(value: str) -> bool:
     return bool(value) and len(value.encode()) <= 64 and all(
         char.isascii() and (char.isalnum() or char in "-_.") for char in value
     )
-
 
 def validate_clock_sync_request(request: system.ClockSyncRequest) -> None:
     if not (
@@ -54,7 +52,6 @@ def validate_clock_sync_response(response: system.ClockSyncResponse) -> None:
     elif response.previous_unix_time_ms or response.applied_unix_time_ms or response.delta_ms:
         raise ValueError("failed clock sync response contains timestamps")
 
-
 def valid_metric_key(key: str) -> bool:
     if not key or len(key.encode()) > 128:
         return False
@@ -67,7 +64,6 @@ def valid_metric_key(key: str) -> bool:
         and all(char.isascii() and (char.islower() or char.isdigit() or char == "_") for char in segment[1:])
         for segment in segments
     )
-
 
 def validate_summary_snapshot(snapshot: telemetry.SummarySnapshot) -> None:
     if len(snapshot.metrics) > 64:
@@ -100,13 +96,11 @@ def validate_summary_snapshot(snapshot: telemetry.SummarySnapshot) -> None:
         if value_kind == "text_value" and len(metric.value.text_value.encode()) > 256:
             raise ValueError("metric text exceeds limit")
 
-
 def _finite_vector(value) -> bool:
     components = [value.x, value.y]
     if hasattr(value, "z"):
         components.append(value.z)
     return all(math.isfinite(component) for component in components)
-
 
 def validate_flight_control_state(state: sunray.FlightControlState) -> None:
     if (

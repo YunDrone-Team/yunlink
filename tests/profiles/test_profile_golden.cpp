@@ -84,10 +84,8 @@ int main() {
     com::yundrone::sunray::v2::FeatureStartRequest request;
     request.set_name("mapping");
     assert(hex(request.SerializeAsString()) == "0a076d617070696e67");
-
     const std::string damaged("\x0a\x08mapping", 9);
     assert(!request.ParseFromString(damaged));
-
     org::yunlink::telemetry::v1::SummarySnapshot summary;
     summary.set_generated_at_ns(1);
     auto* metric = summary.add_metrics();
@@ -98,12 +96,10 @@ int main() {
     assert(org::yunlink::telemetry::v1::validate_summary_snapshot(summary));
     assert(hex(summary.SerializeAsString()) ==
            "080112180a0e6f72672e746573742e72656164791202080120012802");
-
     org::yunlink::media::v1::CameraTakePhotoRequest photo_request;
     photo_request.set_camera_uid("front");
     assert(hex(photo_request.SerializeAsString()) == "0a0566726f6e74");
     assert(org::yunlink::media::v1::validate_camera_request(photo_request.camera_uid()));
-
     org::yunlink::media::v1::MediaAssetListRequest list_request;
     list_request.set_camera_uid("front");
     list_request.add_kinds(org::yunlink::media::v1::MEDIA_PHOTO);
@@ -115,7 +111,6 @@ int main() {
     assert(org::yunlink::media::v1::validate_media_asset_list_request(list_request));
     assert(hex(list_request.SerializeAsString()) ==
            "0a0566726f6e7412020103180a2014281932085933567963323979");
-
     org::yunlink::media::v1::MediaAssetListResponse list_response;
     list_response.set_error(org::yunlink::media::v1::MEDIA_OK);
     list_response.set_next_page_token("next");
@@ -144,7 +139,6 @@ int main() {
     assert(org::yunlink::media::v1::validate_media_asset_list_response(list_response));
     list_request.set_page_size(101);
     assert(!org::yunlink::media::v1::validate_media_asset_list_request(list_request));
-
     org::yunlink::media::v1::CameraStartRtspResponse rtsp_response;
     rtsp_response.set_error(org::yunlink::media::v1::MEDIA_OK);
     rtsp_response.set_message("ready");
@@ -159,7 +153,6 @@ int main() {
     assert(!org::yunlink::media::v1::validate_camera_start_rtsp_response(rtsp_response));
     rtsp_response.set_error(org::yunlink::media::v1::MEDIA_OPERATION_FAILED);
     assert(org::yunlink::media::v1::validate_camera_start_rtsp_response(rtsp_response));
-
     org::yunlink::media::v1::CameraCatalogSnapshot camera_catalog;
     camera_catalog.set_generated_at_ns(42);
     camera_catalog.set_camera_manager_available(true);
@@ -178,7 +171,6 @@ int main() {
     camera->clear_rtsp_url();
     assert(!org::yunlink::media::v1::validate_camera_catalog_snapshot(camera_catalog));
     camera->set_rtsp_url("rtsp://192.168.10.38:8554/front");
-
     org::yunlink::media::v1::MediaAssetRef photo_asset;
     photo_asset.set_asset_id("asset-01");
     photo_asset.set_kind(org::yunlink::media::v1::MEDIA_PHOTO);
@@ -188,7 +180,6 @@ int main() {
     photo_asset.set_camera_uid("front");
     assert(org::yunlink::media::v1::validate_media_asset_ref(photo_asset));
     assert_round_trip(photo_asset);
-
     org::yunlink::media::v1::MediaAssetChunkResponse rejected_chunk;
     rejected_chunk.set_error(org::yunlink::media::v1::MEDIA_BUSY);
     rejected_chunk.set_message("queue is full");
@@ -200,7 +191,6 @@ int main() {
     std::string validation_error;
     assert(!org::yunlink::telemetry::v1::validate_summary_snapshot(summary, &validation_error));
     assert(validation_error == "duplicate metric key");
-
     summary.mutable_metrics()->RemoveLast();
     metric->mutable_value()->set_double_value(std::numeric_limits<double>::infinity());
     assert(!org::yunlink::telemetry::v1::validate_summary_snapshot(summary, &validation_error));
