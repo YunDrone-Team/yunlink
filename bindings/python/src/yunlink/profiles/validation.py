@@ -13,6 +13,12 @@ from .validation_media import (
     validate_media_asset_list_response,
     validate_media_asset_ref,
 )
+from .validation_shell import (
+    validate_shell_close_request,
+    validate_shell_open_request,
+    validate_shell_resize_request,
+    validate_shell_write_request,
+)
 
 MINIMUM_TRUSTED_UNIX_TIME_MS = 1_704_067_200_000
 MAXIMUM_TRUSTED_UNIX_TIME_MS = 4_102_444_800_000

@@ -12,6 +12,8 @@
 #include "org.yunlink.telemetry/v1/summary_validation.hpp"
 #include "org.yunlink.system/v1/system.pb.h"
 #include "org.yunlink.system/v1/system_validation.hpp"
+#include "org.yunlink.shell/v1/shell.pb.h"
+#include "org.yunlink.shell/v1/shell_validation.hpp"
 
 namespace {
 
@@ -38,6 +40,14 @@ template <typename Message> void assert_round_trip(const Message& source) {
 }  // namespace
 
 int main() {
+    org::yunlink::shell::v1::ShellOpenRequest shell_open;
+    shell_open.set_cols(80);
+    shell_open.set_rows(24);
+    assert(org::yunlink::shell::v1::validate_open_request(shell_open));
+    assert(hex(shell_open.SerializeAsString()) == "08501018");
+    shell_open.set_cols(19);
+    assert(!org::yunlink::shell::v1::validate_open_request(shell_open));
+
     org::yunlink::system::v1::ClockSyncRequest clock_request;
     clock_request.set_unix_time_ms(1767225600123ULL);
     clock_request.set_source("sunray-gcs");

@@ -1,8 +1,25 @@
 #include "runtime_internal.hpp"
 
 #include <set>
+#include <sstream>
 
 namespace yunlink::v2 {
+
+namespace {
+
+std::string latest_key(const Envelope& envelope) {
+    std::ostringstream key;
+    key << envelope.session_id << ':' << static_cast<unsigned>(envelope.family) << ':'
+        << envelope.source.entity_uid << ':' << static_cast<unsigned>(envelope.target.scope) << ':';
+    for (const auto& uid : envelope.target.uids) {
+        key << uid << ',';
+    }
+    key << ':' << envelope.type.profile_id << ':' << envelope.type.major << ':'
+        << envelope.type.minor << ':' << envelope.type.type_name;
+    return key.str();
+}
+
+}  // namespace
 
 ErrorCode Runtime::set_entities(std::vector<EntityDescriptor> entities) {
     for (const auto& entity : entities) {
@@ -48,7 +65,13 @@ ErrorCode Runtime::send(const std::string& peer_id, const Envelope& envelope) {
     if (bytes.empty()) {
         return ErrorCode::kEncodeError;
     }
-    return runtime_write(connection, bytes) ? ErrorCode::kOk : ErrorCode::kInternal;
+    return runtime_enqueue(connection,
+                           bytes,
+                           envelope.qos_class,
+                           envelope.qos_class == QosClass::kReliableLatest ? latest_key(envelope)
+                                                                           : std::string())
+               ? ErrorCode::kOk
+               : ErrorCode::kRejected;
 }
 
 ErrorCode Runtime::publish(const std::string& peer_id,

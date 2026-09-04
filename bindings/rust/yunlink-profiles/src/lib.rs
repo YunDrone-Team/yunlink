@@ -20,6 +20,11 @@ pub mod org {
                 include!(concat!(env!("OUT_DIR"), "/org.yunlink.media.v1.rs"));
             }
         }
+        pub mod shell {
+            pub mod v1 {
+                include!(concat!(env!("OUT_DIR"), "/org.yunlink.shell.v1.rs"));
+            }
+        }
     }
 }
 
@@ -38,12 +43,14 @@ pub use org::yunlink::media::v1 as media;
 pub use org::yunlink::mobility::v1 as mobility;
 pub use org::yunlink::system::v1 as system;
 pub use org::yunlink::telemetry::v1 as telemetry;
+pub use org::yunlink::shell::v1 as shell;
 
 pub const MOBILITY_PROFILE_ID: &str = "org.yunlink.mobility";
 pub const TELEMETRY_PROFILE_ID: &str = "org.yunlink.telemetry";
 pub const MEDIA_PROFILE_ID: &str = "org.yunlink.media";
 pub const SUNRAY_PROFILE_ID: &str = "com.yundrone.sunray";
 pub const SYSTEM_PROFILE_ID: &str = "org.yunlink.system";
+pub const SHELL_PROFILE_ID: &str = "org.yunlink.shell";
 
 pub const SUMMARY_MAX_METRICS: usize = 64;
 pub const SUMMARY_MAX_PAYLOAD_BYTES: usize = 16 * 1024;
@@ -61,11 +68,13 @@ pub const MINIMUM_TRUSTED_UNIX_TIME_MS: u64 = 1_704_067_200_000;
 pub const MAXIMUM_TRUSTED_UNIX_TIME_MS: u64 = 4_102_444_800_000;
 
 mod validation_media;
+mod validation_shell;
 mod validation_sunray;
 mod validation_system;
 mod validation_telemetry;
 
 pub use validation_media::*;
+pub use validation_shell::*;
 pub use validation_sunray::*;
 pub use validation_system::*;
 pub use validation_telemetry::*;

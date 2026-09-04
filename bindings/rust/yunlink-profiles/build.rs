@@ -9,6 +9,7 @@ fn main() {
     let media = profiles.join("org.yunlink.media/v1/media.proto");
     let sunray = profiles.join("com.yundrone.sunray/v2/sunray.proto");
     let system = profiles.join("org.yunlink.system/v1/system.proto");
+    let shell = profiles.join("org.yunlink.shell/v1/shell.proto");
     let protoc = protoc_bin_vendored::protoc_bin_path().expect("vendored protoc");
     env::set_var("PROTOC", protoc);
     prost_build::Config::new()
@@ -19,6 +20,7 @@ fn main() {
                 media.clone(),
                 sunray.clone(),
                 system.clone(),
+                shell.clone(),
             ],
             &[profiles],
         )
@@ -28,4 +30,5 @@ fn main() {
     println!("cargo:rerun-if-changed={}", media.display());
     println!("cargo:rerun-if-changed={}", sunray.display());
     println!("cargo:rerun-if-changed={}", system.display());
+    println!("cargo:rerun-if-changed={}", shell.display());
 }

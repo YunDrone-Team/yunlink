@@ -159,6 +159,7 @@ if (YUNLINK_BUILD_TESTS)
       yunlink_profile_telemetry
       yunlink_profile_media
       yunlink_profile_system
+      yunlink_profile_shell
     )
     add_test(NAME test_profile_golden COMMAND test_profile_golden)
 

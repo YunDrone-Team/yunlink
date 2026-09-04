@@ -3,6 +3,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -15,12 +17,23 @@
 namespace yunlink::v2 {
 
 struct RuntimeConnection {
+    struct OutboundFrame {
+        Bytes bytes;
+        QosClass qos = QosClass::kReliableOrdered;
+        std::string latest_key;
+    };
+
     Peer peer;
     std::atomic<bool> running{false};
     std::thread receive_thread;
+    std::thread send_thread;
     asio::io_context io;
     std::shared_ptr<asio::ip::tcp::socket> socket;
     std::mutex send_mutex;
+    std::condition_variable send_condition;
+    std::deque<OutboundFrame> send_queues[4];
+    size_t queued_bytes{0};
+    size_t max_queued_bytes{16U * 1024U * 1024U};
     Bytes receive_buffer;
 };
 
@@ -52,6 +65,11 @@ std::chrono::steady_clock::time_point runtime_steady_now();
 std::string runtime_peer_id(const std::string& ip, uint16_t port);
 void runtime_emit(Runtime::Impl* impl, const RuntimeEvent& event);
 bool runtime_write(const std::shared_ptr<RuntimeConnection>& connection, const Bytes& bytes);
+bool runtime_enqueue(const std::shared_ptr<RuntimeConnection>& connection,
+                     Bytes bytes,
+                     QosClass qos,
+                     std::string latest_key = {});
+void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_receive_loop(Runtime::Impl* impl,
                           const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope);

@@ -33,6 +33,7 @@ std::error_code connect_with_timeout(asio::ip::tcp::socket& socket,
 
 void close_connection(const std::shared_ptr<RuntimeConnection>& connection) {
     connection->running.store(false);
+    connection->send_condition.notify_all();
     if (connection->socket) {
         std::error_code ignored;
         connection->socket->cancel(ignored);
@@ -41,6 +42,10 @@ void close_connection(const std::shared_ptr<RuntimeConnection>& connection) {
     if (connection->receive_thread.joinable() &&
         connection->receive_thread.get_id() != std::this_thread::get_id()) {
         connection->receive_thread.join();
+    }
+    if (connection->send_thread.joinable() &&
+        connection->send_thread.get_id() != std::this_thread::get_id()) {
+        connection->send_thread.join();
     }
 }
 
@@ -141,6 +146,7 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
             connection->peer.id = runtime_peer_id(connection->peer.ip, connection->peer.port);
             connection->socket = socket;
             connection->running.store(true);
+            connection->max_queued_bytes = impl_->config.max_buffer_bytes_per_peer;
             socket->non_blocking(true, error);
             {
                 std::lock_guard<std::mutex> lock(impl_->mutex);
@@ -149,6 +155,7 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
             runtime_emit(
                 impl_.get(),
                 {RuntimeEventKind::kLink, connection->peer, {}, {}, ErrorCode::kOk, {}, true});
+            connection->send_thread = std::thread(runtime_send_loop, connection);
             connection->receive_thread = std::thread(runtime_receive_loop, impl_.get(), connection);
         }
     });
@@ -230,6 +237,7 @@ ErrorCode Runtime::connect_peer(const std::string& ip, uint16_t port, Peer* out)
     }
     connection->peer = {peer_id, ip, port};
     connection->running.store(true);
+    connection->max_queued_bytes = impl_->config.max_buffer_bytes_per_peer;
     connection->socket->non_blocking(true, error);
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
@@ -237,6 +245,7 @@ ErrorCode Runtime::connect_peer(const std::string& ip, uint16_t port, Peer* out)
     }
     runtime_emit(impl_.get(),
                  {RuntimeEventKind::kLink, connection->peer, {}, {}, ErrorCode::kOk, {}, true});
+    connection->send_thread = std::thread(runtime_send_loop, connection);
     connection->receive_thread = std::thread(runtime_receive_loop, impl_.get(), connection);
     if (out != nullptr) {
         *out = connection->peer;

@@ -5,6 +5,8 @@
 namespace yunlink::v2 {
 namespace {
 
+constexpr size_t kReliableOrderedReserveFraction = 4U;
+
 bool socket_closed(const std::error_code& error) {
     return error == asio::error::operation_aborted || error == asio::error::bad_descriptor ||
            error == asio::error::eof || error == asio::error::connection_reset ||
@@ -61,7 +63,7 @@ bool pop_frame(Runtime::Impl* impl, Bytes* buffer, Envelope* out, ErrorCode* err
 
 }  // namespace
 
-bool runtime_write(const std::shared_ptr<RuntimeConnection>& connection, const Bytes& bytes) {
+bool write_socket(const std::shared_ptr<RuntimeConnection>& connection, const Bytes& bytes) {
     if (!connection || !connection->running.load() || !connection->socket || bytes.empty()) {
         return false;
     }
@@ -90,6 +92,134 @@ bool runtime_write(const std::shared_ptr<RuntimeConnection>& connection, const B
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return offset == bytes.size();
+}
+
+size_t qos_index(QosClass qos) {
+    switch (qos) {
+    case QosClass::kReliableOrdered:
+        return 0;
+    case QosClass::kReliableLatest:
+        return 1;
+    case QosClass::kBestEffort:
+        return 2;
+    case QosClass::kBulk:
+        return 3;
+    }
+    return 0;
+}
+
+bool drop_oldest(RuntimeConnection* connection, size_t queue_index) {
+    auto& queue = connection->send_queues[queue_index];
+    if (queue.empty()) {
+        return false;
+    }
+    connection->queued_bytes -= queue.front().bytes.size();
+    queue.pop_front();
+    return true;
+}
+
+size_t enqueue_limit(const RuntimeConnection* connection, QosClass qos);
+
+bool make_room(RuntimeConnection* connection, size_t bytes, QosClass qos) {
+    const size_t limit = enqueue_limit(connection, qos);
+    while (connection->queued_bytes + bytes > limit) {
+        if (drop_oldest(connection, 3) || drop_oldest(connection, 2)) {
+            continue;
+        }
+        return false;
+    }
+    return true;
+}
+
+size_t enqueue_limit(const RuntimeConnection* connection, QosClass qos) {
+    if (qos == QosClass::kReliableOrdered) {
+        return connection->max_queued_bytes;
+    }
+    // Keep a bounded slice available for control-plane frames even when a
+    // telemetry/media burst fills the connection queue.
+    const size_t reserve = connection->max_queued_bytes / kReliableOrderedReserveFraction;
+    return connection->max_queued_bytes - reserve;
+}
+
+bool runtime_enqueue(const std::shared_ptr<RuntimeConnection>& connection,
+                     Bytes bytes,
+                     QosClass qos,
+                     std::string latest_key) {
+    if (!connection || bytes.empty() || !connection->running.load()) {
+        return false;
+    }
+    const size_t index = qos_index(qos);
+    std::lock_guard<std::mutex> lock(connection->send_mutex);
+    if (!connection->running.load() || bytes.size() > enqueue_limit(connection.get(), qos)) {
+        return false;
+    }
+    if (qos == QosClass::kReliableLatest && !latest_key.empty()) {
+        auto& queue = connection->send_queues[index];
+        for (auto& frame : queue) {
+            if (frame.latest_key == latest_key) {
+                connection->queued_bytes -= frame.bytes.size();
+                if (!make_room(connection.get(), bytes.size(), qos)) {
+                    connection->queued_bytes += frame.bytes.size();
+                    return false;
+                }
+                frame.bytes = std::move(bytes);
+                connection->queued_bytes += frame.bytes.size();
+                connection->send_condition.notify_one();
+                return true;
+            }
+        }
+    }
+    if (!make_room(connection.get(), bytes.size(), qos)) {
+        return false;
+    }
+    connection->queued_bytes += bytes.size();
+    connection->send_queues[index].push_back({std::move(bytes), qos, std::move(latest_key)});
+    connection->send_condition.notify_one();
+    return true;
+}
+
+bool take_next_frame(RuntimeConnection* connection, RuntimeConnection::OutboundFrame* frame) {
+    std::lock_guard<std::mutex> lock(connection->send_mutex);
+    size_t index = 0;
+    while (index < 4U && connection->send_queues[index].empty()) {
+        ++index;
+    }
+    if (index == 4U) {
+        return false;
+    }
+    *frame = std::move(connection->send_queues[index].front());
+    connection->send_queues[index].pop_front();
+    connection->queued_bytes -= frame->bytes.size();
+    return true;
+}
+
+void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection) {
+    while (connection->running.load()) {
+        RuntimeConnection::OutboundFrame frame;
+        {
+            std::unique_lock<std::mutex> lock(connection->send_mutex);
+            connection->send_condition.wait(lock, [&]() {
+                return !connection->running.load() || connection->queued_bytes != 0U;
+            });
+        }
+        if (!connection->running.load() || !take_next_frame(connection.get(), &frame)) {
+            continue;
+        }
+        if (!write_socket(connection, frame.bytes)) {
+            connection->running.store(false);
+            connection->send_condition.notify_all();
+            if (connection->socket) {
+                std::error_code ignored;
+                connection->socket->cancel(ignored);
+                connection->socket->close(ignored);
+            }
+            break;
+        }
+    }
+}
+
+bool runtime_write(const std::shared_ptr<RuntimeConnection>& connection, const Bytes& bytes) {
+    return runtime_enqueue(connection, Bytes(bytes), QosClass::kReliableOrdered);
 }
 
 void runtime_receive_loop(Runtime::Impl* impl,

@@ -28,6 +28,11 @@ media catalog, and Bulk file metadata. RTSP/H.264 frames remain outside
 YunLink; see [`profiles/org.yunlink.media-v1.md`](../profiles/org.yunlink.media-v1.md)
 for the catalog and thumbnail relationship rules.
 
+`org.yunlink.shell@1` defines an optional Endpoint-level interactive login
+Shell using RPC plus a raw-byte output Stream. Its constraints and security
+boundary are in
+[`profiles/org.yunlink.shell-v1.md`](profiles/org.yunlink.shell-v1.md).
+
 Both schemas use proto3 syntax compatible with Protobuf 3.6 and avoid newer
 optional-field syntax.
 
