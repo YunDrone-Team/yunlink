@@ -19,6 +19,9 @@ constexpr std::size_t kMediaMaxSourceUriBytes = 2048;
 constexpr std::size_t kMediaMaxAssetPageSize = 100;
 constexpr std::size_t kMediaMaxPageTokenBytes = 512;
 constexpr std::uint32_t kMediaMaxDimensionPixels = 32768;
+constexpr std::size_t kMediaMaxStorageIdBytes = 64;
+constexpr std::size_t kMediaMaxRelativePathBytes = 1024;
+constexpr std::size_t kMediaMaxFileEntries = 256;
 
 bool validate_camera_descriptor(const CameraDescriptor& camera, std::string* error = nullptr);
 bool validate_camera_catalog_snapshot(const CameraCatalogSnapshot& snapshot,
@@ -33,5 +36,11 @@ bool validate_media_asset_list_response(const MediaAssetListResponse& response,
                                         std::string* error = nullptr);
 bool validate_camera_request(const std::string& camera_uid, std::string* error = nullptr);
 bool validate_media_asset_chunk(const MediaAssetChunkResponse& chunk, std::string* error = nullptr);
+bool validate_media_file_entry(const MediaFileEntry& entry, std::string* error = nullptr);
+bool validate_media_file_list_request(const MediaFileListRequest& request,
+                                      std::string* error = nullptr);
+bool validate_media_file_list_response(const MediaFileListResponse& response,
+                                       std::string* error = nullptr);
+bool validate_media_file_chunk(const MediaFileChunkResponse& chunk, std::string* error = nullptr);
 
 }  // namespace org::yunlink::media::v1

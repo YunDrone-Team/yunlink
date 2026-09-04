@@ -383,6 +383,21 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
     return true;
 }
 
+bool validate_mapping_state(const MappingState& state, std::string* error) {
+    if (state.status() != "" && state.status() != "UNAVAILABLE" &&
+        state.status() != "IDLE" && state.status() != "ACCUMULATING" &&
+        state.status() != "ERROR") {
+        return fail(error, "mapping state status is invalid");
+    }
+    for (const auto& lidar : state.lidars()) {
+        if (!std::isfinite(lidar.lidar_rate_hz()) || !std::isfinite(lidar.imu_rate_hz()) ||
+            !std::isfinite(lidar.lidar_age_sec()) || !std::isfinite(lidar.imu_age_sec())) {
+            return fail(error, "mapping state contains a non-finite value");
+        }
+    }
+    return true;
+}
+
 bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error) {
     if (!std::isfinite(goal.yaw_rad()) || !std::isfinite(goal.pitch_rad())) {
         return fail(error, "gimbal angle goal is invalid");

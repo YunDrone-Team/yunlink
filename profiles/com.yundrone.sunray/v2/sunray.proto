@@ -518,6 +518,43 @@ message FormationState {
   string last_error = 16;
 }
 
+// Point-cloud accumulation control and status.  This is intentionally a small
+// typed extension: the Livox driver already owns the ROS services and exposes
+// diagnostics, while YunLink only carries the remote operation and summary.
+message MappingStartRequest {}
+message MappingStartResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message MappingStopRequest {}
+message MappingStopResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message MappingLidarState {
+  string lidar_name = 1;
+  string lidar_topic = 2;
+  string imu_topic = 3;
+  double lidar_rate_hz = 4;
+  double imu_rate_hz = 5;
+  bool pointcloud_accumulating = 6;
+  uint64 pointcloud_frame_count = 7;
+  bool lidar_running = 8;
+  double lidar_age_sec = 9;
+  double imu_age_sec = 10;
+  uint32 lidar_point_num = 11;
+  uint32 lidar_actual_count = 12;
+}
+
+message MappingState {
+  uint64 source_stamp_ns = 1;
+  string status = 2;
+  string error = 3;
+  repeated MappingLidarState lidars = 4;
+}
+
 // These values mirror the stable ROS FeatureSummary contract. This v2 profile
 // is a hard cut: the old supervisor runtime-state enum is not carried on Wire.
 enum FeatureCategory {

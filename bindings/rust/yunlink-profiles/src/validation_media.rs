@@ -187,3 +187,83 @@ pub fn validate_media_asset_chunk(
         .then_some(())
         .ok_or("media asset chunk is invalid")
 }
+
+pub fn validate_media_file_entry(entry: &media::MediaFileEntry) -> Result<(), &'static str> {
+    let directory = entry.entry_type == media::MediaFileEntryType::MediaDirectory as i32;
+    (valid_token(&entry.file_id, 128)
+        && matches!(
+            media::MediaFileEntryType::try_from(entry.entry_type),
+            Ok(media::MediaFileEntryType::MediaFile | media::MediaFileEntryType::MediaDirectory)
+        )
+        && !entry.storage_id.is_empty()
+        && entry.storage_id.len() <= 64
+        && !entry.relative_path.is_empty()
+        && entry.relative_path.len() <= 1024
+        && !entry
+            .relative_path
+            .bytes()
+            .any(|byte| byte < 0x20 || byte == 0x7f)
+        && !entry.name.is_empty()
+        && entry.name.len() <= 160
+        && !entry.name.bytes().any(|byte| byte < 0x20 || byte == 0x7f)
+        && entry.mime_type.len() <= 96
+        && (directory
+            || (entry.size_bytes > 0 && entry.sha256.len() == 32))
+        && (!directory
+            || (entry.mime_type.is_empty() && entry.size_bytes == 0 && entry.sha256.is_empty())))
+        .then_some(())
+        .ok_or("media file entry is invalid")
+}
+
+pub fn validate_media_file_list_request(
+    request: &media::MediaFileListRequest,
+) -> Result<(), &'static str> {
+    ( !request.storage_id.is_empty()
+        && request.storage_id.len() <= 64
+        && request.path_prefix.len() <= 1024
+        && !request.path_prefix.bytes().any(|byte| byte < 0x20 || byte == 0x7f)
+        && request.page_size > 0
+        && request.page_size as usize <= 256
+        && valid_page_token(&request.page_token))
+        .then_some(())
+        .ok_or("media file list request is invalid")
+}
+
+pub fn validate_media_file_list_response(
+    response: &media::MediaFileListResponse,
+) -> Result<(), &'static str> {
+    let error = media::MediaError::try_from(response.error).map_err(|_| "media file list response is invalid")?;
+    if error == media::MediaError::Unspecified
+        || response.message.len() > 256
+        || response.entries.len() > 256
+        || !valid_page_token(&response.next_page_token)
+    {
+        return Err("media file list response is invalid");
+    }
+    if error != media::MediaError::MediaOk
+        && (!response.entries.is_empty() || !response.next_page_token.is_empty())
+    {
+        return Err("failed media file list response contains data");
+    }
+    let mut ids = std::collections::HashSet::new();
+    for entry in &response.entries {
+        validate_media_file_entry(entry)?;
+        if !ids.insert(entry.file_id.as_str()) {
+            return Err("media file list response contains duplicate entry");
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_media_file_chunk(
+    chunk: &media::MediaFileChunkResponse,
+) -> Result<(), &'static str> {
+    validate_media_asset_chunk(&media::MediaAssetChunkResponse {
+        error: chunk.error,
+        message: chunk.message.clone(),
+        transfer_id: chunk.transfer_id.clone(),
+        offset: chunk.offset,
+        data: chunk.data.clone(),
+        eof: chunk.eof,
+    })
+}

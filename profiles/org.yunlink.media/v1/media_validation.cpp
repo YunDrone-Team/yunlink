@@ -51,6 +51,20 @@ bool contains_control(const std::string& value) {
     });
 }
 
+bool valid_relative_path(const std::string& value, bool allow_empty) {
+    if (value.empty()) return allow_empty;
+    if (value.front() == '/' || value.find('\\') != std::string::npos) return false;
+    size_t start = 0;
+    while (start <= value.size()) {
+        const size_t end = value.find('/', start);
+        const auto segment = value.substr(start, end == std::string::npos ? std::string::npos : end - start);
+        if (segment.empty() || segment == "." || segment == "..") return false;
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    return true;
+}
+
 }  // namespace
 
 bool validate_camera_request(const std::string& camera_uid, std::string* error) {
@@ -217,6 +231,67 @@ bool validate_media_asset_chunk(const MediaAssetChunkResponse& chunk, std::strin
     if (error != nullptr) {
         error->clear();
     }
+    return true;
+}
+
+bool validate_media_file_entry(const MediaFileEntry& entry, std::string* error) {
+    const bool directory = entry.entry_type() == MEDIA_DIRECTORY;
+    if (!valid_token(entry.file_id(), kMediaMaxAssetIdBytes) ||
+        (entry.entry_type() != MEDIA_FILE && !directory) ||
+        entry.storage_id().empty() || entry.storage_id().size() > kMediaMaxStorageIdBytes ||
+        entry.relative_path().empty() || entry.relative_path().size() > kMediaMaxRelativePathBytes ||
+        entry.name().empty() || entry.name().size() > 160 || contains_control(entry.relative_path()) ||
+        !valid_relative_path(entry.relative_path(), false) ||
+        contains_control(entry.name()) || (!directory && entry.size_bytes() == 0) ||
+        (!directory && entry.sha256().size() != kMediaSha256Bytes) ||
+        (directory && (!entry.mime_type().empty() || entry.size_bytes() != 0 || !entry.sha256().empty())) ||
+        entry.mime_type().size() > 96) {
+        return fail("media file entry is invalid", error);
+    }
+    if (error != nullptr) error->clear();
+    return true;
+}
+
+bool validate_media_file_list_request(const MediaFileListRequest& request, std::string* error) {
+    if (request.storage_id().empty() || request.storage_id().size() > kMediaMaxStorageIdBytes ||
+        request.path_prefix().size() > kMediaMaxRelativePathBytes ||
+        contains_control(request.path_prefix()) || !valid_relative_path(request.path_prefix(), true) || request.page_size() == 0 ||
+        request.page_size() > kMediaMaxFileEntries || !valid_page_token(request.page_token())) {
+        return fail("media file list request is invalid", error);
+    }
+    if (error != nullptr) error->clear();
+    return true;
+}
+
+bool validate_media_file_list_response(const MediaFileListResponse& response, std::string* error) {
+    if (!valid_error(response.error()) || response.message().size() > kMediaMaxMessageBytes ||
+        response.entries_size() > static_cast<int>(kMediaMaxFileEntries) ||
+        !valid_page_token(response.next_page_token())) {
+        return fail("media file list response is invalid", error);
+    }
+    if (response.error() != MEDIA_OK &&
+        (response.entries_size() != 0 || !response.next_page_token().empty())) {
+        return fail("failed media file list response contains data", error);
+    }
+    std::unordered_set<std::string> ids;
+    for (const auto& entry : response.entries()) {
+        if (!validate_media_file_entry(entry, error) || !ids.insert(entry.file_id()).second) {
+            return fail("media file list response contains duplicate or invalid entry", error);
+        }
+    }
+    if (error != nullptr) error->clear();
+    return true;
+}
+
+bool validate_media_file_chunk(const MediaFileChunkResponse& chunk, std::string* error) {
+    if (!valid_error(chunk.error()) || chunk.message().size() > kMediaMaxMessageBytes ||
+        chunk.data().size() > kMediaMaxChunkBytes ||
+        (!chunk.transfer_id().empty() && !valid_token(chunk.transfer_id(), kMediaMaxTransferIdBytes)) ||
+        (chunk.error() == MEDIA_OK &&
+         (chunk.transfer_id().empty() || (chunk.data().empty() && !chunk.eof())))) {
+        return fail("media file chunk is invalid", error);
+    }
+    if (error != nullptr) error->clear();
     return true;
 }
 

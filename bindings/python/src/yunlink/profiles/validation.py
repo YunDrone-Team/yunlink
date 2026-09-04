@@ -455,6 +455,16 @@ def validate_formation_state(state: sunray.FormationState) -> None:
         raise ValueError("formation state is invalid")
 
 
+def validate_mapping_state(state: sunray.MappingState) -> None:
+    if state.status not in {"", "UNAVAILABLE", "IDLE", "ACCUMULATING", "ERROR"}:
+        raise ValueError("mapping state status is invalid")
+    for lidar in state.lidars:
+        if not all(math.isfinite(value) for value in (
+            lidar.lidar_rate_hz, lidar.imu_rate_hz, lidar.lidar_age_sec, lidar.imu_age_sec
+        )):
+            raise ValueError("mapping state contains a non-finite value")
+
+
 def validate_gimbal_angle_goal(goal: sunray.GimbalAngleGoal) -> None:
     if not math.isfinite(goal.yaw_rad) or not math.isfinite(goal.pitch_rad):
         raise ValueError("gimbal angle goal is invalid")

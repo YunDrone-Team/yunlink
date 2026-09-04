@@ -202,3 +202,85 @@ message MediaAssetStatusResponse {
   uint64 bytes_sent = 4;
   uint64 total_bytes = 5;
 }
+
+enum MediaFileEntryType {
+  MEDIA_FILE_ENTRY_UNSPECIFIED = 0;
+  MEDIA_FILE = 1;
+  MEDIA_DIRECTORY = 2;
+}
+
+message MediaFileEntry {
+  string file_id = 1;
+  MediaFileEntryType entry_type = 2;
+  string storage_id = 3;
+  string relative_path = 4;
+  string name = 5;
+  string mime_type = 6;
+  uint64 size_bytes = 7;
+  bytes sha256 = 8;
+  uint64 modified_at_ns = 9;
+}
+
+message MediaFileListRequest {
+  string storage_id = 1;
+  string path_prefix = 2;
+  uint32 page_size = 3;
+  string page_token = 4;
+}
+
+message MediaFileListResponse {
+  MediaError error = 1;
+  string message = 2;
+  repeated MediaFileEntry entries = 3;
+  string next_page_token = 4;
+  uint64 catalog_revision = 5;
+}
+
+message MediaFileOpen {
+  string file_id = 1;
+}
+
+message MediaFileOpenResponse {
+  MediaError error = 1;
+  string message = 2;
+  string transfer_id = 3;
+  MediaFileEntry file = 4;
+  uint32 chunk_size_bytes = 5;
+}
+
+message MediaFileChunk {
+  string transfer_id = 1;
+  uint64 offset = 2;
+  uint32 max_bytes = 3;
+}
+
+message MediaFileChunkResponse {
+  MediaError error = 1;
+  string message = 2;
+  string transfer_id = 3;
+  uint64 offset = 4;
+  bytes data = 5;
+  bool eof = 6;
+}
+
+message MediaFileClose {
+  string transfer_id = 1;
+  bool cancel = 2;
+}
+
+message MediaFileCloseResponse {
+  MediaError error = 1;
+  string message = 2;
+}
+
+message MediaFileStatus {
+  string transfer_id = 1;
+}
+
+message MediaFileStatusResponse {
+  MediaError error = 1;
+  string message = 2;
+  MediaAssetTransferState state = 3;
+  uint64 bytes_sent = 4;
+  uint64 total_bytes = 5;
+}

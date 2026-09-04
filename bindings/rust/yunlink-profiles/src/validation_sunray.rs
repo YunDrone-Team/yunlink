@@ -390,6 +390,22 @@ pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'
         .ok_or("formation state is invalid")
 }
 
+pub fn validate_mapping_state(state: &sunray::MappingState) -> Result<(), &'static str> {
+    let valid_status = matches!(
+        state.status.as_str(),
+        "" | "UNAVAILABLE" | "IDLE" | "ACCUMULATING" | "ERROR"
+    );
+    let valid_lidars = state.lidars.iter().all(|lidar| {
+        !lidar.lidar_rate_hz.is_nan()
+            && !lidar.imu_rate_hz.is_nan()
+            && !lidar.lidar_age_sec.is_nan()
+            && !lidar.imu_age_sec.is_nan()
+    });
+    (valid_status && valid_lidars)
+        .then_some(())
+        .ok_or("mapping state is invalid")
+}
+
 pub fn validate_gimbal_angle_goal(goal: &sunray::GimbalAngleGoal) -> Result<(), &'static str> {
     (goal.yaw_rad.is_finite() && goal.pitch_rad.is_finite())
         .then_some(())

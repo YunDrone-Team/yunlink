@@ -174,3 +174,30 @@ def validate_media_asset_chunk(chunk: media.MediaAssetChunkResponse) -> None:
         )
     ):
         raise ValueError("media asset chunk is invalid")
+
+def validate_media_file_entry(entry: media.MediaFileEntry) -> None:
+    if entry.entry_type not in {media.MEDIA_FILE, media.MEDIA_DIRECTORY} or not entry.file_id or len(entry.file_id.encode()) > 128:
+        raise ValueError("media file entry identity is invalid")
+    if not entry.storage_id or len(entry.storage_id.encode()) > 64 or not entry.relative_path or len(entry.relative_path.encode()) > 1024:
+        raise ValueError("media file entry path is invalid")
+    if entry.entry_type == media.MEDIA_FILE and (not entry.name or entry.size_bytes == 0 or len(entry.sha256) != 32):
+        raise ValueError("media file entry is invalid")
+
+def validate_media_file_list_request(request: media.MediaFileListRequest) -> None:
+    if not request.storage_id or len(request.storage_id.encode()) > 64 or len(request.path_prefix.encode()) > 1024 or not (1 <= request.page_size <= 256) or not _valid_media_page_token(request.page_token):
+        raise ValueError("media file list request is invalid")
+
+def validate_media_file_list_response(response: media.MediaFileListResponse) -> None:
+    if response.error not in set(range(media.MEDIA_OK, media.MEDIA_INTEGRITY_ERROR + 1)) or len(response.message.encode()) > 256 or len(response.entries) > 256 or not _valid_media_page_token(response.next_page_token):
+        raise ValueError("media file list response is invalid")
+    if response.error != media.MEDIA_OK and (response.entries or response.next_page_token):
+        raise ValueError("failed media file list response contains data")
+    ids: set[str] = set()
+    for entry in response.entries:
+        validate_media_file_entry(entry)
+        if entry.file_id in ids: raise ValueError("duplicate media file id")
+        ids.add(entry.file_id)
+
+def validate_media_file_chunk(chunk: media.MediaFileChunkResponse) -> None:
+    if chunk.error not in set(range(media.MEDIA_OK, media.MEDIA_INTEGRITY_ERROR + 1)) or len(chunk.message.encode()) > 256 or len(chunk.data) > 256 * 1024:
+        raise ValueError("media file chunk is invalid")
