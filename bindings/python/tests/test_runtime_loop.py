@@ -11,6 +11,7 @@ def test_runtime_v2_stream_roundtrip():
     source = yunlink.Runtime(
         yunlink.RuntimeConfig("endpoint.source", 15130, profiles=(PROFILE,))
     )
+    source.set_entity_uids(("uav1",))
     sink = yunlink.Runtime(
         yunlink.RuntimeConfig(
             "endpoint.sink", 15131, profiles=(PROFILE,), required_profiles=(PROFILE,)

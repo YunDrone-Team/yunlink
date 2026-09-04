@@ -106,7 +106,7 @@ ErrorCode Runtime::publish(const std::string& peer_id,
     return result;
 }
 
-size_t Runtime::subscribe(EventHandler handler) {
+size_t Runtime::subscribe(EventHandler handler) {  // NOLINT(performance-unnecessary-value-param)
     if (!handler) {
         return 0;
     }

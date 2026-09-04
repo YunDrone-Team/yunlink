@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(yunlink VERSION 2.0.0 LANGUAGES CXX)
+project(yunlink VERSION 2.0.1 LANGUAGES CXX)
 
 option(YUNLINK_BUILD_TESTS "Build tests" ON)
 option(YUNLINK_ENABLE_CLANG_TIDY "Run clang-tidy during C++ compilation" OFF)
@@ -87,6 +87,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/v2/session.cpp
   src/runtime/v2/authority.cpp
   src/c/v2/runtime.cpp
+  src/c/v2/discovery.cpp
   src/discovery/discovery_v2.cpp
   src/discovery/discovery_v2_advertiser.cpp
   src/core/configuration_service/codec.cpp
@@ -127,6 +128,13 @@ if (YUNLINK_BUILD_TESTS)
   enable_testing()
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+  # The C++ tests use assert() as their test primitive, including for setup calls.
+  if (MSVC)
+    add_compile_options(/UNDEBUG)
+  else()
+    add_compile_options(-UNDEBUG)
+  endif()
+
   add_executable(test_wire_v2 tests/core/test_wire_v2.cpp)
   target_link_libraries(test_wire_v2 PRIVATE yunlink)
   add_test(NAME test_wire_v2 COMMAND test_wire_v2)
@@ -144,7 +152,7 @@ if (YUNLINK_BUILD_TESTS)
   add_test(NAME test_runtime_v2 COMMAND test_runtime_v2)
 
   add_executable(test_c_ffi_v2 tests/bindings/test_c_ffi_v2.cpp)
-  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink_ffi)
+  target_link_libraries(test_c_ffi_v2 PRIVATE yunlink_ffi yunlink)
   add_test(NAME test_c_ffi_v2 COMMAND test_c_ffi_v2)
 
   add_test(

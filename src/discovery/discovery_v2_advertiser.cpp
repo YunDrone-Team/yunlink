@@ -90,6 +90,7 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
                 impl_->event_handler(event);
             } catch (...) {
                 // Diagnostics must never stop the discovery responder.
+                return;
             }
         };
         std::array<uint8_t, 1024> buffer{};
