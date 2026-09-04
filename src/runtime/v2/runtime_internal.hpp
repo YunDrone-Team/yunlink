@@ -33,7 +33,7 @@ struct RuntimeConnection {
     std::condition_variable send_condition;
     std::deque<OutboundFrame> send_queues[4];
     size_t queued_bytes{0};
-    size_t max_queued_bytes{16U * 1024U * 1024U};
+    size_t max_queued_bytes{static_cast<size_t>(16U) * 1024U * 1024U};
     Bytes receive_buffer;
 };
 
