@@ -178,3 +178,29 @@ fn asset_chunks_are_bounded_and_final_empty_chunk_is_explicit() {
     };
     assert!(validate_media_asset_chunk(&malformed_error).is_err());
 }
+
+#[test]
+fn point_cloud_preview_fields_preserve_media_file_open_compatibility() {
+    let legacy = media::MediaFileOpen::decode(hex::decode("0a086d61702d30303031").unwrap().as_slice())
+        .unwrap();
+    assert_eq!(legacy.file_id, "map-0001");
+    assert_eq!(legacy.point_cloud_target_points, 0);
+
+    let request = media::MediaFileOpen {
+        file_id: "map-0001".into(),
+        point_cloud_target_points: 3_000_000,
+    };
+    let decoded = media::MediaFileOpen::decode(request.encode_to_vec().as_slice()).unwrap();
+    assert_eq!(decoded, request);
+
+    let response = media::MediaFileOpenResponse {
+        error: media::MediaError::MediaOk as i32,
+        point_cloud_preview: true,
+        point_cloud_target_points: 3_000_000,
+        ..Default::default()
+    };
+    let decoded =
+        media::MediaFileOpenResponse::decode(response.encode_to_vec().as_slice()).unwrap();
+    assert!(decoded.point_cloud_preview);
+    assert_eq!(decoded.point_cloud_target_points, 3_000_000);
+}

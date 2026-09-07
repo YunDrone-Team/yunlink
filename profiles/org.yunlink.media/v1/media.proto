@@ -238,6 +238,9 @@ message MediaFileListResponse {
 
 message MediaFileOpen {
   string file_id = 1;
+  // Optional point-cloud preview budget. A zero value keeps the original file
+  // transfer behavior and remains compatible with older implementations.
+  uint32 point_cloud_target_points = 6;
 }
 
 message MediaFileOpenResponse {
@@ -246,6 +249,8 @@ message MediaFileOpenResponse {
   string transfer_id = 3;
   MediaFileEntry file = 4;
   uint32 chunk_size_bytes = 5;
+  bool point_cloud_preview = 6;
+  uint32 point_cloud_target_points = 7;
 }
 
 message MediaFileChunk {
