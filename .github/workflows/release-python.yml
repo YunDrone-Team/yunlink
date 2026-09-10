@@ -3,6 +3,7 @@ name: Python Wheels
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,7 +24,7 @@ jobs:
 
       - uses: pypa/cibuildwheel@v3.2.1
         env:
-          CIBW_BUILD: "cp310-* cp311-* cp312-*"
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: python -m pytest {project}/bindings/python/tests
@@ -37,6 +38,7 @@ jobs:
           path: wheelhouse/*.whl
 
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: wheels
     runs-on: ubuntu-latest
     steps:
