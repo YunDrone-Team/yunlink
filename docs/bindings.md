@@ -21,5 +21,19 @@ creates an isolated environment, tests the runtime, and verifies the wheel:
 tools/bindings/run_all.sh
 ```
 
+GitHub Actions builds native wheels for CPython 3.10 through 3.13 on these
+platforms:
+
+- macOS arm64
+- macOS x86_64
+- Linux x86_64 (manylinux)
+- Linux arm64/aarch64 (manylinux)
+- Windows x86_64
+
+Every branch and pull request build stores the wheels as workflow artifacts.
+Pushing a `v*.*.*` tag verifies the same matrix before attaching all wheels to
+the GitHub Release. The matrix verifier rejects missing Python versions, wrong
+architectures, and non-manylinux Linux wheels.
+
 Profile packages are separate from the generic runtime facade so applications
 can choose which schemas they compile or import.
