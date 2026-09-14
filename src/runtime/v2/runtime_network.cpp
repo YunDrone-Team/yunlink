@@ -7,7 +7,7 @@ namespace yunlink::v2 {
 namespace {
 
 constexpr size_t kReliableOrderedReserveFraction = 4U;
-constexpr size_t kWriteQuantumBytes = 16U * 1024U;
+constexpr size_t kWriteQuantumBytes = static_cast<size_t>(16U) * 1024U;
 constexpr size_t kCongestionRetryLimit = 1000U;
 
 uint16_t read_u16(const uint8_t* data) {
