@@ -1,11 +1,47 @@
 #include "runtime_internal.hpp"
 
+#include <algorithm>
 #include <chrono>
 
 namespace yunlink::v2 {
 namespace {
 
 constexpr size_t kReliableOrderedReserveFraction = 4U;
+constexpr size_t kWriteQuantumBytes = 16U * 1024U;
+constexpr size_t kCongestionRetryLimit = 1000U;
+
+uint16_t read_u16(const uint8_t* data) {
+    return static_cast<uint16_t>(data[0]) | static_cast<uint16_t>(data[1] << 8U);
+}
+
+uint32_t read_u32(const uint8_t* data) {
+    uint32_t value = 0;
+    for (unsigned shift = 0; shift < 32; shift += 8) {
+        value |= static_cast<uint32_t>(data[shift / 8]) << shift;
+    }
+    return value;
+}
+
+bool peek_frame_header(const Bytes& buffer,
+                       uint16_t* header_len,
+                       uint32_t* payload_len,
+                       QosClass* qos) {
+    if (buffer.size() < 15 || !WireCodec::has_magic(buffer.data(), buffer.size())) {
+        return false;
+    }
+    const uint16_t parsed_header_len = read_u16(buffer.data() + 8);
+    const uint32_t parsed_payload_len = read_u32(buffer.data() + 10);
+    const uint8_t qos_value = buffer[14];
+    if (parsed_header_len < WireCodec::kFixedHeaderSize ||
+        qos_value < static_cast<uint8_t>(QosClass::kReliableOrdered) ||
+        qos_value > static_cast<uint8_t>(QosClass::kBulk)) {
+        return false;
+    }
+    *header_len = parsed_header_len;
+    *payload_len = parsed_payload_len;
+    *qos = static_cast<QosClass>(qos_value);
+    return true;
+}
 
 bool socket_closed(const std::error_code& error) {
     return error == asio::error::operation_aborted || error == asio::error::bad_descriptor ||
@@ -63,35 +99,83 @@ bool pop_frame(Runtime::Impl* impl, Bytes* buffer, Envelope* out, ErrorCode* err
 
 }  // namespace
 
-bool write_socket(const std::shared_ptr<RuntimeConnection>& connection, const Bytes& bytes) {
-    if (!connection || !connection->running.load() || !connection->socket || bytes.empty()) {
+enum class SocketWriteStatus {
+    kComplete,
+    kCongested,
+    kDisconnected,
+};
+
+bool qos_may_drop(QosClass qos) {
+    return qos == QosClass::kBestEffort || qos == QosClass::kBulk;
+}
+
+bool recover_receive_overflow(Bytes* buffer, size_t max_bytes) {
+    if (buffer == nullptr) {
         return false;
     }
+    while (buffer->size() > max_bytes) {
+        uint16_t header_len = 0;
+        uint32_t payload_len = 0;
+        QosClass qos = QosClass::kReliableOrdered;
+        if (peek_frame_header(*buffer, &header_len, &payload_len, &qos)) {
+            if (!qos_may_drop(qos)) {
+                return false;
+            }
+            const size_t frame_len =
+                static_cast<size_t>(header_len) + payload_len + WireCodec::kTrailerSize;
+            buffer->erase(buffer->begin(),
+                          buffer->begin() + static_cast<long>(std::min(buffer->size(), frame_len)));
+            continue;
+        }
+        size_t magic = 1;
+        while (magic + 3 < buffer->size() &&
+               !WireCodec::has_magic(buffer->data() + magic, buffer->size() - magic)) {
+            ++magic;
+        }
+        if (magic + 3 >= buffer->size()) {
+            buffer->clear();
+            return true;
+        }
+        buffer->erase(buffer->begin(), buffer->begin() + static_cast<long>(magic));
+    }
+    return true;
+}
+
+SocketWriteStatus write_socket(const std::shared_ptr<RuntimeConnection>& connection,
+                               const Bytes& bytes) {
+    if (!connection || !connection->running.load() || !connection->socket || bytes.empty()) {
+        return SocketWriteStatus::kDisconnected;
+    }
     std::error_code error;
-    std::lock_guard<std::mutex> lock(connection->send_mutex);
     size_t offset = 0;
     size_t retry_count = 0;
     while (offset < bytes.size() && connection->running.load()) {
-        const size_t sent = connection->socket->write_some(
-            asio::buffer(bytes.data() + offset, bytes.size() - offset), error);
+        const size_t remaining = bytes.size() - offset;
+        const size_t chunk = remaining > kWriteQuantumBytes ? kWriteQuantumBytes : remaining;
+        const size_t sent =
+            connection->socket->write_some(asio::buffer(bytes.data() + offset, chunk), error);
         if (!error) {
             if (sent == 0U) {
-                return false;
+                return SocketWriteStatus::kDisconnected;
             }
             offset += sent;
             retry_count = 0;
             continue;
         }
         if (error != asio::error::would_block && error != asio::error::try_again) {
-            return false;
+            return SocketWriteStatus::kDisconnected;
         }
-        if (++retry_count > 1000U) {
-            return false;
+        if (++retry_count > kCongestionRetryLimit) {
+            return SocketWriteStatus::kCongested;
         }
         error.clear();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    return offset == bytes.size();
+    if (offset == bytes.size()) {
+        return SocketWriteStatus::kComplete;
+    }
+    return connection->running.load() ? SocketWriteStatus::kCongested
+                                      : SocketWriteStatus::kDisconnected;
 }
 
 size_t qos_index(QosClass qos) {
@@ -205,16 +289,21 @@ void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection) {
         if (!connection->running.load() || !take_next_frame(connection.get(), &frame)) {
             continue;
         }
-        if (!write_socket(connection, frame.bytes)) {
-            connection->running.store(false);
-            connection->send_condition.notify_all();
-            if (connection->socket) {
-                std::error_code ignored;
-                connection->socket->cancel(ignored);
-                connection->socket->close(ignored);
-            }
-            break;
+        const SocketWriteStatus status = write_socket(connection, frame.bytes);
+        if (status == SocketWriteStatus::kComplete) {
+            continue;
         }
+        if (status == SocketWriteStatus::kCongested && qos_may_drop(frame.qos)) {
+            continue;
+        }
+        connection->running.store(false);
+        connection->send_condition.notify_all();
+        if (connection->socket) {
+            std::error_code ignored;
+            connection->socket->cancel(ignored);
+            connection->socket->close(ignored);
+        }
+        break;
     }
 }
 
@@ -248,14 +337,25 @@ void runtime_receive_loop(Runtime::Impl* impl,
         connection->receive_buffer.insert(
             connection->receive_buffer.end(), chunk.begin(), chunk.begin() + received);
         if (connection->receive_buffer.size() > impl->config.max_buffer_bytes_per_peer) {
-            runtime_emit(impl,
-                         {RuntimeEventKind::kError,
-                          connection->peer,
-                          {},
-                          {},
-                          ErrorCode::kDecodeError,
-                          "receive buffer limit exceeded"});
-            break;
+            if (recover_receive_overflow(&connection->receive_buffer,
+                                         impl->config.max_buffer_bytes_per_peer)) {
+                runtime_emit(impl,
+                             {RuntimeEventKind::kError,
+                              connection->peer,
+                              {},
+                              {},
+                              ErrorCode::kDecodeError,
+                              "receive buffer dropped lossy frames"});
+            } else {
+                runtime_emit(impl,
+                             {RuntimeEventKind::kError,
+                              connection->peer,
+                              {},
+                              {},
+                              ErrorCode::kDecodeError,
+                              "receive buffer limit exceeded"});
+                break;
+            }
         }
         while (true) {
             Envelope envelope;

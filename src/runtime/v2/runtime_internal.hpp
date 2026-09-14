@@ -49,6 +49,7 @@ struct Runtime::Impl {
     mutable std::mutex mutex;
     std::unordered_map<std::string, std::shared_ptr<RuntimeConnection>> connections;
     std::map<std::pair<std::string, uint64_t>, SessionInfo> sessions;
+    std::unordered_map<std::string, std::pair<std::string, uint64_t>> lane_owner;
     struct AuthorityLease {
         std::string peer_id;
         uint64_t session_id = 0;
@@ -69,6 +70,8 @@ bool runtime_enqueue(const std::shared_ptr<RuntimeConnection>& connection,
                      Bytes bytes,
                      QosClass qos,
                      std::string latest_key = {});
+bool qos_may_drop(QosClass qos);
+bool recover_receive_overflow(Bytes* buffer, size_t max_bytes);
 void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_receive_loop(Runtime::Impl* impl,
                           const std::shared_ptr<RuntimeConnection>& connection);
@@ -83,6 +86,12 @@ void runtime_revoke_authority(Runtime::Impl* impl,
                               uint64_t session_id,
                               const std::vector<std::string>& entity_uids);
 void runtime_drop_peer_state(Runtime::Impl* impl, const Peer& peer);
+bool runtime_is_lane_peer(Runtime::Impl* impl, const std::string& peer_id);
+std::string runtime_control_peer_id(Runtime::Impl* impl, const std::string& peer_id);
+std::shared_ptr<RuntimeConnection> runtime_connection_for_send(Runtime::Impl* impl,
+                                                               const std::string& peer_id,
+                                                               uint64_t session_id,
+                                                               QosClass qos);
 Bytes encode_profile_list(const std::vector<ProfileDescriptor>& profiles);
 bool decode_profile_list(const Bytes& payload, std::vector<ProfileDescriptor>* profiles);
 Bytes encode_text(const std::string& value);

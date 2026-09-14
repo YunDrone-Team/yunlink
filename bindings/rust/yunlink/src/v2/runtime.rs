@@ -101,6 +101,16 @@ impl Runtime {
             .ok_or(Error { code: 8 })
     }
 
+    pub fn bind_lossy_lane(&self, peer: &Peer, session_id: u64) -> Result<()> {
+        ensure(unsafe {
+            sys::yunlink_v2_runtime_bind_lossy_lane(
+                self.raw(),
+                string_view(&peer.id),
+                session_id,
+            )
+        })
+    }
+
     pub fn close_peer(&self, peer: &Peer) {
         unsafe { sys::yunlink_v2_runtime_close_peer(self.raw(), string_view(&peer.id)) };
     }

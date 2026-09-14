@@ -23,6 +23,8 @@ enum class SessionOperation : uint8_t {
     kAuthenticate = 2,
     kProfiles = 3,
     kReady = 4,
+    kLaneBind = 5,
+    kLaneReady = 6,
 };
 
 enum class AuthorityOperation : uint8_t {
@@ -146,6 +148,7 @@ struct SessionInfo {
     bool authenticated = false;
     std::map<std::string, ProfileDescriptor> negotiated_profiles;
     std::vector<std::string> rejected_profiles;
+    std::string lossy_peer_id;
 
     bool has_profile(const std::string& profile_id, uint16_t major) const;
     bool
@@ -193,6 +196,7 @@ class Runtime {
     ErrorCode connect_peer(const std::string& ip, uint16_t port, Peer* out = nullptr);
     void close_peer(const std::string& peer_id);
     uint64_t open_session(const std::string& peer_id);
+    ErrorCode bind_lossy_lane(const std::string& peer_id, uint64_t session_id);
     ErrorCode set_entities(std::vector<EntityDescriptor> entities);
 
     ErrorCode publish(const std::string& peer_id,

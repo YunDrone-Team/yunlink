@@ -52,14 +52,10 @@ ErrorCode Runtime::send(const std::string& peer_id, const Envelope& envelope) {
                                   envelope.type.minor)) {
         return ErrorCode::kUnsupported;
     }
-    std::shared_ptr<RuntimeConnection> connection;
-    {
-        std::lock_guard<std::mutex> lock(impl_->mutex);
-        const auto it = impl_->connections.find(peer_id);
-        if (it == impl_->connections.end()) {
-            return ErrorCode::kNotFound;
-        }
-        connection = it->second;
+    std::shared_ptr<RuntimeConnection> connection =
+        runtime_connection_for_send(impl_.get(), peer_id, envelope.session_id, envelope.qos_class);
+    if (!connection) {
+        return ErrorCode::kNotFound;
     }
     const Bytes bytes = impl_->codec.encode(envelope);
     if (bytes.empty()) {

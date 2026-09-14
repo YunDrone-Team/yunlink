@@ -103,13 +103,91 @@ uint64_t Runtime::open_session(const std::string& peer_id) {
     return session_id;
 }
 
+bool handle_lane_bind(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope) {
+    std::string secret;
+    if (!decode_text(envelope.payload, &secret) || secret != impl->config.shared_secret) {
+        return false;
+    }
+    std::string control_peer_id;
+    {
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        if (impl->connections.find(peer.id) == impl->connections.end()) {
+            return false;
+        }
+        for (auto& entry : impl->sessions) {
+            SessionInfo& session = entry.second;
+            if (session.session_id != envelope.session_id ||
+                session.state != SessionState::kActive ||
+                session.remote_endpoint_uid != envelope.source.endpoint_uid) {
+                continue;
+            }
+            if (!session.lossy_peer_id.empty() && session.lossy_peer_id != peer.id) {
+                continue;
+            }
+            control_peer_id = entry.first.first;
+            session.lossy_peer_id = peer.id;
+            impl->lane_owner[peer.id] = {control_peer_id, envelope.session_id};
+            break;
+        }
+    }
+    if (control_peer_id.empty()) {
+        return false;
+    }
+    send_session(impl,
+                 peer.id,
+                 envelope.session_id,
+                 SessionOperation::kLaneReady,
+                 "session.lane_ready",
+                 {},
+                 envelope.message_id);
+    return true;
+}
+
+bool handle_lane_ready(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope) {
+    std::lock_guard<std::mutex> lock(impl->mutex);
+    const auto owner = impl->lane_owner.find(peer.id);
+    if (owner == impl->lane_owner.end() || owner->second.second != envelope.session_id) {
+        return false;
+    }
+    const auto session = impl->sessions.find({owner->second.first, envelope.session_id});
+    if (session == impl->sessions.end() || session->second.state != SessionState::kActive) {
+        return false;
+    }
+    session->second.lossy_peer_id = peer.id;
+    return true;
+}
+
 void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope) {
+    if (envelope.family == MessageFamily::kSession) {
+        const auto operation = static_cast<SessionOperation>(envelope.operation);
+        if (operation == SessionOperation::kLaneBind) {
+            handle_lane_bind(impl, peer, envelope);
+            return;
+        }
+        if (operation == SessionOperation::kLaneReady) {
+            handle_lane_ready(impl, peer, envelope);
+            return;
+        }
+    }
+    Peer logical = peer;
+    {
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        const auto owner = impl->lane_owner.find(peer.id);
+        if (owner != impl->lane_owner.end()) {
+            const auto control = impl->connections.find(owner->second.first);
+            if (control != impl->connections.end()) {
+                logical = control->second->peer;
+            } else {
+                logical.id = owner->second.first;
+            }
+        }
+    }
     if (envelope.family != MessageFamily::kSession) {
         bool authorized = false;
         bool profile_supported = false;
         {
             std::lock_guard<std::mutex> lock(impl->mutex);
-            const auto it = impl->sessions.find({peer.id, envelope.session_id});
+            const auto it = impl->sessions.find({logical.id, envelope.session_id});
             if (it != impl->sessions.end() && it->second.state == SessionState::kActive &&
                 it->second.remote_endpoint_uid == envelope.source.endpoint_uid) {
                 std::vector<std::string> entity_uids;
@@ -159,7 +237,7 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
                           authority_error});
             return;
         }
-        runtime_emit(impl, {RuntimeEventKind::kEnvelope, peer, envelope});
+        runtime_emit(impl, {RuntimeEventKind::kEnvelope, logical, envelope});
         return;
     }
 
@@ -261,10 +339,24 @@ void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelo
 
 void runtime_drop_peer_state(Runtime::Impl* impl, const Peer& peer) {
     std::vector<SessionInfo> lost;
+    std::string lossy_to_close;
     {
         std::lock_guard<std::mutex> lock(impl->mutex);
+        const auto lane = impl->lane_owner.find(peer.id);
+        if (lane != impl->lane_owner.end()) {
+            const auto session = impl->sessions.find({lane->second.first, lane->second.second});
+            if (session != impl->sessions.end() && session->second.lossy_peer_id == peer.id) {
+                session->second.lossy_peer_id.clear();
+            }
+            impl->lane_owner.erase(lane);
+            return;
+        }
         for (auto session = impl->sessions.begin(); session != impl->sessions.end();) {
             if (session->first.first == peer.id) {
+                if (!session->second.lossy_peer_id.empty()) {
+                    lossy_to_close = session->second.lossy_peer_id;
+                    impl->lane_owner.erase(lossy_to_close);
+                }
                 session->second.state = SessionState::kLost;
                 lost.push_back(session->second);
                 session = impl->sessions.erase(session);
@@ -277,6 +369,26 @@ void runtime_drop_peer_state(Runtime::Impl* impl, const Peer& peer) {
                 lease = impl->authority_leases.erase(lease);
             } else {
                 ++lease;
+            }
+        }
+    }
+    if (!lossy_to_close.empty()) {
+        std::shared_ptr<RuntimeConnection> lossy;
+        {
+            std::lock_guard<std::mutex> lock(impl->mutex);
+            const auto it = impl->connections.find(lossy_to_close);
+            if (it != impl->connections.end()) {
+                lossy = it->second;
+                impl->connections.erase(it);
+            }
+        }
+        if (lossy) {
+            lossy->running.store(false);
+            lossy->send_condition.notify_all();
+            if (lossy->socket) {
+                std::error_code ignored;
+                lossy->socket->cancel(ignored);
+                lossy->socket->close(ignored);
             }
         }
     }

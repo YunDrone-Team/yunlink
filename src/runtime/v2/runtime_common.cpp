@@ -140,4 +140,41 @@ bool SessionInfo::supports_profile(const std::string& profile_id,
            it->second.minor >= minimum_minor;
 }
 
+bool runtime_is_lane_peer(Runtime::Impl* impl, const std::string& peer_id) {
+    return impl != nullptr && impl->lane_owner.find(peer_id) != impl->lane_owner.end();
+}
+
+std::string runtime_control_peer_id(Runtime::Impl* impl, const std::string& peer_id) {
+    if (impl == nullptr) {
+        return peer_id;
+    }
+    const auto lane = impl->lane_owner.find(peer_id);
+    if (lane != impl->lane_owner.end()) {
+        return lane->second.first;
+    }
+    return peer_id;
+}
+
+std::shared_ptr<RuntimeConnection> runtime_connection_for_send(Runtime::Impl* impl,
+                                                               const std::string& peer_id,
+                                                               uint64_t session_id,
+                                                               QosClass qos) {
+    if (impl == nullptr) {
+        return {};
+    }
+    std::lock_guard<std::mutex> lock(impl->mutex);
+    std::string route = peer_id;
+    if (qos_may_drop(qos)) {
+        const auto session = impl->sessions.find({peer_id, session_id});
+        if (session != impl->sessions.end() && !session->second.lossy_peer_id.empty()) {
+            route = session->second.lossy_peer_id;
+        }
+    }
+    const auto connection = impl->connections.find(route);
+    if (connection == impl->connections.end()) {
+        return {};
+    }
+    return connection->second;
+}
+
 }  // namespace yunlink::v2

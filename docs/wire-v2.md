@@ -43,6 +43,21 @@ major versions select the lower minor. Equal versions with different digests
 reject that Profile. An unsupported optional Profile does not fail the Core
 session; a missing required Profile prevents the session from becoming usable.
 
+## QoS failure isolation
+
+`BestEffort` and `Bulk` frames may be dropped when a send is congested or a
+receive buffer overflows. Those drops must not close the TCP peer or the
+session. Only `ReliableOrdered` (and a hard socket error) may tear down the
+connection. Send loops write without holding the enqueue mutex so control
+frames can still be queued while a large lossy frame is on the wire.
+
+After `session.ready`, a client may open a second TCP connection to the same
+listen port and send `session.lane_bind` (operation 5) with the existing
+session id and shared secret. The server replies `session.lane_ready`
+(operation 6). BestEffort/Bulk `publish` then uses that lossy lane. Closing the
+lossy lane must not mark the session lost. Peers that ignore lane bind keep the
+single-TCP Phase 0 path.
+
 ## Actions
 
 Core checks session, target, TTL, and authority scope. A Profile handler checks

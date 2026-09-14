@@ -253,8 +253,87 @@ ErrorCode Runtime::connect_peer(const std::string& ip, uint16_t port, Peer* out)
     return ErrorCode::kOk;
 }
 
+ErrorCode Runtime::bind_lossy_lane(const std::string& peer_id, uint64_t session_id) {
+    if (!running() || session_id == 0) {
+        return ErrorCode::kInvalidArgument;
+    }
+    SessionInfo info;
+    if (!session(peer_id, session_id, &info) || info.state != SessionState::kActive) {
+        return ErrorCode::kNotFound;
+    }
+    if (!info.lossy_peer_id.empty()) {
+        return ErrorCode::kOk;
+    }
+    std::string ip;
+    uint16_t port = 0;
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        const auto control = impl_->connections.find(peer_id);
+        if (control == impl_->connections.end()) {
+            return ErrorCode::kNotFound;
+        }
+        ip = control->second->peer.ip;
+        port = control->second->peer.port;
+    }
+    const std::string lane_peer_id = peer_id + "#lossy";
+    std::error_code error;
+    const auto address = asio::ip::make_address(ip, error);
+    if (error || port == 0) {
+        return ErrorCode::kInvalidArgument;
+    }
+    auto connection = std::make_shared<RuntimeConnection>();
+    connection->socket = std::make_shared<asio::ip::tcp::socket>(connection->io);
+    connection->socket->open(asio::ip::tcp::v4(), error);
+    if (error) {
+        return ErrorCode::kInternal;
+    }
+    error = connect_with_timeout(*connection->socket,
+                                 asio::ip::tcp::endpoint(address, port),
+                                 impl_->config.connect_timeout_ms);
+    if (error) {
+        return error == asio::error::timed_out ? ErrorCode::kTimeout : ErrorCode::kNotFound;
+    }
+    connection->peer = {lane_peer_id, ip, port};
+    connection->running.store(true);
+    connection->max_queued_bytes = impl_->config.max_buffer_bytes_per_peer;
+    connection->socket->non_blocking(true, error);
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        impl_->connections[lane_peer_id] = connection;
+        impl_->lane_owner[lane_peer_id] = {peer_id, session_id};
+    }
+    connection->send_thread = std::thread(runtime_send_loop, connection);
+    connection->receive_thread = std::thread(runtime_receive_loop, impl_.get(), connection);
+
+    Envelope bind;
+    bind.family = MessageFamily::kSession;
+    bind.operation = static_cast<uint8_t>(SessionOperation::kLaneBind);
+    bind.session_id = session_id;
+    bind.message_id = impl_->next_message_id.fetch_add(1);
+    bind.source.endpoint_uid = impl_->config.endpoint_uid;
+    bind.target = TargetSelector::broadcast();
+    bind.type = {"yunlink.core", 2, 0, "session.lane_bind"};
+    bind.created_at_ms = runtime_now_ms();
+    bind.ttl_ms = 5000;
+    bind.payload = encode_text(impl_->config.shared_secret);
+    if (!runtime_enqueue(connection, impl_->codec.encode(bind), QosClass::kReliableOrdered)) {
+        close_peer(lane_peer_id);
+        return ErrorCode::kRejected;
+    }
+    for (int attempt = 0; attempt < 200; ++attempt) {
+        SessionInfo remote;
+        if (session(peer_id, session_id, &remote) && !remote.lossy_peer_id.empty()) {
+            return ErrorCode::kOk;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    close_peer(lane_peer_id);
+    return ErrorCode::kTimeout;
+}
+
 void Runtime::close_peer(const std::string& peer_id) {
     std::shared_ptr<RuntimeConnection> connection;
+    std::string lossy_peer_id;
     {
         std::lock_guard<std::mutex> lock(impl_->mutex);
         const auto it = impl_->connections.find(peer_id);
@@ -263,8 +342,21 @@ void Runtime::close_peer(const std::string& peer_id) {
         }
         connection = it->second;
         impl_->connections.erase(it);
+        for (auto& session : impl_->sessions) {
+            if (session.first.first == peer_id && !session.second.lossy_peer_id.empty()) {
+                lossy_peer_id = session.second.lossy_peer_id;
+                session.second.lossy_peer_id.clear();
+            }
+        }
+        impl_->lane_owner.erase(peer_id);
+        if (!lossy_peer_id.empty()) {
+            impl_->lane_owner.erase(lossy_peer_id);
+        }
     }
     close_connection(connection);
+    if (!lossy_peer_id.empty() && lossy_peer_id != peer_id) {
+        close_peer(lossy_peer_id);
+    }
 }
 
 }  // namespace yunlink::v2

@@ -151,6 +151,15 @@ if (YUNLINK_BUILD_TESTS)
   target_link_libraries(test_runtime_v2 PRIVATE yunlink)
   add_test(NAME test_runtime_v2 COMMAND test_runtime_v2)
 
+  add_executable(test_qos_failure_isolation tests/runtime/test_qos_failure_isolation.cpp)
+  target_include_directories(test_qos_failure_isolation PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_link_libraries(test_qos_failure_isolation PRIVATE yunlink yunlink_asio)
+  add_test(NAME test_qos_failure_isolation COMMAND test_qos_failure_isolation)
+
+  add_executable(test_runtime_lanes tests/runtime/test_runtime_lanes.cpp)
+  target_link_libraries(test_runtime_lanes PRIVATE yunlink)
+  add_test(NAME test_runtime_lanes COMMAND test_runtime_lanes)
+
   add_executable(test_c_ffi_v2 tests/bindings/test_c_ffi_v2.cpp)
   target_link_libraries(test_c_ffi_v2 PRIVATE yunlink_ffi yunlink)
   add_test(NAME test_c_ffi_v2 COMMAND test_c_ffi_v2)
