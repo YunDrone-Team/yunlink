@@ -29,6 +29,9 @@ struct RuntimeConnection {
     std::thread send_thread;
     asio::io_context io;
     std::shared_ptr<asio::ip::tcp::socket> socket;
+    // Serialise read/write/close operations. Asio sockets do not permit
+    // unsynchronised access from the receive, send and shutdown threads.
+    std::mutex socket_mutex;
     std::mutex send_mutex;
     std::condition_variable send_condition;
     std::deque<OutboundFrame> send_queues[4];

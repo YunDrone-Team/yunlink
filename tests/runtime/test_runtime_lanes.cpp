@@ -66,9 +66,8 @@ int main() {
     assert(session_id != 0);
     {
         std::unique_lock<std::mutex> lock(mutex);
-        assert(changed.wait_for(lock, std::chrono::seconds(3), [&]() {
-            return active.session_id == session_id;
-        }));
+        assert(changed.wait_for(
+            lock, std::chrono::seconds(3), [&]() { return active.session_id == session_id; }));
     }
     assert(client.bind_lossy_lane(peer.id, session_id) == ErrorCode::kOk);
     SessionInfo bound;

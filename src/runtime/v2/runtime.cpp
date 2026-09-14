@@ -35,6 +35,7 @@ void close_connection(const std::shared_ptr<RuntimeConnection>& connection) {
     connection->running.store(false);
     connection->send_condition.notify_all();
     if (connection->socket) {
+        std::lock_guard<std::mutex> socket_lock(connection->socket_mutex);
         std::error_code ignored;
         connection->socket->cancel(ignored);
         connection->socket->close(ignored);

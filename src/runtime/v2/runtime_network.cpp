@@ -152,8 +152,15 @@ SocketWriteStatus write_socket(const std::shared_ptr<RuntimeConnection>& connect
     while (offset < bytes.size() && connection->running.load()) {
         const size_t remaining = bytes.size() - offset;
         const size_t chunk = remaining > kWriteQuantumBytes ? kWriteQuantumBytes : remaining;
-        const size_t sent =
-            connection->socket->write_some(asio::buffer(bytes.data() + offset, chunk), error);
+        size_t sent = 0;
+        {
+            std::lock_guard<std::mutex> socket_lock(connection->socket_mutex);
+            if (!connection->socket || !connection->running.load()) {
+                return SocketWriteStatus::kDisconnected;
+            }
+            sent =
+                connection->socket->write_some(asio::buffer(bytes.data() + offset, chunk), error);
+        }
         if (!error) {
             if (sent == 0U) {
                 return SocketWriteStatus::kDisconnected;
@@ -299,6 +306,7 @@ void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection) {
         connection->running.store(false);
         connection->send_condition.notify_all();
         if (connection->socket) {
+            std::lock_guard<std::mutex> socket_lock(connection->socket_mutex);
             std::error_code ignored;
             connection->socket->cancel(ignored);
             connection->socket->close(ignored);
@@ -316,7 +324,14 @@ void runtime_receive_loop(Runtime::Impl* impl,
     std::array<uint8_t, 8192> chunk{};
     while (impl->running.load() && connection->running.load()) {
         std::error_code error;
-        const size_t received = connection->socket->read_some(asio::buffer(chunk), error);
+        size_t received = 0;
+        {
+            std::lock_guard<std::mutex> socket_lock(connection->socket_mutex);
+            if (!connection->socket || !connection->running.load()) {
+                break;
+            }
+            received = connection->socket->read_some(asio::buffer(chunk), error);
+        }
         if (error) {
             if (error == asio::error::would_block || error == asio::error::try_again) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(
@@ -378,6 +393,7 @@ void runtime_receive_loop(Runtime::Impl* impl,
     }
     connection->running.store(false);
     if (connection->socket) {
+        std::lock_guard<std::mutex> socket_lock(connection->socket_mutex);
         std::error_code ignored;
         connection->socket->shutdown(asio::ip::tcp::socket::shutdown_both, ignored);
         connection->socket->close(ignored);
