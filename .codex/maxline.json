@@ -8,6 +8,9 @@
     "bindings/rust/yunlink-profiles/src/validation_sunray.rs": 411,
     "bindings/rust/yunlink-profiles/tests/control_vectors.rs": 492,
     "src/discovery/discovery_v2.cpp": 397,
+    "src/runtime/v2/runtime.cpp": 380,
+    "src/runtime/v2/runtime_network.cpp": 420,
+    "src/runtime/v2/session.cpp": 420,
     "tests/profiles/test_profile_golden.cpp": 456
   },
   "include_exts": ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "py", "rs"],
