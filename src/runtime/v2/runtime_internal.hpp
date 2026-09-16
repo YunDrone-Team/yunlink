@@ -38,6 +38,23 @@ struct RuntimeConnection {
     size_t queued_bytes{0};
     size_t max_queued_bytes{static_cast<size_t>(16U) * 1024U * 1024U};
     Bytes receive_buffer;
+
+    ~RuntimeConnection() {
+        running.store(false);
+        send_condition.notify_all();
+        const auto reap = [](std::thread& thread) {
+            if (!thread.joinable()) {
+                return;
+            }
+            if (thread.get_id() == std::this_thread::get_id()) {
+                thread.detach();
+                return;
+            }
+            thread.join();
+        };
+        reap(receive_thread);
+        reap(send_thread);
+    }
 };
 
 struct Runtime::Impl {

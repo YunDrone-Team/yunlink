@@ -379,13 +379,13 @@ void runtime_drop_peer_state(Runtime::Impl* impl, const Peer& peer) {
             const auto it = impl->connections.find(lossy_to_close);
             if (it != impl->connections.end()) {
                 lossy = it->second;
-                impl->connections.erase(it);
             }
         }
         if (lossy) {
             lossy->running.store(false);
             lossy->send_condition.notify_all();
             if (lossy->socket) {
+                std::lock_guard<std::mutex> socket_lock(lossy->socket_mutex);
                 std::error_code ignored;
                 lossy->socket->cancel(ignored);
                 lossy->socket->close(ignored);
