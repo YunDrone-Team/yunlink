@@ -15,6 +15,7 @@ enum MediaError {
   MEDIA_PERMISSION_DENIED = 9;
   MEDIA_NOT_FOUND = 10;
   MEDIA_INTEGRITY_ERROR = 11;
+  MEDIA_NO_SPACE = 12;
 }
 
 enum MediaAssetKind {
@@ -288,4 +289,55 @@ message MediaFileStatusResponse {
   MediaAssetTransferState state = 3;
   uint64 bytes_sent = 4;
   uint64 total_bytes = 5;
+}
+
+message MediaFileStorageStatRequest { string storage_id = 1; }
+
+message MediaFileStorageStatResponse {
+  MediaError error = 1;
+  string message = 2;
+  uint64 free_bytes = 3;
+  uint64 total_bytes = 4;
+}
+
+message MediaFilePutOpen {
+  string storage_id = 1;
+  string relative_path = 2;
+  uint64 size_bytes = 3;
+  bytes sha256 = 4;
+  string mime_type = 5;
+}
+
+message MediaFilePutOpenResponse {
+  MediaError error = 1;
+  string message = 2;
+  string transfer_id = 3;
+  uint32 chunk_size_bytes = 4;
+  uint64 free_bytes = 5;
+  string relative_path = 6;
+}
+
+message MediaFilePutChunk {
+  string transfer_id = 1;
+  uint64 offset = 2;
+  bytes data = 3;
+}
+
+message MediaFilePutChunkResponse {
+  MediaError error = 1;
+  string message = 2;
+  string transfer_id = 3;
+  uint64 offset = 4;
+  uint64 bytes_received = 5;
+}
+
+message MediaFilePutClose {
+  string transfer_id = 1;
+  bool cancel = 2;
+}
+
+message MediaFilePutCloseResponse {
+  MediaError error = 1;
+  string message = 2;
+  MediaFileEntry file = 3;
 }

@@ -42,5 +42,9 @@ bool validate_media_file_list_request(const MediaFileListRequest& request,
 bool validate_media_file_list_response(const MediaFileListResponse& response,
                                        std::string* error = nullptr);
 bool validate_media_file_chunk(const MediaFileChunkResponse& chunk, std::string* error = nullptr);
+bool validate_media_file_storage_stat_request(const MediaFileStorageStatRequest& request,
+                                              std::string* error = nullptr);
+bool validate_media_file_put_open(const MediaFilePutOpen& request, std::string* error = nullptr);
+bool validate_media_file_put_chunk(const MediaFilePutChunk& request, std::string* error = nullptr);
 
 }  // namespace org::yunlink::media::v1

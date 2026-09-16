@@ -267,3 +267,39 @@ pub fn validate_media_file_chunk(
         eof: chunk.eof,
     })
 }
+
+pub fn validate_media_file_storage_stat_request(
+    request: &media::MediaFileStorageStatRequest,
+) -> Result<(), &'static str> {
+    (!request.storage_id.is_empty() && request.storage_id.len() <= 64)
+        .then_some(())
+        .ok_or("media storage stat request is invalid")
+}
+
+pub fn validate_media_file_put_open(
+    request: &media::MediaFilePutOpen,
+) -> Result<(), &'static str> {
+    (!request.storage_id.is_empty()
+        && request.storage_id.len() <= 64
+        && !request.relative_path.is_empty()
+        && request.relative_path.len() <= 1024
+        && !request
+            .relative_path
+            .bytes()
+            .any(|byte| byte < 0x20 || byte == 0x7f)
+        && request.size_bytes > 0
+        && request.sha256.len() == 32
+        && request.mime_type.len() <= 96)
+        .then_some(())
+        .ok_or("media file put open is invalid")
+}
+
+pub fn validate_media_file_put_chunk(
+    request: &media::MediaFilePutChunk,
+) -> Result<(), &'static str> {
+    (valid_token(&request.transfer_id, 128)
+        && !request.data.is_empty()
+        && request.data.len() <= MEDIA_MAX_CHUNK_BYTES)
+        .then_some(())
+        .ok_or("media file put chunk is invalid")
+}

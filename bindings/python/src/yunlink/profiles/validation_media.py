@@ -2,6 +2,8 @@ import math
 
 from .org.yunlink.media.v1 import media_pb2 as media
 
+_MEDIA_ERROR_MAX = getattr(media, "MEDIA_NO_SPACE", media.MEDIA_INTEGRITY_ERROR)
+
 
 def _valid_media_token(value: str, max_bytes: int) -> bool:
     return (
@@ -58,7 +60,7 @@ def validate_camera_catalog_snapshot(snapshot: media.CameraCatalogSnapshot) -> N
 
 def validate_camera_start_rtsp_response(response: media.CameraStartRtspResponse) -> None:
     if not (
-        response.error in set(range(media.MEDIA_OK, media.MEDIA_INTEGRITY_ERROR + 1))
+        response.error in set(range(media.MEDIA_OK, _MEDIA_ERROR_MAX + 1))
         and len(response.message.encode()) <= 256
         and len(response.rtsp_url.encode()) <= 2048
         and not any(ord(char) < 0x20 or ord(char) == 0x7F for char in response.rtsp_url)
@@ -188,7 +190,7 @@ def validate_media_file_list_request(request: media.MediaFileListRequest) -> Non
         raise ValueError("media file list request is invalid")
 
 def validate_media_file_list_response(response: media.MediaFileListResponse) -> None:
-    if response.error not in set(range(media.MEDIA_OK, media.MEDIA_INTEGRITY_ERROR + 1)) or len(response.message.encode()) > 256 or len(response.entries) > 256 or not _valid_media_page_token(response.next_page_token):
+    if response.error not in set(range(media.MEDIA_OK, _MEDIA_ERROR_MAX + 1)) or len(response.message.encode()) > 256 or len(response.entries) > 256 or not _valid_media_page_token(response.next_page_token):
         raise ValueError("media file list response is invalid")
     if response.error != media.MEDIA_OK and (response.entries or response.next_page_token):
         raise ValueError("failed media file list response contains data")
@@ -199,5 +201,25 @@ def validate_media_file_list_response(response: media.MediaFileListResponse) -> 
         ids.add(entry.file_id)
 
 def validate_media_file_chunk(chunk: media.MediaFileChunkResponse) -> None:
-    if chunk.error not in set(range(media.MEDIA_OK, media.MEDIA_INTEGRITY_ERROR + 1)) or len(chunk.message.encode()) > 256 or len(chunk.data) > 256 * 1024:
+    if chunk.error not in set(range(media.MEDIA_OK, _MEDIA_ERROR_MAX + 1)) or len(chunk.message.encode()) > 256 or len(chunk.data) > 256 * 1024:
         raise ValueError("media file chunk is invalid")
+
+def validate_media_file_storage_stat_request(request: media.MediaFileStorageStatRequest) -> None:
+    if not request.storage_id or len(request.storage_id.encode()) > 64:
+        raise ValueError("media storage stat request is invalid")
+
+def validate_media_file_put_open(request: media.MediaFilePutOpen) -> None:
+    if (
+        not request.storage_id
+        or len(request.storage_id.encode()) > 64
+        or not request.relative_path
+        or len(request.relative_path.encode()) > 1024
+        or request.size_bytes == 0
+        or len(request.sha256) != 32
+        or len(request.mime_type.encode()) > 96
+    ):
+        raise ValueError("media file put open is invalid")
+
+def validate_media_file_put_chunk(request: media.MediaFilePutChunk) -> None:
+    if not _valid_media_token(request.transfer_id, 128) or not request.data or len(request.data) > 256 * 1024:
+        raise ValueError("media file put chunk is invalid")

@@ -42,7 +42,7 @@ bool valid_page_token(const std::string& value) {
 }
 
 bool valid_error(MediaError error) {
-    return error >= MEDIA_OK && error <= MEDIA_INTEGRITY_ERROR;
+    return error >= MEDIA_OK && error <= MEDIA_NO_SPACE;
 }
 
 bool contains_control(const std::string& value) {
@@ -290,6 +290,37 @@ bool validate_media_file_chunk(const MediaFileChunkResponse& chunk, std::string*
         (chunk.error() == MEDIA_OK &&
          (chunk.transfer_id().empty() || (chunk.data().empty() && !chunk.eof())))) {
         return fail("media file chunk is invalid", error);
+    }
+    if (error != nullptr) error->clear();
+    return true;
+}
+
+bool validate_media_file_storage_stat_request(const MediaFileStorageStatRequest& request,
+                                              std::string* error) {
+    if (request.storage_id().empty() || request.storage_id().size() > kMediaMaxStorageIdBytes) {
+        return fail("media storage stat request is invalid", error);
+    }
+    if (error != nullptr) error->clear();
+    return true;
+}
+
+bool validate_media_file_put_open(const MediaFilePutOpen& request, std::string* error) {
+    if (request.storage_id().empty() || request.storage_id().size() > kMediaMaxStorageIdBytes ||
+        request.relative_path().empty() ||
+        request.relative_path().size() > kMediaMaxRelativePathBytes ||
+        contains_control(request.relative_path()) ||
+        !valid_relative_path(request.relative_path(), false) || request.size_bytes() == 0 ||
+        request.sha256().size() != kMediaSha256Bytes || request.mime_type().size() > 96) {
+        return fail("media file put open is invalid", error);
+    }
+    if (error != nullptr) error->clear();
+    return true;
+}
+
+bool validate_media_file_put_chunk(const MediaFilePutChunk& request, std::string* error) {
+    if (!valid_token(request.transfer_id(), kMediaMaxTransferIdBytes) ||
+        request.data().empty() || request.data().size() > kMediaMaxChunkBytes) {
+        return fail("media file put chunk is invalid", error);
     }
     if (error != nullptr) error->clear();
     return true;
