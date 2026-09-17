@@ -130,6 +130,8 @@ pub struct ConfigFieldSchema {
     /// 不能靠 default_value 本身判断有没有默认值 —— 它可能是空串 / 0 / false。
     pub default_value: ConfigValue,
     pub has_default_value: bool,
+    /// true 表示高级参数：地面站只在专家模式下显示。缺省 false。
+    pub advanced: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -198,6 +200,8 @@ pub struct ConfigResourceListResponse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConfigResourceDescribeRequest {
     pub resource_id: String,
+    /// 地面站 UI 语言（BCP-47）；空表示由 provider 取默认。
+    pub locale: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -208,6 +208,7 @@ inline void write_schema(BufferWriter& writer, const ConfigFieldSchema& value) {
     if (value.has_default_value) {
         write_value(writer, value.default_value);
     }
+    writer.write_bool(value.advanced);
 }
 
 inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
@@ -238,7 +239,7 @@ inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
     if (out->has_default_value && !read_value(reader, &out->default_value)) {
         return false;
     }
-    return true;
+    return reader.read_bool(&out->advanced);
 }
 
 inline void write_field_value(BufferWriter& writer, const ConfigFieldValue& value) {

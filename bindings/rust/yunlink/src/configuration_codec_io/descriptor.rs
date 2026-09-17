@@ -50,6 +50,7 @@ pub(crate) fn write_schema(writer: &mut Writer, value: &ConfigFieldSchema) -> Re
     if value.has_default_value {
         write_value(writer, &value.default_value)?;
     }
+    writer.boolean(value.advanced);
     Ok(())
 }
 
@@ -88,6 +89,7 @@ pub(crate) fn read_schema(reader: &mut Reader<'_>) -> Result<ConfigFieldSchema, 
         // 是否有效完全由 has_default_value 决定。
         ConfigValue::String(String::new())
     };
+    let advanced = reader.boolean()?;
     Ok(ConfigFieldSchema {
         path,
         title,
@@ -105,6 +107,7 @@ pub(crate) fn read_schema(reader: &mut Reader<'_>) -> Result<ConfigFieldSchema, 
         unit,
         default_value,
         has_default_value,
+        advanced,
     })
 }
 

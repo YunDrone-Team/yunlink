@@ -34,12 +34,16 @@ impl ConfigurationPayload for ConfigResourceListResponse {
 
 impl ConfigurationPayload for ConfigResourceDescribeRequest {
     fn encode(&self) -> Result<Vec<u8>> {
-        encode_payload(|writer| writer.text(&self.resource_id))
+        encode_payload(|writer| {
+            writer.text(&self.resource_id)?;
+            writer.text(&self.locale)
+        })
     }
     fn decode(bytes: &[u8]) -> Result<Self> {
         decode_payload(bytes, |reader| {
             Ok(Self {
                 resource_id: reader.text()?,
+                locale: reader.text()?,
             })
         })
     }

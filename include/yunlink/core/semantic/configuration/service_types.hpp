@@ -158,6 +158,9 @@ struct ConfigFieldSchema {
     // 注意不能靠 default_value 本身是否为空来判断：默认值可能是空串、0 或 false。
     ConfigValue default_value;
     bool has_default_value = false;
+    // true 表示高级参数：地面站只在专家模式下显示。缺省 false（普通参数，标准模式也显示）。
+    // 只影响显示，不影响可写性 / 校验 / 存储 / 生效策略，也不是权限控制。
+    bool advanced = false;
 };
 
 struct ConfigFieldValue {
@@ -211,6 +214,9 @@ struct ConfigResourceListResponse {
 
 struct ConfigResourceDescribeRequest {
     std::string resource_id;
+    // 地面站 UI 语言（BCP-47，例如 zh-CN / en-US / uk-UA）；空表示由 provider 取默认。
+    // provider 按它解析 display_name / description / 枚举标签。
+    std::string locale;
 };
 
 struct ConfigResourceDescribeResponse {

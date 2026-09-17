@@ -104,6 +104,7 @@ mod tests {
                 unit: "m/s".to_owned(),
                 has_default_value: true,
                 default_value: ConfigValue::Double(2.5),
+                advanced: true,
             }, ConfigFieldSchema {
                 path: "control.horizon_steps".to_owned(),
                 group_path: "control".to_owned(),
@@ -121,6 +122,7 @@ mod tests {
                 unit: String::new(),
                 has_default_value: false,
                 default_value: ConfigValue::String(String::new()),
+                advanced: false,
             }],
         };
         let payload = response.encode().unwrap();
@@ -132,6 +134,8 @@ mod tests {
             ConfigValue::Double(2.5)
         );
         assert!(!decoded_describe.fields[1].has_default_value);
+        assert!(decoded_describe.fields[0].advanced);
+        assert!(!decoded_describe.fields[1].advanced);
         assert_eq!(
             decoded_describe.fields[1].update_policy,
             ConfigFieldUpdatePolicy::RebuildRequired
