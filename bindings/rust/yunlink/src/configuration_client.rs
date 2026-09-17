@@ -132,6 +132,7 @@ impl<'a> ConfigurationClient<'a> {
             "configuration.resource_describe.response",
             &ConfigResourceDescribeRequest {
                 resource_id: resource_id.into(),
+                locale: String::new(),
             },
         )
         .await

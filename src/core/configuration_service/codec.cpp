@@ -33,13 +33,16 @@ bool decode_payload(const ByteBuffer& bytes, ConfigResourceListResponse* payload
 }
 
 ByteBuffer encode_payload(const ConfigResourceDescribeRequest& payload) {
-    return build_payload([&](BufferWriter& writer) { writer.write_string(payload.resource_id); });
+    return build_payload([&](BufferWriter& writer) {
+        writer.write_string(payload.resource_id);
+        writer.write_string(payload.locale);
+    });
 }
 
 bool decode_payload(const ByteBuffer& bytes, ConfigResourceDescribeRequest* payload) {
     return parse_payload(
         bytes, payload, [](BufferReader& reader, ConfigResourceDescribeRequest* out) {
-            return reader.read_string(&out->resource_id);
+            return reader.read_string(&out->resource_id) && reader.read_string(&out->locale);
         });
 }
 
