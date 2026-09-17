@@ -12,6 +12,8 @@ pub(crate) fn write_value(writer: &mut Writer, value: &ConfigValue) -> Result<()
             writer.f64(*value);
             Ok(())
         })?,
+        // 删除覆写指令：只有类型字节，没有 payload。
+        ConfigValue::Unset => {}
     }
     Ok(())
 }
@@ -26,6 +28,9 @@ pub(crate) fn read_value(reader: &mut Reader<'_>) -> Result<ConfigValue, ()> {
             reader.list(|reader| reader.text())?,
         )),
         6 => Ok(ConfigValue::DoubleList(reader.list(|reader| reader.f64())?)),
+        // 删除覆写指令：只有类型字节，没有 payload。
+        7 => Ok(ConfigValue::Unset),
         _ => Err(()),
     }
 }
+

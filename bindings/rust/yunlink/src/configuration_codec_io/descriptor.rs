@@ -43,14 +43,22 @@ pub(crate) fn write_schema(writer: &mut Writer, value: &ConfigFieldSchema) -> Re
     })?;
     writer.text(&value.group_path)?;
     writer.u8(value.update_policy as u8);
-    writer.text(&value.unit)
+    writer.text(&value.unit)?;
+    // 默认值是可选下发：has_default_value 为 false 时没有 payload。
+    // 不能靠 default_value 是否为空来判断 —— 默认值可能是空串 / 0 / false。
+    writer.boolean(value.has_default_value);
+    if value.has_default_value {
+        write_value(writer, &value.default_value)?;
+    }
+    Ok(())
 }
 
 pub(crate) fn read_schema(reader: &mut Reader<'_>) -> Result<ConfigFieldSchema, ()> {
     let path = reader.text()?;
     let title = reader.text()?;
     let description = reader.text()?;
-    let value_type = value_type(reader.u8()?)?;
+    // schema 的 type 不接受 Unset：它是 patch 写入指令，不是字段类型。
+    let value_type = schema_value_type(reader.u8()?)?;
     let required = reader.boolean()?;
     let read_only = reader.boolean()?;
     let sensitive = reader.boolean()?;
@@ -62,6 +70,24 @@ pub(crate) fn read_schema(reader: &mut Reader<'_>) -> Result<ConfigFieldSchema, 
     if maximum.is_none() {
         let _ = reader.f64()?;
     }
+    let validation_pattern = reader.text()?;
+    let choices = reader.list(|reader| {
+        Ok(ConfigChoice {
+            value: read_value(reader)?,
+            label: reader.text()?,
+        })
+    })?;
+    let group_path = reader.text()?;
+    let update_policy = update_policy(reader.u8()?)?;
+    let unit = reader.text()?;
+    let has_default_value = reader.boolean()?;
+    let default_value = if has_default_value {
+        read_value(reader)?
+    } else {
+        // 与 C++ 端 ConfigValue 的默认构造保持一致（type = String、值为空）；
+        // 是否有效完全由 has_default_value 决定。
+        ConfigValue::String(String::new())
+    };
     Ok(ConfigFieldSchema {
         path,
         title,
@@ -72,15 +98,13 @@ pub(crate) fn read_schema(reader: &mut Reader<'_>) -> Result<ConfigFieldSchema, 
         sensitive,
         minimum,
         maximum,
-        validation_pattern: reader.text()?,
-        choices: reader.list(|reader| {
-            Ok(ConfigChoice {
-                value: read_value(reader)?,
-                label: reader.text()?,
-            })
-        })?,
-        group_path: reader.text()?,
-        update_policy: update_policy(reader.u8()?)?,
-        unit: reader.text()?,
+        validation_pattern,
+        choices,
+        group_path,
+        update_policy,
+        unit,
+        default_value,
+        has_default_value,
     })
 }
+

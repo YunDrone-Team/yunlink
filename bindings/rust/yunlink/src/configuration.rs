@@ -9,6 +9,9 @@ pub enum ConfigValueType {
     String = 4,
     StringList = 5,
     DoubleList = 6,
+    /// 删除覆写指令：只出现在 ConfigValue（patch 写入）里，不作为 schema 字段类型。
+    /// 必须追加在末尾 —— 协议里是裸数字，不能改动已有取值。
+    Unset = 7,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,6 +55,9 @@ pub enum ConfigFieldUpdatePolicy {
     EndpointRestart = 2,
     DeviceReboot = 3,
     Manual = 4,
+    /// 保存后需要重新生成并编译产物才生效；保存本身不会失败，也不需要重启。
+    /// 必须追加在末尾 —— 协议里是裸数字。
+    RebuildRequired = 5,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +75,8 @@ pub enum ConfigValue {
     String(String),
     StringList(Vec<String>),
     DoubleList(Vec<f64>),
+    /// 删除该路径的 provider 侧覆写（patch 指令，无 payload）。
+    Unset,
 }
 
 impl ConfigValue {
@@ -80,6 +88,7 @@ impl ConfigValue {
             Self::String(_) => ConfigValueType::String,
             Self::StringList(_) => ConfigValueType::StringList,
             Self::DoubleList(_) => ConfigValueType::DoubleList,
+            Self::Unset => ConfigValueType::Unset,
         }
     }
 }
@@ -117,6 +126,10 @@ pub struct ConfigFieldSchema {
     pub choices: Vec<ConfigChoice>,
     pub update_policy: ConfigFieldUpdatePolicy,
     pub unit: String,
+    /// 该字段的默认值（provider 侧 L1+L2 合成）；has_default_value 为 false 时无效。
+    /// 不能靠 default_value 本身判断有没有默认值 —— 它可能是空串 / 0 / false。
+    pub default_value: ConfigValue,
+    pub has_default_value: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -133,6 +146,9 @@ pub struct ConfigSnapshot {
     pub variant_id: String,
     pub active_variant_id: String,
     pub values: Vec<ConfigFieldValue>,
+    /// 该资源 + 该方案下被用户覆写（provider 稀疏覆写里存在）的字段路径。
+    /// provider 不提供时为空列表，客户端应把所有字段当作「未覆写」。
+    pub user_overridden_paths: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

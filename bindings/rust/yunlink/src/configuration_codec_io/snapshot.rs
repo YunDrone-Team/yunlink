@@ -15,7 +15,12 @@ pub(crate) fn write_snapshot(writer: &mut Writer, value: &ConfigSnapshot) -> Res
     writer.text(&value.applied_revision)?;
     writer.text(&value.variant_id)?;
     writer.text(&value.active_variant_id)?;
-    writer.list(&value.values, write_field_value)
+    writer.list(&value.values, write_field_value)?;
+    // 用户覆写路径：provider 不提供时为空列表，客户端应全部按「未覆写」处理。
+    writer.list(&value.user_overridden_paths, |writer, path| {
+        writer.text(path)
+    })?;
+    Ok(())
 }
 pub(crate) fn read_snapshot(reader: &mut Reader<'_>) -> Result<ConfigSnapshot, ()> {
     Ok(ConfigSnapshot {
@@ -25,6 +30,7 @@ pub(crate) fn read_snapshot(reader: &mut Reader<'_>) -> Result<ConfigSnapshot, (
         variant_id: reader.text()?,
         active_variant_id: reader.text()?,
         values: reader.list(read_field_value)?,
+        user_overridden_paths: reader.list(|reader| reader.text())?,
     })
 }
 
@@ -56,3 +62,4 @@ pub(crate) fn read_effects(reader: &mut Reader<'_>) -> Result<ConfigEffects, ()>
         reconnect_expected: reader.boolean()?,
     })
 }
+
