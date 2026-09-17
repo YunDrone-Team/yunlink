@@ -31,6 +31,7 @@ pub(crate) fn outcome(value: u8) -> Result<ConfigApplyOutcome, ()> {
         _ => Err(()),
     }
 }
+/// 协议里传输的 ConfigValue 类型：允许追加在末尾的 Unset（删除覆写指令，无 payload）。
 pub(crate) fn value_type(value: u8) -> Result<ConfigValueType, ()> {
     match value {
         1 => Ok(ConfigValueType::Bool),
@@ -39,7 +40,16 @@ pub(crate) fn value_type(value: u8) -> Result<ConfigValueType, ()> {
         4 => Ok(ConfigValueType::String),
         5 => Ok(ConfigValueType::StringList),
         6 => Ok(ConfigValueType::DoubleList),
+        7 => Ok(ConfigValueType::Unset),
         _ => Err(()),
+    }
+}
+/// schema 声明的字段类型只能是真实的标量 / 序列类型，不含 Unset：
+/// Unset 是 patch 写入指令，不是一种可持久化的字段类型。
+pub(crate) fn schema_value_type(value: u8) -> Result<ConfigValueType, ()> {
+    match value_type(value)? {
+        ConfigValueType::Unset => Err(()),
+        other => Ok(other),
     }
 }
 pub(crate) fn update_policy(value: u8) -> Result<ConfigFieldUpdatePolicy, ()> {
@@ -49,6 +59,7 @@ pub(crate) fn update_policy(value: u8) -> Result<ConfigFieldUpdatePolicy, ()> {
         2 => Ok(ConfigFieldUpdatePolicy::EndpointRestart),
         3 => Ok(ConfigFieldUpdatePolicy::DeviceReboot),
         4 => Ok(ConfigFieldUpdatePolicy::Manual),
+        5 => Ok(ConfigFieldUpdatePolicy::RebuildRequired),
         _ => Err(()),
     }
 }
@@ -70,3 +81,4 @@ pub(crate) fn write_status(
 pub(crate) fn read_status(reader: &mut Reader<'_>) -> Result<(ConfigServiceStatus, String), ()> {
     Ok((status(reader.u8()?)?, reader.text()?))
 }
+
