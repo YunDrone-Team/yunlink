@@ -20,6 +20,11 @@ enum class ConfigValueType : uint8_t {
     kString = 4,
     kStringList = 5,
     kDoubleList = 6,
+    // 删除该路径的 provider 侧覆写，回落到更低层。它是一条"写入指令"，不是一种可持久化的
+    // 字段类型：schema 的 type 不应出现该取值，只有 ConfigResourcePatchRequest.updates
+    // 里的 ConfigValue 会用它（无 payload，只编码类型字节）。
+    // 必须追加在末尾：不能改动已有取值，协议里是裸数字。
+    kUnset = 7,
 };
 
 enum class ConfigServiceStatus : uint8_t {
@@ -57,6 +62,11 @@ enum class ConfigFieldUpdatePolicy : uint8_t {
     kEndpointRestart = 2,
     kDeviceReboot = 3,
     kManual = 4,
+    // 保存后需要重新生成并编译产物才会生效；保存本身不会失败，也不需要重启。
+    // 注意这一档**不是"更重的重启"**：重启进程只要几秒，重新 codegen + 编译是数十分钟
+    // 且需要停机，客户端必须把两者显示成不同的话术。
+    // 必须追加在末尾：不能改动已有取值，协议里是裸数字。
+    kRebuildRequired = 5,
 };
 
 enum class ConfigVariantSource : uint8_t {
@@ -143,6 +153,11 @@ struct ConfigFieldSchema {
     std::string group_path;
     ConfigFieldUpdatePolicy update_policy = ConfigFieldUpdatePolicy::kManual;
     std::string unit;
+    // 该字段的默认值（provider 侧语义）。has_default_value 为 false 表示 provider 不提供
+    // 默认值，此时客户端不应显示"默认值"，也不应提供"重置为默认值"入口。
+    // 注意不能靠 default_value 本身是否为空来判断：默认值可能是空串、0 或 false。
+    ConfigValue default_value;
+    bool has_default_value = false;
 };
 
 struct ConfigFieldValue {
@@ -157,6 +172,10 @@ struct ConfigSnapshot {
     std::string variant_id;
     std::string active_variant_id;
     std::vector<ConfigFieldValue> values;
+    // 该资源 + 该方案下被用户覆写（provider 侧稀疏覆写里存在、且不是"删除"语义）的字段
+    // 路径。不在列表里的字段，其有效值等于默认值（或机型覆写值），用户没有改过。
+    // provider 不提供该信息时保持为空，客户端应把所有字段当作"未覆写"，而不是猜测。
+    std::vector<std::string> user_overridden_paths;
 };
 
 struct ConfigVariantDescriptor {

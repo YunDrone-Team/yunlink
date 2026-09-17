@@ -83,10 +83,13 @@ int main() {
         {"endpoint_uid", yunlink::ConfigValue::from_string("endpoint.bridge")},
         {"tcp_listen_port", yunlink::ConfigValue::from_int64(9696)},
     };
+    configuration.snapshot.user_overridden_paths = {"tcp_listen_port"};
     yunlink::ConfigResourceGetResponse decoded_configuration;
     assert(decode(encode(configuration), &decoded_configuration));
     assert(decoded_configuration.snapshot.values.size() == 2);
     assert(decoded_configuration.snapshot.values.front().value.string_value == "endpoint.bridge");
+    assert(decoded_configuration.snapshot.user_overridden_paths.size() == 1);
+    assert(decoded_configuration.snapshot.user_overridden_paths.front() == "tcp_listen_port");
 
     // Configuration resources are provider-neutral. Exercise the complete shape that
     // adapters use for parameter managers: groups, update policy, variants and a
@@ -107,7 +110,14 @@ int main() {
     field.has_maximum = true;
     field.maximum = 10.0;
     field.choices = {{yunlink::ConfigValue::from_double(3.0), "Indoor"}};
+    field.has_default_value = true;
+    field.default_value = yunlink::ConfigValue::from_double(2.5);
     describe.fields.push_back(field);
+    yunlink::ConfigFieldSchema rebuild_field;
+    rebuild_field.path = "control.horizon_steps";
+    rebuild_field.type = yunlink::ConfigValueType::kInt64;
+    rebuild_field.update_policy = yunlink::ConfigFieldUpdatePolicy::kRebuildRequired;
+    describe.fields.push_back(rebuild_field);
     yunlink::ConfigResourceDescribeResponse decoded_describe;
     const Bytes encoded_describe = encode(describe);
     assert(decode(encoded_describe, &decoded_describe));
@@ -116,6 +126,11 @@ int main() {
     assert(decoded_describe.fields.front().update_policy ==
            yunlink::ConfigFieldUpdatePolicy::kHotReload);
     assert(decoded_describe.fields.front().unit == "m/s");
+    assert(decoded_describe.fields.front().has_default_value);
+    assert(decoded_describe.fields.front().default_value.double_value == 2.5);
+    assert(decoded_describe.fields.back().update_policy ==
+           yunlink::ConfigFieldUpdatePolicy::kRebuildRequired);
+    assert(!decoded_describe.fields.back().has_default_value);
     Bytes truncated_describe = encoded_describe;
     truncated_describe.pop_back();
     assert(!decode(truncated_describe, &decoded_describe));
@@ -137,6 +152,21 @@ int main() {
     assert(decoded_patch.validate_only);
     assert(decoded_patch.updates.size() == 2);
     assert(decoded_patch.variant_id == "indoor");
+
+    // kUnset 是"删除覆写"指令：只有类型字节，没有 payload。它必须能独立往返，
+    // 且不能被 valid_schema_value_type 误当成字段类型。
+    yunlink::ConfigValue unset_value;
+    unset_value.type = yunlink::ConfigValueType::kUnset;
+    yunlink::ConfigResourcePatchRequest unset_patch;
+    unset_patch.resource_id = patch.resource_id;
+    unset_patch.variant_id = patch.variant_id;
+    unset_patch.expected_revision = patch.expected_revision;
+    unset_patch.updates = {{"control.max_speed", unset_value}};
+    yunlink::ConfigResourcePatchRequest decoded_unset_patch;
+    assert(decode(encode(unset_patch), &decoded_unset_patch));
+    assert(decoded_unset_patch.updates.size() == 1);
+    assert(decoded_unset_patch.updates.front().path == "control.max_speed");
+    assert(decoded_unset_patch.updates.front().value.type == yunlink::ConfigValueType::kUnset);
     const Bytes patch_golden = {
         0x14, 0x00, 's',  'u',  'n',  'r',  'a',  'y',  '.',  'p',  'a',  'r', 'a', 'm',  's',
         '.',  'f',  'l',  'i',  'g',  'h',  't',  0x06, 0x00, 'i',  'n',  'd', 'o', 'o',  'r',
@@ -170,13 +200,14 @@ int main() {
         0x69, 0x67, 0x68, 0x74, 0x02, 0x00, 0x72, 0x31, 0x02, 0x00, 0x72, 0x31, 0x06, 0x00, 0x69,
         0x6e, 0x64, 0x6f, 0x6f, 0x72, 0x06, 0x00, 0x69, 0x6e, 0x64, 0x6f, 0x6f, 0x72, 0x01, 0x00,
         0x11, 0x00, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x6d, 0x61, 0x78, 0x5f, 0x73,
-        0x70, 0x65, 0x65, 0x64, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x40, 0x01, 0x14,
-        0x00, 0x73, 0x75, 0x6e, 0x72, 0x61, 0x79, 0x2e, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x2e,
-        0x66, 0x6c, 0x69, 0x67, 0x68, 0x74, 0x0b, 0x00, 0x63, 0x61, 0x6e, 0x64, 0x69, 0x64, 0x61,
-        0x74, 0x65, 0x2d, 0x32, 0x02, 0x00, 0x72, 0x31, 0x06, 0x00, 0x69, 0x6e, 0x64, 0x6f, 0x6f,
-        0x72, 0x06, 0x00, 0x69, 0x6e, 0x64, 0x6f, 0x6f, 0x72, 0x01, 0x00, 0x11, 0x00, 0x63, 0x6f,
-        0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x6d, 0x61, 0x78, 0x5f, 0x73, 0x70, 0x65, 0x65, 0x64,
-        0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        0x70, 0x65, 0x65, 0x64, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x40, 0x00, 0x00,
+        0x01, 0x14, 0x00, 0x73, 0x75, 0x6e, 0x72, 0x61, 0x79, 0x2e, 0x70, 0x61, 0x72, 0x61, 0x6d,
+        0x73, 0x2e, 0x66, 0x6c, 0x69, 0x67, 0x68, 0x74, 0x0b, 0x00, 0x63, 0x61, 0x6e, 0x64, 0x69,
+        0x64, 0x61, 0x74, 0x65, 0x2d, 0x32, 0x02, 0x00, 0x72, 0x31, 0x06, 0x00, 0x69, 0x6e, 0x64,
+        0x6f, 0x6f, 0x72, 0x06, 0x00, 0x69, 0x6e, 0x64, 0x6f, 0x6f, 0x72, 0x01, 0x00, 0x11, 0x00,
+        0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x6d, 0x61, 0x78, 0x5f, 0x73, 0x70, 0x65,
+        0x65, 0x64, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x40, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00};
     assert(encode(patch_preview) == patch_preview_golden);
     assert(decode(patch_preview_golden, &decoded_patch_preview));
     assert(decoded_patch_preview.has_candidate_snapshot);

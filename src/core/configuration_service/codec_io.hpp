@@ -54,9 +54,17 @@ inline bool read_strings(BufferReader& reader, std::vector<std::string>* out) {
     });
 }
 
-inline bool valid_value_type(uint8_t value) {
+// schema 声明的字段类型只能是真实的标量/序列类型，不含 kUnset：kUnset 是 patch 写入
+// 指令，不是一种可持久化的字段类型。
+inline bool valid_schema_value_type(uint8_t value) {
     return value >= static_cast<uint8_t>(ConfigValueType::kBool) &&
            value <= static_cast<uint8_t>(ConfigValueType::kDoubleList);
+}
+
+// 协议里传输的 ConfigValue 类型：允许追加在末尾的 kUnset（无 payload）。
+inline bool valid_value_type(uint8_t value) {
+    return value >= static_cast<uint8_t>(ConfigValueType::kBool) &&
+           value <= static_cast<uint8_t>(ConfigValueType::kUnset);
 }
 
 inline bool valid_status(uint8_t value) {
@@ -73,7 +81,7 @@ inline bool valid_outcome(uint8_t value) {
 }
 
 inline bool valid_update_policy(uint8_t value) {
-    return value <= static_cast<uint8_t>(ConfigFieldUpdatePolicy::kManual);
+    return value <= static_cast<uint8_t>(ConfigFieldUpdatePolicy::kRebuildRequired);
 }
 
 inline bool valid_variant_source(uint8_t value) {
@@ -112,6 +120,9 @@ inline void write_value(BufferWriter& writer, const ConfigValue& value) {
             target.write_double(item);
         });
         return;
+    case ConfigValueType::kUnset:
+        // 删除覆写指令：只有类型字节，没有 payload。
+        return;
     }
 }
 
@@ -143,6 +154,9 @@ inline bool read_value(BufferReader& reader, ConfigValue* out) {
         return read_vector(reader, &out->double_list_value, [](BufferReader& source, double* item) {
             return source.read_double(item) && std::isfinite(*item);
         });
+    case ConfigValueType::kUnset:
+        // 删除覆写指令：只有类型字节，没有 payload。
+        return true;
     }
     return false;
 }
@@ -190,13 +204,17 @@ inline void write_schema(BufferWriter& writer, const ConfigFieldSchema& value) {
     writer.write_string(value.group_path);
     writer.write_u8(static_cast<uint8_t>(value.update_policy));
     writer.write_string(value.unit);
+    writer.write_bool(value.has_default_value);
+    if (value.has_default_value) {
+        write_value(writer, value.default_value);
+    }
 }
 
 inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
     uint8_t type = 0;
     if (out == nullptr || !reader.read_string(&out->path) || !reader.read_string(&out->title) ||
         !reader.read_string(&out->description) || !reader.read_u8(&type) ||
-        !valid_value_type(type)) {
+        !valid_schema_value_type(type)) {
         return false;
     }
     out->type = static_cast<ConfigValueType>(type);
@@ -214,6 +232,12 @@ inline bool read_schema(BufferReader& reader, ConfigFieldSchema* out) {
         return false;
     }
     out->update_policy = static_cast<ConfigFieldUpdatePolicy>(update_policy);
+    if (!reader.read_bool(&out->has_default_value)) {
+        return false;
+    }
+    if (out->has_default_value && !read_value(reader, &out->default_value)) {
+        return false;
+    }
     return true;
 }
 
@@ -233,13 +257,15 @@ inline void write_snapshot(BufferWriter& writer, const ConfigSnapshot& value) {
     writer.write_string(value.variant_id);
     writer.write_string(value.active_variant_id);
     write_vector(writer, value.values, write_field_value);
+    write_strings(writer, value.user_overridden_paths);
 }
 
 inline bool read_snapshot(BufferReader& reader, ConfigSnapshot* out) {
     return out != nullptr && reader.read_string(&out->resource_id) &&
            reader.read_string(&out->revision) && reader.read_string(&out->applied_revision) &&
            reader.read_string(&out->variant_id) && reader.read_string(&out->active_variant_id) &&
-           read_vector(reader, &out->values, read_field_value);
+           read_vector(reader, &out->values, read_field_value) &&
+           read_strings(reader, &out->user_overridden_paths);
 }
 
 inline void write_variant(BufferWriter& writer, const ConfigVariantDescriptor& value) {
