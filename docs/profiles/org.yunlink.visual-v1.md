@@ -86,6 +86,96 @@ The matrix semantics are `T(reference <- source)`. Point bytes remain in the
 source frame. A client applies the one transform to its render group, never a
 per-point JavaScript coordinate conversion.
 
+## Point cloud: `YLP2 v1`
+
+Encoding:
+
+```text
+application/vnd.yunlink.pointcloud.xyz-i-int16-le;version=1
+```
+
+The payload is little-endian:
+
+| Offset | Field | Type |
+| --- | --- | --- |
+| 0 | magic `YLP2` | 4 bytes |
+| 4 | version | `u16`, value `1` |
+| 6 | flags | `u16`, bit 0 means intensity is present |
+| 8 | point count | `u32` |
+| 12 | stride | `u32`, value `8` |
+| 16 | points | `count * 8` bytes |
+
+Each point is `[qx, qy, qz]` as signed `i16` followed by `u8 intensity` and one
+padding byte. Coordinates are reconstructed in the source frame with:
+
+```text
+x = qx * visual.quantization_scale_m + visual.origin_xyz[0]
+y = qy * visual.quantization_scale_m + visual.origin_xyz[1]
+z = qz * visual.quantization_scale_m + visual.origin_xyz[2]
+```
+
+The bridge chooses `visual.origin_xyz` per frame, normally the point-cloud
+bounding-box centre, so a 2 mm quantization step can cover a local map without
+overflowing `i16`. If bit 0 is clear, intensity is written as `0`. A decoder
+must reject unknown flags, an unsupported version, a non-8 stride, truncated
+data, trailing data, or non-finite reconstructed coordinates.
+
+Required sample metadata:
+
+```text
+visual.kind = point_cloud
+visual.format = xyz_i_int16_le
+visual.origin_xyz = [x,y,z]
+visual.quantization_scale_m = positive number
+visual.quantization_bits = 16
+visual.point_count
+visual.source_frame
+visual.reference_frame
+visual.reference_from_source.translation_xyz = [x,y,z]
+visual.reference_from_source.rotation_xyzw = [x,y,z,w]
+```
+
+`visual.intensity_min` and `visual.intensity_max` are present when intensity is
+present. `visual.quantization_clamped_count` counts coordinates that had to be
+clamped to the `i16` range; display clients may surface it as a quality metric.
+
+## Point cloud: Draco
+
+Encoding:
+
+```text
+application/vnd.yunlink.pointcloud.draco;version=1
+```
+
+The payload is an opaque Draco point-cloud bitstream. The bridge emits it only
+when the optional Draco encoder is compiled in; otherwise a requested `draco`
+encoding falls back to the configured fallback (`f32` or `int16`). The Draco
+point cloud contains:
+
+- a `POSITION` attribute with `f32 x 3` decoded values;
+- an optional `GENERIC` attribute with `f32 x 1` intensity values.
+
+Required sample metadata:
+
+```text
+visual.kind = point_cloud
+visual.format = draco
+visual.point_count
+visual.draco.quantization_bits
+visual.source_frame
+visual.reference_frame
+visual.reference_from_source.translation_xyz = [x,y,z]
+visual.reference_from_source.rotation_xyzw = [x,y,z,w]
+```
+
+`visual.intensity_present` is `true` when the intensity attribute is present,
+and `visual.draco.intensity_attribute` is then `generic_f32`. The Draco
+bitstream is produced by the linked Draco library, so it is not represented by
+a fixed golden vector; consumers must use a compatible Draco decoder.
+
+Catalog metadata may expose `visual.pointcloud.draco_available = true|false`
+so clients can choose whether to request `draco`.
+
 ## Marker array JSON v1
 
 Encoding:

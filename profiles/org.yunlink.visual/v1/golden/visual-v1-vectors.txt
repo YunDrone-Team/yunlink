@@ -3,6 +3,7 @@
 point_cloud.valid.hex=594c50430100010002000000100000000000000000000000000000000000803f0000004000004040000080400000803f
 point_cloud.invalid_stride.hex=594c504301000100020000000c0000000000000000000000000000000000803f0000004000004040000080400000803f
 point_cloud.invalid_truncated.hex=594c50430100010002000000100000000000000000000000000000000000803f0000004000004040
+point_cloud_int16.valid.hex=594c5032010001000200000008000000e803d007b80bff0018fc30f848f40000
 image.raw.hex=000102030405
 marker.add.json={"version":1,"reference_frame":"uav1/sunray_local","markers":[{"namespace":"route","id":7,"type":4,"action":0,"frame_id":"uav1/sunray_local","source_stamp_ns":"123","lifetime_ns":"250000000","frame_locked":false,"pose":{"position":[1,2,3],"orientation":[0,0,0,1]},"scale":[0.1,0.1,0.1],"color":[1,0,0,1],"text":"","mesh":{"policy":"none","asset_id":""},"points":[[0,0,0],[1,0,0]],"colors":[]}]}
 marker.delete.json={"version":1,"reference_frame":"uav1/sunray_local","markers":[{"namespace":"route","id":7,"action":2}]}

@@ -61,6 +61,12 @@ bool valid_ylpc(const std::vector<uint8_t>& bytes) {
            read_u32(bytes, 12) == 16 && bytes.size() == 16U + read_u32(bytes, 8) * 16U;
 }
 
+bool valid_ylp2(const std::vector<uint8_t>& bytes) {
+    return bytes.size() >= 16 && std::string(bytes.begin(), bytes.begin() + 4) == "YLP2" &&
+           read_u16(bytes, 4) == 1 && (read_u16(bytes, 6) & ~uint16_t{1}) == 0 &&
+           read_u32(bytes, 12) == 8 && bytes.size() == 16U + read_u32(bytes, 8) * 8U;
+}
+
 }  // namespace
 
 int main() {
@@ -68,6 +74,7 @@ int main() {
     assert(valid_ylpc(hex(values.at("point_cloud.valid.hex"))));
     assert(!valid_ylpc(hex(values.at("point_cloud.invalid_stride.hex"))));
     assert(!valid_ylpc(hex(values.at("point_cloud.invalid_truncated.hex"))));
+    assert(valid_ylp2(hex(values.at("point_cloud_int16.valid.hex"))));
     assert(values.at("image.raw.hex").size() == 12);
 
     const auto& add = values.at("marker.add.json");
