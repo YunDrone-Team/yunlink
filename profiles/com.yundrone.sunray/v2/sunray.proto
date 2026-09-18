@@ -651,3 +651,29 @@ message RelocalizationSeedResponse {
   // 单调递增，用于客户端关联"哪一次播种被采纳"。
   uint64 seed_id = 3;
 }
+
+// 定位链路状态快照。Bridge 订阅机上 sunray_msgs/RelocalizationState 后按 stream 转发。
+//
+// 用类型化消息而不是 JSON 字符串：字段改名能在编译期暴露，且不需要在 Bridge 里
+// 引入 JSON 解析依赖。字段与 common/sunray_msgs/localization/msg/RelocalizationState.msg
+// 一一对应。
+message RelocalizationStateSnapshot {
+  // idle / loading / seeded / converging / active / failed / degraded
+  string state = 1;
+  // 当前生效的先验地图（机上解析后的绝对路径）。
+  string map_path = 2;
+  uint64 point_count = 3;
+  // 失败或降级原因，可直接展示给操作员。
+  string detail = 4;
+  // 机上已接收并采纳的播种次数（每次收到 /initialpose 递增）。
+  // 用途：让客户端确认"我这次点选已经到达机上"。
+  // 注意它与 RelocalizationSeedResponse.seed_id 是**两个独立计数器**：后者是
+  // "Bridge 受理并转发了几次"，前者是"机上实际收到几次"。两者都单调递增，但
+  // Bridge 或节点重启后起点不同，不要当作同一个编号使用。
+  uint64 seed_id_accepted = 5;
+  // false 表示当前没有有效的全局位姿，下游不得据此定位。
+  bool pose_valid = 6;
+  // 与 /localization_3d_confidence 同源。
+  double confidence = 7;
+  uint64 source_stamp_ns = 8;
+}
