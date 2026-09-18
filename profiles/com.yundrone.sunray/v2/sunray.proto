@@ -609,3 +609,45 @@ message FeatureStopResponse {
   string message = 2;
   string name = 3;
 }
+
+// ---------------------------------------------------------------------------
+// 重定位：先验地图激活与播种（Sunray Open3D 全局定位）
+//
+// 定位节点持有"一张生效地图 + 一个 odom->map 变换"。换图会让旧变换的语义完全失效，
+// 因此 activate_map 与 seed 都是**地面专用**操作：Bridge 侧与数据文件上传共用同一把
+// 安全门禁（UAV 未解锁 / UGV HOLD），飞行中一律拒绝。
+// ---------------------------------------------------------------------------
+
+// 地图激活。path 是先验地图在端点文件系统上的绝对路径（通常由 MediaFilePut 先落地）。
+message RelocalizationActivateMapRequest {
+  string path = 1;
+}
+message RelocalizationActivateMapResponse {
+  bool accepted = 1;
+  // 拒绝或失败原因，必须可直接展示给操作员。
+  string message = 2;
+  // 生效后的地图身份，便于客户端确认"我激活的是哪一张"。
+  string active_path = 3;
+  uint64 point_count = 4;
+}
+
+// 播种：给出机体在地图中的大致位姿，由机上 ICP 收敛到精确位姿。
+// 朝向用 yaw（弧度，绕地图 z 轴）表达；roll/pitch 缺省由机上按 IMU 重力对齐处理，
+// 因此客户端通常只需要给 x/y/z/yaw 四个量。
+message RelocalizationSeedRequest {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  // 弧度，绕地图 z 轴。
+  double yaw = 4;
+  // 为 true 时 roll/pitch 生效；为 false 时由机上使用重力对齐值。
+  bool has_roll_pitch = 5;
+  double roll = 6;
+  double pitch = 7;
+}
+message RelocalizationSeedResponse {
+  bool accepted = 1;
+  string message = 2;
+  // 单调递增，用于客户端关联"哪一次播种被采纳"。
+  uint64 seed_id = 3;
+}
