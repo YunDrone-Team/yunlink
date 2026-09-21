@@ -281,15 +281,48 @@ bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std
     return true;
 }
 
+bool validate_double_ring(const FormationSetRequest& request, bool dynamic, std::string* error) {
+    if (!request.has_double_ring()) {
+        return fail(error, dynamic ? "dynamic formation double ring is invalid"
+                                   : "formation double ring is invalid");
+    }
+    const auto& ring = request.double_ring();
+    if (!(std::isfinite(ring.radius_m()) && ring.radius_m() > 0.0) ||
+        !std::isfinite(ring.lower_height_m()) || !std::isfinite(ring.upper_height_m()) ||
+        !(ring.lower_height_m() < ring.upper_height_m()) ||
+        !std::isfinite(ring.phase_offset_rad())) {
+        return fail(error, "formation double ring geometry is invalid");
+    }
+    // STATIC_DOUBLE_RING ignores angular speed entirely, so an unused non-finite
+    // value stays acceptable; the dynamic variant requires finite non-zero motion.
+    if (dynamic && !(std::isfinite(ring.angular_speed_radps()) &&
+                     std::abs(ring.angular_speed_radps()) > 0.0)) {
+        return fail(error, "dynamic formation double ring angular speed is invalid");
+    }
+    return true;
+}
+
 bool validate_formation_set_request(const FormationSetRequest& request, std::string* error) {
     const auto positive = [](double value) { return std::isfinite(value) && value > 0.0; };
     const auto moving = [](double value) {
         return std::isfinite(value) && std::abs(value) > 0.0;
     };
+    // Height semantics are part of the task contract: an unsupported mode is
+    // rejected for every formation type, even one that ignores planar height.
+    if (request.height_mode() != FORMATION_HEIGHT_LEGACY_HOLD_CURRENT &&
+        request.height_mode() != FORMATION_HEIGHT_EXPLICIT) {
+        return fail(error, "formation height mode is invalid");
+    }
+    if (!std::isfinite(request.height_m())) {
+        return fail(error, "formation height is invalid");
+    }
     switch (request.formation_type()) {
     case FORMATION_TAKEOFF:
     case FORMATION_LAND:
-        return true;
+        return request.height_mode() == FORMATION_HEIGHT_LEGACY_HOLD_CURRENT &&
+                       request.height_m() == 0.0
+                   ? true
+                   : fail(error, "takeoff and land require legacy height mode and zero height");
     case FORMATION_STATIC_LINE:
         if (!request.has_line() || !positive(request.line().spacing_m()) ||
             !std::isfinite(request.line().angle_deg())) {
@@ -320,6 +353,10 @@ bool validate_formation_set_request(const FormationSetRequest& request, std::str
             return fail(error, "dynamic formation lemniscate is invalid");
         }
         return true;
+    case FORMATION_STATIC_DOUBLE_RING:
+        return validate_double_ring(request, false, error);
+    case FORMATION_DYNAMIC_DOUBLE_RING:
+        return validate_double_ring(request, true, error);
     case FORMATION_LEADER: {
         if (!request.has_leader() || request.leader().agent_slots_size() != 25 ||
             request.leader().virtual_leader_slots_size() != 25 ||
@@ -371,11 +408,16 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
                             state.formation_type() == FORMATION_STATIC_LINE ||
                             state.formation_type() == FORMATION_STATIC_POLYGON ||
                             state.formation_type() == FORMATION_LEADER ||
+                            state.formation_type() == FORMATION_STATIC_DOUBLE_RING ||
                             state.formation_type() == FORMATION_DYNAMIC_POLYGON ||
                             state.formation_type() == FORMATION_DYNAMIC_RING ||
-                            state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE;
+                            state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE ||
+                            state.formation_type() == FORMATION_DYNAMIC_DOUBLE_RING;
+    const bool valid_start = state.dynamic_start_status() >= FORMATION_START_WAITING &&
+                             state.dynamic_start_status() <= FORMATION_START_CANCELLED;
     if (state.phase() < FORMATION_PHASE_IDLE || state.phase() > FORMATION_PHASE_ERROR ||
-        !valid_type || (state.virtual_leader_target_valid() &&
+        !valid_type || !valid_start ||
+        (state.virtual_leader_target_valid() &&
                         (!state.has_virtual_leader_target() ||
                          !finite(state.virtual_leader_target())))) {
         return fail(error, "formation state is invalid");

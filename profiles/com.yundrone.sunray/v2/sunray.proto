@@ -410,9 +410,20 @@ enum FormationType {
   FORMATION_STATIC_LINE = 10;
   FORMATION_STATIC_POLYGON = 11;
   FORMATION_LEADER = 12;
+  FORMATION_STATIC_DOUBLE_RING = 13;
   FORMATION_DYNAMIC_POLYGON = 20;
   FORMATION_DYNAMIC_RING = 21;
   FORMATION_DYNAMIC_LEMNISCATE = 22;
+  FORMATION_DYNAMIC_DOUBLE_RING = 23;
+}
+
+// Planar target height semantics, mirroring sunray_msgs/FormationGoal.
+// FORMATION_HEIGHT_LEGACY_HOLD_CURRENT keeps the previous measured-height
+// behaviour; FORMATION_HEIGHT_EXPLICIT uses an absolute common-frame Z.
+// Unsupported modes are rejected for every formation type.
+enum FormationHeightMode {
+  FORMATION_HEIGHT_LEGACY_HOLD_CURRENT = 0;
+  FORMATION_HEIGHT_EXPLICIT = 1;
 }
 
 enum FormationPhase {
@@ -427,6 +438,17 @@ enum FormationLeaderTargetMode {
   FORMATION_LEADER_TARGET_UNSPECIFIED = 0;
   FORMATION_LEADER_TARGET_FIXED_POSE = 1;
   FORMATION_LEADER_TARGET_ODOM_TOPIC = 2;
+}
+
+// Spatial dynamic-startup gate status, mirroring the sunray_msgs/FormationState
+// constants. WAITING/PREPARED/COMMITTED describe the distributed schedule gate;
+// RUNNING means the shared phase is advancing; CANCELLED is terminal per epoch.
+enum FormationDynamicStartStatus {
+  FORMATION_START_WAITING = 0;
+  FORMATION_START_PREPARED = 1;
+  FORMATION_START_COMMITTED = 2;
+  FORMATION_START_RUNNING = 3;
+  FORMATION_START_CANCELLED = 4;
 }
 
 message FormationTaskEpoch {
@@ -462,6 +484,19 @@ message FormationLeader {
   repeated bool virtual_leader_slots = 3;
 }
 
+// Spatial six-UAV formation: IDs 1..3 lower ring, IDs 4..6 upper ring.
+// radius_m is the common radius; layer heights are absolute common-frame Z.
+// angular_speed_radps is the equal signed angular speed of both rings and is
+// ignored by FORMATION_STATIC_DOUBLE_RING. phase_offset_rad is the upper-ring
+// phase relative to the lower ring; clients supply pi/3 by default.
+message FormationDoubleRing {
+  double radius_m = 1;
+  double lower_height_m = 2;
+  double upper_height_m = 3;
+  double angular_speed_radps = 4;
+  double phase_offset_rad = 5;
+}
+
 message FormationSetRequest {
   FormationType formation_type = 1;
   bool align_yaw_with_trajectory = 2;
@@ -470,6 +505,9 @@ message FormationSetRequest {
   FormationRing ring = 5;
   FormationLemniscate lemniscate = 6;
   FormationLeader leader = 7;
+  FormationHeightMode height_mode = 8;
+  double height_m = 9;
+  FormationDoubleRing double_ring = 10;
 }
 
 message FormationSetResponse {
@@ -516,6 +554,12 @@ message FormationState {
   string formation_layout_key = 14;
   bool formation_layout_valid = 15;
   string last_error = 16;
+  // Spatial capability, monotonic state sequence and the dynamic-start gate.
+  bool spatial_capable = 17;
+  string spatial_config_digest = 18;
+  uint64 state_sequence = 19;
+  FormationDynamicStartStatus dynamic_start_status = 20;
+  uint64 dynamic_start_sequence = 21;
 }
 
 // Point-cloud accumulation control and status.  This is intentionally a small

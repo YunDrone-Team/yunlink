@@ -17,13 +17,52 @@ fn finite_pose(value: &mobility::Pose) -> bool {
     finite_vector3(position) && norm_squared.is_finite() && norm_squared > 1e-12
 }
 
+fn double_ring(
+    request: &sunray::FormationSetRequest,
+    dynamic: bool,
+) -> Result<(), &'static str> {
+    let value = request
+        .double_ring
+        .as_ref()
+        .ok_or("formation double ring is invalid")?;
+    if !(value.radius_m.is_finite() && value.radius_m > 0.0)
+        || !value.lower_height_m.is_finite()
+        || !value.upper_height_m.is_finite()
+        || !(value.lower_height_m < value.upper_height_m)
+        || !value.phase_offset_rad.is_finite()
+    {
+        return Err("formation double ring geometry is invalid");
+    }
+    // STATIC_DOUBLE_RING ignores angular speed entirely, so an unused non-finite
+    // value stays acceptable; the dynamic variant requires finite non-zero motion.
+    if dynamic && !(value.angular_speed_radps.is_finite() && value.angular_speed_radps.abs() > 0.0)
+    {
+        return Err("dynamic formation double ring angular speed is invalid");
+    }
+    Ok(())
+}
+
 pub fn validate_formation_set_request(
     request: &sunray::FormationSetRequest,
 ) -> Result<(), &'static str> {
     let positive = |value: f64| value.is_finite() && value > 0.0;
     let moving = |value: f64| value.is_finite() && value.abs() > 0.0;
+    // Height semantics are part of the task contract: an unsupported mode is
+    // rejected for every formation type, even one that ignores planar height.
+    if request.height_mode != 0 && request.height_mode != 1 {
+        return Err("formation height mode is invalid");
+    }
+    if !request.height_m.is_finite() {
+        return Err("formation height is invalid");
+    }
     match request.formation_type {
-        1 | 2 => Ok(()),
+        1 | 2 => {
+            if request.height_mode == 0 && request.height_m == 0.0 {
+                Ok(())
+            } else {
+                Err("takeoff and land require legacy height mode and zero height")
+            }
+        }
         10 => request
             .line
             .as_ref()
@@ -58,6 +97,8 @@ pub fn validate_formation_set_request(
             })
             .map(|_| ())
             .ok_or("dynamic formation lemniscate is invalid"),
+        13 => double_ring(request, false),
+        23 => double_ring(request, true),
         12 => {
             let leader = request
                 .leader
@@ -113,14 +154,17 @@ pub fn validate_formation_leader_target_request(
 pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'static str> {
     let valid_type = matches!(
         state.formation_type,
-        0 | 1 | 2 | 10 | 11 | 12 | 20 | 21 | 22
+        0 | 1 | 2 | 10 | 11 | 12 | 13 | 20 | 21 | 22 | 23
     );
     let valid_target = !state.virtual_leader_target_valid
         || state
             .virtual_leader_target
             .as_ref()
             .is_some_and(finite_pose);
-    ((0..=4).contains(&state.phase) && valid_type && valid_target)
+    ((0..=4).contains(&state.phase)
+        && (0..=4).contains(&state.dynamic_start_status)
+        && valid_type
+        && valid_target)
         .then_some(())
         .ok_or("formation state is invalid")
 }

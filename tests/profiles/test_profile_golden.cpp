@@ -414,6 +414,62 @@ int main() {
     assert(validate_formation_set_request(ring, &validation_error));
     assert(hex(ring.SerializeAsString()) == "081510012a1209000000000000084011000000000000e0bf");
 
+    // Spatial double ring: absolute layer heights plus a signed angular speed.
+    FormationSetRequest double_ring;
+    double_ring.set_formation_type(FORMATION_DYNAMIC_DOUBLE_RING);
+    double_ring.set_height_mode(FORMATION_HEIGHT_EXPLICIT);
+    double_ring.set_height_m(0.9);
+    double_ring.mutable_double_ring()->set_radius_m(1.2);
+    double_ring.mutable_double_ring()->set_lower_height_m(0.6);
+    double_ring.mutable_double_ring()->set_upper_height_m(1.2);
+    double_ring.mutable_double_ring()->set_angular_speed_radps(-0.2);
+    double_ring.mutable_double_ring()->set_phase_offset_rad(1.0471975511965976);
+    assert(validate_formation_set_request(double_ring, &validation_error));
+    assert(hex(double_ring.SerializeAsString()) ==
+           "0817400149cdccccccccccec3f522d09333333333333f33f11333333333333e33f19333333333333f33f21"
+           "9a9999999999c9bf2965732d3852c1f03f");
+    assert_round_trip(double_ring);
+
+    FormationSetRequest static_double_ring;
+    static_double_ring.set_formation_type(FORMATION_STATIC_DOUBLE_RING);
+    static_double_ring.mutable_double_ring()->set_radius_m(1.2);
+    static_double_ring.mutable_double_ring()->set_lower_height_m(0.6);
+    static_double_ring.mutable_double_ring()->set_upper_height_m(1.2);
+    static_double_ring.mutable_double_ring()->set_phase_offset_rad(1.0471975511965976);
+    assert(validate_formation_set_request(static_double_ring, &validation_error));
+    assert(hex(static_double_ring.SerializeAsString()) ==
+           "080d522409333333333333f33f11333333333333e33f19333333333333f33f2965732d3852c1f03f");
+    assert_round_trip(static_double_ring);
+
+    // STATIC_DOUBLE_RING ignores angular speed, so an unused non-finite value is allowed.
+    static_double_ring.mutable_double_ring()->set_angular_speed_radps(
+        std::numeric_limits<double>::quiet_NaN());
+    assert(validate_formation_set_request(static_double_ring, &validation_error));
+
+    FormationSetRequest zero_speed_ring = double_ring;
+    zero_speed_ring.mutable_double_ring()->set_angular_speed_radps(0.0);
+    assert(!validate_formation_set_request(zero_speed_ring, &validation_error));
+
+    // An unsupported height mode is rejected even by a formation that ignores planar height.
+    FormationSetRequest bad_height_mode = double_ring;
+    bad_height_mode.set_height_mode(static_cast<FormationHeightMode>(2));
+    assert(!validate_formation_set_request(bad_height_mode, &validation_error));
+
+    FormationSetRequest inverted_layers = double_ring;
+    inverted_layers.mutable_double_ring()->set_lower_height_m(2.0);
+    assert(!validate_formation_set_request(inverted_layers, &validation_error));
+
+    FormationSetRequest missing_double_ring = double_ring;
+    missing_double_ring.clear_double_ring();
+    assert(!validate_formation_set_request(missing_double_ring, &validation_error));
+
+    // Takeoff/landing never reinterpret formation height as an altitude.
+    FormationSetRequest land_with_height;
+    land_with_height.set_formation_type(FORMATION_LAND);
+    land_with_height.set_height_mode(FORMATION_HEIGHT_EXPLICIT);
+    land_with_height.set_height_m(0.5);
+    assert(!validate_formation_set_request(land_with_height, &validation_error));
+
     FormationSetRequest leader;
     leader.set_formation_type(FORMATION_LEADER);
     for (int index = 0; index < 25; ++index) {
@@ -452,5 +508,29 @@ int main() {
     assert(hex(formation_state.SerializeAsString()) ==
            "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000"
            "000000f03f110000000000000040190000000000000840120921000000000000f03f");
+
+    // Spatial state carries capability, monotonic sequences and the dynamic-start gate.
+    FormationState spatial_state;
+    spatial_state.set_source_stamp_ns(42);
+    spatial_state.set_agent_id("uav1");
+    spatial_state.set_formation_type(FORMATION_DYNAMIC_DOUBLE_RING);
+    spatial_state.set_phase(FORMATION_PHASE_ACTIVE);
+    spatial_state.set_spatial_capable(true);
+    spatial_state.set_spatial_config_digest("abc");
+    spatial_state.set_state_sequence(7);
+    spatial_state.set_dynamic_start_status(FORMATION_START_RUNNING);
+    spatial_state.set_dynamic_start_sequence(7);
+    assert(validate_formation_state(spatial_state, &validation_error));
+    assert(hex(spatial_state.SerializeAsString()) ==
+           "082a1a047561763138024017880101920103616263980107a00103a80107");
+    assert_round_trip(spatial_state);
+
+    FormationState out_of_range_start = spatial_state;
+    out_of_range_start.set_dynamic_start_status(static_cast<FormationDynamicStartStatus>(9));
+    assert(!validate_formation_state(out_of_range_start, &validation_error));
+
+    FormationState bad_spatial_type = spatial_state;
+    bad_spatial_type.set_formation_type(static_cast<FormationType>(14));
+    assert(!validate_formation_state(bad_spatial_type, &validation_error));
     return 0;
 }

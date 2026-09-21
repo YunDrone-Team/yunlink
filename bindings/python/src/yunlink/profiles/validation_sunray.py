@@ -21,13 +21,45 @@ def _finite_pose(pose) -> bool:
     return _finite_vector(pose.position) and math.isfinite(norm_squared) and norm_squared > 1e-12
 
 
+def _valid_double_ring(request: sunray.FormationSetRequest, dynamic: bool) -> bool:
+    if not request.HasField("double_ring"):
+        return False
+    ring = request.double_ring
+    if not (
+        math.isfinite(ring.radius_m)
+        and ring.radius_m > 0
+        and math.isfinite(ring.lower_height_m)
+        and math.isfinite(ring.upper_height_m)
+        and ring.lower_height_m < ring.upper_height_m
+        and math.isfinite(ring.phase_offset_rad)
+    ):
+        return False
+    # STATIC_DOUBLE_RING ignores angular speed entirely, so an unused non-finite
+    # value stays acceptable; the dynamic variant requires finite non-zero motion.
+    if dynamic and not (
+        math.isfinite(ring.angular_speed_radps) and abs(ring.angular_speed_radps) > 0
+    ):
+        return False
+    return True
+
+
 def validate_formation_set_request(request: sunray.FormationSetRequest) -> None:
     positive = lambda value: math.isfinite(value) and value > 0
     moving = lambda value: math.isfinite(value) and abs(value) > 0
     formation_type = request.formation_type
+    # Height semantics are part of the task contract: an unsupported mode is
+    # rejected for every formation type, even one that ignores planar height.
+    if request.height_mode not in {
+        sunray.FORMATION_HEIGHT_LEGACY_HOLD_CURRENT,
+        sunray.FORMATION_HEIGHT_EXPLICIT,
+    } or not math.isfinite(request.height_m):
+        raise ValueError("formation request is invalid")
     valid = False
     if formation_type in {sunray.FORMATION_TAKEOFF, sunray.FORMATION_LAND}:
-        valid = True
+        valid = (
+            request.height_mode == sunray.FORMATION_HEIGHT_LEGACY_HOLD_CURRENT
+            and request.height_m == 0
+        )
     elif formation_type == sunray.FORMATION_STATIC_LINE:
         valid = (
             request.HasField("line")
@@ -55,6 +87,10 @@ def validate_formation_set_request(request: sunray.FormationSetRequest) -> None:
             and positive(request.lemniscate.y_scale_m)
             and moving(request.lemniscate.move_speed_mps)
         )
+    elif formation_type == sunray.FORMATION_STATIC_DOUBLE_RING:
+        valid = _valid_double_ring(request, False)
+    elif formation_type == sunray.FORMATION_DYNAMIC_DOUBLE_RING:
+        valid = _valid_double_ring(request, True)
     elif formation_type == sunray.FORMATION_LEADER and request.HasField("leader"):
         agents = [slot for slot in request.leader.agent_slots if slot]
         valid = (
@@ -91,14 +127,21 @@ def validate_formation_state(state: sunray.FormationState) -> None:
         sunray.FORMATION_STATIC_LINE,
         sunray.FORMATION_STATIC_POLYGON,
         sunray.FORMATION_LEADER,
+        sunray.FORMATION_STATIC_DOUBLE_RING,
         sunray.FORMATION_DYNAMIC_POLYGON,
         sunray.FORMATION_DYNAMIC_RING,
         sunray.FORMATION_DYNAMIC_LEMNISCATE,
+        sunray.FORMATION_DYNAMIC_DOUBLE_RING,
     }
     valid_target = not state.virtual_leader_target_valid or (
         state.HasField("virtual_leader_target") and _finite_pose(state.virtual_leader_target)
     )
-    if not 0 <= state.phase <= 4 or not valid_type or not valid_target:
+    if (
+        not 0 <= state.phase <= 4
+        or not 0 <= state.dynamic_start_status <= 4
+        or not valid_type
+        or not valid_target
+    ):
         raise ValueError("formation state is invalid")
 
 
