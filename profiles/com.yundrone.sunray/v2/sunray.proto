@@ -35,12 +35,41 @@ message OdomStatus {
   string message = 5;
 }
 
+// 本 profile 内的 TF 快照，语义与 geometry_msgs/TransformStamped 一致：
+// child_frame_id 在 frame_id 下的表达（平移 + 四元数）。
+// 中性的 mobility v1 目前没有 TF 类型，不为这条需求去动它。
+message TransformStamped {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string child_frame_id = 3;
+  org.yunlink.mobility.v1.Pose transform = 4;
+}
+
 message OdomState {
   uint64 source_stamp_ns = 1;
   string frame_id = 2;
-  bool valid = 3;
-  org.yunlink.mobility.v1.Odometry odometry = 4;
+  bool valid = 3;                                   // local（语义不变）
+  org.yunlink.mobility.v1.Odometry odometry = 4;    // local（语义不变）
   uint32 source = 5;
+
+  // ↓↓↓ 2.9 新增：全局那一半（编号从 6 起，不动已有编号，protobuf 向前兼容）
+  //
+  // global_odometry.source_stamp_ns == 0 严格表示"当前没有有效全局位姿"：
+  // 此字段整体缺省（has_global_odometry() == false），既不给零位姿、也不沿用上一帧。
+  org.yunlink.mobility.v1.Odometry global_odometry = 6;
+  // 独立判据，不复用 local 的 valid；恒等于 (global_odometry.source_stamp_ns != 0)。
+  // 与 RelocalizationStateSnapshot.pose_valid 的关系：pose_valid == false ⇒ 这里必须为 false。
+  bool global_odom_valid = 7;
+  // 帧名一律用 "{agent}/…" 全限定形式（与 local_odom.header.frame_id 同一口径）。
+  string world_frame_name = 8;
+  string global_frame_name = 9;
+  string local_frame_name = 10;
+  string base_frame_name = 11;
+  // 三个 TF 仅在各自前提到位时给出；global_to_local_tf 是 global 位姿能否与
+  // 先验地图对齐叠加的前提，缺它 global 位姿只能显示成数字。
+  TransformStamped world_to_global_tf = 12;
+  TransformStamped global_to_local_tf = 13;
+  TransformStamped local_to_base_tf = 14;
 }
 
 message UavControlFsmState {
