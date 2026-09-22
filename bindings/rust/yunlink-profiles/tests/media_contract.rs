@@ -189,6 +189,7 @@ fn point_cloud_preview_fields_preserve_media_file_open_compatibility() {
     let request = media::MediaFileOpen {
         file_id: "map-0001".into(),
         point_cloud_target_points: 3_000_000,
+        desired_window_size: 4,
         capability: "media-file-window-v1".into(),
     };
     let decoded = media::MediaFileOpen::decode(request.encode_to_vec().as_slice()).unwrap();
