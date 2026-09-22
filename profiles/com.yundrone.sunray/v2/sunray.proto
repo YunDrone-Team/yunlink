@@ -589,6 +589,20 @@ message FormationState {
   uint64 state_sequence = 19;
   FormationDynamicStartStatus dynamic_start_status = 20;
   uint64 dynamic_start_sequence = 21;
+
+  // ↓↓↓ 2.10 新增：本机已受理的编队槽位目标（编号从 22 起，不动已有编号，protobuf 向前兼容）
+  //
+  // formation_target_valid == false 严格表示"当前没有已受理的编队目标"：此时
+  // formation_target 整体缺省（has_formation_target() == false）——既不给零位姿，
+  // 也不沿用上一帧。未组队 / 收到 FormationStopDynamic / 离开编队 / 任务 epoch 结束 /
+  // 化解编队 / 发生错误时都必须**立即**翻成 false，不等下一个遥测周期。
+  bool formation_target_valid = 22;
+  // 本机（上报机）已受理的编队槽位目标，与同一条 FormationState.frame_id 同帧表达（米 / 弧度）。
+  // 语义是"目标"而非本机实测位姿：静态阵型为固定槽位目标，动态阵型为**当前时刻的瞬时**
+  // 槽位目标；两者在收敛前必须与本机实测位姿不同。
+  // orientation 至少是有限的平面 yaw 四元数（qz = sin(yaw/2)、qw = cos(yaw/2)、qx = qy = 0）；
+  // 地面站只取平面 yaw，roll/pitch 会被忽略，但不允许 NaN/Inf。
+  org.yunlink.mobility.v1.Pose formation_target = 23;
 }
 
 // Point-cloud accumulation control and status.  This is intentionally a small

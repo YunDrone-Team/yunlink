@@ -532,5 +532,32 @@ int main() {
     FormationState bad_spatial_type = spatial_state;
     bad_spatial_type.set_formation_type(static_cast<FormationType>(14));
     assert(!validate_formation_state(bad_spatial_type, &validation_error));
+
+    // 2.10：逐成员槽位目标回显（字段 22/23）。valid ⇒ 位姿必须存在且有限；
+    // valid == false 时字段整体缺省必须放行（这是"当前没有已受理目标"的唯一表达）。
+    FormationState target_echo = spatial_state;
+    target_echo.set_formation_target_valid(true);
+    assert(!validate_formation_state(target_echo, &validation_error));  // valid 却没有位姿
+    target_echo.mutable_formation_target()->mutable_position()->set_x(1.0);
+    target_echo.mutable_formation_target()->mutable_position()->set_y(2.0);
+    target_echo.mutable_formation_target()->mutable_position()->set_z(3.0);
+    target_echo.mutable_formation_target()->mutable_orientation()->set_z(0.5);
+    target_echo.mutable_formation_target()->mutable_orientation()->set_w(0.8660254037844386);
+    assert(validate_formation_state(target_echo, &validation_error));
+    // 字段 22/23 的 wire 编号在这里锁死：b0 01 = field 22(varint)、ba 01 = field 23(LEN)。
+    assert(hex(target_echo.SerializeAsString()) ==
+           "082a1a047561763138024017880101920103616263980107a00103a80107b00101ba01310a1b09"
+           "000000000000f03f110000000000000040190000000000000840121219000000000000e03f21"
+           "aa4c58e87ab6eb3f");
+
+    FormationState nan_target = target_echo;
+    nan_target.mutable_formation_target()->mutable_position()->set_x(
+        std::numeric_limits<double>::quiet_NaN());
+    assert(!validate_formation_state(nan_target, &validation_error));
+
+    FormationState no_target = target_echo;
+    no_target.set_formation_target_valid(false);
+    no_target.clear_formation_target();
+    assert(validate_formation_state(no_target, &validation_error));
     return 0;
 }

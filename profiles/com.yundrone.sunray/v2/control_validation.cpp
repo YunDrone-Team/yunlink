@@ -415,11 +415,15 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
                             state.formation_type() == FORMATION_DYNAMIC_DOUBLE_RING;
     const bool valid_start = state.dynamic_start_status() >= FORMATION_START_WAITING &&
                              state.dynamic_start_status() <= FORMATION_START_CANCELLED;
+    // 2.10 起 FormationState 承载"本机已受理的编队槽位目标"：valid ⇒ 位姿存在且有限。
+    // valid == false 时字段整体缺省是合法表达（"当前没有已受理目标"），也必须放行。
     if (state.phase() < FORMATION_PHASE_IDLE || state.phase() > FORMATION_PHASE_ERROR ||
         !valid_type || !valid_start ||
         (state.virtual_leader_target_valid() &&
                         (!state.has_virtual_leader_target() ||
-                         !finite(state.virtual_leader_target())))) {
+                         !finite(state.virtual_leader_target()))) ||
+        (state.formation_target_valid() &&
+                        (!state.has_formation_target() || !finite(state.formation_target())))) {
         return fail(error, "formation state is invalid");
     }
     return true;
