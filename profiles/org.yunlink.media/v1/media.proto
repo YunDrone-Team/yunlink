@@ -244,6 +244,9 @@ message MediaFileOpen {
   uint32 point_cloud_target_points = 6;
   // A zero value requests legacy stop-and-wait behavior.
   uint32 desired_window_size = 7;
+  // Explicit client confirmation that it negotiated media-file-window-v1.
+  // Servers must not enable windowing from desired_window_size alone.
+  string capability = 10;
 }
 
 message MediaFileOpenResponse {
@@ -313,6 +316,8 @@ message MediaFilePutOpen {
   bytes sha256 = 4;
   string mime_type = 5;
   uint32 desired_window_size = 6;
+  // Explicit client confirmation that it negotiated media-file-window-v1.
+  string capability = 9;
 }
 
 message MediaFilePutOpenResponse {

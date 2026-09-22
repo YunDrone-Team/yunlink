@@ -189,6 +189,7 @@ fn point_cloud_preview_fields_preserve_media_file_open_compatibility() {
     let request = media::MediaFileOpen {
         file_id: "map-0001".into(),
         point_cloud_target_points: 3_000_000,
+        capability: "media-file-window-v1".into(),
     };
     let decoded = media::MediaFileOpen::decode(request.encode_to_vec().as_slice()).unwrap();
     assert_eq!(decoded, request);
@@ -203,4 +204,22 @@ fn point_cloud_preview_fields_preserve_media_file_open_compatibility() {
         media::MediaFileOpenResponse::decode(response.encode_to_vec().as_slice()).unwrap();
     assert!(decoded.point_cloud_preview);
     assert_eq!(decoded.point_cloud_target_points, 3_000_000);
+}
+
+#[test]
+fn media_file_window_requires_explicit_capability_token() {
+    let legacy = media::MediaFileOpen {
+        file_id: "map-0001".into(),
+        desired_window_size: 4,
+        ..Default::default()
+    };
+    assert!(media::MediaFileOpen::decode(legacy.encode_to_vec().as_slice()).is_ok());
+    let negotiated = media::MediaFileOpen {
+        capability: "media-file-window-v1".into(),
+        desired_window_size: 4,
+        ..legacy
+    };
+    let decoded = media::MediaFileOpen::decode(negotiated.encode_to_vec().as_slice()).unwrap();
+    assert_eq!(decoded.capability, "media-file-window-v1");
+    assert_eq!(decoded.desired_window_size, 4);
 }
