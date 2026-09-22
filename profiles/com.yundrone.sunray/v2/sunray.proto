@@ -605,6 +605,34 @@ message FormationState {
   org.yunlink.mobility.v1.Pose formation_target = 23;
 }
 
+// ↓↓↓ 2.11 新增：动态阵型的**几何图形**（不是逐成员的追逐轨迹）。
+//
+// 语义：动态多边形 / 动态圆环 / 动态 8 字时，成员沿阵型自身的几何图形前进；该图形在
+// 世界系中是静止的，因此每个任务只需要下发一次（流上按 reliable_latest 发布）。
+// 静态阵型不发布本消息；valid == false 表示"清除显示"（切静态阵型 / 任务结束 / 被抢占 /
+// 故障），此时 points 必须整体缺省（既不给零位姿，也不沿用上一帧）。
+message FormationShapePoint {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message FormationShape {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string agent_id = 3;
+  FormationTaskEpoch task_epoch = 4;
+  string task_payload_digest = 5;
+  FormationType formation_type = 6;
+  bool valid = 7;
+  // true = 闭合回路（环 / 多边形周长 / 8 字）；下游需把末点连回首点。
+  bool closed = 8;
+  // 成员沿图形的前进速度（m/s），仅用于标注/诊断，不是渲染样式。
+  double move_speed_mps = 9;
+  // 世界系采样点（已含参考位姿），与同一条 frame_id 同帧表达，单位米。
+  repeated FormationShapePoint points = 10;
+}
+
 // Point-cloud accumulation control and status.  This is intentionally a small
 // typed extension: the Livox driver already owns the ROS services and exposes
 // diagnostics, while YunLink only carries the remote operation and summary.

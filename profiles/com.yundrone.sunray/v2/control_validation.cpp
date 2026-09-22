@@ -27,6 +27,10 @@ bool finite(const org::yunlink::mobility::v1::Quaternion& value) {
     return std::isfinite(norm_squared) && norm_squared > 1e-12;
 }
 
+bool finite(const FormationShapePoint& value) {
+    return std::isfinite(value.x()) && std::isfinite(value.y()) && std::isfinite(value.z());
+}
+
 bool finite(const org::yunlink::mobility::v1::Pose& value) {
     return value.has_position() && value.has_orientation() && finite(value.position()) &&
            finite(value.orientation());
@@ -427,6 +431,31 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
         return fail(error, "formation state is invalid");
     }
     return true;
+}
+
+bool validate_formation_shape(const FormationShape& shape, std::string* error) {
+    // 2.11：动态阵型几何图形。静态阵型不发（valid=false 用于清除上一任务遗留的图形）。
+    if (!shape.valid()) {
+        // 清除语义：points 必须整体缺省，不允许"带点但声明无效"这种含糊表达。
+        return shape.points_size() == 0 ? true
+                                        : fail(error, "formation shape is invalid");
+    }
+    if (shape.formation_type() != FORMATION_DYNAMIC_POLYGON &&
+        shape.formation_type() != FORMATION_DYNAMIC_RING &&
+        shape.formation_type() != FORMATION_DYNAMIC_LEMNISCATE) {
+        return fail(error, "formation shape type is not dynamic planar");
+    }
+    if (shape.points_size() < 3) {
+        return fail(error, "formation shape needs at least 3 points");
+    }
+    for (const auto& point : shape.points()) {
+        if (!finite(point)) {
+            return fail(error, "formation shape has a non-finite point");
+        }
+    }
+    return std::isfinite(shape.move_speed_mps())
+               ? true
+               : fail(error, "formation shape move speed is not finite");
 }
 
 bool validate_mapping_state(const MappingState& state, std::string* error) {

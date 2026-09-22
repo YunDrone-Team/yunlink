@@ -3,6 +3,10 @@ import math
 from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 
 
+def _finite(value) -> bool:
+    return isinstance(value, (int, float)) and math.isfinite(value)
+
+
 def _finite_vector(value) -> bool:
     components = [value.x, value.y]
     if hasattr(value, "z"):
@@ -150,6 +154,28 @@ def validate_formation_state(state: sunray.FormationState) -> None:
         or not valid_formation_target
     ):
         raise ValueError("formation state is invalid")
+
+
+def validate_formation_shape(shape: sunray.FormationShape) -> None:
+    """2.11 动态阵型几何图形；与 C++ 侧 validate_formation_shape 同口径。"""
+    if not shape.valid:
+        # 清除语义：points 必须整体缺省，不允许"声明无效却带点"的含糊表达。
+        if len(shape.points) != 0:
+            raise ValueError("formation shape is invalid")
+        return
+    if shape.formation_type not in {
+        sunray.FORMATION_DYNAMIC_POLYGON,
+        sunray.FORMATION_DYNAMIC_RING,
+        sunray.FORMATION_DYNAMIC_LEMNISCATE,
+    }:
+        raise ValueError("formation shape type is not dynamic planar")
+    if len(shape.points) < 3:
+        raise ValueError("formation shape needs at least 3 points")
+    for point in shape.points:
+        if not (_finite(point.x) and _finite(point.y) and _finite(point.z)):
+            raise ValueError("formation shape has a non-finite point")
+    if not _finite(shape.move_speed_mps):
+        raise ValueError("formation shape move speed is not finite")
 
 
 def validate_mapping_state(state: sunray.MappingState) -> None:

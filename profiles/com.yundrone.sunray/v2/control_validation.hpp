@@ -36,6 +36,8 @@ bool validate_formation_set_request(const FormationSetRequest& request,
 bool validate_formation_leader_target_request(const FormationLeaderTargetRequest& request,
                                               std::string* error = nullptr);
 bool validate_formation_state(const FormationState& state, std::string* error = nullptr);
+// 2.11：动态阵型几何图形（valid ⇒ 点数 >= 3 且逐点有限；false ⇒ points 必须缺省）。
+bool validate_formation_shape(const FormationShape& shape, std::string* error = nullptr);
 bool validate_mapping_state(const MappingState& state, std::string* error = nullptr);
 bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error = nullptr);
 bool validate_gimbal_rate_goal(const GimbalRateGoal& goal, std::string* error = nullptr);
