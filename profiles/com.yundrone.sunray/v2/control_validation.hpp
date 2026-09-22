@@ -35,6 +35,9 @@ bool validate_formation_set_request(const FormationSetRequest& request,
                                     std::string* error = nullptr);
 bool validate_formation_leader_target_request(const FormationLeaderTargetRequest& request,
                                               std::string* error = nullptr);
+// 2.12 下发前预览请求的校验（复用 set 的 goal 口径 + 参考位姿/成员 ID）。
+bool validate_formation_preview_request(const FormationPreviewRequest& request,
+                                        std::string* error = nullptr);
 bool validate_formation_state(const FormationState& state, std::string* error = nullptr);
 // 2.11：动态阵型几何图形（valid ⇒ 点数 >= 3 且逐点有限；false ⇒ points 必须缺省）。
 bool validate_formation_shape(const FormationShape& shape, std::string* error = nullptr);

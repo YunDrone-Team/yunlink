@@ -559,6 +559,44 @@ message FormationLeaderTargetResponse {
   string message = 2;
 }
 
+// ↓↓↓ 2.12 新增：下发前预览（**零副作用**：不创建任务、不广播、不改机侧任务状态）。
+//
+// 目的：操作员先看到目标点/几何图形与"现在下发会不会被拒"，再决定是否下发。
+// goal 直接复用 FormationSetRequest 的描述（同一份 schema，避免两套几何参数漂移）；
+// reference 是阵型参考位姿（非 LEADER 固定零位，LEADER 传拟下发的虚拟领航位姿）。
+message FormationPreviewRequest {
+  FormationSetRequest goal = 1;
+  org.yunlink.mobility.v1.Pose reference = 2;
+  // 期望参与成员；留空 = 机侧按自身 swarm_num 取 1..N。
+  repeated uint32 member_ids = 3;
+}
+
+message FormationPreviewSlot {
+  uint32 agent_id = 1;
+  org.yunlink.mobility.v1.Pose target = 2;
+}
+
+message FormationPreviewResponse {
+  // 几何是否可算（与"当前是否会受理"分开：未解锁/未起飞也能预览形状）。
+  bool success = 1;
+  // 拒绝码沿用 FormationSetResponse.error_code 的同一套常量。
+  uint32 error_code = 2;
+  string message = 3;
+  // 本集群该阵型会走哪条内核：true = 中心化 MPC（槽位由机侧分配决定，地面站无法本地复刻）。
+  bool mpc_routed = 4;
+  bool dynamic = 5;
+  bool phase_aligned = 6;
+  double phase_offset_sec = 7;
+  // 逐成员预览目标（MPC 下是机侧真实分配结果，agent_id 可能不等于请求顺序）。
+  repeated FormationPreviewSlot slots = 8;
+  // 动态阵型的几何图形（一个周期 72 点）；静态阵型为空。
+  bool shape_closed = 9;
+  repeated FormationShapePoint shape_points = 10;
+  // 以当前状态是否会受理（几何合法但未就绪时为 false，原因见 reject_reason）。
+  bool would_accept = 11;
+  string reject_reason = 12;
+}
+
 message FormationStopDynamicRequest {}
 
 message FormationStopDynamicResponse {

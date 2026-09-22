@@ -405,6 +405,22 @@ bool validate_formation_leader_target_request(const FormationLeaderTargetRequest
     return fail(error, "formation leader target mode is invalid");
 }
 
+bool validate_formation_preview_request(const FormationPreviewRequest& request,
+                                       std::string* error) {
+    // 2.12 预览：goal 沿用 set 的校验口径；参考位姿必须有限；成员 ID 不得为 0。
+    if (!request.has_goal() || !request.has_reference() ||
+        !finite(request.reference()) ||
+        !validate_formation_set_request(request.goal(), error)) {
+        return fail(error, "formation preview request is invalid");
+    }
+    for (const auto member : request.member_ids()) {
+        if (member == 0) {
+            return fail(error, "formation preview member id must be non-zero");
+        }
+    }
+    return true;
+}
+
 bool validate_formation_state(const FormationState& state, std::string* error) {
     const bool valid_type = state.formation_type() == FORMATION_UNKNOWN ||
                             state.formation_type() == FORMATION_TAKEOFF ||
