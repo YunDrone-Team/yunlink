@@ -242,6 +242,8 @@ message MediaFileOpen {
   // Optional point-cloud preview budget. A zero value keeps the original file
   // transfer behavior and remains compatible with older implementations.
   uint32 point_cloud_target_points = 6;
+  // A zero value requests legacy stop-and-wait behavior.
+  uint32 desired_window_size = 7;
 }
 
 message MediaFileOpenResponse {
@@ -252,6 +254,10 @@ message MediaFileOpenResponse {
   uint32 chunk_size_bytes = 5;
   bool point_cloud_preview = 6;
   uint32 point_cloud_target_points = 7;
+  // A zero value preserves legacy stop-and-wait behavior.
+  uint32 desired_window_size = 8;
+  // Server-selected limit; zero means windowing is not supported.
+  uint32 max_window_size = 9;
 }
 
 message MediaFileChunk {
@@ -306,6 +312,7 @@ message MediaFilePutOpen {
   uint64 size_bytes = 3;
   bytes sha256 = 4;
   string mime_type = 5;
+  uint32 desired_window_size = 6;
 }
 
 message MediaFilePutOpenResponse {
@@ -315,6 +322,7 @@ message MediaFilePutOpenResponse {
   uint32 chunk_size_bytes = 4;
   uint64 free_bytes = 5;
   string relative_path = 6;
+  uint32 max_window_size = 7;
 }
 
 message MediaFilePutChunk {
