@@ -111,6 +111,16 @@ impl Runtime {
         })
     }
 
+    pub fn session_has_lossy_lane(&self, peer: &Peer, session_id: u64) -> bool {
+        unsafe {
+            sys::yunlink_v2_runtime_session_has_lossy_lane(
+                self.raw(),
+                string_view(&peer.id),
+                session_id,
+            ) != 0
+        }
+    }
+
     pub fn close_peer(&self, peer: &Peer) {
         unsafe { sys::yunlink_v2_runtime_close_peer(self.raw(), string_view(&peer.id)) };
     }

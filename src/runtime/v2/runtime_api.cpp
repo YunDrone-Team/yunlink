@@ -149,6 +149,17 @@ bool Runtime::session_supports_profile(const std::string& peer_id,
            it->second.supports_profile(profile_id, major, minimum_minor);
 }
 
+bool Runtime::session_has_lossy_lane(const std::string& peer_id, uint64_t session_id) const {
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    const auto session = impl_->sessions.find({peer_id, session_id});
+    if (session == impl_->sessions.end() || session->second.state != SessionState::kActive ||
+        session->second.lossy_peer_id.empty()) {
+        return false;
+    }
+    const auto lane = impl_->connections.find(session->second.lossy_peer_id);
+    return lane != impl_->connections.end() && lane->second->running.load();
+}
+
 uint16_t Runtime::listening_port() const {
     return impl_->listening_port.load();
 }

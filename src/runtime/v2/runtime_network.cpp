@@ -22,6 +22,14 @@ uint32_t read_u32(const uint8_t* data) {
     return value;
 }
 
+uint64_t read_u64(const uint8_t* data) {
+    uint64_t value = 0;
+    for (unsigned shift = 0; shift < 64; shift += 8) {
+        value |= static_cast<uint64_t>(data[shift / 8]) << shift;
+    }
+    return value;
+}
+
 bool peek_frame_header(const Bytes& buffer,
                        uint16_t* header_len,
                        uint32_t* payload_len,
@@ -99,14 +107,12 @@ bool pop_frame(Runtime::Impl* impl, Bytes* buffer, Envelope* out, ErrorCode* err
 
 }  // namespace
 
-enum class SocketWriteStatus {
-    kComplete,
-    kCongested,
-    kDisconnected,
-};
-
 bool qos_may_drop(QosClass qos) {
     return qos == QosClass::kBestEffort || qos == QosClass::kBulk;
+}
+
+bool may_drop_congested_frame(QosClass qos, size_t bytes_written) {
+    return bytes_written == 0 && qos_may_drop(qos);
 }
 
 bool recover_receive_overflow(Bytes* buffer, size_t max_bytes) {
@@ -141,48 +147,66 @@ bool recover_receive_overflow(Bytes* buffer, size_t max_bytes) {
     return true;
 }
 
-SocketWriteStatus write_socket(const std::shared_ptr<RuntimeConnection>& connection,
-                               const Bytes& bytes) {
-    if (!connection || !connection->running.load() || !connection->socket || bytes.empty()) {
-        return SocketWriteStatus::kDisconnected;
+SocketWriteResult write_frame_chunks(
+    const Bytes& bytes,
+    const std::function<size_t(const uint8_t*, size_t, std::error_code&)>& send_chunk,
+    const std::function<bool()>& running,
+    size_t retry_limit) {
+    if (bytes.empty() || !running()) {
+        return {SocketWriteStatus::kDisconnected, 0, "socket unavailable"};
     }
     std::error_code error;
     size_t offset = 0;
     size_t retry_count = 0;
-    while (offset < bytes.size() && connection->running.load()) {
+    while (offset < bytes.size() && running()) {
         const size_t remaining = bytes.size() - offset;
         const size_t chunk = remaining > kWriteQuantumBytes ? kWriteQuantumBytes : remaining;
-        size_t sent = 0;
-        {
-            std::lock_guard<std::mutex> socket_lock(connection->socket_mutex);
-            if (!connection->socket || !connection->running.load()) {
-                return SocketWriteStatus::kDisconnected;
-            }
-            sent =
-                connection->socket->write_some(asio::buffer(bytes.data() + offset, chunk), error);
-        }
+        const size_t sent = send_chunk(bytes.data() + offset, chunk, error);
+        offset += sent;
         if (!error) {
             if (sent == 0U) {
-                return SocketWriteStatus::kDisconnected;
+                return {SocketWriteStatus::kDisconnected, offset, "zero-byte write"};
             }
-            offset += sent;
             retry_count = 0;
             continue;
         }
         if (error != asio::error::would_block && error != asio::error::try_again) {
-            return SocketWriteStatus::kDisconnected;
+            return {SocketWriteStatus::kDisconnected, offset, error.message()};
         }
-        if (++retry_count > kCongestionRetryLimit) {
-            return SocketWriteStatus::kCongested;
+        if (sent != 0U) {
+            retry_count = 0;
+        }
+        if (++retry_count > retry_limit) {
+            return {SocketWriteStatus::kCongested, offset, error.message()};
         }
         error.clear();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     if (offset == bytes.size()) {
-        return SocketWriteStatus::kComplete;
+        return {SocketWriteStatus::kComplete, offset, {}};
     }
-    return connection->running.load() ? SocketWriteStatus::kCongested
-                                      : SocketWriteStatus::kDisconnected;
+    return {running() ? SocketWriteStatus::kCongested
+                                      : SocketWriteStatus::kDisconnected,
+            offset, "socket stopped during write"};
+}
+
+SocketWriteResult write_socket(const std::shared_ptr<RuntimeConnection>& connection,
+                               const Bytes& bytes) {
+    if (!connection || !connection->running.load() || !connection->socket) {
+        return {SocketWriteStatus::kDisconnected, 0, "socket unavailable"};
+    }
+    return write_frame_chunks(
+        bytes,
+        [&connection](const uint8_t* data, size_t size, std::error_code& error) {
+            std::lock_guard<std::mutex> lock(connection->socket_mutex);
+            if (!connection->socket || !connection->running.load()) {
+                error = asio::error::operation_aborted;
+                return size_t{0};
+            }
+            return connection->socket->write_some(asio::buffer(data, size), error);
+        },
+        [&connection]() { return connection->running.load(); },
+        kCongestionRetryLimit);
 }
 
 size_t qos_index(QosClass qos) {
@@ -284,7 +308,8 @@ bool take_next_frame(RuntimeConnection* connection, RuntimeConnection::OutboundF
     return true;
 }
 
-void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection) {
+void runtime_send_loop(Runtime::Impl* impl,
+                       const std::shared_ptr<RuntimeConnection>& connection) {
     while (connection->running.load()) {
         RuntimeConnection::OutboundFrame frame;
         {
@@ -296,13 +321,39 @@ void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection) {
         if (!connection->running.load() || !take_next_frame(connection.get(), &frame)) {
             continue;
         }
-        const SocketWriteStatus status = write_socket(connection, frame.bytes);
-        if (status == SocketWriteStatus::kComplete) {
+        const SocketWriteResult result = write_socket(connection, frame.bytes);
+        if (result.status == SocketWriteStatus::kComplete) {
             continue;
         }
-        if (status == SocketWriteStatus::kCongested && qos_may_drop(frame.qos)) {
+        if (result.status == SocketWriteStatus::kCongested &&
+            may_drop_congested_frame(frame.qos, result.bytes_written)) {
             continue;
         }
+        size_t queued_bytes = 0;
+        {
+            std::lock_guard<std::mutex> lock(connection->send_mutex);
+            queued_bytes = connection->queued_bytes;
+        }
+        bool lossy_channel = false;
+        {
+            std::lock_guard<std::mutex> lock(impl->mutex);
+            lossy_channel = impl->lane_owner.find(connection->peer.id) != impl->lane_owner.end();
+        }
+        runtime_emit(impl,
+                     {RuntimeEventKind::kError, connection->peer, {}, {},
+                      ErrorCode::kInternal,
+                      "socket write failed: channel=" +
+                          std::string(lossy_channel ? "lossy" : "control") +
+                          " session_id=" +
+                          std::to_string(frame.bytes.size() >= 28
+                                             ? read_u64(frame.bytes.data() + 20)
+                                             : 0) +
+                          " bytes_written=" +
+                          std::to_string(result.bytes_written) +
+                          " frame_bytes=" + std::to_string(frame.bytes.size()) +
+                          " queued_bytes=" + std::to_string(queued_bytes) +
+                          " qos=" + std::to_string(static_cast<unsigned>(frame.qos)) +
+                          " reason=" + result.error});
         connection->running.store(false);
         connection->send_condition.notify_all();
         if (connection->socket) {

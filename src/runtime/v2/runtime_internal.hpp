@@ -91,8 +91,22 @@ bool runtime_enqueue(const std::shared_ptr<RuntimeConnection>& connection,
                      QosClass qos,
                      std::string latest_key = {});
 bool qos_may_drop(QosClass qos);
+bool may_drop_congested_frame(QosClass qos, size_t bytes_written);
+enum class SocketWriteStatus { kComplete, kCongested, kDisconnected };
+struct SocketWriteResult {
+    SocketWriteStatus status;
+    size_t bytes_written;
+    std::string error;
+};
+// The same chunk writer is used by the socket and a deterministic congestion test.
+SocketWriteResult write_frame_chunks(
+    const Bytes& bytes,
+    const std::function<size_t(const uint8_t*, size_t, std::error_code&)>& send_chunk,
+    const std::function<bool()>& running,
+    size_t retry_limit);
 bool recover_receive_overflow(Bytes* buffer, size_t max_bytes);
-void runtime_send_loop(const std::shared_ptr<RuntimeConnection>& connection);
+void runtime_send_loop(Runtime::Impl* impl,
+                       const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_receive_loop(Runtime::Impl* impl,
                           const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope);

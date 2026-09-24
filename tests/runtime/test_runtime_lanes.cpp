@@ -77,6 +77,8 @@ int main() {
             lock, std::chrono::seconds(3), [&]() { return active.session_id == session_id; }));
     }
     assert(client.bind_lossy_lane(peer.id, session_id) == ErrorCode::kOk);
+    assert(client.session_has_lossy_lane(peer.id, session_id));
+    assert(!client.session_has_lossy_lane(peer.id, session_id + 1));
     SessionInfo bound;
     assert(client.session(peer.id, session_id, &bound));
     assert(!bound.lossy_peer_id.empty());
@@ -101,12 +103,15 @@ int main() {
     assert(client.session(peer.id, session_id, &bound));
     client.close_peer(bound.lossy_peer_id);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    assert(!client.session_has_lossy_lane(peer.id, session_id));
     {
         std::lock_guard<std::mutex> lock(mutex);
         assert(!session_lost);
     }
     assert(client.session(peer.id, session_id, &bound));
     assert(bound.state == SessionState::kActive);
+    assert(client.bind_lossy_lane(peer.id, session_id) == ErrorCode::kOk);
+    assert(client.session_has_lossy_lane(peer.id, session_id));
 
     assert(client.publish(peer.id,
                           session_id,

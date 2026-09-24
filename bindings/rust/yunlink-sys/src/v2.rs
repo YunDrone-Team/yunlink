@@ -140,6 +140,11 @@ extern "C" {
         peer_id: yunlink_v2_string_view_t,
         session_id: u64,
     ) -> u16;
+    pub fn yunlink_v2_runtime_session_has_lossy_lane(
+        runtime: *const yunlink_v2_runtime_t,
+        peer_id: yunlink_v2_string_view_t,
+        session_id: u64,
+    ) -> u8;
     pub fn yunlink_v2_runtime_session_endpoint_uid(
         runtime: *const yunlink_v2_runtime_t,
         peer_id: yunlink_v2_string_view_t,

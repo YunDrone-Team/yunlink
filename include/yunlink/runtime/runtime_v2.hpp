@@ -222,6 +222,7 @@ class Runtime {
                                   const std::string& profile_id,
                                   uint16_t major,
                                   uint16_t minimum_minor) const;
+    bool session_has_lossy_lane(const std::string& peer_id, uint64_t session_id) const;
     bool has_authority(const std::string& peer_id,
                        uint64_t session_id,
                        const std::string& entity_uid,

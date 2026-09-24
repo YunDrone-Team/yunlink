@@ -156,7 +156,7 @@ ErrorCode Runtime::start(const RuntimeConfig& config) {
             runtime_emit(
                 impl_.get(),
                 {RuntimeEventKind::kLink, connection->peer, {}, {}, ErrorCode::kOk, {}, true});
-            connection->send_thread = std::thread(runtime_send_loop, connection);
+            connection->send_thread = std::thread(runtime_send_loop, impl_.get(), connection);
             connection->receive_thread = std::thread(runtime_receive_loop, impl_.get(), connection);
         }
     });
@@ -246,7 +246,7 @@ ErrorCode Runtime::connect_peer(const std::string& ip, uint16_t port, Peer* out)
     }
     runtime_emit(impl_.get(),
                  {RuntimeEventKind::kLink, connection->peer, {}, {}, ErrorCode::kOk, {}, true});
-    connection->send_thread = std::thread(runtime_send_loop, connection);
+    connection->send_thread = std::thread(runtime_send_loop, impl_.get(), connection);
     connection->receive_thread = std::thread(runtime_receive_loop, impl_.get(), connection);
     if (out != nullptr) {
         *out = connection->peer;
@@ -303,7 +303,7 @@ ErrorCode Runtime::bind_lossy_lane(const std::string& peer_id, uint64_t session_
         impl_->connections[lane_peer_id] = connection;
         impl_->lane_owner[lane_peer_id] = {peer_id, session_id};
     }
-    connection->send_thread = std::thread(runtime_send_loop, connection);
+    connection->send_thread = std::thread(runtime_send_loop, impl_.get(), connection);
     connection->receive_thread = std::thread(runtime_receive_loop, impl_.get(), connection);
 
     Envelope bind;
@@ -349,7 +349,15 @@ void Runtime::close_peer(const std::string& peer_id) {
                 session.second.lossy_peer_id.clear();
             }
         }
-        impl_->lane_owner.erase(peer_id);
+        const auto lane_owner = impl_->lane_owner.find(peer_id);
+        if (lane_owner != impl_->lane_owner.end()) {
+            const auto owner_session = impl_->sessions.find(lane_owner->second);
+            if (owner_session != impl_->sessions.end() &&
+                owner_session->second.lossy_peer_id == peer_id) {
+                owner_session->second.lossy_peer_id.clear();
+            }
+            impl_->lane_owner.erase(lane_owner);
+        }
         if (!lossy_peer_id.empty()) {
             impl_->lane_owner.erase(lossy_peer_id);
         }
