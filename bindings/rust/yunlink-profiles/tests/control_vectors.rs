@@ -486,54 +486,29 @@ fn formation_v27_messages_match_golden_vectors_and_validate() {
         "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000000000f03f110000000000000040190000000000000840120921000000000000f03f"
     );
 
-    let double_ring = sunray::FormationSetRequest {
-        formation_type: 23,
-        height_mode: 1,
-        height_m: 0.9,
-        double_ring: Some(sunray::FormationDoubleRing {
-            radius_m: 1.2,
-            lower_height_m: 0.6,
-            upper_height_m: 1.2,
-            angular_speed_radps: -0.2,
-            phase_offset_rad: 1.0471975511965976,
-        }),
-        ..Default::default()
-    };
-    validate_formation_set_request(&double_ring).unwrap();
-    assert_eq!(
-        hex::encode(double_ring.encode_to_vec()),
-        "0817400149cdccccccccccec3f522d09333333333333f33f11333333333333e33f19333333333333f33f219a9999999999c9bf2965732d3852c1f03f"
-    );
+    // 13/23 (static / dynamic double ring) were removed. Both wire numbers are
+    // reserved: an old peer sending either one must be rejected with a readable
+    // reason, not silently reinterpreted as another formation.
+    for removed in [13, 23] {
+        let request = sunray::FormationSetRequest {
+            formation_type: removed,
+            ..Default::default()
+        };
+        assert_eq!(
+            validate_formation_set_request(&request),
+            Err("double-ring formations were removed")
+        );
+    }
 
-    let static_double_ring = sunray::FormationSetRequest {
-        formation_type: 13,
-        double_ring: Some(sunray::FormationDoubleRing {
-            radius_m: 1.2,
-            lower_height_m: 0.6,
-            upper_height_m: 1.2,
-            angular_speed_radps: 0.0,
-            phase_offset_rad: 1.0471975511965976,
-        }),
-        ..Default::default()
-    };
-    validate_formation_set_request(&static_double_ring).unwrap();
-    assert_eq!(
-        hex::encode(static_double_ring.encode_to_vec()),
-        "080d522409333333333333f33f11333333333333e33f19333333333333f33f2965732d3852c1f03f"
-    );
-
-    let mut inverted_layers = double_ring.clone();
-    inverted_layers.double_ring.as_mut().unwrap().lower_height_m = 2.0;
-    assert!(validate_formation_set_request(&inverted_layers).is_err());
-
-    let mut bad_height_mode = double_ring.clone();
+    // An unsupported height mode is rejected even by a formation that ignores planar height.
+    let mut bad_height_mode = ring.clone();
     bad_height_mode.height_mode = 7;
     assert!(validate_formation_set_request(&bad_height_mode).is_err());
 
     let spatial_state = sunray::FormationState {
         source_stamp_ns: 42,
         agent_id: "uav1".into(),
-        formation_type: 23,
+        formation_type: 21,
         phase: 2,
         spatial_capable: true,
         spatial_config_digest: "abc".into(),
@@ -545,7 +520,7 @@ fn formation_v27_messages_match_golden_vectors_and_validate() {
     validate_formation_state(&spatial_state).unwrap();
     assert_eq!(
         hex::encode(spatial_state.encode_to_vec()),
-        "082a1a047561763138024017880101920103616263980107a00103a80107"
+        "082a1a047561763138024015880101920103616263980107a00103a80107"
     );
 
     let mut invalid = ring;

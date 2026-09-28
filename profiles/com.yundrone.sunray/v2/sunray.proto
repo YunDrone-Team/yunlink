@@ -439,11 +439,13 @@ enum FormationType {
   FORMATION_STATIC_LINE = 10;
   FORMATION_STATIC_POLYGON = 11;
   FORMATION_LEADER = 12;
-  FORMATION_STATIC_DOUBLE_RING = 13;
   FORMATION_DYNAMIC_POLYGON = 20;
   FORMATION_DYNAMIC_RING = 21;
   FORMATION_DYNAMIC_LEMNISCATE = 22;
-  FORMATION_DYNAMIC_DOUBLE_RING = 23;
+  // 13 (static double ring) and 23 (dynamic double ring) were removed. The
+  // numbers are reserved and must never be reused; any new formation type
+  // starts at 30.
+  reserved 13, 23;
 }
 
 // Planar target height semantics, mirroring sunray_msgs/FormationGoal.
@@ -513,18 +515,8 @@ message FormationLeader {
   repeated bool virtual_leader_slots = 3;
 }
 
-// Spatial six-UAV formation: IDs 1..3 lower ring, IDs 4..6 upper ring.
-// radius_m is the common radius; layer heights are absolute common-frame Z.
-// angular_speed_radps is the equal signed angular speed of both rings and is
-// ignored by FORMATION_STATIC_DOUBLE_RING. phase_offset_rad is the upper-ring
-// phase relative to the lower ring; clients supply pi/3 by default.
-message FormationDoubleRing {
-  double radius_m = 1;
-  double lower_height_m = 2;
-  double upper_height_m = 3;
-  double angular_speed_radps = 4;
-  double phase_offset_rad = 5;
-}
+// Spatial planar formations remain available through FormationHeightMode
+// EXPLICIT_HEIGHT (height_m), which is orthogonal to formation_type.
 
 message FormationSetRequest {
   FormationType formation_type = 1;
@@ -536,7 +528,8 @@ message FormationSetRequest {
   FormationLeader leader = 7;
   FormationHeightMode height_mode = 8;
   double height_m = 9;
-  FormationDoubleRing double_ring = 10;
+  // 10 was the removed double-ring message field; the number is reserved, never reused.
+  reserved 10;
 }
 
 message FormationSetResponse {

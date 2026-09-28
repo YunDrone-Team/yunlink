@@ -285,27 +285,6 @@ bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std
     return true;
 }
 
-bool validate_double_ring(const FormationSetRequest& request, bool dynamic, std::string* error) {
-    if (!request.has_double_ring()) {
-        return fail(error, dynamic ? "dynamic formation double ring is invalid"
-                                   : "formation double ring is invalid");
-    }
-    const auto& ring = request.double_ring();
-    if (!(std::isfinite(ring.radius_m()) && ring.radius_m() > 0.0) ||
-        !std::isfinite(ring.lower_height_m()) || !std::isfinite(ring.upper_height_m()) ||
-        !(ring.lower_height_m() < ring.upper_height_m()) ||
-        !std::isfinite(ring.phase_offset_rad())) {
-        return fail(error, "formation double ring geometry is invalid");
-    }
-    // STATIC_DOUBLE_RING ignores angular speed entirely, so an unused non-finite
-    // value stays acceptable; the dynamic variant requires finite non-zero motion.
-    if (dynamic && !(std::isfinite(ring.angular_speed_radps()) &&
-                     std::abs(ring.angular_speed_radps()) > 0.0)) {
-        return fail(error, "dynamic formation double ring angular speed is invalid");
-    }
-    return true;
-}
-
 bool validate_formation_set_request(const FormationSetRequest& request, std::string* error) {
     const auto positive = [](double value) { return std::isfinite(value) && value > 0.0; };
     const auto moving = [](double value) {
@@ -357,10 +336,11 @@ bool validate_formation_set_request(const FormationSetRequest& request, std::str
             return fail(error, "dynamic formation lemniscate is invalid");
         }
         return true;
-    case FORMATION_STATIC_DOUBLE_RING:
-        return validate_double_ring(request, false, error);
-    case FORMATION_DYNAMIC_DOUBLE_RING:
-        return validate_double_ring(request, true, error);
+    // 13/23 (static / dynamic double ring) were removed; the reserved wire values
+    // are rejected with a readable reason instead of the generic invalid-type arm.
+    case static_cast<FormationType>(13):
+    case static_cast<FormationType>(23):
+        return fail(error, "double-ring formations were removed");
     case FORMATION_LEADER: {
         if (!request.has_leader() || request.leader().agent_slots_size() != 25 ||
             request.leader().virtual_leader_slots_size() != 25 ||
@@ -428,11 +408,9 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
                             state.formation_type() == FORMATION_STATIC_LINE ||
                             state.formation_type() == FORMATION_STATIC_POLYGON ||
                             state.formation_type() == FORMATION_LEADER ||
-                            state.formation_type() == FORMATION_STATIC_DOUBLE_RING ||
                             state.formation_type() == FORMATION_DYNAMIC_POLYGON ||
                             state.formation_type() == FORMATION_DYNAMIC_RING ||
-                            state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE ||
-                            state.formation_type() == FORMATION_DYNAMIC_DOUBLE_RING;
+                            state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE;
     const bool valid_start = state.dynamic_start_status() >= FORMATION_START_WAITING &&
                              state.dynamic_start_status() <= FORMATION_START_CANCELLED;
     // 2.10 起 FormationState 承载"本机已受理的编队槽位目标"：valid ⇒ 位姿存在且有限。

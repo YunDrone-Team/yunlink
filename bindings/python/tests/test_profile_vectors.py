@@ -396,24 +396,14 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
         "081510012a1209000000000000084011000000000000e0bf"
     )
 
-    # Spatial double ring: absolute layer heights plus a signed angular speed.
-    double_ring = sunray.FormationSetRequest(
-        formation_type=sunray.FORMATION_DYNAMIC_DOUBLE_RING,
-        height_mode=sunray.FORMATION_HEIGHT_EXPLICIT,
-        height_m=0.9,
-        double_ring=sunray.FormationDoubleRing(
-            radius_m=1.2,
-            lower_height_m=0.6,
-            upper_height_m=1.2,
-            angular_speed_radps=-0.2,
-            phase_offset_rad=1.0471975511965976,
-        ),
-    )
-    validate_formation_set_request(double_ring)
-    assert double_ring.SerializeToString(deterministic=True).hex() == (
-        "0817400149cdccccccccccec3f522d09333333333333f33f11333333333333e33f19333333333333f33f21"
-        "9a9999999999c9bf2965732d3852c1f03f"
-    )
+    # 13/23 (static / dynamic double ring) were removed. Both wire numbers are
+    # reserved: an old peer sending either one must be rejected with a readable
+    # reason, not silently reinterpreted as another formation.
+    for removed in (13, 23):
+        with pytest.raises(ValueError, match="double-ring formations were removed"):
+            validate_formation_set_request(
+                sunray.FormationSetRequest(formation_type=removed)
+            )
 
     variants = [
         sunray.FormationSetRequest(formation_type=sunray.FORMATION_TAKEOFF),
@@ -434,16 +424,6 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
             formation_type=sunray.FORMATION_DYNAMIC_LEMNISCATE,
             lemniscate=sunray.FormationLemniscate(
                 x_scale_m=3, y_scale_m=2, move_speed_mps=0.5
-            ),
-        ),
-        sunray.FormationSetRequest(
-            formation_type=sunray.FORMATION_STATIC_DOUBLE_RING,
-            double_ring=sunray.FormationDoubleRing(
-                radius_m=1.2,
-                lower_height_m=0.6,
-                upper_height_m=1.2,
-                angular_speed_radps=0.0,
-                phase_offset_rad=1.0471975511965976,
             ),
         ),
         sunray.FormationSetRequest(
@@ -504,7 +484,7 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
     spatial_state = sunray.FormationState(
         source_stamp_ns=42,
         agent_id="uav1",
-        formation_type=sunray.FORMATION_DYNAMIC_DOUBLE_RING,
+        formation_type=sunray.FORMATION_DYNAMIC_RING,
         phase=sunray.FORMATION_PHASE_ACTIVE,
         spatial_capable=True,
         spatial_config_digest="abc",
@@ -514,21 +494,15 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
     )
     validate_formation_state(spatial_state)
     assert spatial_state.SerializeToString(deterministic=True).hex() == (
-        "082a1a047561763138024017880101920103616263980107a00103a80107"
+        "082a1a047561763138024015880101920103616263980107a00103a80107"
     )
 
     ring.ring.move_speed_mps = 0
     with pytest.raises(ValueError, match="formation request is invalid"):
         validate_formation_set_request(ring)
 
-    inverted_layers = sunray.FormationSetRequest()
-    inverted_layers.CopyFrom(double_ring)
-    inverted_layers.double_ring.lower_height_m = 2.0
-    with pytest.raises(ValueError, match="formation request is invalid"):
-        validate_formation_set_request(inverted_layers)
-
     bad_height_mode = sunray.FormationSetRequest()
-    bad_height_mode.CopyFrom(double_ring)
+    bad_height_mode.CopyFrom(ring)
     bad_height_mode.height_mode = 7
     with pytest.raises(ValueError, match="formation request is invalid"):
         validate_formation_set_request(bad_height_mode)

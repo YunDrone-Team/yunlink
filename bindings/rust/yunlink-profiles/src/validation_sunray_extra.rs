@@ -17,31 +17,6 @@ fn finite_pose(value: &mobility::Pose) -> bool {
     finite_vector3(position) && norm_squared.is_finite() && norm_squared > 1e-12
 }
 
-fn double_ring(
-    request: &sunray::FormationSetRequest,
-    dynamic: bool,
-) -> Result<(), &'static str> {
-    let value = request
-        .double_ring
-        .as_ref()
-        .ok_or("formation double ring is invalid")?;
-    if !(value.radius_m.is_finite() && value.radius_m > 0.0)
-        || !value.lower_height_m.is_finite()
-        || !value.upper_height_m.is_finite()
-        || !(value.lower_height_m < value.upper_height_m)
-        || !value.phase_offset_rad.is_finite()
-    {
-        return Err("formation double ring geometry is invalid");
-    }
-    // STATIC_DOUBLE_RING ignores angular speed entirely, so an unused non-finite
-    // value stays acceptable; the dynamic variant requires finite non-zero motion.
-    if dynamic && !(value.angular_speed_radps.is_finite() && value.angular_speed_radps.abs() > 0.0)
-    {
-        return Err("dynamic formation double ring angular speed is invalid");
-    }
-    Ok(())
-}
-
 pub fn validate_formation_set_request(
     request: &sunray::FormationSetRequest,
 ) -> Result<(), &'static str> {
@@ -97,8 +72,9 @@ pub fn validate_formation_set_request(
             })
             .map(|_| ())
             .ok_or("dynamic formation lemniscate is invalid"),
-        13 => double_ring(request, false),
-        23 => double_ring(request, true),
+        // 13/23 were removed; the wire values stay reserved and are rejected with a
+        // readable reason instead of falling through to the generic invalid-type arm.
+        13 | 23 => Err("double-ring formations were removed"),
         12 => {
             let leader = request
                 .leader
@@ -152,9 +128,11 @@ pub fn validate_formation_leader_target_request(
 }
 
 pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'static str> {
+    // 13/23 are reserved and no longer valid echo types: an old peer's state frame
+    // is treated as unknown/unsupported (dropped for diagnosis, never rendered).
     let valid_type = matches!(
         state.formation_type,
-        0 | 1 | 2 | 10 | 11 | 12 | 13 | 20 | 21 | 22 | 23
+        0 | 1 | 2 | 10 | 11 | 12 | 20 | 21 | 22
     );
     let valid_target = !state.virtual_leader_target_valid
         || state
