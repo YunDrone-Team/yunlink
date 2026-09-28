@@ -9,7 +9,38 @@
 
 #include <asio.hpp>
 
+#if !defined(_WIN32)
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#endif
+
 #include "yunlink/discovery/discovery_v2.hpp"
+
+namespace {
+
+asio::ip::address_v4 test_multicast_interface() {
+#if !defined(_WIN32)
+    ifaddrs* interfaces = nullptr;
+    if (getifaddrs(&interfaces) != 0)
+        return asio::ip::address_v4::any();
+    asio::ip::address_v4 address = asio::ip::address_v4::any();
+    for (const ifaddrs* entry = interfaces; entry != nullptr; entry = entry->ifa_next) {
+        if (!entry->ifa_addr || entry->ifa_addr->sa_family != AF_INET ||
+            !(entry->ifa_flags & IFF_UP) || !(entry->ifa_flags & IFF_MULTICAST))
+            continue;
+        const auto* ipv4 = reinterpret_cast<const sockaddr_in*>(entry->ifa_addr);
+        address = asio::ip::address_v4(ntohl(ipv4->sin_addr.s_addr));
+        break;
+    }
+    freeifaddrs(interfaces);
+    return address;
+#else
+    return asio::ip::address_v4::any();
+#endif
+}
+
+}  // namespace
 
 int main() {
     using namespace yunlink::v2;
@@ -137,13 +168,46 @@ int main() {
     asio::ip::udp::endpoint response_source;
     const size_t response_size = client.receive_from(asio::buffer(response), response_source);
     assert(response_size > 0);
+    const auto multicast_interface = test_multicast_interface();
+    if (multicast_interface != asio::ip::address_v4::any()) {
+        asio::ip::udp::socket multicast_client(io, asio::ip::udp::endpoint(multicast_interface, 0));
+        multicast_client.set_option(asio::ip::multicast::outbound_interface(multicast_interface));
+        multicast_client.set_option(asio::ip::multicast::enable_loopback(true));
+        multicast_client.non_blocking(true);
+        const asio::ip::udp::endpoint multicast_destination(
+            asio::ip::address_v4::from_string(kDiscoveryMulticastGroup), advertiser_port);
+        multicast_client.send_to(asio::buffer(encoded_v3_query), multicast_destination);
+        const auto multicast_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+        bool received_multicast_reply = false;
+        while (std::chrono::steady_clock::now() < multicast_deadline) {
+            std::error_code receive_error;
+            const size_t size = multicast_client.receive_from(
+                asio::buffer(response), response_source, 0, receive_error);
+            if (!receive_error) {
+                DiscoveryAdvertisement multicast_reply;
+                received_multicast_reply =
+                    decode_discovery_reply(Bytes(response.begin(), response.begin() + size),
+                                           secret,
+                                           v3_query.nonce,
+                                           &multicast_reply);
+                if (received_multicast_reply)
+                    break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        assert(received_multicast_reply);
+    } else {
+        std::cout << "multicast loopback test skipped: no IPv4 multicast interface\n";
+    }
     client.send_to(asio::buffer(Bytes{1, 2, 3}), destination);
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
     while (std::chrono::steady_clock::now() < deadline) {
         {
             std::lock_guard<std::mutex> lock(event_mutex);
-            if (events.size() >= 3)
+            if (std::any_of(events.begin(), events.end(), [](const auto& event) {
+                    return event.kind == DiscoveryAdvertiserEventKind::kRejected;
+                }))
                 break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -158,6 +222,12 @@ int main() {
     assert(has_event(DiscoveryAdvertiserEventKind::kQueryReceived));
     assert(has_event(DiscoveryAdvertiserEventKind::kReplySent));
     assert(has_event(DiscoveryAdvertiserEventKind::kRejected));
+    if (multicast_interface != asio::ip::address_v4::any()) {
+        assert(std::any_of(events.begin(), events.end(), [&](const auto& event) {
+            return event.kind == DiscoveryAdvertiserEventKind::kMulticastJoined &&
+                   event.remote_ip == multicast_interface.to_string();
+        }));
+    }
 
     std::cout << "test_discovery_v2 passed\n";
     return 0;

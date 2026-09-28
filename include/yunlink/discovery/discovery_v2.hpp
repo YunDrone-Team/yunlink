@@ -18,6 +18,8 @@
 namespace yunlink::v2 {
 
 constexpr uint16_t kDefaultDiscoveryPort = 9697;
+// Administratively scoped, link-local (TTL 1) discovery query destination.
+constexpr const char* kDiscoveryMulticastGroup = "239.255.96.97";
 // Discovery packets are independently versioned from the Wire schema. Keep v2
 // for legacy clients; v3 adds the authoritative per-entity Agent ID and v4 adds
 // bounded extension attributes without changing the packet for every new field.
@@ -73,6 +75,9 @@ enum class DiscoveryAdvertiserEventKind : uint8_t {
     kRejected = 3,
     kReceiveError = 4,
     kSendError = 5,
+    kMulticastJoinFailed = 6,
+    kMulticastJoined = 7,
+    kMulticastLeft = 8,
 };
 
 struct DiscoveryAdvertiserEvent {
@@ -80,6 +85,7 @@ struct DiscoveryAdvertiserEvent {
     std::string remote_ip;
     uint16_t remote_port = 0;
     ErrorCode error = ErrorCode::kOk;
+    std::string detail;
 };
 
 class DiscoveryAdvertiser {

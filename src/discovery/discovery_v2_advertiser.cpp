@@ -1,10 +1,18 @@
 #include "yunlink/discovery/discovery_v2.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <map>
 #include <mutex>
 #include <thread>
+
+#if !defined(_WIN32)
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#endif
 
 #include <asio.hpp>
 
@@ -13,6 +21,30 @@ namespace yunlink::v2 {
 bool discovery_advertisement_is_valid(const DiscoveryAdvertisement& value);
 
 namespace {
+
+using Address = asio::ip::address_v4;
+
+std::vector<Address> multicast_interfaces() {
+    std::vector<Address> result;
+#if !defined(_WIN32)
+    ifaddrs* interfaces = nullptr;
+    if (getifaddrs(&interfaces) != 0)
+        return result;
+    for (const ifaddrs* entry = interfaces; entry != nullptr; entry = entry->ifa_next) {
+        if (!entry->ifa_addr || entry->ifa_addr->sa_family != AF_INET ||
+            !(entry->ifa_flags & IFF_UP) || !(entry->ifa_flags & IFF_MULTICAST))
+            continue;
+        const auto* address = reinterpret_cast<const sockaddr_in*>(entry->ifa_addr);
+        result.push_back(Address(ntohl(address->sin_addr.s_addr)));
+    }
+    freeifaddrs(interfaces);
+#else
+    result.push_back(Address::any());
+#endif
+    std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    return result;
+}
 
 uint64_t now_ms() {
     return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -31,6 +63,8 @@ struct DiscoveryAdvertiser::Impl {
     DiscoveryAdvertisement advertisement;
     std::string shared_secret;
     EventHandler event_handler;
+    std::map<Address, bool> multicast_memberships;
+    bool reported_missing_multicast_interface = false;
 };
 
 DiscoveryAdvertiser::DiscoveryAdvertiser() : impl_(std::make_unique<Impl>()) {}
@@ -71,11 +105,13 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
         impl_->socket.reset();
         return ErrorCode::kInternal;
     }
+    impl_->multicast_memberships.clear();
     impl_->running.store(true);
     impl_->thread = std::thread([this]() {
         const auto emit = [this](DiscoveryAdvertiserEventKind kind,
                                  const asio::ip::udp::endpoint& remote,
-                                 ErrorCode error) {
+                                 ErrorCode error,
+                                 const std::string& detail = std::string{}) {
             if (!impl_->event_handler)
                 return;
             DiscoveryAdvertiserEvent event;
@@ -86,6 +122,7 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
             if (endpoint_error)
                 event.remote_ip.clear();
             event.remote_port = remote.port();
+            event.detail = detail;
             try {
                 impl_->event_handler(event);
             } catch (...) {
@@ -93,8 +130,68 @@ ErrorCode DiscoveryAdvertiser::start(uint16_t bind_port,
                 return;
             }
         };
+        const auto group = Address::from_string(kDiscoveryMulticastGroup);
+        const auto refresh_multicast = [this, &emit, group]() {
+            const auto interfaces = multicast_interfaces();
+            if (interfaces.empty() && !impl_->reported_missing_multicast_interface) {
+                emit(DiscoveryAdvertiserEventKind::kMulticastJoinFailed,
+                     asio::ip::udp::endpoint(asio::ip::address_v4::any(), 0),
+                     ErrorCode::kInternal,
+                     "no multicast-capable IPv4 interface");
+                impl_->reported_missing_multicast_interface = true;
+            } else if (!interfaces.empty()) {
+                impl_->reported_missing_multicast_interface = false;
+            }
+            for (auto it = impl_->multicast_memberships.begin();
+                 it != impl_->multicast_memberships.end();) {
+                if (std::find(interfaces.begin(), interfaces.end(), it->first) !=
+                    interfaces.end()) {
+                    ++it;
+                    continue;
+                }
+                if (it->second) {
+                    std::error_code ignored;
+                    impl_->socket->set_option(asio::ip::multicast::leave_group(group, it->first),
+                                              ignored);
+                    emit(DiscoveryAdvertiserEventKind::kMulticastLeft,
+                         asio::ip::udp::endpoint(it->first, 0),
+                         ErrorCode::kOk);
+                }
+                it = impl_->multicast_memberships.erase(it);
+            }
+            for (const auto& address : interfaces) {
+                const auto known = impl_->multicast_memberships.find(address);
+                std::error_code join_error;
+                impl_->socket->set_option(asio::ip::multicast::join_group(group, address),
+                                          join_error);
+                const bool already_joined = known != impl_->multicast_memberships.end() &&
+                                            known->second &&
+                                            join_error == asio::error::address_in_use;
+                if (already_joined)
+                    continue;
+                const bool was_healthy =
+                    known != impl_->multicast_memberships.end() && known->second;
+                impl_->multicast_memberships[address] = !join_error;
+                if (!join_error && !was_healthy)
+                    emit(DiscoveryAdvertiserEventKind::kMulticastJoined,
+                         asio::ip::udp::endpoint(address, 0),
+                         ErrorCode::kOk);
+                if (join_error && (known == impl_->multicast_memberships.end() || was_healthy))
+                    emit(DiscoveryAdvertiserEventKind::kMulticastJoinFailed,
+                         asio::ip::udp::endpoint(address, 0),
+                         ErrorCode::kInternal,
+                         join_error.message());
+            }
+        };
+        refresh_multicast();
+        auto next_membership_refresh = std::chrono::steady_clock::now() + std::chrono::seconds(5);
         std::array<uint8_t, 1024> buffer{};
         while (impl_->running.load()) {
+            if (std::chrono::steady_clock::now() >= next_membership_refresh) {
+                refresh_multicast();
+                next_membership_refresh =
+                    std::chrono::steady_clock::now() + std::chrono::seconds(5);
+            }
             asio::ip::udp::endpoint remote;
             std::error_code error;
             const size_t size = impl_->socket->receive_from(asio::buffer(buffer), remote, 0, error);
@@ -149,6 +246,8 @@ void DiscoveryAdvertiser::stop() {
         impl_->thread.join();
     }
     impl_->socket.reset();
+    impl_->multicast_memberships.clear();
+    impl_->reported_missing_multicast_interface = false;
 }
 
 bool DiscoveryAdvertiser::running() const {
