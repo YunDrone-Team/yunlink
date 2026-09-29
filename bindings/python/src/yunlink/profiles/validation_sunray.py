@@ -29,19 +29,9 @@ def validate_formation_set_request(request: sunray.FormationSetRequest) -> None:
     positive = lambda value: math.isfinite(value) and value > 0
     moving = lambda value: math.isfinite(value) and abs(value) > 0
     formation_type = request.formation_type
-    # Height semantics are part of the task contract: an unsupported mode is
-    # rejected for every formation type, even one that ignores planar height.
-    if request.height_mode not in {
-        sunray.FORMATION_HEIGHT_LEGACY_HOLD_CURRENT,
-        sunray.FORMATION_HEIGHT_EXPLICIT,
-    } or not math.isfinite(request.height_m):
-        raise ValueError("formation request is invalid")
     valid = False
     if formation_type in {sunray.FORMATION_TAKEOFF, sunray.FORMATION_LAND}:
-        valid = (
-            request.height_mode == sunray.FORMATION_HEIGHT_LEGACY_HOLD_CURRENT
-            and request.height_m == 0
-        )
+        valid = True
     elif formation_type == sunray.FORMATION_STATIC_LINE:
         valid = (
             request.HasField("line")
@@ -124,7 +114,6 @@ def validate_formation_state(state: sunray.FormationState) -> None:
     )
     if (
         not 0 <= state.phase <= 4
-        or not 0 <= state.dynamic_start_status <= 4
         or not valid_type
         or not valid_target
         or not valid_formation_target

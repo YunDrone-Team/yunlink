@@ -22,22 +22,8 @@ pub fn validate_formation_set_request(
 ) -> Result<(), &'static str> {
     let positive = |value: f64| value.is_finite() && value > 0.0;
     let moving = |value: f64| value.is_finite() && value.abs() > 0.0;
-    // Height semantics are part of the task contract: an unsupported mode is
-    // rejected for every formation type, even one that ignores planar height.
-    if request.height_mode != 0 && request.height_mode != 1 {
-        return Err("formation height mode is invalid");
-    }
-    if !request.height_m.is_finite() {
-        return Err("formation height is invalid");
-    }
     match request.formation_type {
-        1 | 2 => {
-            if request.height_mode == 0 && request.height_m == 0.0 {
-                Ok(())
-            } else {
-                Err("takeoff and land require legacy height mode and zero height")
-            }
-        }
+        1 | 2 => Ok(()),
         10 => request
             .line
             .as_ref()
@@ -140,7 +126,6 @@ pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'
             .as_ref()
             .is_some_and(finite_pose);
     ((0..=4).contains(&state.phase)
-        && (0..=4).contains(&state.dynamic_start_status)
         && valid_type
         && valid_target)
         .then_some(())

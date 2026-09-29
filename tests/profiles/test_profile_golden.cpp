@@ -424,18 +424,6 @@ int main() {
     assert(!validate_formation_set_request(removed_ring_type, &validation_error));
     assert(validation_error.find("double-ring formations were removed") != std::string::npos);
 
-    // An unsupported height mode is rejected even by a formation that ignores planar height.
-    FormationSetRequest bad_height_mode = ring;
-    bad_height_mode.set_height_mode(static_cast<FormationHeightMode>(2));
-    assert(!validate_formation_set_request(bad_height_mode, &validation_error));
-
-    // Takeoff/landing never reinterpret formation height as an altitude.
-    FormationSetRequest land_with_height;
-    land_with_height.set_formation_type(FORMATION_LAND);
-    land_with_height.set_height_mode(FORMATION_HEIGHT_EXPLICIT);
-    land_with_height.set_height_m(0.5);
-    assert(!validate_formation_set_request(land_with_height, &validation_error));
-
     FormationSetRequest leader;
     leader.set_formation_type(FORMATION_LEADER);
     for (int index = 0; index < 25; ++index) {
@@ -475,25 +463,16 @@ int main() {
            "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000"
            "000000f03f110000000000000040190000000000000840120921000000000000f03f");
 
-    // Spatial state carries capability, monotonic sequences and the dynamic-start gate.
     FormationState spatial_state;
     spatial_state.set_source_stamp_ns(42);
     spatial_state.set_agent_id("uav1");
     spatial_state.set_formation_type(FORMATION_DYNAMIC_RING);
     spatial_state.set_phase(FORMATION_PHASE_ACTIVE);
-    spatial_state.set_spatial_capable(true);
-    spatial_state.set_spatial_config_digest("abc");
     spatial_state.set_state_sequence(7);
-    spatial_state.set_dynamic_start_status(FORMATION_START_RUNNING);
-    spatial_state.set_dynamic_start_sequence(7);
     assert(validate_formation_state(spatial_state, &validation_error));
     assert(hex(spatial_state.SerializeAsString()) ==
-           "082a1a047561763138024015880101920103616263980107a00103a80107");
+           "082a1a047561763138024015980107");
     assert_round_trip(spatial_state);
-
-    FormationState out_of_range_start = spatial_state;
-    out_of_range_start.set_dynamic_start_status(static_cast<FormationDynamicStartStatus>(9));
-    assert(!validate_formation_state(out_of_range_start, &validation_error));
 
     FormationState bad_spatial_type = spatial_state;
     bad_spatial_type.set_formation_type(static_cast<FormationType>(14));
@@ -512,7 +491,7 @@ int main() {
     assert(validate_formation_state(target_echo, &validation_error));
     // 字段 22/23 的 wire 编号在这里锁死：b0 01 = field 22(varint)、ba 01 = field 23(LEN)。
     assert(hex(target_echo.SerializeAsString()) ==
-           "082a1a047561763138024017880101920103616263980107a00103a80107b00101ba01310a1b09"
+           "082a1a047561763138024015980107b00101ba01310a1b09"
            "000000000000f03f110000000000000040190000000000000840121219000000000000e03f21"
            "aa4c58e87ab6eb3f");
 

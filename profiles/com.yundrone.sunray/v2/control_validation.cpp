@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <unordered_set>
+#include <google/protobuf/unknown_field_set.h>
 
 namespace com::yundrone::sunray::v2 {
 namespace {
@@ -286,26 +287,24 @@ bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std
 }
 
 bool validate_formation_set_request(const FormationSetRequest& request, std::string* error) {
+    // Minor-version negotiation permits older peers. Reserved fields are still
+    // preserved by protobuf as unknown fields: never silently flatten an old
+    // explicit-height or double-ring request into a planar command.
+    const auto& unknown = request.GetReflection()->GetUnknownFields(request);
+    for (int i = 0; i < unknown.field_count(); ++i) {
+        const int number = unknown.field(i).number();
+        if (number == 8 || number == 9 || number == 10) {
+            return fail(error, "removed formation height or double-ring fields are not supported");
+        }
+    }
     const auto positive = [](double value) { return std::isfinite(value) && value > 0.0; };
     const auto moving = [](double value) {
         return std::isfinite(value) && std::abs(value) > 0.0;
     };
-    // Height semantics are part of the task contract: an unsupported mode is
-    // rejected for every formation type, even one that ignores planar height.
-    if (request.height_mode() != FORMATION_HEIGHT_LEGACY_HOLD_CURRENT &&
-        request.height_mode() != FORMATION_HEIGHT_EXPLICIT) {
-        return fail(error, "formation height mode is invalid");
-    }
-    if (!std::isfinite(request.height_m())) {
-        return fail(error, "formation height is invalid");
-    }
     switch (request.formation_type()) {
     case FORMATION_TAKEOFF:
     case FORMATION_LAND:
-        return request.height_mode() == FORMATION_HEIGHT_LEGACY_HOLD_CURRENT &&
-                       request.height_m() == 0.0
-                   ? true
-                   : fail(error, "takeoff and land require legacy height mode and zero height");
+        return true;
     case FORMATION_STATIC_LINE:
         if (!request.has_line() || !positive(request.line().spacing_m()) ||
             !std::isfinite(request.line().angle_deg())) {
@@ -411,12 +410,10 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
                             state.formation_type() == FORMATION_DYNAMIC_POLYGON ||
                             state.formation_type() == FORMATION_DYNAMIC_RING ||
                             state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE;
-    const bool valid_start = state.dynamic_start_status() >= FORMATION_START_WAITING &&
-                             state.dynamic_start_status() <= FORMATION_START_CANCELLED;
     // 2.10 起 FormationState 承载"本机已受理的编队槽位目标"：valid ⇒ 位姿存在且有限。
     // valid == false 时字段整体缺省是合法表达（"当前没有已受理目标"），也必须放行。
     if (state.phase() < FORMATION_PHASE_IDLE || state.phase() > FORMATION_PHASE_ERROR ||
-        !valid_type || !valid_start ||
+        !valid_type ||
         (state.virtual_leader_target_valid() &&
                         (!state.has_virtual_leader_target() ||
                          !finite(state.virtual_leader_target()))) ||

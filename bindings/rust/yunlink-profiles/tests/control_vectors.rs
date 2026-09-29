@@ -500,29 +500,6 @@ fn formation_v27_messages_match_golden_vectors_and_validate() {
         );
     }
 
-    // An unsupported height mode is rejected even by a formation that ignores planar height.
-    let mut bad_height_mode = ring.clone();
-    bad_height_mode.height_mode = 7;
-    assert!(validate_formation_set_request(&bad_height_mode).is_err());
-
-    let spatial_state = sunray::FormationState {
-        source_stamp_ns: 42,
-        agent_id: "uav1".into(),
-        formation_type: 21,
-        phase: 2,
-        spatial_capable: true,
-        spatial_config_digest: "abc".into(),
-        state_sequence: 7,
-        dynamic_start_status: 3,
-        dynamic_start_sequence: 7,
-        ..Default::default()
-    };
-    validate_formation_state(&spatial_state).unwrap();
-    assert_eq!(
-        hex::encode(spatial_state.encode_to_vec()),
-        "082a1a047561763138024015880101920103616263980107a00103a80107"
-    );
-
     let mut invalid = ring;
     invalid.ring.as_mut().unwrap().move_speed_mps = 0.0;
     assert!(validate_formation_set_request(&invalid).is_err());

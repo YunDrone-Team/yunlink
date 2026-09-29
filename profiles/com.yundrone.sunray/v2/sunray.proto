@@ -448,15 +448,6 @@ enum FormationType {
   reserved 13, 23;
 }
 
-// Planar target height semantics, mirroring sunray_msgs/FormationGoal.
-// FORMATION_HEIGHT_LEGACY_HOLD_CURRENT keeps the previous measured-height
-// behaviour; FORMATION_HEIGHT_EXPLICIT uses an absolute common-frame Z.
-// Unsupported modes are rejected for every formation type.
-enum FormationHeightMode {
-  FORMATION_HEIGHT_LEGACY_HOLD_CURRENT = 0;
-  FORMATION_HEIGHT_EXPLICIT = 1;
-}
-
 enum FormationPhase {
   FORMATION_PHASE_IDLE = 0;
   FORMATION_PHASE_TRANSITIONING = 1;
@@ -469,17 +460,6 @@ enum FormationLeaderTargetMode {
   FORMATION_LEADER_TARGET_UNSPECIFIED = 0;
   FORMATION_LEADER_TARGET_FIXED_POSE = 1;
   FORMATION_LEADER_TARGET_ODOM_TOPIC = 2;
-}
-
-// Spatial dynamic-startup gate status, mirroring the sunray_msgs/FormationState
-// constants. WAITING/PREPARED/COMMITTED describe the distributed schedule gate;
-// RUNNING means the shared phase is advancing; CANCELLED is terminal per epoch.
-enum FormationDynamicStartStatus {
-  FORMATION_START_WAITING = 0;
-  FORMATION_START_PREPARED = 1;
-  FORMATION_START_COMMITTED = 2;
-  FORMATION_START_RUNNING = 3;
-  FORMATION_START_CANCELLED = 4;
 }
 
 message FormationTaskEpoch {
@@ -515,9 +495,6 @@ message FormationLeader {
   repeated bool virtual_leader_slots = 3;
 }
 
-// Spatial planar formations remain available through FormationHeightMode
-// EXPLICIT_HEIGHT (height_m), which is orthogonal to formation_type.
-
 message FormationSetRequest {
   FormationType formation_type = 1;
   bool align_yaw_with_trajectory = 2;
@@ -526,10 +503,8 @@ message FormationSetRequest {
   FormationRing ring = 5;
   FormationLemniscate lemniscate = 6;
   FormationLeader leader = 7;
-  FormationHeightMode height_mode = 8;
-  double height_m = 9;
-  // 10 was the removed double-ring message field; the number is reserved, never reused.
-  reserved 10;
+  // 8 and 9 were removed spatial height fields; numbers are reserved, never reused.
+  reserved 8, 9, 10;
 }
 
 message FormationSetResponse {
@@ -614,12 +589,9 @@ message FormationState {
   string formation_layout_key = 14;
   bool formation_layout_valid = 15;
   string last_error = 16;
-  // Spatial capability, monotonic state sequence and the dynamic-start gate.
-  bool spatial_capable = 17;
-  string spatial_config_digest = 18;
+  // 17/18 and 20/21 were removed spatial capability/start-gate fields.
+  reserved 17, 18, 20, 21;
   uint64 state_sequence = 19;
-  FormationDynamicStartStatus dynamic_start_status = 20;
-  uint64 dynamic_start_sequence = 21;
 
   // ↓↓↓ 2.10 新增：本机已受理的编队槽位目标（编号从 22 起，不动已有编号，protobuf 向前兼容）
   //

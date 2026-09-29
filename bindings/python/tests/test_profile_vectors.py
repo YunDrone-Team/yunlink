@@ -480,40 +480,9 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
         "21000000000000f03f"
     )
 
-    # Spatial state carries capability, monotonic sequences and the dynamic-start gate.
-    spatial_state = sunray.FormationState(
-        source_stamp_ns=42,
-        agent_id="uav1",
-        formation_type=sunray.FORMATION_DYNAMIC_RING,
-        phase=sunray.FORMATION_PHASE_ACTIVE,
-        spatial_capable=True,
-        spatial_config_digest="abc",
-        state_sequence=7,
-        dynamic_start_status=sunray.FORMATION_START_RUNNING,
-        dynamic_start_sequence=7,
-    )
-    validate_formation_state(spatial_state)
-    assert spatial_state.SerializeToString(deterministic=True).hex() == (
-        "082a1a047561763138024015880101920103616263980107a00103a80107"
-    )
-
     ring.ring.move_speed_mps = 0
     with pytest.raises(ValueError, match="formation request is invalid"):
         validate_formation_set_request(ring)
-
-    bad_height_mode = sunray.FormationSetRequest()
-    bad_height_mode.CopyFrom(ring)
-    bad_height_mode.height_mode = 7
-    with pytest.raises(ValueError, match="formation request is invalid"):
-        validate_formation_set_request(bad_height_mode)
-
-    land_with_height = sunray.FormationSetRequest(
-        formation_type=sunray.FORMATION_LAND,
-        height_mode=sunray.FORMATION_HEIGHT_EXPLICIT,
-        height_m=0.5,
-    )
-    with pytest.raises(ValueError, match="formation request is invalid"):
-        validate_formation_set_request(land_with_height)
 
 
 @pytest.mark.parametrize(
