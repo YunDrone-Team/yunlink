@@ -550,12 +550,12 @@ message FormationPreviewResponse {
   // 拒绝码沿用 FormationSetResponse.error_code 的同一套常量。
   uint32 error_code = 2;
   string message = 3;
-  // 本集群该阵型会走哪条内核：true = 中心化 MPC（槽位由机侧分配决定，地面站无法本地复刻）。
-  bool mpc_routed = 4;
+  // 4 原为 mpc_routed（中心化 MPC 已移除）；编号保留，禁止复用。
+  reserved 4;
   bool dynamic = 5;
   bool phase_aligned = 6;
   double phase_offset_sec = 7;
-  // 逐成员预览目标（MPC 下是机侧真实分配结果，agent_id 可能不等于请求顺序）。
+  // 逐成员预览目标（槽位来自任务的权威方案，agent_id 可能不等于请求顺序）。
   repeated FormationPreviewSlot slots = 8;
   // 动态阵型的几何图形（一个周期 72 点）；静态阵型为空。
   bool shape_closed = 9;
