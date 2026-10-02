@@ -43,6 +43,38 @@ message OdomState {
   uint32 source = 5;
 }
 
+// Sunray Profile 2.9. One atomic localization snapshot per entity.
+// Coordinates: metres, seconds, radians; right handed, Z up; quaternion xyzw.
+// source_sequence advances only for a new trusted input, never for a heartbeat.
+enum LocalizationStatus {
+  LOCALIZATION_WAITING = 0;
+  LOCALIZATION_VALID = 1;
+  LOCALIZATION_PUBLISHER_MISSING = 2;
+  LOCALIZATION_STALE = 3;
+  LOCALIZATION_INVALID = 4;
+  LOCALIZATION_TRANSFORM_UNAVAILABLE = 5;
+}
+
+message LocalizationState {
+  string localization_epoch = 1;
+  uint64 source_sequence = 2;
+  uint64 source_stamp_ns = 3;
+  uint32 source_id = 4;
+  double input_rate_hz = 5;
+  uint64 input_age_ms = 6;
+  LocalizationStatus status = 7;
+  string reason = 8;
+  org.yunlink.mobility.v1.Odometry local_odometry = 9;
+  string scene_frame_id = 10;
+  // Maps local coordinates into scene coordinates; never implied identity.
+  org.yunlink.mobility.v1.Pose scene_from_local = 11;
+  bool scene_transform_valid = 12;
+  // Reference frame of both linear and angular velocity in local_odometry.
+  string velocity_frame_id = 13;
+  // Advances on relocalization even if frame names remain unchanged.
+  uint64 reference_revision = 14;
+}
+
 message UavControlFsmState {
   uint64 source_stamp_ns = 1;
   uint32 state = 2;

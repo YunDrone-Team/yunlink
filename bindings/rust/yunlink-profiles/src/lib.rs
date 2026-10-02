@@ -68,6 +68,7 @@ pub const MINIMUM_TRUSTED_UNIX_TIME_MS: u64 = 1_704_067_200_000;
 pub const MAXIMUM_TRUSTED_UNIX_TIME_MS: u64 = 4_102_444_800_000;
 
 mod validation_media;
+mod validation_localization;
 mod validation_shell;
 mod validation_sunray;
 mod validation_sunray_extra;
@@ -75,6 +76,7 @@ mod validation_system;
 mod validation_telemetry;
 
 pub use validation_media::*;
+pub use validation_localization::*;
 pub use validation_shell::*;
 pub use validation_sunray::*;
 pub use validation_sunray_extra::*;

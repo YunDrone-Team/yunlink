@@ -40,6 +40,15 @@ template <typename Message> void assert_round_trip(const Message& source) {
 }  // namespace
 
 int main() {
+    com::yundrone::sunray::v2::LocalizationState localization;
+    assert(localization.SerializeAsString().empty());
+    localization.set_status(com::yundrone::sunray::v2::LOCALIZATION_PUBLISHER_MISSING);
+    localization.set_reason("missing");
+    assert(hex(localization.SerializeAsString()) == "380242076d697373696e67");
+    com::yundrone::sunray::v2::LocalizationState decoded_localization;
+    assert(decoded_localization.ParseFromString(localization.SerializeAsString()));
+    assert(decoded_localization.status() == localization.status());
+    assert(decoded_localization.reason() == "missing");
     org::yunlink::shell::v1::ShellOpenRequest shell_open;
     shell_open.set_cols(80);
     shell_open.set_rows(24);
