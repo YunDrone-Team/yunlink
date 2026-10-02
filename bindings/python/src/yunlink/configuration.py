@@ -175,6 +175,7 @@ class ConfigResourceListResponse:
 @dataclasses.dataclass(frozen=True)
 class ConfigResourceDescribeRequest:
     resource_id: str
+    locale: str = ""
 
 
 @dataclasses.dataclass(frozen=True)

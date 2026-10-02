@@ -6,6 +6,18 @@ from yunlink.configuration_codec import ConfigurationCodecError, decode, encode
 
 
 class ConfigurationCodecTest(unittest.TestCase):
+    def test_describe_request_keeps_legacy_default_and_supports_locale_extension(self) -> None:
+        request = yunlink.ConfigResourceDescribeRequest("sunray.params.flight")
+        legacy = encode(request)
+        self.assertEqual(
+            decode(yunlink.ConfigResourceDescribeRequest, legacy), request
+        )
+
+        localized = yunlink.ConfigResourceDescribeRequest("sunray.params.flight", "zh-CN")
+        self.assertEqual(
+            decode(yunlink.ConfigResourceDescribeRequest, encode(localized)), localized
+        )
+
     def test_patch_matches_cross_language_golden_vector(self) -> None:
         request = yunlink.ConfigResourcePatchRequest(
             resource_id="sunray.params.flight",

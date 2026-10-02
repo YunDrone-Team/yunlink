@@ -36,14 +36,23 @@ impl ConfigurationPayload for ConfigResourceDescribeRequest {
     fn encode(&self) -> Result<Vec<u8>> {
         encode_payload(|writer| {
             writer.text(&self.resource_id)?;
-            writer.text(&self.locale)
+            // Preserve the legacy request shape for the provider default.
+            if self.locale.is_empty() {
+                Ok(())
+            } else {
+                writer.text(&self.locale)
+            }
         })
     }
     fn decode(bytes: &[u8]) -> Result<Self> {
         decode_payload(bytes, |reader| {
             Ok(Self {
                 resource_id: reader.text()?,
-                locale: reader.text()?,
+                locale: if reader.remaining() {
+                    reader.text()?
+                } else {
+                    String::new()
+                },
             })
         })
     }

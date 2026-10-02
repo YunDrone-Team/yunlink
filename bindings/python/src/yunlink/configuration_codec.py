@@ -102,6 +102,9 @@ class _Reader:
             raise ConfigurationCodecError("list exceeds configuration contract")
         return tuple(read() for _ in range(count))
 
+    def remaining(self) -> bool:
+        return self.cursor < len(self.data)
+
 
 def _enum(enum_type: type[enum.IntEnum], value: int) -> enum.IntEnum:
     try:
@@ -252,7 +255,10 @@ def encode(payload: Any) -> bytes:
     if isinstance(payload, ConfigResourceListRequest): writer.u8(0)
     elif isinstance(payload, ConfigResourceListResponse):
         _write_status(writer, payload.status, payload.message); writer.items(payload.resources, lambda item: _write_descriptor(writer, item))
-    elif isinstance(payload, ConfigResourceDescribeRequest): writer.text(payload.resource_id)
+    elif isinstance(payload, ConfigResourceDescribeRequest):
+        writer.text(payload.resource_id)
+        if payload.locale:
+            writer.text(payload.locale)
     elif isinstance(payload, ConfigResourceDescribeResponse):
         _write_status(writer, payload.status, payload.message); _write_descriptor(writer, payload.resource); writer.items(payload.fields, lambda item: _write_schema(writer, item))
     elif isinstance(payload, ConfigResourceGetRequest): writer.text(payload.resource_id); writer.text(payload.variant_id)
@@ -295,7 +301,9 @@ def decode(payload_type: type[T], data: bytes) -> T:
         value: Any = ConfigResourceListRequest()
     elif payload_type is ConfigResourceListResponse:
         status, message = _read_status(reader); value = ConfigResourceListResponse(status, message, reader.items(lambda: _read_descriptor(reader)))
-    elif payload_type is ConfigResourceDescribeRequest: value = ConfigResourceDescribeRequest(reader.text())
+    elif payload_type is ConfigResourceDescribeRequest:
+        resource_id = reader.text()
+        value = ConfigResourceDescribeRequest(resource_id, reader.text() if reader.remaining() else "")
     elif payload_type is ConfigResourceDescribeResponse:
         status, message = _read_status(reader); value = ConfigResourceDescribeResponse(status, message, _read_descriptor(reader), reader.items(lambda: _read_schema(reader)))
     elif payload_type is ConfigResourceGetRequest: value = ConfigResourceGetRequest(reader.text(), reader.text())

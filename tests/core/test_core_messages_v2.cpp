@@ -131,6 +131,19 @@ int main() {
     assert(decoded_describe.fields.back().update_policy ==
            yunlink::ConfigFieldUpdatePolicy::kRebuildRequired);
     assert(!decoded_describe.fields.back().has_default_value);
+
+    // The default locale keeps the legacy request wire shape; a non-empty
+    // locale is an additive extension for newer providers.
+    yunlink::ConfigResourceDescribeRequest describe_request;
+    describe_request.resource_id = "sunray.params.flight";
+    yunlink::ConfigResourceDescribeRequest decoded_request;
+    const Bytes legacy_describe_request = encode(describe_request);
+    assert(decode(legacy_describe_request, &decoded_request));
+    assert(decoded_request.locale.empty());
+    describe_request.locale = "zh-CN";
+    assert(decode(encode(describe_request), &decoded_request));
+    assert(decoded_request.locale == "zh-CN");
+
     Bytes truncated_describe = encoded_describe;
     truncated_describe.pop_back();
     assert(!decode(truncated_describe, &decoded_describe));

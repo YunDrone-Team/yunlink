@@ -211,6 +211,9 @@ struct ConfigResourceListResponse {
 
 struct ConfigResourceDescribeRequest {
     std::string resource_id;
+    // BCP-47 locale for provider-owned titles, descriptions and choice labels.
+    // Empty keeps the provider's default language.
+    std::string locale;
 };
 
 struct ConfigResourceDescribeResponse {

@@ -33,6 +33,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn describe_request_keeps_legacy_default_and_supports_locale_extension() {
+        let request = ConfigResourceDescribeRequest {
+            resource_id: "sunray.params.flight".to_owned(),
+            locale: String::new(),
+        };
+        let legacy = request.encode().unwrap();
+        assert_eq!(ConfigResourceDescribeRequest::decode(&legacy).unwrap(), request);
+
+        let localized = ConfigResourceDescribeRequest {
+            resource_id: "sunray.params.flight".to_owned(),
+            locale: "zh-CN".to_owned(),
+        };
+        assert_eq!(
+            ConfigResourceDescribeRequest::decode(&localized.encode().unwrap()).unwrap(),
+            localized
+        );
+    }
+
+    #[test]
     fn patch_matches_cross_language_golden_vector_and_rejects_corruption() {
         let request = ConfigResourcePatchRequest {
             resource_id: "sunray.params.flight".to_owned(),

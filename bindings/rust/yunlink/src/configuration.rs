@@ -198,6 +198,8 @@ pub struct ConfigResourceListResponse {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConfigResourceDescribeRequest {
     pub resource_id: String,
+    /// BCP-47 locale for provider-owned labels; empty selects the provider default.
+    pub locale: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]

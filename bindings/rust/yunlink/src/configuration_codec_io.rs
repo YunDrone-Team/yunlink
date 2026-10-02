@@ -70,6 +70,9 @@ impl<'a> Reader<'a> {
     pub(crate) fn done(&self) -> bool {
         self.cursor == self.data.len()
     }
+    pub(crate) fn remaining(&self) -> bool {
+        self.cursor < self.data.len()
+    }
     pub(crate) fn u8(&mut self) -> Result<u8, ()> {
         let value = *self.data.get(self.cursor).ok_or(())?;
         self.cursor += 1;
