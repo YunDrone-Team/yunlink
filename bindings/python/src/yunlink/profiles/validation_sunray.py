@@ -3,6 +3,10 @@ import math
 from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 
 
+def _finite(value) -> bool:
+    return isinstance(value, (int, float)) and math.isfinite(value)
+
+
 def _finite_vector(value) -> bool:
     components = [value.x, value.y]
     if hasattr(value, "z"):
@@ -55,6 +59,10 @@ def validate_formation_set_request(request: sunray.FormationSetRequest) -> None:
             and positive(request.lemniscate.y_scale_m)
             and moving(request.lemniscate.move_speed_mps)
         )
+    elif formation_type in (13, 23):
+        # 13/23 were removed; the wire values stay reserved and are rejected with a
+        # readable reason instead of the generic invalid-request message.
+        raise ValueError("double-ring formations were removed")
     elif formation_type == sunray.FORMATION_LEADER and request.HasField("leader"):
         agents = [slot for slot in request.leader.agent_slots if slot]
         valid = (
@@ -98,8 +106,41 @@ def validate_formation_state(state: sunray.FormationState) -> None:
     valid_target = not state.virtual_leader_target_valid or (
         state.HasField("virtual_leader_target") and _finite_pose(state.virtual_leader_target)
     )
-    if not 0 <= state.phase <= 4 or not valid_type or not valid_target:
+    # 2.10 起一并承载"本机已受理的编队槽位目标"：valid ⇒ 位姿存在且有限；
+    # valid == false 时字段整体缺省是合法表达（"当前没有已受理目标"）。
+    # 与 C++ 侧 validate_formation_state 同口径；需要随 proto 重新生成的 sunray_pb2.py 才带这两个字段。
+    valid_formation_target = not state.formation_target_valid or (
+        state.HasField("formation_target") and _finite_pose(state.formation_target)
+    )
+    if (
+        not 0 <= state.phase <= 4
+        or not valid_type
+        or not valid_target
+        or not valid_formation_target
+    ):
         raise ValueError("formation state is invalid")
+
+
+def validate_formation_shape(shape: sunray.FormationShape) -> None:
+    """2.11 动态阵型几何图形；与 C++ 侧 validate_formation_shape 同口径。"""
+    if not shape.valid:
+        # 清除语义：points 必须整体缺省，不允许"声明无效却带点"的含糊表达。
+        if len(shape.points) != 0:
+            raise ValueError("formation shape is invalid")
+        return
+    if shape.formation_type not in {
+        sunray.FORMATION_DYNAMIC_POLYGON,
+        sunray.FORMATION_DYNAMIC_RING,
+        sunray.FORMATION_DYNAMIC_LEMNISCATE,
+    }:
+        raise ValueError("formation shape type is not dynamic planar")
+    if len(shape.points) < 3:
+        raise ValueError("formation shape needs at least 3 points")
+    for point in shape.points:
+        if not (_finite(point.x) and _finite(point.y) and _finite(point.z)):
+            raise ValueError("formation shape has a non-finite point")
+    if not _finite(shape.move_speed_mps):
+        raise ValueError("formation shape move speed is not finite")
 
 
 def validate_mapping_state(state: sunray.MappingState) -> None:

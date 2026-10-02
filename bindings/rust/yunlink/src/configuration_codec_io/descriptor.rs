@@ -110,3 +110,4 @@ pub(crate) fn read_schema(reader: &mut Reader<'_>) -> Result<ConfigFieldSchema, 
         advanced,
     })
 }
+

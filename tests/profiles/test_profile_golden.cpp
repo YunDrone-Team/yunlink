@@ -423,6 +423,16 @@ int main() {
     assert(validate_formation_set_request(ring, &validation_error));
     assert(hex(ring.SerializeAsString()) == "081510012a1209000000000000084011000000000000e0bf");
 
+    // 13/23 (static / dynamic double ring) were removed. Both wire numbers are
+    // reserved: an old peer sending either one must be rejected, not reinterpreted.
+    FormationSetRequest removed_ring_type;
+    removed_ring_type.set_formation_type(static_cast<FormationType>(13));
+    assert(!validate_formation_set_request(removed_ring_type, &validation_error));
+    assert(validation_error.find("double-ring formations were removed") != std::string::npos);
+    removed_ring_type.set_formation_type(static_cast<FormationType>(23));
+    assert(!validate_formation_set_request(removed_ring_type, &validation_error));
+    assert(validation_error.find("double-ring formations were removed") != std::string::npos);
+
     FormationSetRequest leader;
     leader.set_formation_type(FORMATION_LEADER);
     for (int index = 0; index < 25; ++index) {
@@ -461,5 +471,47 @@ int main() {
     assert(hex(formation_state.SerializeAsString()) ==
            "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000"
            "000000f03f110000000000000040190000000000000840120921000000000000f03f");
+
+    FormationState spatial_state;
+    spatial_state.set_source_stamp_ns(42);
+    spatial_state.set_agent_id("uav1");
+    spatial_state.set_formation_type(FORMATION_DYNAMIC_RING);
+    spatial_state.set_phase(FORMATION_PHASE_ACTIVE);
+    spatial_state.set_state_sequence(7);
+    assert(validate_formation_state(spatial_state, &validation_error));
+    assert(hex(spatial_state.SerializeAsString()) ==
+           "082a1a047561763138024015980107");
+    assert_round_trip(spatial_state);
+
+    FormationState bad_spatial_type = spatial_state;
+    bad_spatial_type.set_formation_type(static_cast<FormationType>(14));
+    assert(!validate_formation_state(bad_spatial_type, &validation_error));
+
+    // 2.10：逐成员槽位目标回显（字段 22/23）。valid ⇒ 位姿必须存在且有限；
+    // valid == false 时字段整体缺省必须放行（这是"当前没有已受理目标"的唯一表达）。
+    FormationState target_echo = spatial_state;
+    target_echo.set_formation_target_valid(true);
+    assert(!validate_formation_state(target_echo, &validation_error));  // valid 却没有位姿
+    target_echo.mutable_formation_target()->mutable_position()->set_x(1.0);
+    target_echo.mutable_formation_target()->mutable_position()->set_y(2.0);
+    target_echo.mutable_formation_target()->mutable_position()->set_z(3.0);
+    target_echo.mutable_formation_target()->mutable_orientation()->set_z(0.5);
+    target_echo.mutable_formation_target()->mutable_orientation()->set_w(0.8660254037844386);
+    assert(validate_formation_state(target_echo, &validation_error));
+    // 字段 22/23 的 wire 编号在这里锁死：b0 01 = field 22(varint)、ba 01 = field 23(LEN)。
+    assert(hex(target_echo.SerializeAsString()) ==
+           "082a1a047561763138024015980107b00101ba01310a1b09"
+           "000000000000f03f110000000000000040190000000000000840121219000000000000e03f21"
+           "aa4c58e87ab6eb3f");
+
+    FormationState nan_target = target_echo;
+    nan_target.mutable_formation_target()->mutable_position()->set_x(
+        std::numeric_limits<double>::quiet_NaN());
+    assert(!validate_formation_state(nan_target, &validation_error));
+
+    FormationState no_target = target_echo;
+    no_target.set_formation_target_valid(false);
+    no_target.clear_formation_target();
+    assert(validate_formation_state(no_target, &validation_error));
     return 0;
 }

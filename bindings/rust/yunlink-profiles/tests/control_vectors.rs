@@ -486,6 +486,20 @@ fn formation_v27_messages_match_golden_vectors_and_validate() {
         "082a12036d61701a0475617631220a080a12047561763118023802400c480160016a280a1b09000000000000f03f110000000000000040190000000000000840120921000000000000f03f"
     );
 
+    // 13/23 (static / dynamic double ring) were removed. Both wire numbers are
+    // reserved: an old peer sending either one must be rejected with a readable
+    // reason, not silently reinterpreted as another formation.
+    for removed in [13, 23] {
+        let request = sunray::FormationSetRequest {
+            formation_type: removed,
+            ..Default::default()
+        };
+        assert_eq!(
+            validate_formation_set_request(&request),
+            Err("double-ring formations were removed")
+        );
+    }
+
     let mut invalid = ring;
     invalid.ring.as_mut().unwrap().move_speed_mps = 0.0;
     assert!(validate_formation_set_request(&invalid).is_err());

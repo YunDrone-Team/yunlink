@@ -58,6 +58,9 @@ pub fn validate_formation_set_request(
             })
             .map(|_| ())
             .ok_or("dynamic formation lemniscate is invalid"),
+        // 13/23 were removed; the wire values stay reserved and are rejected with a
+        // readable reason instead of falling through to the generic invalid-type arm.
+        13 | 23 => Err("double-ring formations were removed"),
         12 => {
             let leader = request
                 .leader
@@ -111,6 +114,8 @@ pub fn validate_formation_leader_target_request(
 }
 
 pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'static str> {
+    // 13/23 are reserved and no longer valid echo types: an old peer's state frame
+    // is treated as unknown/unsupported (dropped for diagnosis, never rendered).
     let valid_type = matches!(
         state.formation_type,
         0 | 1 | 2 | 10 | 11 | 12 | 20 | 21 | 22
@@ -120,7 +125,9 @@ pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'
             .virtual_leader_target
             .as_ref()
             .is_some_and(finite_pose);
-    ((0..=4).contains(&state.phase) && valid_type && valid_target)
+    ((0..=4).contains(&state.phase)
+        && valid_type
+        && valid_target)
         .then_some(())
         .ok_or("formation state is invalid")
 }

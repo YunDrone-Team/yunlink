@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <unordered_set>
+#include <google/protobuf/unknown_field_set.h>
 
 namespace com::yundrone::sunray::v2 {
 namespace {
@@ -25,6 +26,10 @@ bool finite(const org::yunlink::mobility::v1::Quaternion& value) {
     const double norm_squared = value.x() * value.x() + value.y() * value.y() +
                                 value.z() * value.z() + value.w() * value.w();
     return std::isfinite(norm_squared) && norm_squared > 1e-12;
+}
+
+bool finite(const FormationShapePoint& value) {
+    return std::isfinite(value.x()) && std::isfinite(value.y()) && std::isfinite(value.z());
 }
 
 bool finite(const org::yunlink::mobility::v1::Pose& value) {
@@ -282,6 +287,16 @@ bool validate_planner_set_home_request(const PlannerSetHomeRequest& request, std
 }
 
 bool validate_formation_set_request(const FormationSetRequest& request, std::string* error) {
+    // Minor-version negotiation permits older peers. Reserved fields are still
+    // preserved by protobuf as unknown fields: never silently flatten an old
+    // explicit-height or double-ring request into a planar command.
+    const auto& unknown = request.GetReflection()->GetUnknownFields(request);
+    for (int i = 0; i < unknown.field_count(); ++i) {
+        const int number = unknown.field(i).number();
+        if (number == 8 || number == 9 || number == 10) {
+            return fail(error, "removed formation height or double-ring fields are not supported");
+        }
+    }
     const auto positive = [](double value) { return std::isfinite(value) && value > 0.0; };
     const auto moving = [](double value) {
         return std::isfinite(value) && std::abs(value) > 0.0;
@@ -320,6 +335,11 @@ bool validate_formation_set_request(const FormationSetRequest& request, std::str
             return fail(error, "dynamic formation lemniscate is invalid");
         }
         return true;
+    // 13/23 (static / dynamic double ring) were removed; the reserved wire values
+    // are rejected with a readable reason instead of the generic invalid-type arm.
+    case static_cast<FormationType>(13):
+    case static_cast<FormationType>(23):
+        return fail(error, "double-ring formations were removed");
     case FORMATION_LEADER: {
         if (!request.has_leader() || request.leader().agent_slots_size() != 25 ||
             request.leader().virtual_leader_slots_size() != 25 ||
@@ -364,6 +384,22 @@ bool validate_formation_leader_target_request(const FormationLeaderTargetRequest
     return fail(error, "formation leader target mode is invalid");
 }
 
+bool validate_formation_preview_request(const FormationPreviewRequest& request,
+                                       std::string* error) {
+    // 2.12 预览：goal 沿用 set 的校验口径；参考位姿必须有限；成员 ID 不得为 0。
+    if (!request.has_goal() || !request.has_reference() ||
+        !finite(request.reference()) ||
+        !validate_formation_set_request(request.goal(), error)) {
+        return fail(error, "formation preview request is invalid");
+    }
+    for (const auto member : request.member_ids()) {
+        if (member == 0) {
+            return fail(error, "formation preview member id must be non-zero");
+        }
+    }
+    return true;
+}
+
 bool validate_formation_state(const FormationState& state, std::string* error) {
     const bool valid_type = state.formation_type() == FORMATION_UNKNOWN ||
                             state.formation_type() == FORMATION_TAKEOFF ||
@@ -374,13 +410,43 @@ bool validate_formation_state(const FormationState& state, std::string* error) {
                             state.formation_type() == FORMATION_DYNAMIC_POLYGON ||
                             state.formation_type() == FORMATION_DYNAMIC_RING ||
                             state.formation_type() == FORMATION_DYNAMIC_LEMNISCATE;
+    // 2.10 起 FormationState 承载"本机已受理的编队槽位目标"：valid ⇒ 位姿存在且有限。
+    // valid == false 时字段整体缺省是合法表达（"当前没有已受理目标"），也必须放行。
     if (state.phase() < FORMATION_PHASE_IDLE || state.phase() > FORMATION_PHASE_ERROR ||
-        !valid_type || (state.virtual_leader_target_valid() &&
+        !valid_type ||
+        (state.virtual_leader_target_valid() &&
                         (!state.has_virtual_leader_target() ||
-                         !finite(state.virtual_leader_target())))) {
+                         !finite(state.virtual_leader_target()))) ||
+        (state.formation_target_valid() &&
+                        (!state.has_formation_target() || !finite(state.formation_target())))) {
         return fail(error, "formation state is invalid");
     }
     return true;
+}
+
+bool validate_formation_shape(const FormationShape& shape, std::string* error) {
+    // 2.11：动态阵型几何图形。静态阵型不发（valid=false 用于清除上一任务遗留的图形）。
+    if (!shape.valid()) {
+        // 清除语义：points 必须整体缺省，不允许"带点但声明无效"这种含糊表达。
+        return shape.points_size() == 0 ? true
+                                        : fail(error, "formation shape is invalid");
+    }
+    if (shape.formation_type() != FORMATION_DYNAMIC_POLYGON &&
+        shape.formation_type() != FORMATION_DYNAMIC_RING &&
+        shape.formation_type() != FORMATION_DYNAMIC_LEMNISCATE) {
+        return fail(error, "formation shape type is not dynamic planar");
+    }
+    if (shape.points_size() < 3) {
+        return fail(error, "formation shape needs at least 3 points");
+    }
+    for (const auto& point : shape.points()) {
+        if (!finite(point)) {
+            return fail(error, "formation shape has a non-finite point");
+        }
+    }
+    return std::isfinite(shape.move_speed_mps())
+               ? true
+               : fail(error, "formation shape move speed is not finite");
 }
 
 bool validate_mapping_state(const MappingState& state, std::string* error) {

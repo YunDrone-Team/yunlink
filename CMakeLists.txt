@@ -180,6 +180,10 @@ if (YUNLINK_BUILD_TESTS)
     )
     add_test(NAME test_profile_golden COMMAND test_profile_golden)
 
+    add_executable(test_formation_removed_fields tests/profiles/test_formation_removed_fields.cpp)
+    target_link_libraries(test_formation_removed_fields PRIVATE yunlink_profile_sunray)
+    add_test(NAME test_formation_removed_fields COMMAND test_formation_removed_fields)
+
     add_executable(test_visual_contract tests/profiles/test_visual_contract.cpp)
     target_compile_definitions(test_visual_contract PRIVATE
       YUNLINK_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"

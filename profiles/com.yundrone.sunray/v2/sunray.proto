@@ -35,12 +35,41 @@ message OdomStatus {
   string message = 5;
 }
 
+// 本 profile 内的 TF 快照，语义与 geometry_msgs/TransformStamped 一致：
+// child_frame_id 在 frame_id 下的表达（平移 + 四元数）。
+// 中性的 mobility v1 目前没有 TF 类型，不为这条需求去动它。
+message TransformStamped {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string child_frame_id = 3;
+  org.yunlink.mobility.v1.Pose transform = 4;
+}
+
 message OdomState {
   uint64 source_stamp_ns = 1;
   string frame_id = 2;
-  bool valid = 3;
-  org.yunlink.mobility.v1.Odometry odometry = 4;
+  bool valid = 3;                                   // local（语义不变）
+  org.yunlink.mobility.v1.Odometry odometry = 4;    // local（语义不变）
   uint32 source = 5;
+
+  // ↓↓↓ 2.9 新增：全局那一半（编号从 6 起，不动已有编号，protobuf 向前兼容）
+  //
+  // global_odometry.source_stamp_ns == 0 严格表示"当前没有有效全局位姿"：
+  // 此字段整体缺省（has_global_odometry() == false），既不给零位姿、也不沿用上一帧。
+  org.yunlink.mobility.v1.Odometry global_odometry = 6;
+  // 独立判据，不复用 local 的 valid；恒等于 (global_odometry.source_stamp_ns != 0)。
+  // 与 RelocalizationStateSnapshot.pose_valid 的关系：pose_valid == false ⇒ 这里必须为 false。
+  bool global_odom_valid = 7;
+  // 帧名一律用 "{agent}/…" 全限定形式（与 local_odom.header.frame_id 同一口径）。
+  string world_frame_name = 8;
+  string global_frame_name = 9;
+  string local_frame_name = 10;
+  string base_frame_name = 11;
+  // 三个 TF 仅在各自前提到位时给出；global_to_local_tf 是 global 位姿能否与
+  // 先验地图对齐叠加的前提，缺它 global 位姿只能显示成数字。
+  TransformStamped world_to_global_tf = 12;
+  TransformStamped global_to_local_tf = 13;
+  TransformStamped local_to_base_tf = 14;
 }
 
 // Sunray Profile 2.9. One atomic localization snapshot per entity.
@@ -445,6 +474,10 @@ enum FormationType {
   FORMATION_DYNAMIC_POLYGON = 20;
   FORMATION_DYNAMIC_RING = 21;
   FORMATION_DYNAMIC_LEMNISCATE = 22;
+  // 13 (static double ring) and 23 (dynamic double ring) were removed. The
+  // numbers are reserved and must never be reused; any new formation type
+  // starts at 30.
+  reserved 13, 23;
 }
 
 enum FormationPhase {
@@ -502,6 +535,8 @@ message FormationSetRequest {
   FormationRing ring = 5;
   FormationLemniscate lemniscate = 6;
   FormationLeader leader = 7;
+  // 8 and 9 were removed spatial height fields; numbers are reserved, never reused.
+  reserved 8, 9, 10;
 }
 
 message FormationSetResponse {
@@ -522,6 +557,44 @@ message FormationLeaderTargetRequest {
 message FormationLeaderTargetResponse {
   bool success = 1;
   string message = 2;
+}
+
+// ↓↓↓ 2.12 新增：下发前预览（**零副作用**：不创建任务、不广播、不改机侧任务状态）。
+//
+// 目的：操作员先看到目标点/几何图形与"现在下发会不会被拒"，再决定是否下发。
+// goal 直接复用 FormationSetRequest 的描述（同一份 schema，避免两套几何参数漂移）；
+// reference 是阵型参考位姿（非 LEADER 固定零位，LEADER 传拟下发的虚拟领航位姿）。
+message FormationPreviewRequest {
+  FormationSetRequest goal = 1;
+  org.yunlink.mobility.v1.Pose reference = 2;
+  // 期望参与成员；留空 = 机侧按自身 swarm_num 取 1..N。
+  repeated uint32 member_ids = 3;
+}
+
+message FormationPreviewSlot {
+  uint32 agent_id = 1;
+  org.yunlink.mobility.v1.Pose target = 2;
+}
+
+message FormationPreviewResponse {
+  // 几何是否可算（与"当前是否会受理"分开：未解锁/未起飞也能预览形状）。
+  bool success = 1;
+  // 拒绝码沿用 FormationSetResponse.error_code 的同一套常量。
+  uint32 error_code = 2;
+  string message = 3;
+  // 4 原为 mpc_routed（中心化 MPC 已移除）；编号保留，禁止复用。
+  reserved 4;
+  bool dynamic = 5;
+  bool phase_aligned = 6;
+  double phase_offset_sec = 7;
+  // 逐成员预览目标（槽位来自任务的权威方案，agent_id 可能不等于请求顺序）。
+  repeated FormationPreviewSlot slots = 8;
+  // 动态阵型的几何图形（一个周期 72 点）；静态阵型为空。
+  bool shape_closed = 9;
+  repeated FormationShapePoint shape_points = 10;
+  // 以当前状态是否会受理（几何合法但未就绪时为 false，原因见 reject_reason）。
+  bool would_accept = 11;
+  string reject_reason = 12;
 }
 
 message FormationStopDynamicRequest {}
@@ -548,6 +621,51 @@ message FormationState {
   string formation_layout_key = 14;
   bool formation_layout_valid = 15;
   string last_error = 16;
+  // 17/18 and 20/21 were removed spatial capability/start-gate fields.
+  reserved 17, 18, 20, 21;
+  uint64 state_sequence = 19;
+
+  // ↓↓↓ 2.10 新增：本机已受理的编队槽位目标（编号从 22 起，不动已有编号，protobuf 向前兼容）
+  //
+  // formation_target_valid == false 严格表示"当前没有已受理的编队目标"：此时
+  // formation_target 整体缺省（has_formation_target() == false）——既不给零位姿，
+  // 也不沿用上一帧。未组队 / 收到 FormationStopDynamic / 离开编队 / 任务 epoch 结束 /
+  // 化解编队 / 发生错误时都必须**立即**翻成 false，不等下一个遥测周期。
+  bool formation_target_valid = 22;
+  // 本机（上报机）已受理的编队槽位目标，与同一条 FormationState.frame_id 同帧表达（米 / 弧度）。
+  // 语义是"目标"而非本机实测位姿：静态阵型为固定槽位目标，动态阵型为**当前时刻的瞬时**
+  // 槽位目标；两者在收敛前必须与本机实测位姿不同。
+  // orientation 至少是有限的平面 yaw 四元数（qz = sin(yaw/2)、qw = cos(yaw/2)、qx = qy = 0）；
+  // 地面站只取平面 yaw，roll/pitch 会被忽略，但不允许 NaN/Inf。
+  org.yunlink.mobility.v1.Pose formation_target = 23;
+}
+
+// ↓↓↓ 2.11 新增：动态阵型的**几何图形**（不是逐成员的追逐轨迹）。
+//
+// 语义：动态多边形 / 动态圆环 / 动态 8 字时，成员沿阵型自身的几何图形前进；该图形在
+// 世界系中是静止的，因此每个任务只需要下发一次（流上按 reliable_latest 发布）。
+// 静态阵型不发布本消息；valid == false 表示"清除显示"（切静态阵型 / 任务结束 / 被抢占 /
+// 故障），此时 points 必须整体缺省（既不给零位姿，也不沿用上一帧）。
+message FormationShapePoint {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message FormationShape {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string agent_id = 3;
+  FormationTaskEpoch task_epoch = 4;
+  string task_payload_digest = 5;
+  FormationType formation_type = 6;
+  bool valid = 7;
+  // true = 闭合回路（环 / 多边形周长 / 8 字）；下游需把末点连回首点。
+  bool closed = 8;
+  // 成员沿图形的前进速度（m/s），仅用于标注/诊断，不是渲染样式。
+  double move_speed_mps = 9;
+  // 世界系采样点（已含参考位姿），与同一条 frame_id 同帧表达，单位米。
+  repeated FormationShapePoint points = 10;
 }
 
 // Point-cloud accumulation control and status.  This is intentionally a small
@@ -640,4 +758,72 @@ message FeatureStopResponse {
   bool success = 1;
   string message = 2;
   string name = 3;
+}
+
+// ---------------------------------------------------------------------------
+// 重定位：先验地图激活与播种（Sunray Open3D 全局定位）
+//
+// 定位节点持有"一张生效地图 + 一个 odom->map 变换"。换图会让旧变换的语义完全失效，
+// 因此 activate_map 与 seed 都是**地面专用**操作：Bridge 侧与数据文件上传共用同一把
+// 安全门禁（UAV 未解锁 / UGV HOLD），飞行中一律拒绝。
+// ---------------------------------------------------------------------------
+
+// 地图激活。path 是先验地图在端点文件系统上的绝对路径（通常由 MediaFilePut 先落地）。
+message RelocalizationActivateMapRequest {
+  string path = 1;
+}
+message RelocalizationActivateMapResponse {
+  bool accepted = 1;
+  // 拒绝或失败原因，必须可直接展示给操作员。
+  string message = 2;
+  // 生效后的地图身份，便于客户端确认"我激活的是哪一张"。
+  string active_path = 3;
+  uint64 point_count = 4;
+}
+
+// 播种：给出机体在地图中的大致位姿，由机上 ICP 收敛到精确位姿。
+// 朝向用 yaw（弧度，绕地图 z 轴）表达；roll/pitch 缺省由机上按 IMU 重力对齐处理，
+// 因此客户端通常只需要给 x/y/z/yaw 四个量。
+message RelocalizationSeedRequest {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  // 弧度，绕地图 z 轴。
+  double yaw = 4;
+  // 为 true 时 roll/pitch 生效；为 false 时由机上使用重力对齐值。
+  bool has_roll_pitch = 5;
+  double roll = 6;
+  double pitch = 7;
+}
+message RelocalizationSeedResponse {
+  bool accepted = 1;
+  string message = 2;
+  // 单调递增，用于客户端关联"哪一次播种被采纳"。
+  uint64 seed_id = 3;
+}
+
+// 定位链路状态快照。Bridge 订阅机上 sunray_msgs/RelocalizationState 后按 stream 转发。
+//
+// 用类型化消息而不是 JSON 字符串：字段改名能在编译期暴露，且不需要在 Bridge 里
+// 引入 JSON 解析依赖。字段与 common/sunray_msgs/localization/msg/RelocalizationState.msg
+// 一一对应。
+message RelocalizationStateSnapshot {
+  // idle / loading / seeded / converging / active / failed / degraded
+  string state = 1;
+  // 当前生效的先验地图（机上解析后的绝对路径）。
+  string map_path = 2;
+  uint64 point_count = 3;
+  // 失败或降级原因，可直接展示给操作员。
+  string detail = 4;
+  // 机上已接收并采纳的播种次数（每次收到 /initialpose 递增）。
+  // 用途：让客户端确认"我这次点选已经到达机上"。
+  // 注意它与 RelocalizationSeedResponse.seed_id 是**两个独立计数器**：后者是
+  // "Bridge 受理并转发了几次"，前者是"机上实际收到几次"。两者都单调递增，但
+  // Bridge 或节点重启后起点不同，不要当作同一个编号使用。
+  uint64 seed_id_accepted = 5;
+  // false 表示当前没有有效的全局位姿，下游不得据此定位。
+  bool pose_valid = 6;
+  // 与 /localization_3d_confidence 同源。
+  double confidence = 7;
+  uint64 source_stamp_ns = 8;
 }

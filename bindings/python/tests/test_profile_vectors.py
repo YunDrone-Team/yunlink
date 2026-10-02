@@ -396,6 +396,15 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
         "081510012a1209000000000000084011000000000000e0bf"
     )
 
+    # 13/23 (static / dynamic double ring) were removed. Both wire numbers are
+    # reserved: an old peer sending either one must be rejected with a readable
+    # reason, not silently reinterpreted as another formation.
+    for removed in (13, 23):
+        with pytest.raises(ValueError, match="double-ring formations were removed"):
+            validate_formation_set_request(
+                sunray.FormationSetRequest(formation_type=removed)
+            )
+
     variants = [
         sunray.FormationSetRequest(formation_type=sunray.FORMATION_TAKEOFF),
         sunray.FormationSetRequest(formation_type=sunray.FORMATION_LAND),
