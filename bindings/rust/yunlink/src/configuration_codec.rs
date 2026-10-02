@@ -123,6 +123,7 @@ mod tests {
                 unit: "m/s".to_owned(),
                 has_default_value: true,
                 default_value: ConfigValue::Double(2.5),
+                advanced: true,
             }, ConfigFieldSchema {
                 path: "control.horizon_steps".to_owned(),
                 group_path: "control".to_owned(),
@@ -140,6 +141,7 @@ mod tests {
                 unit: String::new(),
                 has_default_value: false,
                 default_value: ConfigValue::String(String::new()),
+                advanced: false,
             }],
         };
         let payload = response.encode().unwrap();

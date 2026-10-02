@@ -112,6 +112,7 @@ int main() {
     field.choices = {{yunlink::ConfigValue::from_double(3.0), "Indoor"}};
     field.has_default_value = true;
     field.default_value = yunlink::ConfigValue::from_double(2.5);
+    field.advanced = true;
     describe.fields.push_back(field);
     yunlink::ConfigFieldSchema rebuild_field;
     rebuild_field.path = "control.horizon_steps";
@@ -128,9 +129,11 @@ int main() {
     assert(decoded_describe.fields.front().unit == "m/s");
     assert(decoded_describe.fields.front().has_default_value);
     assert(decoded_describe.fields.front().default_value.double_value == 2.5);
+    assert(decoded_describe.fields.front().advanced);
     assert(decoded_describe.fields.back().update_policy ==
            yunlink::ConfigFieldUpdatePolicy::kRebuildRequired);
     assert(!decoded_describe.fields.back().has_default_value);
+    assert(!decoded_describe.fields.back().advanced);
 
     // The default locale keeps the legacy request wire shape; a non-empty
     // locale is an additive extension for newer providers.

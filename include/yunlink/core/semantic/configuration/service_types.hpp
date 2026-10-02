@@ -158,6 +158,8 @@ struct ConfigFieldSchema {
     // 注意不能靠 default_value 本身是否为空来判断：默认值可能是空串、0 或 false。
     ConfigValue default_value;
     bool has_default_value = false;
+    // true 表示高级参数：地面站只在专家模式下显示。缺省 false。
+    bool advanced = false;
 };
 
 struct ConfigFieldValue {

@@ -130,6 +130,8 @@ pub struct ConfigFieldSchema {
     /// 不能靠 default_value 本身判断有没有默认值 —— 它可能是空串 / 0 / false。
     pub default_value: ConfigValue,
     pub has_default_value: bool,
+    /// true 表示高级参数，只影响地面站展示模式。
+    pub advanced: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
