@@ -505,6 +505,8 @@ message FormationSetRequest {
   FormationLeader leader = 7;
   // 8 and 9 were removed spatial height fields; numbers are reserved, never reused.
   reserved 8, 9, 10;
+  // 小队作用域：空 = swarm 级（向后兼容）；非空 = 只作用于该 team_id 的成员。
+  string team_id = 11;
 }
 
 message FormationSetResponse {
