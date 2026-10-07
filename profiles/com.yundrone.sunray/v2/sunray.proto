@@ -703,6 +703,16 @@ message FeatureDescriptor {
   string health_message = 9;
   bool auto_start = 10;
   string start_preview_command = 11;
+  string demo_id = 12;
+  TeamDemoLifecycleMode lifecycle_mode = 13;
+  string target_scope = 14;
+}
+
+enum TeamDemoLifecycleMode {
+  TEAM_DEMO_LIFECYCLE_UNSPECIFIED = 0;
+  TEAM_DEMO_MANAGED_TAKEOFF_LAND = 1;
+  TEAM_DEMO_REQUIRES_AIRBORNE = 2;
+  TEAM_DEMO_MANAGED_TAKEOFF_THEN_GOAL = 3;
 }
 
 message FeatureListRequest {}
@@ -728,6 +738,19 @@ message FeatureStopResponse {
   bool success = 1;
   string message = 2;
   string name = 3;
+}
+
+message TeamDemoStartRequest {
+  string demo_id = 1;
+  string target_agent_name = 2;
+  uint32 target_agent_id = 3;
+}
+message TeamDemoStartResponse {
+  bool success = 1;
+  string message = 2;
+  string demo_id = 3;
+  string target_agent_name = 4;
+  uint32 target_agent_id = 5;
 }
 
 // ---------------------------------------------------------------------------
