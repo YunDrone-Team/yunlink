@@ -522,6 +522,16 @@ message FormationLeaderTargetRequest {
   string frame_id = 3;
   org.yunlink.mobility.v1.Pose target_pose = 4;
   string odom_topic = 5;
+  // 小队作用域：空 = swarm 级（向后兼容）；非空 = 只作用于该 team_id 的成员。
+  // 语义与 `FormationSetRequest.team_id = 11` **完全同口径**（原文透传、trim、空=swarm），
+  // 不要另立规则。
+  //
+  // ⚠️ 这是**安全门禁**字段，不是可选提示：不含本字段的旧桥会按 protobuf 规则**静默忽略**它，
+  // 一条"只发给 team_alpha"的长机目标就会退化成"全部小队"——操作员以为只动了一队。
+  // 因此两侧必须在**会话 minor 相等且 digest 一致**后才允许下发带 team_id 的请求
+  // （地面站侧门禁见 `gateway/src/yunlink_monitor/actions/formation.rs` 的 TEAM_SCOPE_MINOR，
+  // 与 `FormationSetRequest.team_id` 的 2.15 门禁同款）。
+  string team_id = 6;
 }
 
 message FormationLeaderTargetResponse {
