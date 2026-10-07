@@ -618,6 +618,19 @@ message FormationState {
   // orientation 至少是有限的平面 yaw 四元数（qz = sin(yaw/2)、qw = cos(yaw/2)、qx = qy = 0）；
   // 地面站只取平面 yaw，roll/pitch 会被忽略，但不允许 NaN/Inf。
   org.yunlink.mobility.v1.Pose formation_target = 23;
+
+  // ↓↓↓ 2.16 新增：虚拟长机目标的小队作用域（编号从 24 起，不动已有编号，protobuf 向前兼容）
+  //
+  // 本机上报的 `virtual_leader_target` 属于哪个小队域：空串 = swarm 级（全局域），
+  // 非空 = 该值就是机侧 `sunray.team_id` 原文。语义与 `FormationSetRequest.team_id = 11`、
+  // `FormationLeaderTargetRequest.team_id = 6` **完全同口径**（原文透传、trim、空=swarm）。
+  //
+  // 为什么必须带：按队分域后，`virtual_leader_target` 只是"**这台机上**生效的那个域的目标"。
+  // 地面站若不看本字段，就无法判断该目标是"全部小队"（应画一个圈、标"全部小队"）还是
+  // 某一队的（应标到该队）；把别队的目标标到本队，正是过去那次误操作的形态。
+  //
+  // 仅当 `virtual_leader_target_valid == true` 时本字段才有效；valid == false 时忽略。
+  string virtual_leader_team_id = 24;
 }
 
 // ↓↓↓ 2.11 新增：动态阵型的**几何图形**（不是逐成员的追逐轨迹）。
