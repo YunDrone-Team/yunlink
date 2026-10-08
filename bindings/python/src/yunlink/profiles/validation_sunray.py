@@ -91,6 +91,17 @@ def validate_formation_leader_target_request(
         raise ValueError("formation leader target request is invalid")
 
 
+def validate_team_goal_request(request: sunray.TeamGoalRequest) -> None:
+    # 2.17 小队目标：与 formation leader target 是两条独立 action。
+    # team_id 必填非空是安全契约（没有"空 = 全部小队"），空值/未知一律拒绝。
+    if not request.team_id:
+        raise ValueError("team goal request team_id must not be empty")
+    if not request.frame_id:
+        raise ValueError("team goal request frame_id must not be empty")
+    if not request.HasField("target_pose") or not _finite_pose(request.target_pose):
+        raise ValueError("team goal target pose is invalid")
+
+
 def validate_formation_state(state: sunray.FormationState) -> None:
     valid_type = state.formation_type in {
         sunray.FORMATION_UNKNOWN,

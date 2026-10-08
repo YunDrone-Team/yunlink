@@ -446,6 +446,43 @@ int main() {
            "0801102a1a036d617022280a1b09000000000000f03f110000000000000040190000000000000840"
            "120921000000000000f03f");
 
+    // 2.17 小队目标：与 FormationLeaderTargetRequest 是**两条独立 action**（wire 也不共享字段）。
+    // team_id 必填非空是本消息的**安全契约**：空值必须在协议层被拒。
+    TeamGoalRequest team_goal;
+    team_goal.set_frame_id("map");
+    team_goal.set_source_stamp_ns(42);
+    team_goal.mutable_target_pose()->mutable_position()->set_x(1.0);
+    team_goal.mutable_target_pose()->mutable_position()->set_y(2.0);
+    team_goal.mutable_target_pose()->mutable_position()->set_z(3.0);
+    team_goal.mutable_target_pose()->mutable_orientation()->set_w(1.0);
+    team_goal.set_team_id("team_1");
+    assert(validate_team_goal_request(team_goal, &validation_error));
+    assert(hex(team_goal.SerializeAsString()) ==
+           "0a036d6170102a1a280a1b09000000000000f03f110000000000000040190000000000000840120921"
+           "000000000000f03f22067465616d5f31");
+    // 空 team_id：拒绝（不是"空 = 全部小队"——那正是被拆掉的旧通道病根）。
+    TeamGoalRequest team_goal_missing_team = team_goal;
+    team_goal_missing_team.clear_team_id();
+    assert(!validate_team_goal_request(team_goal_missing_team, &validation_error));
+    assert(validation_error.find("team_id") != std::string::npos);
+    // 空 frame_id / 缺 target_pose / 四元数范数为零：逐一拒绝。
+    TeamGoalRequest team_goal_missing_frame = team_goal;
+    team_goal_missing_frame.clear_frame_id();
+    assert(!validate_team_goal_request(team_goal_missing_frame, &validation_error));
+    TeamGoalRequest team_goal_missing_pose = team_goal;
+    team_goal_missing_pose.clear_target_pose();
+    assert(!validate_team_goal_request(team_goal_missing_pose, &validation_error));
+    TeamGoalRequest team_goal_zero_quaternion = team_goal;
+    team_goal_zero_quaternion.mutable_target_pose()->mutable_orientation()->set_w(0.0);
+    assert(!validate_team_goal_request(team_goal_zero_quaternion, &validation_error));
+
+    TeamGoalResponse team_goal_response;
+    team_goal_response.set_success(true);
+    team_goal_response.set_message("accepted by uav1");
+    team_goal_response.set_team_id("team_1");
+    team_goal_response.set_planner_agent_id("uav1");
+    assert_round_trip(team_goal_response);
+
     FormationState formation_state;
     formation_state.set_source_stamp_ns(42);
     formation_state.set_frame_id("map");

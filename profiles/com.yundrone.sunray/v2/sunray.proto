@@ -539,6 +539,47 @@ message FormationLeaderTargetResponse {
   string message = 2;
 }
 
+// ===========================================================================
+// ↓↓↓ 2.17 新增：**小队目标**（TeamGoal）——与上面的 FormationLeaderTargetRequest
+// （阵型虚拟长机目标）**语义无关**，不要混用、不要互相复用通道。
+//
+// 背景：地面站协作页的"2D 目标点"过去复用了阵型虚拟长机的线协议，于是 Team/协同控制
+// 模式下必然撞上阵型那道门，弹出与操作无关的"仅已建立的 Leader 阵型可设置虚拟 leader
+// 目标"。本组消息把"小队目标"独立成一条 action：
+//   - 收件人 = 该小队的**规划代表**（当前配置固定为 UAV）；
+//   - 机侧动作 = 把目标发布到本机规划器目标话题 `<agent_prefix>/move_base_simple/goal`，
+//     **不产生任何控制指令**，控制出口仍是既有链路；
+//   - 随动成员（UGV）不接收目标：误发给随动成员时明确拒绝并指名该发给谁；
+//   - **不写** FormationState.virtual_leader_target*，**不进** swarm_sync 的阵型同步。
+//
+// ⚠️ team_id 是**必填、非空**字段（不像 FormationSetRequest.team_id /
+// FormationLeaderTargetRequest.team_id 的"空 = swarm 级"）：空值或未知 team 一律拒绝。
+// 这正是本 action 存在的安全意义——旧通道里"只发一队"会因为旧桥静默忽略 team_id 而
+// 退化成"全部小队"；没有"空 = 全部"这个口子，这类事故在协议层就不可能发生。
+message TeamGoalRequest {
+  // 目标点所在帧（与 FormationLeaderTargetRequest.frame_id 同口径）。
+  string frame_id = 1;
+  // 源时间戳（地面站采样时刻），用于链路时延观测。
+  uint64 source_stamp_ns = 2;
+  // 目标位姿：只取 position.x/y 与 yaw；z 由机侧规划器的 goal_z 决定（不要臆造高度）。
+  org.yunlink.mobility.v1.Pose target_pose = 3;
+  // ★ 必填、非空。空值或未知 team 一律拒绝（success=false + 明确原因）。
+  //    与 FormationSetRequest.team_id = 11 的**取值口径**一致（机侧 sunray.team_id 原文），
+  //    但**契约强度不同**：这里是必填，不是"空 = swarm 级"。
+  string team_id = 4;
+}
+
+message TeamGoalResponse {
+  // 只表示"已被规划代表接受为目标"，不表示已到达。
+  bool success = 1;
+  // 操作员可见的原因。
+  string message = 2;
+  // 回显（便于地面站把结果显示到正确的小队行）。
+  string team_id = 3;
+  // 接收目标的规划代表（如 "uav1"），便于地面站显示"已下发给谁"。
+  string planner_agent_id = 4;
+}
+
 // ↓↓↓ 2.12 新增：下发前预览（**零副作用**：不创建任务、不广播、不改机侧任务状态）。
 //
 // 目的：操作员先看到目标点/几何图形与"现在下发会不会被拒"，再决定是否下发。

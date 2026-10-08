@@ -12,6 +12,7 @@ from yunlink.profiles import (
     validate_summary_snapshot,
     validate_emergency_kill_goal,
     validate_formation_leader_target_request,
+    validate_team_goal_request,
     validate_formation_set_request,
     validate_formation_state,
     validate_land_goal,
@@ -459,6 +460,27 @@ def test_formation_v27_messages_match_cross_language_vectors_and_validate():
             odom_topic="/tracked/leader/odom",
         )
     )
+
+    # 2.17 小队目标：与 formation leader target 是两条独立 action（wire 也不共享字段）。
+    # 这里断言与 C++ test_profile_golden 同一串字节，防跨语言漂移。
+    team_goal = sunray.TeamGoalRequest(
+        frame_id="map",
+        source_stamp_ns=42,
+        target_pose=pose,
+        team_id="team_1",
+    )
+    validate_team_goal_request(team_goal)
+    assert team_goal.SerializeToString(deterministic=True).hex() == (
+        "0a036d6170102a1a280a1b09000000000000f03f110000000000000040"
+        "190000000000000840120921000000000000f03f22067465616d5f31"
+    )
+    for invalid in (
+        sunray.TeamGoalRequest(frame_id="map", target_pose=pose),  # 空 team_id
+        sunray.TeamGoalRequest(team_id="team_1", target_pose=pose),  # 空 frame_id
+        sunray.TeamGoalRequest(frame_id="map", team_id="team_1"),  # 缺 target_pose
+    ):
+        with pytest.raises(ValueError):
+            validate_team_goal_request(invalid)
 
     state = sunray.FormationState(
         source_stamp_ns=42,

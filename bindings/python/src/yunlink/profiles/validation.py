@@ -365,6 +365,7 @@ def validate_ugv_planning_state(state: sunray.UgvPlanningState) -> None:
 
 from .validation_sunray import (
     validate_formation_leader_target_request,
+    validate_team_goal_request,
     validate_formation_set_request,
     validate_formation_state,
     validate_gimbal_angle_goal,
