@@ -35,6 +35,8 @@ bool validate_formation_set_request(const FormationSetRequest& request,
                                     std::string* error = nullptr);
 bool validate_formation_leader_target_request(const FormationLeaderTargetRequest& request,
                                               std::string* error = nullptr);
+// 2.17 小队目标请求的校验：team_id 必填非空、frame_id 非空、target_pose 有限且四元数非零。
+bool validate_team_goal_request(const TeamGoalRequest& request, std::string* error = nullptr);
 // 2.12 下发前预览请求的校验（复用 set 的 goal 口径 + 参考位姿/成员 ID）。
 bool validate_formation_preview_request(const FormationPreviewRequest& request,
                                         std::string* error = nullptr);

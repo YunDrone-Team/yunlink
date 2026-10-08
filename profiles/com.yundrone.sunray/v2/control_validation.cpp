@@ -384,6 +384,23 @@ bool validate_formation_leader_target_request(const FormationLeaderTargetRequest
     return fail(error, "formation leader target mode is invalid");
 }
 
+bool validate_team_goal_request(const TeamGoalRequest& request, std::string* error) {
+    // 2.17 小队目标：team_id 是**必填、非空**的安全门禁字段——这里没有"空 = swarm 级"
+    // 的口子（与 FormationSetRequest/FormationLeaderTargetRequest 的 team_id 恰好相反）。
+    // 空 team_id 一律在协议层拒绝，从源头消灭"只发一队静默退化成全部小队"。
+    if (request.team_id().empty()) {
+        return fail(error, "team goal request team_id must not be empty");
+    }
+    if (request.frame_id().empty()) {
+        return fail(error, "team goal request frame_id must not be empty");
+    }
+    // finite(Pose) 同时覆盖：position 有限、orientation 有限且四元数范数非零。
+    if (!request.has_target_pose() || !finite(request.target_pose())) {
+        return fail(error, "team goal target pose is invalid");
+    }
+    return true;
+}
+
 bool validate_formation_preview_request(const FormationPreviewRequest& request,
                                        std::string* error) {
     // 2.12 预览：goal 沿用 set 的校验口径；参考位姿必须有限；成员 ID 不得为 0。
