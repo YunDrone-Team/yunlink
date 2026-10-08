@@ -3,6 +3,7 @@ use yunlink_profiles::{
     mobility, sunray, validate_emergency_kill_goal, validate_flight_control_state,
     validate_formation_leader_target_request, validate_formation_set_request,
     validate_formation_state, validate_gimbal_angle_goal, validate_gimbal_rate_goal,
+    validate_team_goal_request,
     validate_gimbal_zoom_absolute_goal, validate_land_goal, validate_planner_set_home_request,
     validate_takeoff_goal, validate_uav_direct_control_goal, validate_uav_waypoint_mission_goal,
     validate_ugv_control_state, validate_ugv_move_point_goal, validate_ugv_velocity_goal,
@@ -451,6 +452,8 @@ fn formation_v27_messages_match_golden_vectors_and_validate() {
         frame_id: "map".into(),
         target_pose: Some(pose.clone()),
         odom_topic: String::new(),
+        // 2.16 起长机目标带小队作用域；空串 = swarm 级（与 2.15 的 FormationSetRequest 同口径）。
+        team_id: String::new(),
     };
     validate_formation_leader_target_request(&target).unwrap();
     assert_eq!(
@@ -463,6 +466,34 @@ fn formation_v27_messages_match_golden_vectors_and_validate() {
         ..Default::default()
     };
     validate_formation_leader_target_request(&topic).unwrap();
+
+    // 2.17 小队目标：与 formation leader target 是两条独立 action（wire 也不共享字段）。
+    // 这一串必须与 C++ / Python / GCS 的向量逐字一致，防跨语言漂移。
+    let team_goal = sunray::TeamGoalRequest {
+        frame_id: "map".into(),
+        source_stamp_ns: 42,
+        target_pose: Some(pose.clone()),
+        team_id: "team_1".into(),
+    };
+    validate_team_goal_request(&team_goal).unwrap();
+    assert_eq!(
+        hex::encode(team_goal.encode_to_vec()),
+        "0a036d6170102a1a280a1b09000000000000f03f110000000000000040190000000000000840120921000000000000f03f22067465616d5f31"
+    );
+    // 空 team_id 必须被拒（不是"空 = 全部小队"——那正是被拆掉的旧通道病根）。
+    let empty_team = sunray::TeamGoalRequest {
+        team_id: String::new(),
+        ..team_goal.clone()
+    };
+    assert_eq!(
+        validate_team_goal_request(&empty_team),
+        Err("team goal request team_id must not be empty")
+    );
+    let no_pose = sunray::TeamGoalRequest {
+        target_pose: None,
+        ..team_goal.clone()
+    };
+    assert!(validate_team_goal_request(&no_pose).is_err());
 
     let state = sunray::FormationState {
         source_stamp_ns: 42,

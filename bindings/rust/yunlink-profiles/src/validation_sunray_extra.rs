@@ -113,6 +113,23 @@ pub fn validate_formation_leader_target_request(
     }
 }
 
+/// 2.17 小队目标：与 formation leader target 是两条独立 action。
+/// team_id 必填非空是**安全契约**（没有「空 = 全部小队」），空值一律在协议层拒绝。
+pub fn validate_team_goal_request(
+    request: &sunray::TeamGoalRequest,
+) -> Result<(), &'static str> {
+    if request.team_id.is_empty() {
+        return Err("team goal request team_id must not be empty");
+    }
+    if request.frame_id.is_empty() {
+        return Err("team goal request frame_id must not be empty");
+    }
+    if !request.target_pose.as_ref().is_some_and(finite_pose) {
+        return Err("team goal target pose is invalid");
+    }
+    Ok(())
+}
+
 pub fn validate_formation_state(state: &sunray::FormationState) -> Result<(), &'static str> {
     // 13/23 are reserved and no longer valid echo types: an old peer's state frame
     // is treated as unknown/unsupported (dropped for diagnosis, never rendered).
