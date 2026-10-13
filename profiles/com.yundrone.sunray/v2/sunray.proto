@@ -903,6 +903,7 @@ message StartupQueueItem {
   double started_at = 13;
   double finished_at = 14;
   double elapsed_sec = 15;
+  bool auto_start_locked = 16; // enabled 由设备策略决定（当前：随集群模式）；仍可调整顺序
 }
 message StartupQueueSnapshot {
   uint32 schema_version = 1;
