@@ -957,3 +957,33 @@ message StartupQueueResponse {
   string message = 2;
   StartupQueueSnapshot snapshot = 3;
 }
+
+// ↓↓↓ 2.19 新增：运行期 Team / 协同模式（动态编排层）。
+//
+// 背景：`TEAM_MODE` 原本是**设备环境**字段（update_policy=device_reboot），改它要重启整机；
+// 而"这一轮实验要不要协同"是操作员事实，必须能在运行期表达。因此 Team 模式上移为
+// `sunray_system` 的运行期编排能力：地面站下发本 RPC → 机侧写运行期权威值并重启当前在跑的
+// 集群控制 Feature（UAV/UGV 的 swarm_control）带 `external_planner := enabled`。
+//
+// 语义：
+//   · enabled=true  → 平台按 Team 模式运行：swarm_control 消费外部规划器参考，
+//                     地面站据此出现「协同集群」（机侧属性 sunray.team_mode 同时变 true）；
+//   · enabled=false → 回到普通编队模式（参考链路拆除）。
+//   · 只重启**当前在跑**的集群控制 Feature；没在跑的不动（不会把操作员没启动的功能偷偷拉起）。
+//
+// 与 FeatureStartRequest 的区别：那条是"启停某个 Feature"的通用入口，需要在调用方拼
+// external_planner 参数、并自行决定哪些 Feature 属于集群控制；本 action 把"模式"作为
+// 一等公民，机侧负责挑 Feature、原子切换，并把结果回显成 enabled。
+message SetTeamModeRequest {
+  // true = 进入 Team / 协同模式；false = 回到普通编队模式。
+  bool enabled = 1;
+}
+
+message SetTeamModeResponse {
+  bool success = 1;
+  // 操作员可见的原因；失败时给出具体 Feature 或原因。
+  string message = 2;
+  // 切换后机侧**当前有效**的模式（回读 /sunray/system_context/team_mode）。
+  // 成功时等于请求值；失败时是保持不变的当前值，地面站据此把开关画回真实状态。
+  bool enabled = 3;
+}
