@@ -170,6 +170,11 @@ if (YUNLINK_BUILD_TESTS)
   )
 
   if (YUNLINK_BUILD_PROFILES)
+    add_executable(test_team_contract tests/profiles/test_team_contract.cpp)
+    target_link_libraries(test_team_contract PRIVATE yunlink_profile_sunray yunlink)
+    target_compile_definitions(test_team_contract PRIVATE YUNLINK_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    add_test(NAME test_team_contract COMMAND test_team_contract)
+
     add_executable(test_profile_golden tests/profiles/test_profile_golden.cpp)
     target_link_libraries(test_profile_golden PRIVATE
       yunlink_profile_sunray

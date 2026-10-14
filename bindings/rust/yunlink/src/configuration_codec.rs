@@ -33,6 +33,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn shipment_matches_actual_old_rust_codec_vectors() {
+        let vectors = include_str!("../../../../profiles/com.yundrone.sunray/v2/golden/team-contract-vectors.txt");
+        let golden = |name: &str| {
+            let value = vectors.lines().filter_map(|line| line.split_once('='))
+                .find(|(key, _)| *key == name).unwrap().1;
+            (0..value.len()).step_by(2)
+                .map(|i| u8::from_str_radix(&value[i..i + 2], 16).unwrap())
+                .collect::<Vec<_>>()
+        };
+        let request = ConfigResourceDescribeRequest {
+            resource_id: "sunray.params.flight".into(), locale: "zh-CN".into(),
+        };
+        let bytes = golden("describe.zh-CN.hex");
+        assert_eq!(request.encode().unwrap(), bytes);
+        assert_eq!(ConfigResourceDescribeRequest::decode(&bytes).unwrap(), request);
+        let mut bytes = golden("describe.advanced.hex");
+        let response = ConfigResourceDescribeResponse::decode(&bytes).unwrap();
+        assert_eq!(response.fields.len(), 2);
+        assert!(response.fields[0].advanced);
+        assert!(!response.fields[1].advanced);
+        assert_eq!(response.encode().unwrap(), bytes);
+        bytes.pop();
+        assert!(ConfigResourceDescribeResponse::decode(&bytes).is_err());
+    }
+
+    #[test]
     fn describe_request_keeps_legacy_default_and_supports_locale_extension() {
         let request = ConfigResourceDescribeRequest {
             resource_id: "sunray.params.flight".to_owned(),
