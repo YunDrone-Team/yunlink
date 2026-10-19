@@ -1,5 +1,13 @@
 # Local Verification
 
+## Version metadata correction
+
+The 2026-10-19 main-branch correction aligns the CMake and Python package
+versions at 2.0.2. The historical `v2.0.2` tag at `a8f1ebc` retains its original
+source, which declared 2.0.1; the tag is not moved or republished. This is a
+metadata correction, not a protocol or ABI change: `SOVERSION` remains 2 and
+the Rust crate versions remain unchanged.
+
 Run Core with Profiles disabled and enabled:
 
 ```bash
