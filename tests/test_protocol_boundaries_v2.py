@@ -28,7 +28,7 @@ def files(path: Path):
 violations = []
 for root in GENERIC_PATHS:
     for path in files(root):
-        for line_number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+        for line_number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             if FORBIDDEN.search(line):
                 violations.append(f"{path.relative_to(ROOT)}:{line_number}: {line.strip()}")
 
@@ -38,13 +38,13 @@ ros_protocol = re.compile(
 )
 for root in ROS_FREE_PATHS:
     for path in files(root):
-        for line_number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+        for line_number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             if ros_protocol.search(line):
                 violations.append(
                     f"ROS protocol leaked into {path.relative_to(ROOT)}:{line_number}: {line.strip()}"
                 )
 
-cmake = (ROOT / "CMakeLists.txt").read_text()
+cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
 target_sources = cmake[cmake.index("set(YUNLINK_LIBRARY_SOURCES"):cmake.index("add_library(yunlink STATIC")]
 if "profiles/" in target_sources or "protobuf" in target_sources.lower():
     violations.append("YUNLINK_LIBRARY_SOURCES must not depend on profiles or Protobuf")
@@ -67,7 +67,7 @@ for legacy in legacy_paths:
         violations.append(f"Wire v1 public path still exists: {legacy}")
 
 for path in (ROOT / "CMakePresets.json", ROOT / "bindings/rust/yunlink-sys/build.rs"):
-    if "YUNLINK_BUILD_EXAMPLES" in path.read_text():
+    if "YUNLINK_BUILD_EXAMPLES" in path.read_text(encoding="utf-8"):
         violations.append(f"removed examples option remains in {path.relative_to(ROOT)}")
 
 if violations:

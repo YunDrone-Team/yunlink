@@ -95,8 +95,8 @@ int main() {
     assert(complete.bytes_written == control.size());
     const auto first = WireCodec().decode(written.data(), written.size(), 1);
     assert(first.ok() && first.consumed == lossy.size());
-    const auto second = WireCodec().decode(written.data() + first.consumed,
-                                           written.size() - first.consumed, 1);
+    const auto second =
+        WireCodec().decode(written.data() + first.consumed, written.size() - first.consumed, 1);
     assert(second.ok() && second.consumed == control.size());
 
     Bytes overflow = lossy;

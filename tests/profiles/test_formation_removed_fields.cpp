@@ -14,9 +14,10 @@ int main() {
     const std::string wire = baseline.SerializeAsString();
     // Literal pre-removal protobuf encodings: explicit height enum (8),
     // absolute height including zero (9), double-ring payload including empty (10).
-    const std::vector<std::string> removed = {
-        std::string("\x40\x01", 2), std::string("\x49\0\0\0\0\0\0\0\0", 9),
-        std::string("\x52\0", 2), std::string("\x40\0", 2)};
+    const std::vector<std::string> removed = {std::string("\x40\x01", 2),
+                                              std::string("\x49\0\0\0\0\0\0\0\0", 9),
+                                              std::string("\x52\0", 2),
+                                              std::string("\x40\0", 2)};
     for (const auto& suffix : removed) {
         sunray::FormationSetRequest decoded;
         assert(decoded.ParseFromString(wire + suffix));

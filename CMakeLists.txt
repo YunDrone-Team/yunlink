@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(yunlink VERSION 2.0.2 LANGUAGES CXX)
+project(yunlink VERSION 2.0.3 LANGUAGES CXX)
 
 option(YUNLINK_BUILD_TESTS "Build tests" ON)
 option(YUNLINK_ENABLE_CLANG_TIDY "Run clang-tidy during C++ compilation" OFF)

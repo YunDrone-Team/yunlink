@@ -105,8 +105,7 @@ SocketWriteResult write_frame_chunks(
     const std::function<bool()>& running,
     size_t retry_limit);
 bool recover_receive_overflow(Bytes* buffer, size_t max_bytes);
-void runtime_send_loop(Runtime::Impl* impl,
-                       const std::shared_ptr<RuntimeConnection>& connection);
+void runtime_send_loop(Runtime::Impl* impl, const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_receive_loop(Runtime::Impl* impl,
                           const std::shared_ptr<RuntimeConnection>& connection);
 void runtime_handle_envelope(Runtime::Impl* impl, const Peer& peer, const Envelope& envelope);

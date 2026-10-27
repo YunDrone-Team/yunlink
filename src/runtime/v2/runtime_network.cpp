@@ -185,9 +185,9 @@ SocketWriteResult write_frame_chunks(
     if (offset == bytes.size()) {
         return {SocketWriteStatus::kComplete, offset, {}};
     }
-    return {running() ? SocketWriteStatus::kCongested
-                                      : SocketWriteStatus::kDisconnected,
-            offset, "socket stopped during write"};
+    return {running() ? SocketWriteStatus::kCongested : SocketWriteStatus::kDisconnected,
+            offset,
+            "socket stopped during write"};
 }
 
 SocketWriteResult write_socket(const std::shared_ptr<RuntimeConnection>& connection,
@@ -308,8 +308,7 @@ bool take_next_frame(RuntimeConnection* connection, RuntimeConnection::OutboundF
     return true;
 }
 
-void runtime_send_loop(Runtime::Impl* impl,
-                       const std::shared_ptr<RuntimeConnection>& connection) {
+void runtime_send_loop(Runtime::Impl* impl, const std::shared_ptr<RuntimeConnection>& connection) {
     while (connection->running.load()) {
         RuntimeConnection::OutboundFrame frame;
         {
@@ -339,21 +338,20 @@ void runtime_send_loop(Runtime::Impl* impl,
             std::lock_guard<std::mutex> lock(impl->mutex);
             lossy_channel = impl->lane_owner.find(connection->peer.id) != impl->lane_owner.end();
         }
-        runtime_emit(impl,
-                     {RuntimeEventKind::kError, connection->peer, {}, {},
-                      ErrorCode::kInternal,
-                      "socket write failed: channel=" +
-                          std::string(lossy_channel ? "lossy" : "control") +
-                          " session_id=" +
-                          std::to_string(frame.bytes.size() >= 28
-                                             ? read_u64(frame.bytes.data() + 20)
-                                             : 0) +
-                          " bytes_written=" +
-                          std::to_string(result.bytes_written) +
-                          " frame_bytes=" + std::to_string(frame.bytes.size()) +
-                          " queued_bytes=" + std::to_string(queued_bytes) +
-                          " qos=" + std::to_string(static_cast<unsigned>(frame.qos)) +
-                          " reason=" + result.error});
+        runtime_emit(
+            impl,
+            {RuntimeEventKind::kError,
+             connection->peer,
+             {},
+             {},
+             ErrorCode::kInternal,
+             "socket write failed: channel=" + std::string(lossy_channel ? "lossy" : "control") +
+                 " session_id=" +
+                 std::to_string(frame.bytes.size() >= 28 ? read_u64(frame.bytes.data() + 20) : 0) +
+                 " bytes_written=" + std::to_string(result.bytes_written) +
+                 " frame_bytes=" + std::to_string(frame.bytes.size()) +
+                 " queued_bytes=" + std::to_string(queued_bytes) + " qos=" +
+                 std::to_string(static_cast<unsigned>(frame.qos)) + " reason=" + result.error});
         connection->running.store(false);
         connection->send_condition.notify_all();
         if (connection->socket) {

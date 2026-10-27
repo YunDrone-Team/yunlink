@@ -516,8 +516,7 @@ int main() {
     spatial_state.set_phase(FORMATION_PHASE_ACTIVE);
     spatial_state.set_state_sequence(7);
     assert(validate_formation_state(spatial_state, &validation_error));
-    assert(hex(spatial_state.SerializeAsString()) ==
-           "082a1a047561763138024015980107");
+    assert(hex(spatial_state.SerializeAsString()) == "082a1a047561763138024015980107");
     assert_round_trip(spatial_state);
 
     FormationState bad_spatial_type = spatial_state;
