@@ -8,11 +8,14 @@ part of the Core library target and are disabled by default.
 `org.yunlink.mobility@1.0` defines geometry, odometry, goto, velocity, and
 trajectory payloads.
 
-`com.yundrone.sunray@2.6` defines Sunray telemetry, typed UAV and UGV actions,
+`com.yundrone.sunray@2.20` defines Sunray telemetry, typed UAV and UGV actions,
 formation actions, diagnostics, events, and Feature RPC payloads. It imports
 the Mobility Profile for common geometry. The UGV single-vehicle action and
 control-state contract is specified in
 [`profiles/com.yundrone.sunray-v2-ugv-control.md`](profiles/com.yundrone.sunray-v2-ugv-control.md).
+
+The independent sample-driven acceleration compensation contract is in
+[`profiles/com.yundrone.sunray-v2-acceleration.md`](profiles/com.yundrone.sunray-v2-acceleration.md).
 
 `org.yunlink.visual@1` defines a neutral StreamSample contract for bounded
 point-cloud, marker-array, and image data. Its complete wire, metadata, and

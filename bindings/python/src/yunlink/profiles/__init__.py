@@ -14,6 +14,7 @@ from .org.yunlink.system.v1 import system_pb2 as system
 from .org.yunlink.shell.v1 import shell_pb2 as shell
 from .com.yundrone.sunray.v2 import sunray_pb2 as sunray
 from .validation import (
+    validate_uav_acceleration_compensation_goal,
     valid_metric_key,
     validate_flight_control_state,
     validate_summary_snapshot,
@@ -55,6 +56,7 @@ from .validation import (
 )
 
 __all__ = [
+    "validate_uav_acceleration_compensation_goal",
     "MOBILITY_PROFILE_ID",
     "TELEMETRY_PROFILE_ID",
     "MEDIA_PROFILE_ID",

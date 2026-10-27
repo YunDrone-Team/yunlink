@@ -18,6 +18,8 @@ bool validate_ugv_control_state(const UgvControlState& state, std::string* error
 bool validate_uav_direct_control_goal(const UavDirectControlGoal& goal,
                                       std::string* error = nullptr);
 bool validate_emergency_kill_goal(const EmergencyKillGoal& goal, std::string* error = nullptr);
+bool validate_uav_acceleration_compensation_goal(const UavAccelerationCompensationGoal& goal,
+                                                std::string* error = nullptr);
 bool validate_takeoff_goal(const TakeoffGoal& goal, std::string* error = nullptr);
 bool validate_land_goal(const LandGoal& goal, std::string* error = nullptr);
 bool validate_uav_waypoint_mission_goal(const UavWaypointMissionGoal& goal,

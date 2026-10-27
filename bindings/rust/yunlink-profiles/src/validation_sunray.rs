@@ -10,6 +10,16 @@ pub(crate) fn finite_vector3(value: &mobility::Vector3) -> bool {
     value.x.is_finite() && value.y.is_finite() && value.z.is_finite()
 }
 
+pub fn validate_uav_acceleration_compensation_goal(
+    goal: &sunray::UavAccelerationCompensationGoal,
+) -> Result<(), &'static str> {
+    goal.acceleration_ned_mps2
+        .as_ref()
+        .is_some_and(finite_vector3)
+        .then_some(())
+        .ok_or("NED acceleration compensation must be present and finite")
+}
+
 pub fn validate_flight_control_state(
     state: &sunray::FlightControlState,
 ) -> Result<(), &'static str> {

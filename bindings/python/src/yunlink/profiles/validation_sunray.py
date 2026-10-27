@@ -169,6 +169,13 @@ def validate_gimbal_angle_goal(goal: sunray.GimbalAngleGoal) -> None:
         raise ValueError("gimbal angle goal is invalid")
 
 
+def validate_uav_acceleration_compensation_goal(
+    goal: sunray.UavAccelerationCompensationGoal,
+) -> None:
+    if not goal.HasField("acceleration_ned_mps2") or not _finite_vector(goal.acceleration_ned_mps2):
+        raise ValueError("NED acceleration compensation must be present and finite")
+
+
 def validate_gimbal_rate_goal(goal: sunray.GimbalRateGoal) -> None:
     if not -100 <= goal.yaw_control <= 100 or not -100 <= goal.pitch_control <= 100:
         raise ValueError("gimbal rate control must be between -100 and 100")

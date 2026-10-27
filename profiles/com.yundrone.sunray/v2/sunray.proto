@@ -196,6 +196,14 @@ message UavDirectControlGoal {
   uint32 lease_ms = 8;
 }
 
+// Added in Sunray 2.20. World NED, m/s^2, gravity-free compensation only.
+// Goal / Update each carry one new sample; receivers must never replay it.
+// Cancel removes compensation without changing position/velocity references.
+// An inactive sender expires after 300 ms. Requires SunrayPosController.
+message UavAccelerationCompensationGoal {
+  org.yunlink.mobility.v1.Vector3 acceleration_ned_mps2 = 1;
+}
+
 message EmergencyKillGoal {
   bool confirmed = 1;
 }

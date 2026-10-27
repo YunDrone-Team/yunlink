@@ -57,6 +57,14 @@ bool valid_continuous_lease(uint32_t lease_ms) {
 
 }  // namespace
 
+bool validate_uav_acceleration_compensation_goal(const UavAccelerationCompensationGoal& goal,
+                                                std::string* error) {
+    if (!goal.has_acceleration_ned_mps2() || !finite(goal.acceleration_ned_mps2())) {
+        return fail(error, "NED acceleration compensation must be present and finite");
+    }
+    return true;
+}
+
 bool validate_flight_control_state(const FlightControlState& state, std::string* error) {
     if (!std::isfinite(state.battery_voltage_v()) || state.battery_voltage_v() < 0.0F ||
         state.battery_percent() > 100U || state.controller_type() < ACTIVE_CONTROLLER_UNKNOWN ||

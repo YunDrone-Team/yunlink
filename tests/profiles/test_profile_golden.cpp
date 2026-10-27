@@ -40,6 +40,18 @@ template <typename Message> void assert_round_trip(const Message& source) {
 }  // namespace
 
 int main() {
+    com::yundrone::sunray::v2::UavAccelerationCompensationGoal acceleration;
+    assert(!com::yundrone::sunray::v2::validate_uav_acceleration_compensation_goal(acceleration));
+    auto* ned = acceleration.mutable_acceleration_ned_mps2();
+    ned->set_x(0.25);
+    ned->set_y(-0.5);
+    ned->set_z(0.125);
+    assert(com::yundrone::sunray::v2::validate_uav_acceleration_compensation_goal(acceleration));
+    assert(hex(acceleration.SerializeAsString()) ==
+           "0a1b09000000000000d03f11000000000000e0bf19000000000000c03f");
+    assert_round_trip(acceleration);
+    ned->set_z(std::numeric_limits<double>::quiet_NaN());
+    assert(!com::yundrone::sunray::v2::validate_uav_acceleration_compensation_goal(acceleration));
     com::yundrone::sunray::v2::LocalizationState localization;
     assert(localization.SerializeAsString().empty());
     localization.set_status(com::yundrone::sunray::v2::LOCALIZATION_PUBLISHER_MISSING);
