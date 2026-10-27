@@ -2,8 +2,9 @@
 
 ## Version metadata correction
 
-The 2026-10-19 main-branch correction aligns the CMake and Python package
-versions at 2.0.2. The historical `v2.0.2` tag at `a8f1ebc` retains its original
+The current CMake and Python package versions are 2.0.3. Release verification
+checks wheel filenames, embedded metadata, CMake version and the release tag.
+The historical `v2.0.2` tag at `a8f1ebc` retains its original
 source, which declared 2.0.1; the tag is not moved or republished. This is a
 metadata correction, not a protocol or ABI change: `SOVERSION` remains 2 and
 the Rust crate versions remain unchanged.
@@ -26,6 +27,7 @@ Run language bindings and architecture guards:
 cargo test --workspace --manifest-path bindings/rust/Cargo.toml
 tools/bindings/run_all.sh
 python3 tests/test_protocol_boundaries_v2.py
+python3 tests/test_python_wheels.py
 ```
 
 The Profile-enabled C++ build requires a system Protobuf installation. Rust
