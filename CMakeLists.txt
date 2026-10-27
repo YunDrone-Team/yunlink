@@ -84,6 +84,7 @@ set(YUNLINK_LIBRARY_SOURCES
   src/runtime/v2/runtime_api.cpp
   src/runtime/v2/runtime_common.cpp
   src/runtime/v2/runtime_network.cpp
+  src/runtime/v2/io/runtime_receive.cpp
   src/runtime/v2/session.cpp
   src/runtime/v2/authority.cpp
   src/c/v2/runtime.cpp
@@ -184,6 +185,10 @@ if (YUNLINK_BUILD_TESTS)
       yunlink_profile_shell
     )
     add_test(NAME test_profile_golden COMMAND test_profile_golden)
+
+    add_executable(test_formation_vectors tests/profiles/test_formation_vectors.cpp)
+    target_link_libraries(test_formation_vectors PRIVATE yunlink_profile_sunray)
+    add_test(NAME test_formation_vectors COMMAND test_formation_vectors)
 
     add_executable(test_formation_removed_fields tests/profiles/test_formation_removed_fields.cpp)
     target_link_libraries(test_formation_removed_fields PRIVATE yunlink_profile_sunray)

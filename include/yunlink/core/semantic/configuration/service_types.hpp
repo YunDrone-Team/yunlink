@@ -20,10 +20,8 @@ enum class ConfigValueType : uint8_t {
     kString = 4,
     kStringList = 5,
     kDoubleList = 6,
-    // 删除该路径的 provider 侧覆写，回落到更低层。它是一条"写入指令"，不是一种可持久化的
-    // 字段类型：schema 的 type 不应出现该取值，只有 ConfigResourcePatchRequest.updates
-    // 里的 ConfigValue 会用它（无 payload，只编码类型字节）。
-    // 必须追加在末尾：不能改动已有取值，协议里是裸数字。
+    // 删除 provider 覆写并回落到更低层。仅用于 patch 的 ConfigValue，不用于 schema。
+    // 无 payload，只编码类型字节；保留已有 wire 编号。
     kUnset = 7,
 };
 
