@@ -71,6 +71,11 @@ add_library(yunlink::profile_media ALIAS yunlink_profile_media)
 protobuf_generate_cpp(
   YUNLINK_SUNRAY_PROTO_SRCS
   YUNLINK_SUNRAY_PROTO_HDRS
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray_state.proto
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray_uav.proto
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray_ugv.proto
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray_formation.proto
+  ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray_services.proto
   ${YUNLINK_PROFILE_PROTO_ROOT}/com.yundrone.sunray/v2/sunray.proto
 )
 add_library(yunlink_profile_sunray STATIC

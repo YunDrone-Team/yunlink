@@ -29,6 +29,18 @@ fn main() {
     println!("cargo:rerun-if-changed={}", telemetry.display());
     println!("cargo:rerun-if-changed={}", media.display());
     println!("cargo:rerun-if-changed={}", sunray.display());
+    for name in [
+        "sunray_state.proto",
+        "sunray_uav.proto",
+        "sunray_ugv.proto",
+        "sunray_formation.proto",
+        "sunray_services.proto",
+    ] {
+        println!(
+            "cargo:rerun-if-changed={}",
+            profiles.join("com.yundrone.sunray/v2").join(name).display()
+        );
+    }
     println!("cargo:rerun-if-changed={}", system.display());
     println!("cargo:rerun-if-changed={}", shell.display());
 }

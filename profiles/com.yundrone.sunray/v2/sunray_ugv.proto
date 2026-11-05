@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package com.yundrone.sunray.v2;
+
+import "org.yunlink.mobility/v1/mobility.proto";
+
+// Split from sunray.proto. Package and field numbers are unchanged.
+
+message UgvControl {
+  uint32 control_cmd = 1;
+  org.yunlink.mobility.v1.Vector3 desired_position_m = 2;
+  org.yunlink.mobility.v1.Vector3 desired_velocity_mps = 3;
+  org.yunlink.mobility.v1.Twist body_twist = 4;
+  double desired_yaw_rad = 5;
+  double desired_wgs84_latitude_deg = 6;
+  double desired_wgs84_longitude_deg = 7;
+  double desired_wgs84_altitude_m = 8;
+}
+
+message UgvControlState {
+  uint64 source_stamp_ns = 1;
+  string frame_id = 2;
+  string agent_name = 3;
+  uint32 agent_id = 4;
+  uint32 drive_type = 5;
+  bool command_valid = 6;
+  bool inside_geo_fence = 7;
+  uint32 diagnostic_level = 8;
+  string diagnostic_message = 9;
+  uint32 fsm_state = 10;
+  UgvControl active_command = 11;
+  org.yunlink.mobility.v1.Odometry odometry = 12;
+  org.yunlink.mobility.v1.Pose target_pose = 13;
+  org.yunlink.mobility.v1.Twist controller_output = 14;
+  bool odom_ready = 15;
+  float battery_voltage_v = 16;
+  uint32 battery_percent = 17;
+}
+
+enum UgvMovePointFrame {
+  UGV_MOVE_LOCAL = 0;
+  UGV_MOVE_BODY = 1;
+}
+
+enum UgvYawMode {
+  UGV_YAW_KEEP = 0;
+  UGV_YAW_SET = 1;
+}
+
+message UgvMovePointGoal {
+  UgvMovePointFrame frame = 1;
+  org.yunlink.mobility.v1.Vector3 point_m = 2;
+  UgvYawMode yaw_mode = 3;
+  double desired_yaw_rad = 4;
+  string local_frame_id = 5;
+}
+
+message UgvLocalVelocityTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector2 linear_mps = 2;
+  double desired_yaw_rad = 3;
+}
+
+message UgvBodyVelocityTarget {
+  org.yunlink.mobility.v1.Vector2 linear_mps = 1;
+  double yaw_rate_radps = 2;
+}
+
+message UgvVelocityGoal {
+  oneof target {
+    UgvLocalVelocityTarget local = 1;
+    UgvBodyVelocityTarget body = 2;
+  }
+  uint32 lease_ms = 3;
+}
+
+message UgvHoldGoal {}
+
+enum UgvWaypointArrivalAction {
+  UGV_WAYPOINT_NEXT = 0;
+  UGV_WAYPOINT_HOLD_CURRENT_YAW = 1;
+  UGV_WAYPOINT_HOLD_SET_YAW = 2;
+}
+
+enum UgvMissionCompletionAction {
+  UGV_MISSION_HOLD = 0;
+  UGV_MISSION_RETURN_HOME_AND_HOLD = 1;
+}
+
+message UgvNavGoal {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector2 position_m = 2;
+  double yaw_rad = 3;
+}
+
+message UgvWaypoint {
+  org.yunlink.mobility.v1.Vector2 position_m = 1;
+  double yaw_rad = 2;
+  double hold_time_s = 3;
+  UgvWaypointArrivalAction arrival_action = 4;
+}
+
+message UgvWaypointMissionGoal {
+  string task_name = 1;
+  string frame_id = 2;
+  repeated UgvWaypoint waypoints = 3;
+  UgvMissionCompletionAction completion_action = 4;
+}
+
+message UgvReturnHomeGoal {}
+
+message UgvPlanningState {
+  uint64 source_stamp_ns = 1;
+  uint32 main_state = 2;
+  uint32 task_state = 3;
+  string task_name = 4;
+  uint32 current_waypoint_index = 5;
+  uint32 total_waypoints = 6;
+  UgvWaypoint current_waypoint = 7;
+  double distance_to_goal_m = 8;
+  double hold_remaining_s = 9;
+  string failure_reason = 10;
+  string planner_frame_id = 11;
+}

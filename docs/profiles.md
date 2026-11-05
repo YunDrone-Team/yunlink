@@ -9,7 +9,10 @@ part of the Core library target and are disabled by default.
 trajectory payloads.
 
 `com.yundrone.sunray@2.20` defines Sunray telemetry, typed UAV and UGV actions,
-formation actions, diagnostics, events, and Feature RPC payloads. It imports
+formation actions, diagnostics, events, and Feature RPC payloads. The messages
+stay in package `com.yundrone.sunray.v2`. `sunray.proto` only imports
+`sunray_state.proto`, `sunray_uav.proto`, `sunray_ugv.proto`,
+`sunray_formation.proto`, and `sunray_services.proto`. It imports
 the Mobility Profile for common geometry. The UGV single-vehicle action and
 control-state contract is specified in
 [`profiles/com.yundrone.sunray-v2-ugv-control.md`](profiles/com.yundrone.sunray-v2-ugv-control.md).

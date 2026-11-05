@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package com.yundrone.sunray.v2;
+
+import "org.yunlink.mobility/v1/mobility.proto";
+
+// Split from sunray.proto. Package and field numbers are unchanged.
+
+message UavControlFsmState {
+  uint64 source_stamp_ns = 1;
+  uint32 state = 2;
+  uint32 last_state = 3;
+  string detail = 4;
+}
+
+message UavControllerState {
+  uint64 source_stamp_ns = 1;
+  string controller_name = 2;
+  bool active = 3;
+  org.yunlink.mobility.v1.Vector3 position_error = 4;
+  org.yunlink.mobility.v1.Vector3 velocity_error = 5;
+  org.yunlink.mobility.v1.Vector3 output = 6;
+}
+
+message UavControl {
+  uint32 control_cmd = 1;
+  org.yunlink.mobility.v1.Vector3 desired_position_m = 2;
+  org.yunlink.mobility.v1.Vector3 desired_velocity_mps = 3;
+  org.yunlink.mobility.v1.Vector3 desired_acceleration_mps2 = 4;
+  double desired_yaw_rad = 5;
+  double desired_yaw_rate_radps = 6;
+  uint32 yaw_mode = 7;
+  uint32 controller_type = 8;
+  org.yunlink.mobility.v1.Vector2 desired_body_xy_position_m = 9;
+  org.yunlink.mobility.v1.Vector2 desired_body_xy_velocity_mps = 10;
+  double fixed_height_m = 11;
+}
+
+enum UavYawMode {
+  UAV_YAW_KEEP = 0;
+  UAV_YAW_SET_ANGLE = 1;
+  UAV_YAW_SET_RATE = 2;
+}
+
+enum UavControllerType {
+  UAV_CONTROLLER_DEFAULT = 0;
+  UAV_CONTROLLER_POSITION = 1;
+  UAV_CONTROLLER_ATTITUDE = 2;
+}
+
+message YawTarget {
+  UavYawMode mode = 1;
+  double value = 2;
+}
+
+message HeightLock {
+  double height_m = 1;
+}
+
+message WorldPositionTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 position_m = 2;
+}
+
+message BodyPositionTarget {
+  org.yunlink.mobility.v1.Vector2 body_xy_position_m = 1;
+  double fixed_height_m = 2;
+}
+
+message TrajectorySetpointTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 position_m = 2;
+  org.yunlink.mobility.v1.Vector3 velocity_mps = 3;
+  org.yunlink.mobility.v1.Vector3 acceleration_mps2 = 4;
+}
+
+message WorldVelocityTarget {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 velocity_mps = 2;
+  HeightLock height_lock = 3;
+}
+
+message BodyVelocityTarget {
+  org.yunlink.mobility.v1.Vector2 body_xy_velocity_mps = 1;
+  double fixed_height_m = 2;
+}
+
+message UavDirectControlGoal {
+  oneof target {
+    WorldPositionTarget world_position = 1;
+    BodyPositionTarget body_position = 2;
+    TrajectorySetpointTarget trajectory_setpoint = 3;
+    WorldVelocityTarget world_velocity = 4;
+    BodyVelocityTarget body_velocity = 5;
+  }
+  YawTarget yaw = 6;
+  UavControllerType controller = 7;
+  uint32 lease_ms = 8;
+}
+
+// Added in Sunray 2.20. World NED, m/s^2, gravity-free compensation only.
+// Goal / Update each carry one new sample; receivers must never replay it.
+// Cancel removes compensation without changing position/velocity references.
+// An inactive sender expires after 300 ms. Requires SunrayPosController.
+message UavAccelerationCompensationGoal {
+  org.yunlink.mobility.v1.Vector3 acceleration_ned_mps2 = 1;
+}
+
+message EmergencyKillGoal {
+  bool confirmed = 1;
+}
+
+message TakeoffGoal {
+  // Zero selects the UAV controller defaults.
+  double takeoff_relative_height_m = 1;
+  double takeoff_max_velocity_mps = 2;
+}
+
+message LandGoal {
+  // Zero selects the UAV controller default.
+  double land_max_velocity_mps = 1;
+}
+
+message HoverGoal {}
+
+enum UavWaypointArrivalAction {
+  UAV_WAYPOINT_NEXT = 0;
+  UAV_WAYPOINT_HOLD_CURRENT_YAW = 1;
+  UAV_WAYPOINT_HOLD_SET_YAW = 2;
+}
+
+enum UavMissionCompletionAction {
+  UAV_MISSION_FINISH_HOVER = 0;
+  UAV_MISSION_FINISH_RETURN_HOME_AND_LAND = 1;
+  UAV_MISSION_FINISH_LAND_NOW = 2;
+}
+
+message UavWaypoint {
+  org.yunlink.mobility.v1.Vector3 position_m = 1;
+  double yaw_rad = 2;
+  double hold_time_s = 3;
+  UavWaypointArrivalAction arrival_action = 4;
+}
+
+message UavWaypointMissionGoal {
+  string frame_id = 1;
+  repeated UavWaypoint waypoints = 2;
+  string task_name = 3;
+  UavMissionCompletionAction completion_action = 4;
+}
+
+message UavNavGoal {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Vector3 position_m = 2;
+  double yaw_rad = 3;
+}
+
+message UavReturnHomeGoal {}
+
+message PlannerCancelTaskRequest {}
+message PlannerCancelTaskResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+message PlannerSetHomeRequest {
+  org.yunlink.mobility.v1.Vector3 home_m = 1;
+  string frame_id = 2;
+}
+message PlannerSetHomeResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+enum UavPlanningMainState {
+  UAV_PLANNING_MAIN_NOT_READY = 0;
+  UAV_PLANNING_MAIN_WAIT_MISSION = 1;
+  UAV_PLANNING_MAIN_TASK_MAIN = 2;
+  UAV_PLANNING_MAIN_SAFETY_ESCAPE = 3;
+}
+
+enum UavPlanningTaskState {
+  UAV_PLANNING_TASK_IDLE = 0;
+  UAV_PLANNING_TASK_TAKEOFF = 1;
+  UAV_PLANNING_TASK_WAIT_TRAJECTORY = 2;
+  UAV_PLANNING_TASK_EXEC_TRAJECTORY = 3;
+  UAV_PLANNING_TASK_HOLDING = 4;
+  UAV_PLANNING_TASK_WAYPOINT_COMPLETED = 5;
+  UAV_PLANNING_TASK_LAND = 6;
+  UAV_PLANNING_TASK_FAILED = 7;
+}
+
+message UavPlanningState {
+  UavPlanningMainState main_state = 1;
+  UavPlanningTaskState task_state = 2;
+  string task_name = 3;
+  uint32 current_waypoint_index = 4;
+  uint32 total_waypoints = 5;
+  UavWaypoint current_waypoint = 6;
+  double distance_to_goal_m = 7;
+  double hold_remaining_s = 8;
+  string failure_reason = 9;
+  string planner_frame_id = 10;
+}
+
+message UavControlState {
+  uint64 source_stamp_ns = 1;
+  bool command_valid = 2;
+  UavControl active_command = 3;
+  uint32 fsm_state = 4;
+  string diagnostic = 5;
+}
