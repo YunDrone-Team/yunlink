@@ -22,7 +22,7 @@ fn main() {
                 system.clone(),
                 shell.clone(),
             ],
-            &[profiles],
+            std::slice::from_ref(&profiles),
         )
         .expect("compile YunLink profiles");
     println!("cargo:rerun-if-changed={}", mobility.display());
