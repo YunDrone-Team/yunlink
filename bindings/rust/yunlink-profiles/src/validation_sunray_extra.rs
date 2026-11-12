@@ -184,3 +184,138 @@ pub fn validate_gimbal_zoom_absolute_goal(
         .then_some(())
         .ok_or("gimbal zoom must be between 1.0 and 30.9")
 }
+
+// ---------------------------------------------------------------------------
+// 2.21 swarm 级 Team 目标（先预览选位，再确认下发）。
+//
+// 这里只做**协议层**校验：坏值在网关就拦下并给出具体原因，不必等 ROS 服务超时。
+// 业务下限（safety_min_spacing_m，当前 0.6）来自机侧响应，**不在这里硬编码**；
+// 可达性 / 路径 / 轨迹可行性一律不判（回调优化无法预测，用户已明确否决）。
+// ---------------------------------------------------------------------------
+
+/// 协调器 `global_frame` 默认值；写错会被直接拒（INVALID_COMMON_TASK）。
+pub const SWARM_TEAM_GOAL_FRAME_ID: &str = "world";
+
+const SWARM_TEAM_GOAL_LAYOUTS: [&str; 5] = ["", "optimized", "circle", "triangle", "line"];
+
+pub fn validate_swarm_team_goal_request(
+    request: &sunray::SwarmTeamGoalRequest,
+) -> Result<(), &'static str> {
+    if request.request_id == 0 {
+        return Err("swarm team goal request_id must be non-zero");
+    }
+    let Some(target_pose) = request.target_pose.as_ref() else {
+        return Err("swarm team goal target_pose is missing");
+    };
+    if target_pose.frame_id != SWARM_TEAM_GOAL_FRAME_ID {
+        return Err("swarm team goal frame_id must be world");
+    }
+    if !target_pose.pose.as_ref().is_some_and(finite_pose) {
+        return Err("swarm team goal target pose is invalid (non-zero orientation required)");
+    }
+    if !SWARM_TEAM_GOAL_LAYOUTS.contains(&request.layout.as_str()) {
+        return Err("swarm team goal layout is invalid");
+    }
+    if !request.desired_spacing_m.is_finite() || request.desired_spacing_m < 0.0 {
+        return Err("swarm team goal desired_spacing_m must be finite and non-negative");
+    }
+    Ok(())
+}
+
+/// `team_ids[i] ↔ targets[i]` 是协调器的硬承诺；长度不等说明桥转发出错，
+/// 必须当成坏响应而不是"少画几个点"（那样操作员会照着不完整的预览去确认）。
+pub fn validate_swarm_team_goal_response(
+    response: &sunray::SwarmTeamGoalResponse,
+) -> Result<(), &'static str> {
+    if response.team_ids.len() != response.targets.len() {
+        return Err("swarm team goal team_ids/targets length mismatch");
+    }
+    for target in &response.targets {
+        let finite_xy = target
+            .pose
+            .as_ref()
+            .and_then(|pose| pose.position.as_ref())
+            .is_some_and(|position| position.x.is_finite() && position.y.is_finite());
+        if !finite_xy {
+            return Err("swarm team goal target position is not finite");
+        }
+    }
+    if !response.actual_min_spacing_m.is_finite() || !response.safety_min_spacing_m.is_finite() {
+        return Err("swarm team goal spacing readouts are not finite");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod swarm_team_goal_validation_tests {
+    use super::*;
+
+    fn valid_request() -> sunray::SwarmTeamGoalRequest {
+        sunray::SwarmTeamGoalRequest {
+            target_pose: Some(sunray::SwarmTeamGoalPoseStamped {
+                frame_id: "world".into(),
+                pose: Some(mobility::Pose {
+                    position: Some(mobility::Vector3 { x: -1.0, y: 0.2, z: 0.0 }),
+                    orientation: Some(mobility::Quaternion { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }),
+                }),
+            }),
+            layout: "triangle".into(),
+            request_id: 1,
+            preview_only: true,
+            desired_spacing_m: 0.0,
+        }
+    }
+
+    #[test]
+    fn accepts_a_valid_preview_request() {
+        assert!(validate_swarm_team_goal_request(&valid_request()).is_ok());
+        let mut auto = valid_request();
+        auto.layout.clear();
+        assert!(validate_swarm_team_goal_request(&auto).is_ok(), "空 layout = optimized");
+    }
+
+    #[test]
+    fn rejects_zero_id_wrong_frame_zero_quaternion_bad_layout_and_negative_spacing() {
+        let mut request = valid_request();
+        request.request_id = 0;
+        assert_eq!(validate_swarm_team_goal_request(&request),
+            Err("swarm team goal request_id must be non-zero"));
+
+        request = valid_request();
+        request.target_pose.as_mut().unwrap().frame_id = "map".into();
+        assert_eq!(validate_swarm_team_goal_request(&request),
+            Err("swarm team goal frame_id must be world"));
+
+        request = valid_request();
+        request.target_pose.as_mut().unwrap().pose.as_mut().unwrap().orientation =
+            Some(mobility::Quaternion { x: 0.0, y: 0.0, z: 0.0, w: 0.0 });
+        assert_eq!(validate_swarm_team_goal_request(&request),
+            Err("swarm team goal target pose is invalid (non-zero orientation required)"));
+
+        request = valid_request();
+        request.layout = "hexagon".into();
+        assert_eq!(validate_swarm_team_goal_request(&request),
+            Err("swarm team goal layout is invalid"));
+
+        request = valid_request();
+        request.desired_spacing_m = -0.1;
+        assert_eq!(validate_swarm_team_goal_request(&request),
+            Err("swarm team goal desired_spacing_m must be finite and non-negative"));
+    }
+
+    #[test]
+    fn response_requires_aligned_team_ids_and_targets() {
+        let mut response = sunray::SwarmTeamGoalResponse::default();
+        response.team_ids.push("team1".into());
+        assert_eq!(validate_swarm_team_goal_response(&response),
+            Err("swarm team goal team_ids/targets length mismatch"));
+        response.targets.push(sunray::SwarmTeamGoalPoseStamped {
+            frame_id: "world".into(),
+            pose: Some(mobility::Pose {
+                position: Some(mobility::Vector3 { x: 1.0, y: 0.0, z: 0.8 }),
+                orientation: Some(mobility::Quaternion { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }),
+            }),
+        });
+        assert!(validate_swarm_team_goal_response(&response).is_ok());
+    }
+}

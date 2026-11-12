@@ -349,3 +349,21 @@ message FcLogPullResponse {
   string relative_path = 4;
   uint64 size_bytes = 5;
 }
+
+// ↓↓↓ 2.21 新增：运行期优先级下发开关。
+//
+// 服务 /sunray_system/set_team_priority_enable（std_srvs/SetBool）的线协议投影。
+// FALSE(默认) = 一次性下发全部目标，冲突交给优化器（纯优化 / 对称避让）；
+// TRUE        = 按 teams.yaml 的 priority 分级下发，高优先级先动、停稳后下一队。
+// 切换**不重启任何 Feature**；开机默认来自设备环境 TEAM_PRIORITY_ENABLE=FALSE，
+// GCS 不写环境变量、不改 priority 数值。
+message SetTeamPriorityEnableRequest {
+  bool enabled = 1;
+}
+
+message SetTeamPriorityEnableResponse {
+  bool success = 1;
+  string message = 2;
+  // 切换后机侧当前有效值（回读 latched 话题 / param）；失败时是保持不变的当前值。
+  bool enabled = 3;
+}

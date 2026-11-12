@@ -275,3 +275,58 @@ message FormationShape {
   // 世界系采样点（已含参考位姿），与同一条 frame_id 同帧表达，单位米。
   repeated FormationShapePoint points = 10;
 }
+
+// ===========================================================================
+// ↓↓↓ 2.21 新增：**swarm 级 Team 目标（先预览选位，再确认下发）**。
+//
+// 背景：2.17 的 `TeamGoalRequest` 是**逐队**通道（一次请求 = 一条命令 = 一个非空
+// `team_id`）。而 Sunray_v2 的 `team_goal_coordinator_node` 把多队目标升级成
+// `/sunray/swarm/set_team_goal : SetSwarmTeamGoal`：地面站只给一个**共享中心点**，
+// 机侧布局求解器解出每队各自的落点；旧通道无法表达 `preview_only / request_id /
+// layout / desired_spacing_m / targets[]`，把字段硬塞进它会破坏逐队下发与
+// `formation.rs` 的跨语言 golden vector。因此这里**另开一条 swarm 级 RPC**。
+//
+// ⚠️ 只定义**GCS 侧线协议**；机侧 bridge 需把它们转发到 ROS 服务
+// （Sunray_v2 仓库的事，不要伪造 targets、也不要改旧 `TeamGoalRequest`）。
+// 契约全文见 `desktop-electron/docs/swarm-team-goal-preview-contract.md`。
+// ===========================================================================
+
+// PoseStamped 在 YunLink 线协议上的等价物：`header.frame_id` + `pose`。
+// `frame_id` 必须是 "world"（协调器 global_frame 默认值）；四元数必须非零
+// （至少 `w=1.0`），否则协调器回 `INVALID_ORIENTATION`。
+message SwarmTeamGoalPoseStamped {
+  string frame_id = 1;
+  org.yunlink.mobility.v1.Pose pose = 2;
+}
+
+// /sunray/swarm/set_team_goal 的请求投影（字段语义逐字对齐 .srv）。
+message SwarmTeamGoalRequest {
+  // 共享中心点。position.z **不参与落点**：协调器会把返回的
+  // `targets[i].pose.position.z` 覆写成该队代表机当前观测高度。
+  SwarmTeamGoalPoseStamped target_pose = 1;
+  // "" / "optimized" / "circle" / "triangle" / "line"。
+  string layout = 2;
+  // 非零；真正下发必须比上次严格递增，否则 `STALE_REQUEST_ID`。
+  // 预览阶段同一 id 可反复调用（换中心点重新预览）；提交必须原样复用预览那次 id。
+  uint64 request_id = 3;
+  // true = 只求解并回传候选落点（零副作用、不是运动授权）；
+  // false = 复用该 id 的预览解下发（协调器 `REUSED_PREVIEW`）。
+  bool preview_only = 4;
+  // 0 = auto；显式值必须 >= `safety_min_spacing_m`，否则
+  // `SPACING_BELOW_SAFETY_FLOOR`。下限以响应为准，GCS 不硬编码。
+  double desired_spacing_m = 5;
+}
+
+message SwarmTeamGoalResponse {
+  bool success = 1;
+  // 原样展示：COMPLETE_PREVIEW / ALL_FSM_TASKS_ACCEPTED / STAGED_DISPATCH
+  // 以及全部拒绝原因。都只表示"候选解 / 已受理"，**不表示轨迹可行或已到位**。
+  string message = 2;
+  uint64 request_id = 3;
+  // `team_ids[i]` ↔ `targets[i]` 一一对应，顺序即 teams.yaml 队顺序。
+  repeated string team_ids = 4;
+  // 每队各自的落点，不是中心点；GCS 只画 XY，不要把 z 当操作员设定高度。
+  repeated SwarmTeamGoalPoseStamped targets = 5;
+  double actual_min_spacing_m = 6;
+  double safety_min_spacing_m = 7;
+}
