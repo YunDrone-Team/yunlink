@@ -45,7 +45,7 @@ bool validate_formation_preview_request(const FormationPreviewRequest& request,
 bool validate_formation_state(const FormationState& state, std::string* error = nullptr);
 // 2.11：动态阵型几何图形（valid ⇒ 点数 >= 3 且逐点有限；false ⇒ points 必须缺省）。
 bool validate_formation_shape(const FormationShape& shape, std::string* error = nullptr);
-bool validate_mapping_state(const MappingState& state, std::string* error = nullptr);
+// [SUNRAY 2026-11-24] MappingState 诊断流已下线，validate_mapping_state 随之移除。
 bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error = nullptr);
 bool validate_gimbal_rate_goal(const GimbalRateGoal& goal, std::string* error = nullptr);
 bool validate_gimbal_zoom_absolute_goal(const GimbalZoomAbsoluteGoal& goal,

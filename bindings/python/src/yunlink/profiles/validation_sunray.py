@@ -154,14 +154,7 @@ def validate_formation_shape(shape: sunray.FormationShape) -> None:
         raise ValueError("formation shape move speed is not finite")
 
 
-def validate_mapping_state(state: sunray.MappingState) -> None:
-    if state.status not in {"", "UNAVAILABLE", "IDLE", "ACCUMULATING", "ERROR"}:
-        raise ValueError("mapping state status is invalid")
-    for lidar in state.lidars:
-        if not all(math.isfinite(value) for value in (
-            lidar.lidar_rate_hz, lidar.imu_rate_hz, lidar.lidar_age_sec, lidar.imu_age_sec
-        )):
-            raise ValueError("mapping state contains a non-finite value")
+# [SUNRAY 2026-11-24] validate_mapping_state 已移除：MappingState 诊断流下线。
 
 
 def validate_gimbal_angle_goal(goal: sunray.GimbalAngleGoal) -> None:

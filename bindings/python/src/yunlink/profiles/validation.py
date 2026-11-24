@@ -372,5 +372,4 @@ from .validation_sunray import (
     validate_gimbal_angle_goal,
     validate_gimbal_rate_goal,
     validate_gimbal_zoom_absolute_goal,
-    validate_mapping_state,
 )

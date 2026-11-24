@@ -474,20 +474,7 @@ bool validate_formation_shape(const FormationShape& shape, std::string* error) {
                : fail(error, "formation shape move speed is not finite");
 }
 
-bool validate_mapping_state(const MappingState& state, std::string* error) {
-    if (state.status() != "" && state.status() != "UNAVAILABLE" &&
-        state.status() != "IDLE" && state.status() != "ACCUMULATING" &&
-        state.status() != "ERROR") {
-        return fail(error, "mapping state status is invalid");
-    }
-    for (const auto& lidar : state.lidars()) {
-        if (!std::isfinite(lidar.lidar_rate_hz()) || !std::isfinite(lidar.imu_rate_hz()) ||
-            !std::isfinite(lidar.lidar_age_sec()) || !std::isfinite(lidar.imu_age_sec())) {
-            return fail(error, "mapping state contains a non-finite value");
-        }
-    }
-    return true;
-}
+// [SUNRAY 2026-11-24] MappingState 诊断流已下线，validate_mapping_state 随之移除。
 
 bool validate_gimbal_angle_goal(const GimbalAngleGoal& goal, std::string* error) {
     if (!std::isfinite(goal.yaw_rad()) || !std::isfinite(goal.pitch_rad())) {

@@ -50,42 +50,10 @@ message VehicleEvent {
 
 message EmptyGoal {}
 
-// Point-cloud accumulation control and status.  This is intentionally a small
-// typed extension: the Livox driver already owns the ROS services and exposes
-// diagnostics, while YunLink only carries the remote operation and summary.
-message MappingStartRequest {}
-message MappingStartResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-message MappingStopRequest {}
-message MappingStopResponse {
-  bool success = 1;
-  string message = 2;
-}
-
-message MappingLidarState {
-  string lidar_name = 1;
-  string lidar_topic = 2;
-  string imu_topic = 3;
-  double lidar_rate_hz = 4;
-  double imu_rate_hz = 5;
-  bool pointcloud_accumulating = 6;
-  uint64 pointcloud_frame_count = 7;
-  bool lidar_running = 8;
-  double lidar_age_sec = 9;
-  double imu_age_sec = 10;
-  uint32 lidar_point_num = 11;
-  uint32 lidar_actual_count = 12;
-}
-
-message MappingState {
-  uint64 source_stamp_ns = 1;
-  string status = 2;
-  string error = 3;
-  repeated MappingLidarState lidars = 4;
-}
+// [SUNRAY 2026-11-24] Livox point-cloud accumulation RPC control and its
+// diagnostic state stream have been removed. The Livox driver still owns the
+// ROS services locally; YunLink no longer proxies start/stop or carries
+// MappingState. hdl_graph_slam mapping control uses dedicated RPCs instead.
 
 // These values mirror the stable ROS FeatureSummary contract. This v2 profile
 // is a hard cut: the old supervisor runtime-state enum is not carried on Wire.
@@ -366,4 +334,58 @@ message SetTeamPriorityEnableResponse {
   string message = 2;
   // 切换后机侧当前有效值（回读 latched 话题 / param）；失败时是保持不变的当前值。
   bool enabled = 3;
+}
+
+// ↓↓↓ 2.22 新增：hdl_graph_slam 建图控制（经机侧 bridge 转发到 /hdl_graph_slam/*）。
+//
+// 与旧 Livox 点云累积开关语义不同：这组消息控制的是 hdl_graph_slam 的建图生命周期、
+// 数据源与动态点过滤强度。hdl 启动后默认 IDLE，必须由 GCS 调 start 放行；
+// pause 保留已建图；reset 清空关键帧/位姿图。
+//
+// 三组消息收敛 6 个 ROS service：
+//   HdlMappingControl  → start / pause / reset / status
+//   HdlDataSource      → set_data_source
+//   HdlFilterStrength  → set_filter_strength
+message HdlMappingControlRequest {
+  // 0=START, 1=PAUSE, 2=RESET, 3=STATUS（STATUS 仅查询，不改状态）。
+  uint32 operation = 1;
+}
+
+message HdlMappingControlResponse {
+  bool success = 1;
+  // 0=IDLE, 1=MAPPING, 2=PAUSED（机侧回读的当前状态）。
+  uint32 state = 2;
+  uint32 keyframe_count = 3;
+  string message = 4;
+}
+
+message HdlDataSourceRequest {
+  // "m_detector" | "raw"；空字符串=仅查询不改。
+  string source = 1;
+}
+
+message HdlDataSourceResponse {
+  bool success = 1;
+  // "m_detector" | "raw"；机侧回读的当前生效数据源。
+  string active_source = 2;
+  string message = 3;
+}
+
+message HdlFilterStrengthRequest {
+  // 传负数表示保持当前值；服务端会 clamp 越界值并回读实际生效值。
+  float cluster_confidence = 1; // -1=保持；合法 [0.05, 1.0]
+  int32 case1_evidence = 2;     // -1=保持；合法 [1, 20]
+  int32 case2_evidence = 3;     // -1=保持；合法 [1, 20]
+  int32 case3_evidence = 4;     // -1=保持；合法 [1, 20]
+  float min_speed = 5;          // -1=保持；合法 [0.01, 5.0]
+}
+
+message HdlFilterStrengthResponse {
+  bool success = 1;
+  string message = 2;
+  float cluster_confidence = 3; // 以下均为服务端 clamp 后回读的生效值
+  int32 case1_evidence = 4;
+  int32 case2_evidence = 5;
+  int32 case3_evidence = 6;
+  float min_speed = 7;
 }
