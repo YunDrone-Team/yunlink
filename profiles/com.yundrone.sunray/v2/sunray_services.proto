@@ -342,10 +342,11 @@ message SetTeamPriorityEnableResponse {
 // 数据源与动态点过滤强度。hdl 启动后默认 IDLE，必须由 GCS 调 start 放行；
 // pause 保留已建图；reset 清空关键帧/位姿图。
 //
-// 三组消息收敛 6 个 ROS service：
+// 四组消息收敛 7 个 ROS service：
 //   HdlMappingControl  → start / pause / reset / status
 //   HdlDataSource      → set_data_source
 //   HdlFilterStrength  → set_filter_strength
+//   HdlSaveMap         → save_map（导出当前地图到 sunray-data/maps/）
 message HdlMappingControlRequest {
   // 0=START, 1=PAUSE, 2=RESET, 3=STATUS（STATUS 仅查询，不改状态）。
   uint32 operation = 1;
@@ -378,6 +379,25 @@ message HdlFilterStrengthRequest {
   int32 case2_evidence = 3;     // -1=保持；合法 [1, 20]
   int32 case3_evidence = 4;     // -1=保持；合法 [1, 20]
   float min_speed = 5;          // -1=保持；合法 [0.01, 5.0]
+}
+
+message HdlSaveMapRequest {
+  // hdl_graph_slam 导出的体素分辨率（米）。合法 [0.01, 0.5]；
+  // <=0 时 bridge 使用默认 0.1（与 map_points 的 map_cloud_resolution 一致）。
+  float resolution = 1;
+  // 可选文件名（不含目录/扩展名）。为空时 bridge 自动生成
+  // map_YYYYMMDD_HHMMSS_<分辨率>.pcd，写入 sunray-data 存储的 maps/ 目录。
+  string file_name = 2;
+}
+
+message HdlSaveMapResponse {
+  bool success = 1;
+  string message = 2;
+  // 相对 sunray-data 存储根的路径（如 maps/map_20261127_193000_0p10.pcd），
+  // 供 GCS 直接用 data-files 链路分块下载到本地。失败时为空。
+  string relative_path = 3;
+  // 导出点云的实际点数（从 PCD header 读取），失败时为 0。
+  uint32 point_count = 4;
 }
 
 message HdlFilterStrengthResponse {
