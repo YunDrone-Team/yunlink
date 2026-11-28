@@ -339,22 +339,23 @@ message SetTeamPriorityEnableResponse {
 // ↓↓↓ 2.22 新增：hdl_graph_slam 建图控制（经机侧 bridge 转发到 /hdl_graph_slam/*）。
 //
 // 与旧 Livox 点云累积开关语义不同：这组消息控制的是 hdl_graph_slam 的建图生命周期、
-// 数据源与动态点过滤强度。hdl 启动后默认 IDLE，必须由 GCS 调 start 放行；
-// pause 保留已建图；reset 清空关键帧/位姿图。
+// 数据源与动态点过滤强度。生命周期只有「开始 / 结束」两种动作：
+// start 内部先清空旧位姿图再建图（新建一张地图），stop 冻结位姿图但保留地图供保存/恢复。
+// 不再提供 pause / reset；operation=2 保留给历史兼容位，机侧必须拒绝。
 //
 // 四组消息收敛 7 个 ROS service：
-//   HdlMappingControl  → start / pause / reset / status
+//   HdlMappingControl  → start / stop / status / restore_map
 //   HdlDataSource      → set_data_source
 //   HdlFilterStrength  → set_filter_strength
-//   HdlSaveMap         → save_map（导出当前地图到 sunray-data/maps/）
+//   HdlSaveMap         → save_map（导出当前位姿图的全量 PCD 到 sunray-data/maps/）
 message HdlMappingControlRequest {
-  // 0=START, 1=PAUSE, 2=RESET, 3=STATUS（STATUS 仅查询，不改状态）。
+  // 0=START(新建地图), 1=STOP(结束并保留地图), 2=保留位(拒绝), 3=STATUS（仅查询）。
   uint32 operation = 1;
 }
 
 message HdlMappingControlResponse {
   bool success = 1;
-  // 0=IDLE, 1=MAPPING, 2=PAUSED（机侧回读的当前状态）。
+  // 0=IDLE, 1=MAPPING, 2=STOPPED（机侧回读的当前状态）。
   uint32 state = 2;
   uint32 keyframe_count = 3;
   string message = 4;
